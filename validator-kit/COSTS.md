@@ -34,6 +34,19 @@ on-demand t4g.small the overhead per check is well under a cent once runs batch 
 any volume where a run sees more than one check. The simulation's break-even (about 55 network checks a week, for an
 always-on watcher and an enclave-capable instance) is the conservative figure.
 
+## Limits across runs
+
+The guards above are per run, and runs can repeat. `max_starts_per_day` (default 12) bounds a day: 12 x 20 calls x $0.12 is
+about $29 at the dearest verdict above. `budget_stop` blocks spending at 100 % of `budget_limit_usd`, but AWS's cost data
+arrives hours late, so it can overshoot. See the runbook's "Spending guards".
+
+## In v3 (simulated, not built)
+
+v3's fee follows the market instead of a fixed $0.05. In the simulation it settles at about $0.21 a check, and an honest
+validator nets **−$1.43 ± 0.22 a month at 30 submissions a week and +$4.77 ± 0.31 at 100** (`reports/open-validators-v3.md`).
+Model calls are passed through, so the shortfall at low traffic is overheads against the fee. It's open as #141, and blocks
+v3's contracts.
+
 ## With attestation later
 
 Nitro Enclaves don't run on burstable instances: the attested node needs a **c6g.xlarge (about $0.136 an hour)** or

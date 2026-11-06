@@ -16,7 +16,7 @@ real run on a throwaway copy of the AWS devnet ("The first real run" below).
     `https://<handle>:<key>@devnet.example.com`; the secret below is the `<handle>:<key>` part;
   - the **deployment record** (`devnet-v2.json`): chain ID and RaceV2's address;
   - the **demo repository** (`owner/name` on GitHub, or on a Forgejo: see "A Forgejo target") whose pull requests claim
-    the submissions, and the **seat** you take (a vacant one);
+    the submissions, and the **seat** you take (a vacant one, or one rotated to your key: all 7 are in use on the AWS devnet today);
   - the **node image digest** (`…/pof-oracle-node@sha256:…`) every validator runs. An image in a private ECR registry
     works: the node logs in before pulling, and its role may read that one repository, in that registry's region.
 - **Model access**, from any provider (ADR 0003: nothing one party runs is required; Bedrock is just the AWS adapter):
@@ -222,6 +222,9 @@ keys on stdin. While forge or cast runs, they're in that process's environment, 
 
 ## The first real run (#150, #112)
 
+> **This has run** (2026-11-04): see #150. When pasting a token, run its `read -rs` line alone: a pasted block feeds the next
+> line into the hidden prompt.
+
 For the deployment's owner: one real bounty on the AWS devnet, from an issue on `pof-sandbox` to the fees withdrawn, with
 the owner's validator (Claude through Bedrock) as one of the 7 seats and the 6 role seats running on the owner's PC.
 `scripts/first-run-e2e.sh` runs all of this on a throwaway copy, with a real Forgejo, the kit's watcher code and a 90-second
@@ -244,15 +247,17 @@ dedicated user; revoke the token afterwards. If `main` is protected, that user m
 
 **The order**
 
-1. **The relay's repository.** Merge platform's change, then in `environments/prod/us-east-1/pof-devnet`: plan (it adds the
-   ECR repository and its lifecycle policy, and re-syncs the host), apply.
+1. **The relay's repository.** Merge platform's change, then dispatch `tofu-apply` with the host up. The stack's in the
+   pipeline since platform-211; a dispatch applies every stack. It adds the ECR repository and its lifecycle policy, and
+   re-syncs the host.
 2. **The image.** From a clean checkout of this repository, with an administrator's profile for that account:
    ```
    AWS_PROFILE=<profile> scripts/exchange-image.sh "$(cd <platform>/environments/prod/us-east-1/pof-devnet && tofu output -raw exchange_repository_url)"
    ```
    It builds for linux/arm64, pushes, and prints `exchange_image_digest`.
-3. **The relay.** Set that digest as the variable's default in platform's stack, plan (the host's role gets the pull
-   permission; the sync logs in, pulls and starts the relay), apply. Check it, with your key in `DEVNET_RPC_AUTH`:
+3. **The relay.** Set that digest as the variable's default in platform's stack, merge, and dispatch `tofu-apply` (the
+   host's role gets the pull permission; the sync logs in, pulls and starts the relay). Check it, with your key in
+   `DEVNET_RPC_AUTH`:
    ```
    curl -s -o /dev/null -w '%{http_code}\n' https://devnet.example.com/exchange/healthz     # 401
    curl -s -K <(printf 'user = "%s"\n' "$DEVNET_RPC_AUTH") https://devnet.example.com/exchange/healthz   # the race

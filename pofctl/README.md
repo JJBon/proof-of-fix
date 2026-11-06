@@ -8,7 +8,7 @@ registration check, and a submission's verdict signed by whichever of them are d
 - **Standard library only:** it talks JSON-RPC to the chain and signs transactions itself, with the oracle node's
   vendored, pinned secp256k1 and keccak (`oracle/vendor`). No cast, forge or Docker is needed to use it.
 - **v2 by default** (`RaceV2`, coin only), and v1 with `--v1`.
-- **Money is the devnet's test coin.** POF is parked and appears nowhere.
+- **Money is the devnet's test coin.** v2 makes no token calls, so POF appears nowhere here. v3's design includes it, simulated only until #126's legal review.
 
 ## Setup
 

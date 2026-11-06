@@ -2,14 +2,14 @@
 
 You run the AI check for open-source fixes on **your own AWS account**, and the **contract pays you** for every check it counts. This guide is for engineers invited to the private devnet (proof-of-fix#104).
 
-**Confidentiality:** proof-of-fix is private. You're invited personally: please don't share the endpoint, your key, the code or this guide.
+**Private for now:** you're invited personally. Please don't share the endpoint or your key, and ask the organiser before sharing the code.
 
 ## What you get from the organiser
 - **The chain's address:** `https://devnet.example.com`. This is a private Ethereum devnet (chain 7193) with mainnet's rules. It's up from 09:00 to 01:00 Bogota time.
 - **Your API key** for it (`<handle>:<key>`, HTTP basic auth). Without it the endpoint answers 401.
-- **The deployment record** (`devnet-v2.json`): the contracts' addresses.
-- **A vacant seat number** (0–6), and the **node image digest** every validator runs.
-- **The demo repository on GitHub** whose pull requests are the fixes you'll check.
+- **The deployment record** (`contracts/deployments/devnet-aws-v2.json`): the contracts' addresses.
+- **A seat number** (0–6), and the **node image digest** every validator runs. All 7 seats are in use today, by the owner's validator and six test roles, so the organiser hands you one by rotating it to your key.
+- **The target repository** (`pof-sandbox` on Forgejo today) whose pull requests are the fixes you'll check, and a read-only token for it with `read:repository` and `read:issue`.
 
 ## What you deploy (about 20 minutes)
 **The validator kit** ([`validator-kit/`](../validator-kit/README.md), runbook: [`validator-kit/runbook.md`](../validator-kit/runbook.md)) is a Terraform module for **your** AWS account:
@@ -48,15 +48,20 @@ On the devnet the 7 days can be fast-forwarded. Seat bonds come later (task 5.8)
 ## Commands you'll use (`scripts/pofctl`, no install)
 ```
 export POFCTL_RPC=https://devnet.example.com POFCTL_RPC_TOKEN="<handle>:<key>" POFCTL_RPC_AUTH=Basic
-scripts/pofctl --record devnet-v2.json status
-scripts/pofctl --record devnet-v2.json solver quote --bounty 1   # what a fix pays, the check deposit, the service fee
-scripts/pofctl --record devnet-v2.json --as engineer validator join --seat <n>
-scripts/pofctl --record devnet-v2.json --as engineer validator status
+scripts/pofctl --record contracts/deployments/devnet-aws-v2.json status
+scripts/pofctl --record contracts/deployments/devnet-aws-v2.json solver quote --bounty 1   # what a fix pays, the check deposit, the service fee
+scripts/pofctl --record contracts/deployments/devnet-aws-v2.json --as engineer validator join --seat <n>
+scripts/pofctl --record contracts/deployments/devnet-aws-v2.json --as engineer validator status
 ```
 You can also play the other roles (funder, reporter, solver): see [`pofctl/README.md`](../pofctl/README.md).
 
+## Limits on your spending
+You don't approve each job: your node works from the contract. The kit limits a bad day for you: per run (20 model calls, 500,000 tokens), per day (`max_starts_per_day`, default 12) and per month (`budget_stop`, which blocks spending at your budget). See the runbook's "Spending guards".
+
 ## What isn't there yet
-The devnet demonstrates the money and the draw end to end, but some parts of a real network are still to come. See **"What's built and what's left"** in the [README](../README.md#whats-built-and-whats-left). Most importantly:
-- verdicts aren't attested by secure hardware yet, so the devnet trusts each seat's key;
-- validators in different accounts still need the small service that exchanges sealed verdicts (#94);
-- the node still has to fetch each fix's code itself and run its sandbox from inside its container (#112).
+The full loop has run for real on this devnet, including the owner's validator with a real model. See the [README](../README.md#where-it-stands) for what that does and doesn't prove. Most importantly for you:
+- verdicts aren't attested by secure hardware yet, so the devnet trusts each seat's key (#94);
+- there are no seat bonds, so cheating isn't punished yet (task 5.8);
+- no real money is involved: you earn the test coin, while your AWS and model costs are real.
+
+v3 will replace the 7 seats with open registration: a bond and an attestation instead of a seat. It's designed and simulated, not built.

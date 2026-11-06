@@ -75,9 +75,10 @@ no test makes one (`tests/test_models.py` uses fake servers on 127.0.0.1); use t
 | Now (phase 1) | Later |
 |---|---|
 | the contract accepts the node's EIP-712 signatures, and refuses a key outside its set | keys inside a real CVM (phase 2) |
-| every verdict has a receipt stored by hash; tampering is detected | the receipt hash on-chain (after #93) |
-| sealed verdicts and canaries, enforced by the aggregator | enforced on-chain (after #93) |
+| every verdict has a receipt stored by hash; tampering is detected | the receipt hash on-chain (#122) |
+| sealed verdicts and canaries, enforced by the aggregator | enforced on-chain (#122) |
 | the sandbox: pinned image, no network, read-only, limits | the sandbox inside the CVM, its image measured |
+| a real model called directly from a node on AWS, its token counts on-chain (#150) | judge quality measured (#160) |
 | nothing about a node's honesty without a TEE: a local receipt is the node's own record | the TDX quote binds the receipt to the measured image |
 
 ## Phase 2 on Phala Cloud: the owner's steps (needs approval; outward)
