@@ -254,7 +254,7 @@ Python 3.9 or later, standard library only. A real bounty on the AWS devnet: the
 - `validator-kit/`: run a validator in your own AWS account ([README](validator-kit/README.md), [runbook](validator-kit/runbook.md), [costs](validator-kit/COSTS.md)).
 - `pofctl/` and `scripts/pofctl`: play every role against a devnet ([README](pofctl/README.md)).
 - `bot/`: links issues and pull requests to bounties; the repository hosts are `bot/forge.py` (Forgejo or GitHub, per repository) and `bot/github.py`.
-- `scripts/`: `devnet.sh`, `devnet-seats.sh` and `first-bounty.sh` for the devnet, the end-to-end rigs, and `check.sh`.
+- `scripts/`: `devnet.sh`, `devnet-seats.sh` and `first-bounty.sh` for the devnet, the end-to-end rigs, `check.sh`, and `github_snapshot.py`, which refreshes the scrubbed private GitHub copies.
 - `pof/`: the mechanism and `pof/sim/`, including `pof/sim/openval/` for v3.
 - `reports/`: simulation, contract and experiment reports. `experiments/`: the experiments' code and results.
 - `openspec/`: specs and changes (spec-driven; rules in `openspec/config.yaml`). `openspec/changes/proof-of-fix-132-open-validators/` is v3.
