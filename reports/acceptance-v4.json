@@ -1,0 +1,965 @@
+{
+  "seeds": 20,
+  "weeks": 8,
+  "passed": true,
+  "failures": [],
+  "criteria": {
+    "defective:abuser": {
+      "mean_per_contribution": -27.1859,
+      "n": 16
+    },
+    "defective:gamer": {
+      "mean_per_contribution": -9.0779,
+      "n": 298
+    },
+    "defective:honest": {
+      "mean_per_contribution": -17.2269,
+      "n": 954
+    },
+    "defective:newcomer": {
+      "mean_per_contribution": -21.0832,
+      "n": 48
+    },
+    "defective:owner": {
+      "mean_per_contribution": -7.2725,
+      "n": 182
+    },
+    "defective:padder": {
+      "mean_per_contribution": -19.254,
+      "n": 154
+    },
+    "defective:spammer": {
+      "mean_per_contribution": -10.3278,
+      "n": 1335
+    },
+    "defective:splitter": {
+      "mean_per_contribution": -14.3599,
+      "n": 55
+    },
+    "defective:stacker": {
+      "mean_per_contribution": -9.239,
+      "n": 342
+    },
+    "defective:sybil": {
+      "mean_per_contribution": -2.3017,
+      "n": 546
+    },
+    "collusion@0.1": {
+      "mean_gain": -684.35,
+      "standard_error": 267.13,
+      "seeds": 20
+    },
+    "collusion@0.2": {
+      "mean_gain": -478.54,
+      "standard_error": 285.27,
+      "seeds": 20
+    },
+    "collusion@0.3": {
+      "mean_gain": -515.37,
+      "standard_error": 262.99,
+      "seeds": 20
+    },
+    "collusion@0.4": {
+      "mean_gain": -782.37,
+      "standard_error": 383.83,
+      "seeds": 20
+    },
+    "collusion@0.5": {
+      "mean_gain": -1245.34,
+      "standard_error": 441.88,
+      "seeds": 20
+    },
+    "collusion@0.6": {
+      "mean_gain": -1184.75,
+      "standard_error": 396.75,
+      "seeds": 20
+    },
+    "collusion@0.7": {
+      "mean_gain": -1509.45,
+      "standard_error": 547.07,
+      "seeds": 20
+    },
+    "owner": {
+      "mean_gain": 464.41,
+      "standard_error": 769.44,
+      "seeds": 20
+    },
+    "splitting": {
+      "mean_gain": -117.98,
+      "standard_error": 437.38,
+      "seeds": 20
+    },
+    "collusion_threshold_measured": null,
+    "capital": {
+      "unaffordable_fixed_stake": 1111.3,
+      "unaffordable_proposed": 477.45,
+      "cut": 0.5704,
+      "cut_beyond_target": 263.42,
+      "standard_error": 7.86
+    }
+  },
+  "returns": {
+    "honest": {
+      "honest": {
+        "mean": 3509.72,
+        "min": 2868.84,
+        "max": 4143.27
+      },
+      "hunter": {
+        "mean": 723.67,
+        "min": 215.23,
+        "max": 1756.85
+      },
+      "owner": {
+        "mean": 14696.96,
+        "min": 9377.99,
+        "max": 24189.11
+      },
+      "validator": {
+        "mean": 2145.08,
+        "min": 1411.0,
+        "max": 2345.68
+      }
+    },
+    "spam": {
+      "gamer": {
+        "mean": 1453.63,
+        "min": 910.34,
+        "max": 2557.32
+      },
+      "honest": {
+        "mean": 2026.41,
+        "min": 1482.09,
+        "max": 2649.54
+      },
+      "hunter": {
+        "mean": 2208.97,
+        "min": 1450.37,
+        "max": 3431.46
+      },
+      "owner": {
+        "mean": 13194.14,
+        "min": 8983.65,
+        "max": 22271.95
+      },
+      "padder": {
+        "mean": 2670.13,
+        "min": 1.28,
+        "max": 6367.73
+      },
+      "spammer": {
+        "mean": 1343.69,
+        "min": 661.14,
+        "max": 2039.56
+      },
+      "splitter": {
+        "mean": 1685.89,
+        "min": -16.41,
+        "max": 7496.59
+      },
+      "stacker": {
+        "mean": 2383.54,
+        "min": 641.02,
+        "max": 4751.99
+      },
+      "validator": {
+        "mean": 2136.25,
+        "min": 1287.61,
+        "max": 2329.53
+      }
+    },
+    "griefing": {
+      "griefer": {
+        "mean": -236.02,
+        "min": -271.46,
+        "max": -136.46
+      },
+      "honest": {
+        "mean": 3342.85,
+        "min": 2886.45,
+        "max": 3983.63
+      },
+      "hunter": {
+        "mean": 827.15,
+        "min": 274.26,
+        "max": 2826.23
+      },
+      "owner": {
+        "mean": 15148.5,
+        "min": 11713.32,
+        "max": 19036.41
+      },
+      "validator": {
+        "mean": 2232.2,
+        "min": 2154.35,
+        "max": 2325.56
+      }
+    },
+    "sponsorship": {
+      "abuser": {
+        "mean": 1668.25,
+        "min": -84.35,
+        "max": 4697.49
+      },
+      "honest": {
+        "mean": 2826.82,
+        "min": 2039.04,
+        "max": 3499.43
+      },
+      "hunter": {
+        "mean": 1085.19,
+        "min": 442.32,
+        "max": 2199.45
+      },
+      "newcomer": {
+        "mean": 1236.53,
+        "min": 355.71,
+        "max": 2233.79
+      },
+      "owner": {
+        "mean": 14794.76,
+        "min": 11046.89,
+        "max": 22125.63
+      },
+      "sybil": {
+        "mean": 553.2,
+        "min": 120.67,
+        "max": 1375.93
+      },
+      "validator": {
+        "mean": 2077.75,
+        "min": 1435.58,
+        "max": 2271.53
+      }
+    }
+  },
+  "unaffordable_submissions": {
+    "honest": 8.15,
+    "spam": 64.35,
+    "sponsorship": 137.5
+  },
+  "turning_actors": {
+    "stacker-1": {
+      "stake_before": 130.45,
+      "stake_after": 54.08
+    },
+    "gamer-1": {
+      "stake_before": 61.56,
+      "stake_after": 51.32
+    }
+  },
+  "contributors_pool_end": {
+    "honest": {
+      "mean": 26889.56,
+      "min": 25000.0,
+      "max": 30451.84
+    },
+    "spam": {
+      "mean": 25607.86,
+      "min": 25156.83,
+      "max": 26289.12
+    },
+    "sponsorship": {
+      "mean": 25462.88,
+      "min": 25000.0,
+      "max": 26647.02
+    }
+  },
+  "pledges": {
+    "honest": {
+      "made": 3.05,
+      "amount": 181.29,
+      "lost_to_slashes": 0.0,
+      "lost_to_clawbacks": 0.0
+    },
+    "spam": {
+      "made": 12.8,
+      "amount": 411.62,
+      "lost_to_slashes": 6.9,
+      "lost_to_clawbacks": 0.0
+    },
+    "sponsorship": {
+      "made": 3.95,
+      "amount": 188.52,
+      "lost_to_slashes": 0.0,
+      "lost_to_clawbacks": 0.0
+    }
+  },
+  "collusion": [
+    {
+      "share": 0.1,
+      "mean_gain": -684.35,
+      "standard_error": 267.13,
+      "seeds": 20
+    },
+    {
+      "share": 0.2,
+      "mean_gain": -478.54,
+      "standard_error": 285.27,
+      "seeds": 20
+    },
+    {
+      "share": 0.3,
+      "mean_gain": -515.37,
+      "standard_error": 262.99,
+      "seeds": 20
+    },
+    {
+      "share": 0.4,
+      "mean_gain": -782.37,
+      "standard_error": 383.83,
+      "seeds": 20
+    },
+    {
+      "share": 0.5,
+      "mean_gain": -1245.34,
+      "standard_error": 441.88,
+      "seeds": 20
+    },
+    {
+      "share": 0.6,
+      "mean_gain": -1184.75,
+      "standard_error": 396.75,
+      "seeds": 20
+    },
+    {
+      "share": 0.7,
+      "mean_gain": -1509.45,
+      "standard_error": 547.07,
+      "seeds": 20
+    }
+  ],
+  "owner": {
+    "honest_payout": {
+      "mean": 14696.96,
+      "min": 9377.99,
+      "max": 24189.11
+    },
+    "self_interested_payout": {
+      "mean": 15161.36,
+      "min": 12075.8,
+      "max": 19379.85
+    },
+    "gain": {
+      "mean_gain": 464.41,
+      "standard_error": 769.44,
+      "seeds": 20
+    },
+    "declined_others": {
+      "mean": 3.4,
+      "min": 1,
+      "max": 6
+    },
+    "panels": {
+      "approvals": 11.4,
+      "declines_over_limit": 20.15,
+      "decline_appeals": 1.15,
+      "overturned": 1.15,
+      "split_changes_refused": 1
+    }
+  },
+  "hunt_elasticity_sweep": {
+    "0.0": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -6.4655,
+      "spammer_defective_per_contribution": -8.999,
+      "honest_return": 3460.98,
+      "validator_return": 2238.3,
+      "escaped_regressions": 4.75,
+      "splitting_gain": 490.8,
+      "owner_gain": 611.63,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5717,
+      "unaffordable_proposed": 471.2
+    },
+    "0.5": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "1.0": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5729,
+      "unaffordable_proposed": 473.9
+    }
+  },
+  "review_detection_sweep": {
+    "3000": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 3.1938,
+      "spammer_defective_per_contribution": -6.7939,
+      "honest_return": 3453.01,
+      "validator_return": 2141.38,
+      "escaped_regressions": 8.2,
+      "splitting_gain": -44.87,
+      "owner_gain": 40.06,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5711,
+      "unaffordable_proposed": 476.6
+    },
+    "6000": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "8000": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 27.3074,
+      "spammer_defective_per_contribution": -11.8714,
+      "honest_return": 3547.35,
+      "validator_return": 2154.69,
+      "escaped_regressions": 2.45,
+      "splitting_gain": -44.23,
+      "owner_gain": 741.04,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5708,
+      "unaffordable_proposed": 476.6
+    }
+  },
+  "ablation": {
+    "all rules (defaults)": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "no escrow share for challengers": {
+      "passed": false,
+      "failed_criteria": [
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -0.7722,
+      "spammer_defective_per_contribution": -10.0821,
+      "honest_return": 3517.94,
+      "validator_return": 2159.57,
+      "escaped_regressions": 4.47,
+      "splitting_gain": 1059.95,
+      "owner_gain": -633.61,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5692,
+      "unaffordable_proposed": 473.15
+    },
+    "no review duty": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "honesty pays",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": 15.7319,
+      "spammer_defective_per_contribution": -4.1414,
+      "honest_return": 3483.71,
+      "validator_return": 122.22,
+      "escaped_regressions": 12.22,
+      "splitting_gain": 886.72,
+      "owner_gain": -320.21,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5781,
+      "unaffordable_proposed": 468.75
+    },
+    "one instalment (no clawback)": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -4.5359,
+      "spammer_defective_per_contribution": -9.9526,
+      "honest_return": 3369.65,
+      "validator_return": 1722.26,
+      "escaped_regressions": 4.58,
+      "splitting_gain": 788.19,
+      "owner_gain": 68.1,
+      "collusion_gains_from": null,
+      "capital_cut": 0.6798,
+      "unaffordable_proposed": 262.1
+    },
+    "per-tier weights (not linear)": {
+      "passed": false,
+      "failed_criteria": [
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -5.366,
+      "spammer_defective_per_contribution": -12.6115,
+      "honest_return": 3579.18,
+      "validator_return": 2121.49,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 917.49,
+      "owner_gain": -497.24,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5657,
+      "unaffordable_proposed": 479.5
+    },
+    "no decline limit": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": 4.0945,
+      "spammer_defective_per_contribution": -10.2434,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 4.95,
+      "splitting_gain": 1192.7,
+      "owner_gain": 710.24,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "first defaults' stake (10)": {
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": 0.8934,
+      "spammer_defective_per_contribution": -0.8319,
+      "honest_return": 694.37,
+      "validator_return": 2168.62,
+      "escaped_regressions": 4.95,
+      "splitting_gain": 1080.33,
+      "owner_gain": 698.29,
+      "collusion_gains_from": null,
+      "capital_cut": -0.05,
+      "unaffordable_proposed": 4.2
+    },
+    "no pledges": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 71.9278,
+      "spammer_defective_per_contribution": -9.6402,
+      "honest_return": 3428.73,
+      "validator_return": 2101.36,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 141.3,
+      "owner_gain": 643.35,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5886,
+      "unaffordable_proposed": 471.6
+    },
+    "no index (fixed stake)": {
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 18.5731,
+      "spammer_defective_per_contribution": -13.789,
+      "honest_return": 3529.05,
+      "validator_return": 2119.71,
+      "escaped_regressions": 3.95,
+      "splitting_gain": 179.77,
+      "owner_gain": -527.09,
+      "collusion_gains_from": null,
+      "capital_cut": -0.0002,
+      "unaffordable_proposed": 1111.55
+    },
+    "no reward cap": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 4.6396,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3580.76,
+      "validator_return": 2135.83,
+      "escaped_regressions": 4.8,
+      "splitting_gain": -65.23,
+      "owner_gain": -111.56,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    }
+  },
+  "pledge_stake_cap_sweep": {
+    "0": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 71.9278,
+      "spammer_defective_per_contribution": -9.6402,
+      "honest_return": 3428.73,
+      "validator_return": 2101.36,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 141.3,
+      "owner_gain": 643.35,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5886,
+      "unaffordable_proposed": 471.6
+    },
+    "2500": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 6.6668,
+      "spammer_defective_per_contribution": -9.7487,
+      "honest_return": 3385.2,
+      "validator_return": 2137.84,
+      "escaped_regressions": 4.83,
+      "splitting_gain": 32.13,
+      "owner_gain": 334.9,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5836,
+      "unaffordable_proposed": 473.45
+    },
+    "5000": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "7500": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -3.7514,
+      "spammer_defective_per_contribution": -8.1018,
+      "honest_return": 3554.09,
+      "validator_return": 2116.02,
+      "escaped_regressions": 4.78,
+      "splitting_gain": -442.52,
+      "owner_gain": 76.34,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5764,
+      "unaffordable_proposed": 462.95
+    }
+  },
+  "pledge_escrow_cap_sweep": {
+    "5000": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "10000": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -3.2209,
+      "spammer_defective_per_contribution": -10.0369,
+      "honest_return": 3464.53,
+      "validator_return": 2144.2,
+      "escaped_regressions": 4.33,
+      "splitting_gain": 71.44,
+      "owner_gain": 229.68,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5719,
+      "unaffordable_proposed": 476.05
+    }
+  },
+  "stake_index_sweep": {
+    "0": {
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 18.5731,
+      "spammer_defective_per_contribution": -13.789,
+      "honest_return": 3529.05,
+      "validator_return": 2119.71,
+      "escaped_regressions": 3.95,
+      "splitting_gain": 179.77,
+      "owner_gain": -527.09,
+      "collusion_gains_from": null,
+      "capital_cut": -0.0002,
+      "unaffordable_proposed": 1111.55
+    },
+    "1500": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 42.213,
+      "spammer_defective_per_contribution": -5.4372,
+      "honest_return": 3443.27,
+      "validator_return": 2119.87,
+      "escaped_regressions": 5.2,
+      "splitting_gain": 673.27,
+      "owner_gain": 211.05,
+      "collusion_gains_from": null,
+      "capital_cut": 0.7134,
+      "unaffordable_proposed": 318.5
+    },
+    "2500": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 1.7064,
+      "spammer_defective_per_contribution": -7.2263,
+      "honest_return": 3446.4,
+      "validator_return": 2124.74,
+      "escaped_regressions": 5.03,
+      "splitting_gain": -148.65,
+      "owner_gain": 15.32,
+      "collusion_gains_from": null,
+      "capital_cut": 0.6694,
+      "unaffordable_proposed": 367.4
+    },
+    "4000": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    }
+  },
+  "reward_cap_sweep": {
+    "0": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 4.6396,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3580.76,
+      "validator_return": 2135.83,
+      "escaped_regressions": 4.8,
+      "splitting_gain": -65.23,
+      "owner_gain": -111.56,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    },
+    "4": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 52.6384,
+      "spammer_defective_per_contribution": -10.2959,
+      "honest_return": 2614.64,
+      "validator_return": 2126.73,
+      "escaped_regressions": 4.72,
+      "splitting_gain": 650.1,
+      "owner_gain": 207.13,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5701,
+      "unaffordable_proposed": 477.8
+    },
+    "6": {
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -2.3017,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -117.98,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "8": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 12.1089,
+      "spammer_defective_per_contribution": -9.3944,
+      "honest_return": 3642.33,
+      "validator_return": 2138.01,
+      "escaped_regressions": 4.78,
+      "splitting_gain": 120.7,
+      "owner_gain": 511.75,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    },
+    "16": {
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 4.6396,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3621.31,
+      "validator_return": 2136.37,
+      "escaped_regressions": 4.8,
+      "splitting_gain": -65.23,
+      "owner_gain": 453.07,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    }
+  },
+  "reward_to_stake": {
+    "honest": {
+      "reward_to_stake": 5.748,
+      "max": 6.0
+    },
+    "spam": {
+      "reward_to_stake": 2.934,
+      "max": 6.0
+    },
+    "sponsorship": {
+      "reward_to_stake": 4.331,
+      "max": 6.0
+    },
+    "replay": {
+      "reward_to_stake": 1.118,
+      "max": 2.864
+    }
+  },
+  "risk": [
+    {
+      "multiplier": 1,
+      "honest": {
+        "mean": 2594.12,
+        "min": 1940.08,
+        "max": 3149.13
+      },
+      "spammer": {
+        "mean": 2348.24,
+        "min": 1425.23,
+        "max": 3539.0
+      },
+      "escaped_regressions": {
+        "mean": 2.2,
+        "min": 1,
+        "max": 4
+      }
+    },
+    {
+      "multiplier": 2,
+      "honest": {
+        "mean": 2564.72,
+        "min": 2038.48,
+        "max": 3041.65
+      },
+      "spammer": {
+        "mean": 2449.38,
+        "min": 1247.66,
+        "max": 3283.82
+      },
+      "escaped_regressions": {
+        "mean": 2.35,
+        "min": 0,
+        "max": 4
+      }
+    },
+    {
+      "multiplier": 3,
+      "honest": {
+        "mean": 2510.25,
+        "min": 1957.94,
+        "max": 3035.49
+      },
+      "spammer": {
+        "mean": 2373.25,
+        "min": 1484.03,
+        "max": 4377.76
+      },
+      "escaped_regressions": {
+        "mean": 2.35,
+        "min": 0,
+        "max": 8
+      }
+    }
+  ],
+  "replay": {
+    "contributions": {
+      "mean": 1303.6,
+      "min": 1267,
+      "max": 1358
+    },
+    "honest": {
+      "mean": 967.2,
+      "min": 922.6,
+      "max": 987.06
+    },
+    "validator": {
+      "mean": 1320.18,
+      "min": 1251.97,
+      "max": 1350.18
+    },
+    "hunter": {
+      "mean": 684.02,
+      "min": 470.37,
+      "max": 992.55
+    },
+    "escaped_regressions": {
+      "mean": 9.5,
+      "min": 3,
+      "max": 16
+    },
+    "unaffordable_submissions": {
+      "mean": 477.45,
+      "min": 436,
+      "max": 541
+    },
+    "pledges": {
+      "mean": 77.7,
+      "min": 60,
+      "max": 93
+    }
+  }
+}

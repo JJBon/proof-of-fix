@@ -1,0 +1,18 @@
+{
+ "date": "2026-11-03T15:17:38Z",
+ "error": "internal error: commitment protocol failed during mpc-tls preprocessing caused by: preprocess error: record layer error: tag error: share conversion error: role error: ot error: inner sender error: io error: unexpected end of file: preprocess error: record layer error: tag error: share conversion error: role error: ot error: inner sender error: io error: unexpected end of file",
+ "event": "result",
+ "kind": "free",
+ "max_sent_records": null,
+ "notary": "self-a",
+ "notary_events": [
+  {
+   "error": "internal error: commitment protocol failed during mpc-tls preprocessing caused by: preprocess error: execution error: context mux error: preprocess error: execution error: context mux error",
+   "event": "failed"
+  }
+ ],
+ "ok": false,
+ "pad": 0,
+ "run": "free-self-a-mpc-s8192-r4096",
+ "wall_s": 0.217
+}

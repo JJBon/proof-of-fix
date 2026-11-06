@@ -1,0 +1,27 @@
+{
+ "id": "01-median-borderline",
+ "label": "borderline",
+ "note": "side effect: sorts the caller's list in place (median() now mutates its argument)",
+ "repo": "local/sample",
+ "issue": "median() is wrong for an even count: median([4, 1, 3, 2]) returns 3, but the median of an even number of values is the mean of the two middle values (2.5).",
+ "commit": "Fix the median of an even count without copying the list",
+ "diff": "--- a/stats.py\n+++ b/stats.py\n@@ -6,5 +6,6 @@\n \n \n def median(xs):\n-    s = sorted(xs)\n-    return s[len(s) // 2]  # the issue: for an even count this isn't the middle of the two middle values\n+    xs.sort()  # in place: no copy of a large list\n+    mid = len(xs) // 2\n+    return xs[mid] if len(xs) % 2 else (xs[mid - 1] + xs[mid]) / 2\n",
+ "context": [
+  {
+   "path": "stats.py",
+   "text": "    1 \"\"\"A tiny library, the loop's test repository (proof-of-fix#56 task 3.3).\"\"\"\n    2 \n    3 \n    4 def mean(xs):\n    5     return sum(xs) / len(xs)\n    6 \n    7 \n    8 def median(xs):\n    9     s = sorted(xs)\n   10     return s[len(s) // 2]  # the issue: for an even count this isn't the middle of the two middle values"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "3e867bda39f6fd14f5cadda02372a7ead3c64e4de7093cbf2b2e08b153306b6d"
+ }
+}

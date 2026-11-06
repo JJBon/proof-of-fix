@@ -1,0 +1,361 @@
+{
+  "seeds": 100,
+  "sweep_seeds": 20,
+  "weeks": 8,
+  "passed": true,
+  "failures": [],
+  "criteria": {
+    "bluffer_gain": {
+      "mean": -3.18,
+      "standard_error": 17.31,
+      "seeds": 100
+    },
+    "flood": {
+      "mean": -254.23,
+      "standard_error": 17.95,
+      "seeds": 100
+    },
+    "lowballer_gain": {
+      "mean": -104.61,
+      "standard_error": 19.6,
+      "seeds": 100
+    },
+    "no_show": {
+      "mean": -369.03,
+      "standard_error": 7.32,
+      "seeds": 100
+    },
+    "owner_gain": {
+      "mean": -8.07,
+      "standard_error": 4.04,
+      "seeds": 100
+    },
+    "solver": {
+      "mean": 66.95,
+      "standard_error": 2.23,
+      "seeds": 600
+    },
+    "spam_solver": {
+      "mean": -163.02,
+      "standard_error": 11.8,
+      "seeds": 100
+    },
+    "treasury_junk": {
+      "mean": 4123.21,
+      "standard_error": 89.78,
+      "seeds": 100
+    },
+    "validator": {
+      "mean": 39.15,
+      "standard_error": 0.41,
+      "seeds": 600
+    },
+    "defective:bluffer": {
+      "mean_per_contribution": 3.258,
+      "standard_error": 5.3412,
+      "n": 81,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:flood": {
+      "mean_per_contribution": -30.0911,
+      "standard_error": 2.1037,
+      "n": 844,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "defective:lowballer": {
+      "mean_per_contribution": -15.7132,
+      "standard_error": 2.9535,
+      "n": 152,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:solver": {
+      "mean_per_contribution": -7.8707,
+      "standard_error": 0.4999,
+      "n": 12292,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:spam_solver": {
+      "mean_per_contribution": -8.4038,
+      "standard_error": 0.5833,
+      "n": 2550,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "ring@2": {
+      "mean_gain": 5.28,
+      "standard_error": 31.55,
+      "seeds": 100
+    },
+    "ring@3": {
+      "mean_gain": 15.88,
+      "standard_error": 34.03,
+      "seeds": 100
+    },
+    "ring@4": {
+      "mean_gain": 107.75,
+      "standard_error": 41.61,
+      "seeds": 100
+    },
+    "ring@6": {
+      "mean_gain": 10.06,
+      "standard_error": 42.12,
+      "seeds": 100
+    },
+    "ring_gains_from": 4
+  },
+  "elasticity_verdicts": {
+    "0.0": {
+      "seeds": 100,
+      "passed": false,
+      "failed_criteria": [
+        "bidding your cost is best"
+      ],
+      "solver_net_of_effort": 68.87,
+      "validator": 41.88,
+      "spam_solver": -122.77,
+      "no_show": -372.72,
+      "ring_gains_from": 4
+    },
+    "1.0": {
+      "seeds": 100,
+      "passed": false,
+      "failed_criteria": [
+        "bidding your cost is best"
+      ],
+      "solver_net_of_effort": 68.62,
+      "validator": 39.22,
+      "spam_solver": -141.24,
+      "no_show": -374.75,
+      "ring_gains_from": null
+    }
+  },
+  "returns": {
+    "hunter": 19.29,
+    "owner": 119.1,
+    "pledger": -158.22,
+    "solver": 69.6,
+    "validator": 33.67
+  },
+  "market": {
+    "bounties": {
+      "open": 62.6,
+      "paid": 56.47
+    },
+    "issues": {
+      "pledged": 47.14,
+      "treasury": 71.93,
+      "unfunded": 0.07
+    },
+    "price_to_cost": 1.7444,
+    "mean_price": 82.68,
+    "treasury_spend": 9558.33,
+    "deliveries": {
+      "bids": 203.48,
+      "assigned": 68.48,
+      "delivered": 62.5,
+      "delivery_failed": 5.98
+    },
+    "flood_treasury_junk": 4123.21
+  },
+  "sweeps": {
+    "cost per line": {
+      "500000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 118.76,
+        "validator": 40.75,
+        "spam_solver": -126.28,
+        "no_show": -372.51,
+        "ring_gains_from": null
+      },
+      "1000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "2000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 30.85,
+        "validator": 33.41,
+        "spam_solver": -121.57,
+        "no_show": -385.65,
+        "ring_gains_from": null
+      }
+    },
+    "pledged share": {
+      "2000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 66.75,
+        "validator": 40.18,
+        "spam_solver": -143.04,
+        "no_show": -383.06,
+        "ring_gains_from": 4
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 70.5,
+        "validator": 38.92,
+        "spam_solver": -124.4,
+        "no_show": -376.64,
+        "ring_gains_from": null
+      }
+    },
+    "treasury junk detection": {
+      "5000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 59.64,
+        "validator": 39.16,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "8500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "9500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.42,
+        "validator": 39.62,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      }
+    },
+    "bond (stake share)": {
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "attackers lose",
+          "honest mistakes don't pay"
+        ],
+        "solver_net_of_effort": 62.3,
+        "validator": 38.07,
+        "spam_solver": -66.81,
+        "no_show": -202.67,
+        "ring_gains_from": 3
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 72.2,
+        "validator": 40.06,
+        "spam_solver": -97.23,
+        "no_show": -472.41,
+        "ring_gains_from": 6
+      }
+    },
+    "delivery days": {
+      "7": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 74.19,
+        "validator": 39.05,
+        "spam_solver": -122.16,
+        "no_show": -484.31,
+        "ring_gains_from": null
+      },
+      "14": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "28": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.66,
+        "validator": 39.91,
+        "spam_solver": -161.42,
+        "no_show": -273.8,
+        "ring_gains_from": null
+      }
+    },
+    "market fee": {
+      "1000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 98.12,
+        "validator": 23.31,
+        "spam_solver": -106.36,
+        "no_show": -413.02,
+        "ring_gains_from": null
+      },
+      "2000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 65.6,
+        "validator": 39.83,
+        "spam_solver": -161.42,
+        "no_show": -389.41,
+        "ring_gains_from": null
+      },
+      "3000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 56.31,
+        "validator": 52.66,
+        "spam_solver": -157.02,
+        "no_show": -374.37,
+        "ring_gains_from": null
+      }
+    }
+  }
+}

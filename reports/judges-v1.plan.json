@@ -1,0 +1,1072 @@
+{
+ "cases": {
+  "astropy__astropy-13033:bad": {
+   "input": 2477,
+   "size": "medium"
+  },
+  "astropy__astropy-13033:bad+code": {
+   "input": 2535,
+   "size": "medium"
+  },
+  "astropy__astropy-13033:bad+comment": {
+   "input": 2530,
+   "size": "medium"
+  },
+  "astropy__astropy-13033:bad+commit": {
+   "input": 2525,
+   "size": "medium"
+  },
+  "astropy__astropy-13033:good": {
+   "input": 3869,
+   "size": "medium"
+  },
+  "astropy__astropy-13977:bad": {
+   "input": 4294,
+   "size": "large"
+  },
+  "astropy__astropy-13977:bad+code": {
+   "input": 4350,
+   "size": "large"
+  },
+  "astropy__astropy-13977:bad+comment": {
+   "input": 4346,
+   "size": "large"
+  },
+  "astropy__astropy-13977:bad+commit": {
+   "input": 4342,
+   "size": "large"
+  },
+  "astropy__astropy-13977:good": {
+   "input": 9430,
+   "size": "large"
+  },
+  "astropy__astropy-14182:bad": {
+   "input": 2333,
+   "size": "small"
+  },
+  "astropy__astropy-14182:bad+code": {
+   "input": 2387,
+   "size": "small"
+  },
+  "astropy__astropy-14182:bad+comment": {
+   "input": 2383,
+   "size": "small"
+  },
+  "astropy__astropy-14182:bad+commit": {
+   "input": 2381,
+   "size": "small"
+  },
+  "astropy__astropy-14182:good": {
+   "input": 3495,
+   "size": "large"
+  },
+  "astropy__astropy-14369:bad": {
+   "input": 8640,
+   "size": "large"
+  },
+  "astropy__astropy-14369:bad+code": {
+   "input": 8696,
+   "size": "large"
+  },
+  "astropy__astropy-14369:bad+comment": {
+   "input": 8692,
+   "size": "large"
+  },
+  "astropy__astropy-14369:bad+commit": {
+   "input": 8688,
+   "size": "large"
+  },
+  "astropy__astropy-14369:good": {
+   "input": 9660,
+   "size": "large"
+  },
+  "astropy__astropy-14598:bad": {
+   "input": 5423,
+   "size": "large"
+  },
+  "astropy__astropy-14598:bad+code": {
+   "input": 5482,
+   "size": "large"
+  },
+  "astropy__astropy-14598:bad+comment": {
+   "input": 5478,
+   "size": "large"
+  },
+  "astropy__astropy-14598:bad+commit": {
+   "input": 5472,
+   "size": "large"
+  },
+  "astropy__astropy-14598:good": {
+   "input": 5544,
+   "size": "medium"
+  },
+  "django__django-10999:bad": {
+   "input": 1597,
+   "size": "small"
+  },
+  "django__django-10999:bad+code": {
+   "input": 1651,
+   "size": "small"
+  },
+  "django__django-10999:bad+comment": {
+   "input": 1647,
+   "size": "small"
+  },
+  "django__django-10999:bad+commit": {
+   "input": 1645,
+   "size": "small"
+  },
+  "django__django-10999:good": {
+   "input": 2942,
+   "size": "medium"
+  },
+  "django__django-11400:bad": {
+   "input": 3271,
+   "size": "medium"
+  },
+  "django__django-11400:bad+code": {
+   "input": 3326,
+   "size": "medium"
+  },
+  "django__django-11400:bad+comment": {
+   "input": 3321,
+   "size": "medium"
+  },
+  "django__django-11400:bad+commit": {
+   "input": 3319,
+   "size": "medium"
+  },
+  "django__django-11400:good": {
+   "input": 11613,
+   "size": "large"
+  },
+  "django__django-11433:bad": {
+   "input": 19802,
+   "size": "large"
+  },
+  "django__django-11433:bad+code": {
+   "input": 19856,
+   "size": "large"
+  },
+  "django__django-11433:bad+comment": {
+   "input": 19851,
+   "size": "large"
+  },
+  "django__django-11433:bad+commit": {
+   "input": 19851,
+   "size": "large"
+  },
+  "django__django-11433:good": {
+   "input": 3627,
+   "size": "medium"
+  },
+  "django__django-11820:bad": {
+   "input": 1828,
+   "size": "small"
+  },
+  "django__django-11820:bad+code": {
+   "input": 1886,
+   "size": "small"
+  },
+  "django__django-11820:bad+comment": {
+   "input": 1882,
+   "size": "small"
+  },
+  "django__django-11820:bad+commit": {
+   "input": 1877,
+   "size": "small"
+  },
+  "django__django-11820:good": {
+   "input": 3490,
+   "size": "medium"
+  },
+  "django__django-13158:bad": {
+   "input": 2691,
+   "size": "large"
+  },
+  "django__django-13158:bad+code": {
+   "input": 2745,
+   "size": "large"
+  },
+  "django__django-13158:bad+comment": {
+   "input": 2740,
+   "size": "large"
+  },
+  "django__django-13158:bad+commit": {
+   "input": 2740,
+   "size": "large"
+  },
+  "django__django-13158:good": {
+   "input": 5042,
+   "size": "small"
+  },
+  "django__django-13195:bad": {
+   "input": 15226,
+   "size": "large"
+  },
+  "django__django-13195:bad+code": {
+   "input": 15283,
+   "size": "large"
+  },
+  "django__django-13195:bad+comment": {
+   "input": 15278,
+   "size": "large"
+  },
+  "django__django-13195:bad+commit": {
+   "input": 15274,
+   "size": "large"
+  },
+  "django__django-13195:good": {
+   "input": 10842,
+   "size": "large"
+  },
+  "django__django-14034:bad": {
+   "input": 2520,
+   "size": "small"
+  },
+  "django__django-14034:bad+code": {
+   "input": 2576,
+   "size": "small"
+  },
+  "django__django-14034:bad+comment": {
+   "input": 2572,
+   "size": "small"
+  },
+  "django__django-14034:bad+commit": {
+   "input": 2568,
+   "size": "small"
+  },
+  "django__django-14034:good": {
+   "input": 4492,
+   "size": "medium"
+  },
+  "django__django-15037:bad": {
+   "input": 4603,
+   "size": "large"
+  },
+  "django__django-15037:bad+code": {
+   "input": 4660,
+   "size": "large"
+  },
+  "django__django-15037:bad+comment": {
+   "input": 4656,
+   "size": "large"
+  },
+  "django__django-15037:bad+commit": {
+   "input": 4652,
+   "size": "large"
+  },
+  "django__django-15037:good": {
+   "input": 2832,
+   "size": "small"
+  },
+  "django__django-15695:bad": {
+   "input": 2581,
+   "size": "medium"
+  },
+  "django__django-15695:bad+code": {
+   "input": 2638,
+   "size": "medium"
+  },
+  "django__django-15695:bad+comment": {
+   "input": 2633,
+   "size": "medium"
+  },
+  "django__django-15695:bad+commit": {
+   "input": 2629,
+   "size": "medium"
+  },
+  "django__django-15695:good": {
+   "input": 3725,
+   "size": "small"
+  },
+  "django__django-16560:bad": {
+   "input": 8466,
+   "size": "medium"
+  },
+  "django__django-16560:bad+code": {
+   "input": 8520,
+   "size": "medium"
+  },
+  "django__django-16560:bad+comment": {
+   "input": 8516,
+   "size": "medium"
+  },
+  "django__django-16560:bad+commit": {
+   "input": 8514,
+   "size": "medium"
+  },
+  "django__django-16560:good": {
+   "input": 26469,
+   "size": "large"
+  },
+  "django__django-16877:bad": {
+   "input": 1720,
+   "size": "small"
+  },
+  "django__django-16877:bad+code": {
+   "input": 1774,
+   "size": "small"
+  },
+  "django__django-16877:bad+comment": {
+   "input": 1769,
+   "size": "small"
+  },
+  "django__django-16877:bad+commit": {
+   "input": 1768,
+   "size": "small"
+  },
+  "django__django-16877:good": {
+   "input": 2273,
+   "size": "large"
+  },
+  "django__django-16950:bad": {
+   "input": 3712,
+   "size": "small"
+  },
+  "django__django-16950:bad+code": {
+   "input": 3767,
+   "size": "small"
+  },
+  "django__django-16950:bad+comment": {
+   "input": 3763,
+   "size": "small"
+  },
+  "django__django-16950:bad+commit": {
+   "input": 3760,
+   "size": "small"
+  },
+  "django__django-16950:good": {
+   "input": 2429,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-21568:bad": {
+   "input": 3877,
+   "size": "large"
+  },
+  "matplotlib__matplotlib-21568:bad+code": {
+   "input": 3931,
+   "size": "large"
+  },
+  "matplotlib__matplotlib-21568:bad+comment": {
+   "input": 3927,
+   "size": "large"
+  },
+  "matplotlib__matplotlib-21568:bad+commit": {
+   "input": 3925,
+   "size": "large"
+  },
+  "matplotlib__matplotlib-21568:good": {
+   "input": 2042,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-23299:bad": {
+   "input": 3078,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-23299:bad+code": {
+   "input": 3132,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-23299:bad+comment": {
+   "input": 3128,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-23299:bad+commit": {
+   "input": 3126,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-23299:good": {
+   "input": 3794,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-24870:bad": {
+   "input": 4029,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-24870:bad+code": {
+   "input": 4084,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-24870:bad+comment": {
+   "input": 4079,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-24870:bad+commit": {
+   "input": 4078,
+   "size": "medium"
+  },
+  "matplotlib__matplotlib-24870:good": {
+   "input": 6934,
+   "size": "large"
+  },
+  "matplotlib__matplotlib-26466:bad": {
+   "input": 3359,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-26466:bad+code": {
+   "input": 3415,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-26466:bad+comment": {
+   "input": 3410,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-26466:bad+commit": {
+   "input": 3408,
+   "size": "small"
+  },
+  "matplotlib__matplotlib-26466:good": {
+   "input": 4681,
+   "size": "medium"
+  },
+  "mwaskom__seaborn-3187:bad": {
+   "input": 4743,
+   "size": "medium"
+  },
+  "mwaskom__seaborn-3187:bad+code": {
+   "input": 4801,
+   "size": "medium"
+  },
+  "mwaskom__seaborn-3187:bad+comment": {
+   "input": 4796,
+   "size": "medium"
+  },
+  "mwaskom__seaborn-3187:bad+commit": {
+   "input": 4791,
+   "size": "medium"
+  },
+  "mwaskom__seaborn-3187:good": {
+   "input": 4971,
+   "size": "medium"
+  },
+  "psf__requests-1724:bad": {
+   "input": 3812,
+   "size": "small"
+  },
+  "psf__requests-1724:bad+code": {
+   "input": 3869,
+   "size": "small"
+  },
+  "psf__requests-1724:bad+comment": {
+   "input": 3864,
+   "size": "small"
+  },
+  "psf__requests-1724:bad+commit": {
+   "input": 3860,
+   "size": "small"
+  },
+  "psf__requests-1724:good": {
+   "input": 5947,
+   "size": "small"
+  },
+  "psf__requests-1766:bad": {
+   "input": 1950,
+   "size": "small"
+  },
+  "psf__requests-1766:bad+code": {
+   "input": 2007,
+   "size": "small"
+  },
+  "psf__requests-1766:bad+comment": {
+   "input": 2002,
+   "size": "small"
+  },
+  "psf__requests-1766:bad+commit": {
+   "input": 1998,
+   "size": "small"
+  },
+  "psf__requests-1766:good": {
+   "input": 1950,
+   "size": "small"
+  },
+  "psf__requests-2317:bad": {
+   "input": 2759,
+   "size": "small"
+  },
+  "psf__requests-2317:bad+code": {
+   "input": 2813,
+   "size": "small"
+  },
+  "psf__requests-2317:bad+comment": {
+   "input": 2808,
+   "size": "small"
+  },
+  "psf__requests-2317:bad+commit": {
+   "input": 2808,
+   "size": "small"
+  },
+  "psf__requests-2317:good": {
+   "input": 3826,
+   "size": "small"
+  },
+  "pydata__xarray-3993:bad": {
+   "input": 4152,
+   "size": "large"
+  },
+  "pydata__xarray-3993:bad+code": {
+   "input": 4206,
+   "size": "large"
+  },
+  "pydata__xarray-3993:bad+comment": {
+   "input": 4201,
+   "size": "large"
+  },
+  "pydata__xarray-3993:bad+commit": {
+   "input": 4200,
+   "size": "large"
+  },
+  "pydata__xarray-3993:good": {
+   "input": 5364,
+   "size": "medium"
+  },
+  "pydata__xarray-4687:bad": {
+   "input": 3892,
+   "size": "small"
+  },
+  "pydata__xarray-4687:bad+code": {
+   "input": 3946,
+   "size": "small"
+  },
+  "pydata__xarray-4687:bad+comment": {
+   "input": 3941,
+   "size": "small"
+  },
+  "pydata__xarray-4687:bad+commit": {
+   "input": 3941,
+   "size": "small"
+  },
+  "pydata__xarray-4687:good": {
+   "input": 6343,
+   "size": "medium"
+  },
+  "pydata__xarray-7229:bad": {
+   "input": 2532,
+   "size": "medium"
+  },
+  "pydata__xarray-7229:bad+code": {
+   "input": 2588,
+   "size": "medium"
+  },
+  "pydata__xarray-7229:bad+comment": {
+   "input": 2584,
+   "size": "medium"
+  },
+  "pydata__xarray-7229:bad+commit": {
+   "input": 2581,
+   "size": "medium"
+  },
+  "pydata__xarray-7229:good": {
+   "input": 4947,
+   "size": "large"
+  },
+  "pylint-dev__pylint-4661:bad": {
+   "input": 4480,
+   "size": "large"
+  },
+  "pylint-dev__pylint-4661:bad+code": {
+   "input": 4533,
+   "size": "large"
+  },
+  "pylint-dev__pylint-4661:bad+comment": {
+   "input": 4529,
+   "size": "large"
+  },
+  "pylint-dev__pylint-4661:bad+commit": {
+   "input": 4528,
+   "size": "large"
+  },
+  "pylint-dev__pylint-4661:good": {
+   "input": 6003,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-10356:bad": {
+   "input": 4066,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-10356:bad+code": {
+   "input": 4120,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-10356:bad+comment": {
+   "input": 4115,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-10356:bad+commit": {
+   "input": 4115,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-10356:good": {
+   "input": 4729,
+   "size": "large"
+  },
+  "pytest-dev__pytest-5787:bad": {
+   "input": 31497,
+   "size": "large"
+  },
+  "pytest-dev__pytest-5787:bad+code": {
+   "input": 31550,
+   "size": "large"
+  },
+  "pytest-dev__pytest-5787:bad+comment": {
+   "input": 31546,
+   "size": "large"
+  },
+  "pytest-dev__pytest-5787:bad+commit": {
+   "input": 31545,
+   "size": "large"
+  },
+  "pytest-dev__pytest-5787:good": {
+   "input": 27496,
+   "size": "large"
+  },
+  "pytest-dev__pytest-7324:bad": {
+   "input": 61725,
+   "size": "large"
+  },
+  "pytest-dev__pytest-7324:bad+code": {
+   "input": 61778,
+   "size": "large"
+  },
+  "pytest-dev__pytest-7324:bad+comment": {
+   "input": 61774,
+   "size": "large"
+  },
+  "pytest-dev__pytest-7324:bad+commit": {
+   "input": 61773,
+   "size": "large"
+  },
+  "pytest-dev__pytest-7324:good": {
+   "input": 3210,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-7521:bad": {
+   "input": 1842,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-7521:bad+code": {
+   "input": 1896,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-7521:bad+comment": {
+   "input": 1891,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-7521:bad+commit": {
+   "input": 1890,
+   "size": "medium"
+  },
+  "pytest-dev__pytest-7521:good": {
+   "input": 3910,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10435:bad": {
+   "input": 4382,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10435:bad+code": {
+   "input": 4445,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10435:bad+comment": {
+   "input": 4440,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10435:bad+commit": {
+   "input": 4430,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10435:good": {
+   "input": 3364,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10673:bad": {
+   "input": 1585,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10673:bad+code": {
+   "input": 1639,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10673:bad+comment": {
+   "input": 1635,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10673:bad+commit": {
+   "input": 1633,
+   "size": "small"
+  },
+  "sphinx-doc__sphinx-10673:good": {
+   "input": 5528,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-7748:bad": {
+   "input": 16422,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-7748:bad+code": {
+   "input": 16475,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-7748:bad+comment": {
+   "input": 16470,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-7748:bad+commit": {
+   "input": 16470,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-7748:good": {
+   "input": 7422,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8056:bad": {
+   "input": 7111,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8056:bad+code": {
+   "input": 7165,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8056:bad+comment": {
+   "input": 7160,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8056:bad+commit": {
+   "input": 7160,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8056:good": {
+   "input": 4070,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-8265:bad": {
+   "input": 27569,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8265:bad+code": {
+   "input": 27623,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8265:bad+comment": {
+   "input": 27618,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8265:bad+commit": {
+   "input": 27618,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-8265:good": {
+   "input": 3944,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-9461:bad": {
+   "input": 5912,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-9461:bad+code": {
+   "input": 5967,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-9461:bad+comment": {
+   "input": 5962,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-9461:bad+commit": {
+   "input": 5961,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-9461:good": {
+   "input": 12441,
+   "size": "large"
+  },
+  "sphinx-doc__sphinx-9602:bad": {
+   "input": 6523,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-9602:bad+code": {
+   "input": 6580,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-9602:bad+comment": {
+   "input": 6576,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-9602:bad+commit": {
+   "input": 6572,
+   "size": "medium"
+  },
+  "sphinx-doc__sphinx-9602:good": {
+   "input": 5478,
+   "size": "medium"
+  },
+  "sympy__sympy-13091:bad": {
+   "input": 2587,
+   "size": "large"
+  },
+  "sympy__sympy-13091:bad+code": {
+   "input": 2641,
+   "size": "large"
+  },
+  "sympy__sympy-13091:bad+comment": {
+   "input": 2636,
+   "size": "large"
+  },
+  "sympy__sympy-13091:bad+commit": {
+   "input": 2636,
+   "size": "large"
+  },
+  "sympy__sympy-13091:good": {
+   "input": 38382,
+   "size": "large"
+  },
+  "sympy__sympy-13372:bad": {
+   "input": 1075,
+   "size": "medium"
+  },
+  "sympy__sympy-13372:bad+code": {
+   "input": 1129,
+   "size": "medium"
+  },
+  "sympy__sympy-13372:bad+comment": {
+   "input": 1124,
+   "size": "medium"
+  },
+  "sympy__sympy-13372:bad+commit": {
+   "input": 1124,
+   "size": "medium"
+  },
+  "sympy__sympy-13372:good": {
+   "input": 2049,
+   "size": "small"
+  },
+  "sympy__sympy-13615:bad": {
+   "input": 1355,
+   "size": "large"
+  },
+  "sympy__sympy-13615:bad+code": {
+   "input": 1408,
+   "size": "large"
+  },
+  "sympy__sympy-13615:bad+comment": {
+   "input": 1404,
+   "size": "large"
+  },
+  "sympy__sympy-13615:bad+commit": {
+   "input": 1403,
+   "size": "large"
+  },
+  "sympy__sympy-13615:good": {
+   "input": 1927,
+   "size": "medium"
+  },
+  "sympy__sympy-13798:bad": {
+   "input": 4441,
+   "size": "large"
+  },
+  "sympy__sympy-13798:bad+code": {
+   "input": 4494,
+   "size": "large"
+  },
+  "sympy__sympy-13798:bad+comment": {
+   "input": 4490,
+   "size": "large"
+  },
+  "sympy__sympy-13798:bad+commit": {
+   "input": 4489,
+   "size": "large"
+  },
+  "sympy__sympy-13798:good": {
+   "input": 3631,
+   "size": "medium"
+  },
+  "sympy__sympy-13877:bad": {
+   "input": 4480,
+   "size": "small"
+  },
+  "sympy__sympy-13877:bad+code": {
+   "input": 4537,
+   "size": "small"
+  },
+  "sympy__sympy-13877:bad+comment": {
+   "input": 4532,
+   "size": "small"
+  },
+  "sympy__sympy-13877:bad+commit": {
+   "input": 4528,
+   "size": "small"
+  },
+  "sympy__sympy-13877:good": {
+   "input": 6852,
+   "size": "large"
+  },
+  "sympy__sympy-15976:bad": {
+   "input": 2649,
+   "size": "large"
+  },
+  "sympy__sympy-15976:bad+code": {
+   "input": 2702,
+   "size": "large"
+  },
+  "sympy__sympy-15976:bad+comment": {
+   "input": 2698,
+   "size": "large"
+  },
+  "sympy__sympy-15976:bad+commit": {
+   "input": 2697,
+   "size": "large"
+  },
+  "sympy__sympy-15976:good": {
+   "input": 5408,
+   "size": "large"
+  },
+  "sympy__sympy-17318:bad": {
+   "input": 4912,
+   "size": "large"
+  },
+  "sympy__sympy-17318:bad+code": {
+   "input": 4965,
+   "size": "large"
+  },
+  "sympy__sympy-17318:bad+comment": {
+   "input": 4961,
+   "size": "large"
+  },
+  "sympy__sympy-17318:bad+commit": {
+   "input": 4960,
+   "size": "large"
+  },
+  "sympy__sympy-17318:good": {
+   "input": 2941,
+   "size": "small"
+  },
+  "sympy__sympy-18199:bad": {
+   "input": 24073,
+   "size": "large"
+  },
+  "sympy__sympy-18199:bad+code": {
+   "input": 24126,
+   "size": "large"
+  },
+  "sympy__sympy-18199:bad+comment": {
+   "input": 24122,
+   "size": "large"
+  },
+  "sympy__sympy-18199:bad+commit": {
+   "input": 24121,
+   "size": "large"
+  },
+  "sympy__sympy-18199:good": {
+   "input": 6401,
+   "size": "large"
+  },
+  "sympy__sympy-20916:bad": {
+   "input": 1212,
+   "size": "small"
+  },
+  "sympy__sympy-20916:bad+code": {
+   "input": 1266,
+   "size": "small"
+  },
+  "sympy__sympy-20916:bad+comment": {
+   "input": 1261,
+   "size": "small"
+  },
+  "sympy__sympy-20916:bad+commit": {
+   "input": 1260,
+   "size": "small"
+  },
+  "sympy__sympy-20916:good": {
+   "input": 4352,
+   "size": "medium"
+  },
+  "sympy__sympy-21379:bad": {
+   "input": 4825,
+   "size": "medium"
+  },
+  "sympy__sympy-21379:bad+code": {
+   "input": 4881,
+   "size": "medium"
+  },
+  "sympy__sympy-21379:bad+comment": {
+   "input": 4876,
+   "size": "medium"
+  },
+  "sympy__sympy-21379:bad+commit": {
+   "input": 4874,
+   "size": "medium"
+  },
+  "sympy__sympy-21379:good": {
+   "input": 3076,
+   "size": "small"
+  }
+ },
+ "chars_per_token": 3.5,
+ "families": [
+  "anthropic",
+  "openai",
+  "google",
+  "deepseek",
+  "qwen",
+  "mistral",
+  "nvidia"
+ ],
+ "hash": "9ed6768c875c4516",
+ "output_tokens": {
+  "large": 8000,
+  "medium": 4000,
+  "small": 2000
+ },
+ "prompt": "585862933e5d30fc",
+ "seats": {
+  "anthropic": {
+   "api": "messages",
+   "family": "anthropic",
+   "limit_field": "max_tokens",
+   "model": "claude-opus-5-5",
+   "note": ""
+  },
+  "deepseek": {
+   "api": "chat",
+   "family": "deepseek",
+   "limit_field": "max_tokens",
+   "model": "deepseek.v3.2",
+   "note": "8K output at most"
+  },
+  "google": {
+   "api": "chat",
+   "family": "google",
+   "limit_field": "max_tokens",
+   "model": "gemini-3.1-pro-preview",
+   "note": "Gemini API through the gateway (owner, 2026-10-30); gemini-3-pro-preview was shut down 2026-03-09"
+  },
+  "mistral": {
+   "api": "chat",
+   "family": "mistral",
+   "limit_field": "max_tokens",
+   "model": "mistral.mistral-large-3-675b-instruct",
+   "note": ""
+  },
+  "nvidia": {
+   "api": "chat",
+   "family": "nvidia",
+   "limit_field": "max_tokens",
+   "model": "nvidia.nemotron-super-3-120b",
+   "note": "in place of Meta's Llama, which Bedrock Mantle doesn't serve (so neither does the gateway)"
+  },
+  "openai": {
+   "api": "chat",
+   "family": "openai",
+   "limit_field": "max_completion_tokens",
+   "model": "openai.gpt-6.1-sol",
+   "note": "Bedrock Mantle, /openai/v1"
+  },
+  "qwen": {
+   "api": "chat",
+   "family": "qwen",
+   "limit_field": "max_tokens",
+   "model": "qwen.qwen3-235b-a22b-2507",
+   "note": "8K output at most"
+  }
+ }
+}

@@ -1,0 +1,81 @@
+{
+  "source": "storytold/gridcraft",
+  "window": [
+    "2026-10-07",
+    "2026-10-23"
+  ],
+  "fetched": "2026-10-23",
+  "note": "Aggregates of public pull-request metadata only: no usernames, PR numbers, titles or URLs.",
+  "merged": {
+    "count": 659,
+    "changed_lines": {
+      "p10": 18,
+      "p25": 34,
+      "p50": 76,
+      "p75": 186,
+      "p90": 431,
+      "max": 29860
+    },
+    "changed_lines_histogram": {
+      "<=10": 39,
+      "<=30": 103,
+      "<=100": 253,
+      "<=400": 190,
+      "<=1500": 60,
+      "<=5000": 12,
+      ">5000": 2
+    },
+    "changed_files": {
+      "p10": 1,
+      "p25": 2,
+      "p50": 3,
+      "p75": 5,
+      "p90": 10,
+      "max": 247
+    },
+    "hours_to_merge": {
+      "p10": 1.7,
+      "p25": 7.5,
+      "p50": 20.9,
+      "p75": 123.2,
+      "p90": 187.5,
+      "max": 244.9
+    },
+    "human_review_share": 0.077,
+    "linked_issue_share": 0.54
+  },
+  "weekly": {
+    "2026-W41": {
+      "merged": 208,
+      "distinct_authors": 39
+    },
+    "2026-W42": {
+      "merged": 159,
+      "distinct_authors": 31
+    },
+    "2026-W43": {
+      "merged": 292,
+      "distinct_authors": 84
+    }
+  },
+  "open": {
+    "count": 526,
+    "changed_lines": {
+      "p10": 57,
+      "p25": 136,
+      "p50": 383,
+      "p75": 1123,
+      "p90": 3972,
+      "max": 71919
+    },
+    "age_days": {
+      "p10": 1.5,
+      "p25": 4.1,
+      "p50": 8.4,
+      "p75": 10.5,
+      "p90": 11.7,
+      "max": 15.6
+    },
+    "human_review_share": 0.308
+  }
+}

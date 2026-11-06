@@ -1,0 +1,2268 @@
+{
+ "accuracy": {
+  "llama-cpu-t1-q8_0-nocache": {
+   "bad": {
+    "pass": 1
+   },
+   "borderline": {
+    "invalid": 1,
+    "pass": 1
+   },
+   "good": {
+    "pass": 2
+   }
+  },
+  "llama-cpu-t16-q8_0-nocache": {
+   "bad": {
+    "fail": 1,
+    "pass": 2
+   },
+   "borderline": {
+    "invalid": 1,
+    "pass": 3
+   },
+   "good": {
+    "pass": 3
+   }
+  },
+  "llama-cpu-t8-q4_k_m-nocache": {
+   "bad": {
+    "fail": 4,
+    "pass": 6
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "invalid": 1,
+    "pass": 9
+   }
+  },
+  "llama-cpu-t8-q8_0": {
+   "bad": {
+    "fail": 1,
+    "pass": 2
+   },
+   "borderline": {
+    "invalid": 1,
+    "pass": 3
+   },
+   "good": {
+    "pass": 3
+   }
+  },
+  "llama-cpu-t8-q8_0-nocache": {
+   "bad": {
+    "fail": 5,
+    "pass": 5
+   },
+   "borderline": {
+    "fail": 1,
+    "invalid": 1,
+    "pass": 8
+   },
+   "good": {
+    "invalid": 1,
+    "pass": 9
+   }
+  },
+  "llama-gpu-q4_k_m": {
+   "bad": {
+    "fail": 5,
+    "invalid": 1,
+    "pass": 4
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "llama-gpu-q4_k_m-nocache": {
+   "bad": {
+    "fail": 4,
+    "invalid": 1,
+    "pass": 5
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "llama-gpu-q8_0": {
+   "bad": {
+    "fail": 6,
+    "pass": 4
+   },
+   "borderline": {
+    "fail": 1,
+    "invalid": 1,
+    "pass": 8
+   },
+   "good": {
+    "invalid": 1,
+    "pass": 9
+   }
+  },
+  "llama-gpu-q8_0-nocache": {
+   "bad": {
+    "fail": 6,
+    "pass": 4
+   },
+   "borderline": {
+    "fail": 1,
+    "invalid": 1,
+    "pass": 8
+   },
+   "good": {
+    "invalid": 1,
+    "pass": 9
+   }
+  },
+  "vllm-bi-restart1": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "vllm-bi-seq": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "vllm-d-restart1": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "vllm-d-restart2": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "vllm-d-seq": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  },
+  "vllm-dnopc-seq": {
+   "bad": {
+    "fail": 7,
+    "pass": 3
+   },
+   "borderline": {
+    "fail": 1,
+    "pass": 9
+   },
+   "good": {
+    "pass": 10
+   }
+  }
+ },
+ "agreement": {
+  "llama-cpu-t8-q4_k_m-nocache vs llama-gpu-q4_k_m-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-good",
+    "07-config-bad"
+   ],
+   "same_stated": 30,
+   "same_text": 10,
+   "same_verdict": 28,
+   "stated_differ": []
+  },
+  "llama-cpu-t8-q8_0-nocache vs llama-cpu-t8-q4_k_m-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-good",
+    "07-config-borderline",
+    "10-urls-bad",
+    "10-urls-good"
+   ],
+   "same_stated": 29,
+   "same_text": 1,
+   "same_verdict": 26,
+   "stated_differ": [
+    "10-urls-bad"
+   ]
+  },
+  "llama-cpu-t8-q8_0-nocache vs llama-gpu-q8_0-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-bad"
+   ],
+   "same_stated": 29,
+   "same_text": 19,
+   "same_verdict": 29,
+   "stated_differ": [
+    "03-duration-bad"
+   ]
+  },
+  "llama-gpu-q8_0-nocache vs llama-gpu-q4_k_m-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-bad",
+    "07-config-bad",
+    "07-config-borderline",
+    "10-urls-bad",
+    "10-urls-good"
+   ],
+   "same_stated": 28,
+   "same_text": 1,
+   "same_verdict": 25,
+   "stated_differ": [
+    "03-duration-bad",
+    "10-urls-bad"
+   ]
+  },
+  "vllm-bi-seq vs llama-cpu-t8-q4_k_m-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-good",
+    "05-backoff-bad",
+    "07-config-bad",
+    "10-urls-bad"
+   ],
+   "same_stated": 27,
+   "same_text": 0,
+   "same_verdict": 26,
+   "stated_differ": [
+    "05-backoff-bad",
+    "07-config-bad",
+    "10-urls-bad"
+   ]
+  },
+  "vllm-bi-seq vs llama-cpu-t8-q8_0-nocache": {
+   "cases": 30,
+   "differ": [
+    "05-backoff-bad",
+    "07-config-bad",
+    "07-config-borderline",
+    "10-urls-good"
+   ],
+   "same_stated": 28,
+   "same_text": 1,
+   "same_verdict": 26,
+   "stated_differ": [
+    "05-backoff-bad",
+    "07-config-bad"
+   ]
+  },
+  "vllm-bi-seq vs llama-gpu-q4_k_m-nocache": {
+   "cases": 30,
+   "differ": [
+    "05-backoff-bad",
+    "07-config-bad",
+    "10-urls-bad"
+   ],
+   "same_stated": 27,
+   "same_text": 0,
+   "same_verdict": 27,
+   "stated_differ": [
+    "05-backoff-bad",
+    "07-config-bad",
+    "10-urls-bad"
+   ]
+  },
+  "vllm-bi-seq vs llama-gpu-q8_0-nocache": {
+   "cases": 30,
+   "differ": [
+    "03-duration-bad",
+    "05-backoff-bad",
+    "07-config-bad",
+    "07-config-borderline",
+    "10-urls-good"
+   ],
+   "same_stated": 27,
+   "same_text": 2,
+   "same_verdict": 25,
+   "stated_differ": [
+    "03-duration-bad",
+    "05-backoff-bad",
+    "07-config-bad"
+   ]
+  },
+  "vllm-d-seq vs vllm-bi-seq": {
+   "cases": 30,
+   "differ": [],
+   "same_stated": 30,
+   "same_text": 19,
+   "same_verdict": 30,
+   "stated_differ": []
+  },
+  "vllm-d-seq vs vllm-dnopc-seq": {
+   "cases": 30,
+   "differ": [],
+   "same_stated": 30,
+   "same_text": 12,
+   "same_verdict": 30,
+   "stated_differ": []
+  }
+ },
+ "divergence": {
+  "every greedy setup, both engines": {
+   "first_difference_char_median": 37.0,
+   "pairs": 742,
+   "verdict_written_before_divergence": 488
+  },
+  "vLLM default, greedy (every repeat, batch and restart)": {
+   "first_difference_char_median": 135.5,
+   "pairs": 142,
+   "verdict_written_before_divergence": 116
+  },
+  "vLLM, every greedy setup": {
+   "first_difference_char_median": 107,
+   "pairs": 165,
+   "verdict_written_before_divergence": 130
+  }
+ },
+ "shopping": {
+  "vllm-bi-nonce": {
+   "by_label": {
+    "bad": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 2,
+     "cases_mixed": 5,
+     "cases_never_pass": 3,
+     "greedy_pass": 3,
+     "invalid": 5,
+     "mean_gain_5_calls": 0.11675503125000002,
+     "pass_rate": 0.505,
+     "passes": 101
+    },
+    "borderline": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 7,
+     "cases_mixed": 2,
+     "cases_never_pass": 1,
+     "greedy_pass": 9,
+     "invalid": 3,
+     "mean_gain_5_calls": 0.014998968750000008,
+     "pass_rate": 0.885,
+     "passes": 177
+    },
+    "good": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 8,
+     "cases_mixed": 2,
+     "cases_never_pass": 0,
+     "greedy_pass": 10,
+     "invalid": 2,
+     "mean_gain_5_calls": 0.014998968750000008,
+     "pass_rate": 0.985,
+     "passes": 197
+    }
+   },
+   "per_case": {
+    "01-median-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "01-median-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "01-median-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "02-slugify-bad": {
+     "calls": 20,
+     "fail": 19,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "02-slugify-borderline": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "02-slugify-good": {
+     "calls": 20,
+     "fail": 1,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "03-duration-bad": {
+     "calls": 20,
+     "fail": 2,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.99999,
+     "pass": 18,
+     "pass_rate": 0.9
+    },
+    "03-duration-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "03-duration-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "04-pages-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "04-pages-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "04-pages-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "05-backoff-bad": {
+     "calls": 20,
+     "fail": 7,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9947478125,
+     "pass": 13,
+     "pass_rate": 0.65
+    },
+    "05-backoff-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "05-backoff-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-bad": {
+     "calls": 20,
+     "fail": 19,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.22621906250000023,
+     "pass": 1,
+     "pass_rate": 0.05
+    },
+    "06-lru-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "07-config-bad": {
+     "calls": 20,
+     "fail": 3,
+     "invalid": 3,
+     "label": "bad",
+     "p_any_pass_in_5": 0.99757,
+     "pass": 14,
+     "pass_rate": 0.7
+    },
+    "07-config-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 2,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.99999,
+     "pass": 18,
+     "pass_rate": 0.9
+    },
+    "07-config-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 2,
+     "label": "good",
+     "p_any_pass_in_5": 0.99999,
+     "pass": 18,
+     "pass_rate": 0.9
+    },
+    "08-money-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "08-money-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "08-money-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "09-csv-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "10-urls-bad": {
+     "calls": 20,
+     "fail": 4,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9990234375,
+     "pass": 15,
+     "pass_rate": 0.75
+    },
+    "10-urls-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "10-urls-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    }
+   }
+  },
+  "vllm-d-shop": {
+   "by_label": {
+    "bad": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 1,
+     "cases_mixed": 4,
+     "cases_never_pass": 5,
+     "greedy_pass": 3,
+     "invalid": 22,
+     "mean_gain_5_calls": 0.10684209375,
+     "pass_rate": 0.385,
+     "passes": 77
+    },
+    "borderline": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 6,
+     "cases_mixed": 3,
+     "cases_never_pass": 1,
+     "greedy_pass": 9,
+     "invalid": 7,
+     "mean_gain_5_calls": 0.034984781250000006,
+     "pass_rate": 0.865,
+     "passes": 173
+    },
+    "good": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 8,
+     "cases_mixed": 2,
+     "cases_never_pass": 0,
+     "greedy_pass": 10,
+     "invalid": 6,
+     "mean_gain_5_calls": 0.029902312500000007,
+     "pass_rate": 0.97,
+     "passes": 194
+    }
+   },
+   "per_case": {
+    "01-median-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "01-median-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "01-median-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "02-slugify-bad": {
+     "calls": 20,
+     "fail": 1,
+     "invalid": 19,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "02-slugify-borderline": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "02-slugify-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "03-duration-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "03-duration-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "03-duration-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "04-pages-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "04-pages-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 3,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.9999240625,
+     "pass": 17,
+     "pass_rate": 0.85
+    },
+    "04-pages-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "05-backoff-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "05-backoff-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "05-backoff-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "06-lru-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "07-config-bad": {
+     "calls": 20,
+     "fail": 9,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.96875,
+     "pass": 10,
+     "pass_rate": 0.5
+    },
+    "07-config-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 3,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.9999240625,
+     "pass": 17,
+     "pass_rate": 0.85
+    },
+    "07-config-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "08-money-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "08-money-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "08-money-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "09-csv-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 5,
+     "label": "good",
+     "p_any_pass_in_5": 0.9990234375,
+     "pass": 15,
+     "pass_rate": 0.75
+    },
+    "10-urls-bad": {
+     "calls": 20,
+     "fail": 11,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9496715625,
+     "pass": 9,
+     "pass_rate": 0.45
+    },
+    "10-urls-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "10-urls-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "good",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    }
+   }
+  },
+  "vllm-d-shop-t1": {
+   "by_label": {
+    "bad": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 1,
+     "cases_mixed": 6,
+     "cases_never_pass": 3,
+     "greedy_pass": 3,
+     "invalid": 13,
+     "mean_gain_5_calls": 0.14643431250000002,
+     "pass_rate": 0.34,
+     "passes": 68
+    },
+    "borderline": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 6,
+     "cases_mixed": 3,
+     "cases_never_pass": 1,
+     "greedy_pass": 9,
+     "invalid": 17,
+     "mean_gain_5_calls": 0.08291071875,
+     "pass_rate": 0.815,
+     "passes": 163
+    },
+    "good": {
+     "calls": 200,
+     "cases": 10,
+     "cases_always_pass": 6,
+     "cases_mixed": 4,
+     "cases_never_pass": 0,
+     "greedy_pass": 10,
+     "invalid": 12,
+     "mean_gain_5_calls": 0.059748375000000006,
+     "pass_rate": 0.94,
+     "passes": 188
+    }
+   },
+   "per_case": {
+    "01-median-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "01-median-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "01-median-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "02-slugify-bad": {
+     "calls": 20,
+     "fail": 17,
+     "invalid": 2,
+     "label": "bad",
+     "p_any_pass_in_5": 0.22621906250000023,
+     "pass": 1,
+     "pass_rate": 0.05
+    },
+    "02-slugify-borderline": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "02-slugify-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "03-duration-bad": {
+     "calls": 20,
+     "fail": 1,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "03-duration-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 2,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.99999,
+     "pass": 18,
+     "pass_rate": 0.9
+    },
+    "03-duration-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "good",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "04-pages-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "04-pages-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 9,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.9815471875,
+     "pass": 11,
+     "pass_rate": 0.55
+    },
+    "04-pages-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 2,
+     "label": "good",
+     "p_any_pass_in_5": 0.99999,
+     "pass": 18,
+     "pass_rate": 0.9
+    },
+    "05-backoff-bad": {
+     "calls": 20,
+     "fail": 16,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.6723199999999999,
+     "pass": 4,
+     "pass_rate": 0.2
+    },
+    "05-backoff-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "05-backoff-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "06-lru-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "06-lru-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "07-config-bad": {
+     "calls": 20,
+     "fail": 8,
+     "invalid": 10,
+     "label": "bad",
+     "p_any_pass_in_5": 0.40950999999999993,
+     "pass": 2,
+     "pass_rate": 0.1
+    },
+    "07-config-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 6,
+     "label": "borderline",
+     "p_any_pass_in_5": 0.99757,
+     "pass": 14,
+     "pass_rate": 0.7
+    },
+    "07-config-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 6,
+     "label": "good",
+     "p_any_pass_in_5": 0.99757,
+     "pass": 14,
+     "pass_rate": 0.7
+    },
+    "08-money-bad": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 1,
+     "label": "bad",
+     "p_any_pass_in_5": 0.9999996875,
+     "pass": 19,
+     "pass_rate": 0.95
+    },
+    "08-money-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "08-money-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-bad": {
+     "calls": 20,
+     "fail": 20,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.0,
+     "pass": 0,
+     "pass_rate": 0.0
+    },
+    "09-csv-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "09-csv-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "good",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "10-urls-bad": {
+     "calls": 20,
+     "fail": 17,
+     "invalid": 0,
+     "label": "bad",
+     "p_any_pass_in_5": 0.5562946875000001,
+     "pass": 3,
+     "pass_rate": 0.15
+    },
+    "10-urls-borderline": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 0,
+     "label": "borderline",
+     "p_any_pass_in_5": 1.0,
+     "pass": 20,
+     "pass_rate": 1.0
+    },
+    "10-urls-good": {
+     "calls": 20,
+     "fail": 0,
+     "invalid": 3,
+     "label": "good",
+     "p_any_pass_in_5": 0.9999240625,
+     "pass": 17,
+     "pass_rate": 0.85
+    }
+   }
+  }
+ },
+ "speed": {
+  "llama-cpu-t1-q8_0-nocache": {
+   "calls": 5,
+   "completion_tokens_median": 88,
+   "end_to_end_tokens_per_s": 1.0463859173123624,
+   "generation_tokens_per_s_median": 3.691437811072301,
+   "latency_max_s": 91.23,
+   "latency_median_s": 86.599,
+   "prompt_eval_tokens_per_s_median": 14.087682204187972,
+   "prompt_tokens_median": 889
+  },
+  "llama-cpu-t16-q8_0-nocache": {
+   "calls": 10,
+   "completion_tokens_median": 91.0,
+   "end_to_end_tokens_per_s": 2.976862526834698,
+   "generation_tokens_per_s_median": 4.615761678325697,
+   "latency_max_s": 40.722,
+   "latency_median_s": 30.3565,
+   "prompt_eval_tokens_per_s_median": 88.71353414248149,
+   "prompt_tokens_median": 872.0
+  },
+  "llama-cpu-t8-q4_k_m-nocache": {
+   "calls": 30,
+   "completion_tokens_median": 84.0,
+   "end_to_end_tokens_per_s": 5.9898060031314895,
+   "generation_tokens_per_s_median": 11.66971965791477,
+   "latency_max_s": 20.757,
+   "latency_median_s": 14.463999999999999,
+   "prompt_eval_tokens_per_s_median": 124.89443118139478,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-cpu-t8-q8_0": {
+   "calls": 20,
+   "completion_tokens_median": 91.0,
+   "end_to_end_tokens_per_s": 5.031348968586836,
+   "generation_tokens_per_s_median": 7.141755279894403,
+   "latency_max_s": 31.0,
+   "latency_median_s": 18.991999999999997,
+   "prompt_eval_tokens_per_s_median": 39.8536660010732,
+   "prompt_tokens_median": 872.0
+  },
+  "llama-cpu-t8-q8_0-nocache": {
+   "calls": 60,
+   "completion_tokens_median": 86.0,
+   "end_to_end_tokens_per_s": 3.552775739009265,
+   "generation_tokens_per_s_median": 7.003200793283966,
+   "latency_max_s": 33.418,
+   "latency_median_s": 24.573999999999998,
+   "prompt_eval_tokens_per_s_median": 72.64760586963268,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-cpu-t8-q8_0-seed": {
+   "calls": 20,
+   "completion_tokens_median": 95.0,
+   "end_to_end_tokens_per_s": 3.6962747856978915,
+   "generation_tokens_per_s_median": 7.108348456914819,
+   "latency_max_s": 28.971,
+   "latency_median_s": 25.1915,
+   "prompt_eval_tokens_per_s_median": 74.91074495015552,
+   "prompt_tokens_median": 872.0
+  },
+  "llama-gpu-q4_k_m": {
+   "calls": 30,
+   "completion_tokens_median": 84.0,
+   "end_to_end_tokens_per_s": 80.86660788512407,
+   "generation_tokens_per_s_median": 146.64240238260123,
+   "latency_max_s": 1.481,
+   "latency_median_s": 1.0345,
+   "prompt_eval_tokens_per_s_median": 11233.806302406814,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-gpu-q4_k_m-nocache": {
+   "calls": 30,
+   "completion_tokens_median": 84.5,
+   "end_to_end_tokens_per_s": 121.02024435922588,
+   "generation_tokens_per_s_median": 146.59935242222875,
+   "latency_max_s": 1.064,
+   "latency_median_s": 0.717,
+   "prompt_eval_tokens_per_s_median": 11392.33540070393,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-gpu-q8_0": {
+   "calls": 90,
+   "completion_tokens_median": 87.0,
+   "end_to_end_tokens_per_s": 82.09446260769435,
+   "generation_tokens_per_s_median": 95.23136346296744,
+   "latency_max_s": 1.639,
+   "latency_median_s": 1.0274999999999999,
+   "prompt_eval_tokens_per_s_median": 94.8047713332374,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-gpu-q8_0-nocache": {
+   "calls": 90,
+   "completion_tokens_median": 88.0,
+   "end_to_end_tokens_per_s": 85.4716203796626,
+   "generation_tokens_per_s_median": 95.07688754013003,
+   "latency_max_s": 1.525,
+   "latency_median_s": 1.025,
+   "prompt_eval_tokens_per_s_median": 12145.058427471551,
+   "prompt_tokens_median": 880.5
+  },
+  "llama-gpu-q8_0-seed": {
+   "calls": 60,
+   "completion_tokens_median": 87.0,
+   "end_to_end_tokens_per_s": 82.07632860312403,
+   "generation_tokens_per_s_median": 90.03705449011024,
+   "latency_max_s": 1.732,
+   "latency_median_s": 1.0585,
+   "prompt_eval_tokens_per_s_median": 11891.053059925074,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-c32": {
+   "calls": 90,
+   "completion_tokens_median": 93.5,
+   "end_to_end_tokens_per_s": 19.521331856175397,
+   "latency_max_s": 7.548,
+   "latency_median_s": 4.994,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-c8": {
+   "calls": 90,
+   "completion_tokens_median": 93.5,
+   "end_to_end_tokens_per_s": 23.44107895738056,
+   "latency_max_s": 6.568,
+   "latency_median_s": 4.042,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-nonce": {
+   "calls": 600,
+   "completion_tokens_median": 94.0,
+   "end_to_end_tokens_per_s": 17.85021307269269,
+   "latency_max_s": 9.984,
+   "latency_median_s": 5.275,
+   "prompt_tokens_median": 878.0
+  },
+  "vllm-bi-restart1": {
+   "calls": 60,
+   "completion_tokens_median": 93.5,
+   "end_to_end_tokens_per_s": 23.86910338666129,
+   "latency_max_s": 6.208,
+   "latency_median_s": 3.9035,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-restart1-seed": {
+   "calls": 30,
+   "completion_tokens_median": 108.0,
+   "end_to_end_tokens_per_s": 24.29606748247594,
+   "latency_max_s": 6.065,
+   "latency_median_s": 4.384,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-seed-c32": {
+   "calls": 90,
+   "completion_tokens_median": 108.0,
+   "end_to_end_tokens_per_s": 18.71932079530415,
+   "latency_max_s": 8.158,
+   "latency_median_s": 5.653499999999999,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-seed-seq": {
+   "calls": 90,
+   "completion_tokens_median": 108.0,
+   "end_to_end_tokens_per_s": 22.31035854309904,
+   "latency_max_s": 6.816,
+   "latency_median_s": 4.829,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-bi-seq": {
+   "calls": 150,
+   "completion_tokens_median": 93.5,
+   "end_to_end_tokens_per_s": 22.442292310299813,
+   "latency_max_s": 7.146,
+   "latency_median_s": 4.2565,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-c32": {
+   "calls": 90,
+   "completion_tokens_median": 91.0,
+   "end_to_end_tokens_per_s": 32.14812758434272,
+   "latency_max_s": 4.795,
+   "latency_median_s": 2.867,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-c8": {
+   "calls": 90,
+   "completion_tokens_median": 90.0,
+   "end_to_end_tokens_per_s": 49.60188110481476,
+   "latency_max_s": 2.975,
+   "latency_median_s": 1.8465,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-restart1": {
+   "calls": 60,
+   "completion_tokens_median": 92.0,
+   "end_to_end_tokens_per_s": 54.34041198672184,
+   "latency_max_s": 2.64,
+   "latency_median_s": 1.706,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-restart1-seed": {
+   "calls": 30,
+   "completion_tokens_median": 103.0,
+   "end_to_end_tokens_per_s": 55.0135043889264,
+   "latency_max_s": 2.627,
+   "latency_median_s": 1.8505,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-restart2": {
+   "calls": 60,
+   "completion_tokens_median": 92.0,
+   "end_to_end_tokens_per_s": 53.01074410227747,
+   "latency_max_s": 2.695,
+   "latency_median_s": 1.7475,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-restart2-seed": {
+   "calls": 30,
+   "completion_tokens_median": 103.0,
+   "end_to_end_tokens_per_s": 53.75049478823064,
+   "latency_max_s": 2.653,
+   "latency_median_s": 1.9425,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-seed-c32": {
+   "calls": 90,
+   "completion_tokens_median": 103.0,
+   "end_to_end_tokens_per_s": 32.05835897936919,
+   "latency_max_s": 5.255,
+   "latency_median_s": 3.3434999999999997,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-seed-seq": {
+   "calls": 90,
+   "completion_tokens_median": 105.0,
+   "end_to_end_tokens_per_s": 53.69957528517729,
+   "latency_max_s": 2.745,
+   "latency_median_s": 1.9705,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-seq": {
+   "calls": 300,
+   "completion_tokens_median": 92.0,
+   "end_to_end_tokens_per_s": 54.04019074927635,
+   "latency_max_s": 2.672,
+   "latency_median_s": 1.6985000000000001,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-shop": {
+   "calls": 600,
+   "completion_tokens_median": 103.0,
+   "end_to_end_tokens_per_s": 49.3745258651138,
+   "latency_max_s": 3.875,
+   "latency_median_s": 2.0875000000000004,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-d-shop-t1": {
+   "calls": 600,
+   "completion_tokens_median": 92.0,
+   "end_to_end_tokens_per_s": 49.40249694329655,
+   "latency_max_s": 4.207,
+   "latency_median_s": 1.8625,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-dnopc-c32": {
+   "calls": 90,
+   "completion_tokens_median": 94.0,
+   "end_to_end_tokens_per_s": 26.14011955512721,
+   "latency_max_s": 6.694,
+   "latency_median_s": 3.645,
+   "prompt_tokens_median": 880.5
+  },
+  "vllm-dnopc-seq": {
+   "calls": 150,
+   "completion_tokens_median": 93.0,
+   "end_to_end_tokens_per_s": 51.111553938071815,
+   "latency_max_s": 2.901,
+   "latency_median_s": 1.8315000000000001,
+   "prompt_tokens_median": 880.5
+  }
+ },
+ "versus": {
+  "llama-cpu-t8-q4_k_m-nocache (0) \u2192 llama-gpu-q4_k_m-nocache: Q4_K_M: CPU vs CUDA": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 10,
+   "cases_all_same_verdict": 28,
+   "same_text": 10,
+   "same_tokens": 10,
+   "same_verdict": 28,
+   "verdict_flips": [
+    "03-duration-good",
+    "07-config-bad"
+   ]
+  },
+  "llama-cpu-t8-q8_0-nocache (0) \u2192 llama-cpu-t1-q8_0-nocache: 8 vs 1 thread": {
+   "calls": 5,
+   "cases": 5,
+   "cases_all_same_tokens": 5,
+   "cases_all_same_verdict": 5,
+   "same_text": 5,
+   "same_tokens": 5,
+   "same_verdict": 5,
+   "verdict_flips": []
+  },
+  "llama-cpu-t8-q8_0-nocache (0) \u2192 llama-cpu-t16-q8_0-nocache: 8 vs 16 threads": {
+   "calls": 10,
+   "cases": 10,
+   "cases_all_same_tokens": 8,
+   "cases_all_same_verdict": 10,
+   "same_text": 8,
+   "same_tokens": 8,
+   "same_verdict": 10,
+   "verdict_flips": []
+  },
+  "llama-cpu-t8-q8_0-nocache (0) \u2192 llama-cpu-t8-q8_0-nocache: first vs every repeat": {
+   "calls": 60,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 60,
+   "same_tokens": 60,
+   "same_verdict": 60,
+   "verdict_flips": []
+  },
+  "llama-cpu-t8-q8_0-nocache (0) \u2192 llama-cpu-t8-q8_0: cache_prompt off vs on (default)": {
+   "calls": 20,
+   "cases": 10,
+   "cases_all_same_tokens": 9,
+   "cases_all_same_verdict": 10,
+   "same_text": 19,
+   "same_tokens": 19,
+   "same_verdict": 20,
+   "verdict_flips": []
+  },
+  "llama-cpu-t8-q8_0-nocache (0) \u2192 llama-gpu-q8_0-nocache: CPU vs CUDA, same GGUF": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 19,
+   "cases_all_same_verdict": 29,
+   "same_text": 57,
+   "same_tokens": 57,
+   "same_verdict": 87,
+   "verdict_flips": [
+    "03-duration-bad"
+   ]
+  },
+  "llama-cpu-t8-q8_0-seed (0) \u2192 llama-cpu-t8-q8_0-seed: seeded: first vs every repeat": {
+   "calls": 20,
+   "cases": 10,
+   "cases_all_same_tokens": 10,
+   "cases_all_same_verdict": 10,
+   "same_text": 20,
+   "same_tokens": 20,
+   "same_verdict": 20,
+   "verdict_flips": []
+  },
+  "llama-cpu-t8-q8_0-seed (0) \u2192 llama-gpu-q8_0-seed: seeded: CPU vs CUDA": {
+   "calls": 20,
+   "cases": 10,
+   "cases_all_same_tokens": 2,
+   "cases_all_same_verdict": 10,
+   "same_text": 4,
+   "same_tokens": 4,
+   "same_verdict": 20,
+   "verdict_flips": []
+  },
+  "llama-gpu-q4_k_m-nocache (0) \u2192 llama-gpu-q4_k_m: Q4_K_M: cache_prompt off vs on (default)": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 12,
+   "cases_all_same_verdict": 29,
+   "same_text": 12,
+   "same_tokens": 12,
+   "same_verdict": 29,
+   "verdict_flips": [
+    "03-duration-bad"
+   ]
+  },
+  "llama-gpu-q8_0-nocache (0) \u2192 llama-gpu-q8_0-nocache: first vs every repeat": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "llama-gpu-q8_0-nocache (0) \u2192 llama-gpu-q8_0: cache_prompt off vs on (default)": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 16,
+   "cases_all_same_verdict": 30,
+   "same_text": 57,
+   "same_tokens": 57,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "llama-gpu-q8_0-seed (0) \u2192 llama-gpu-q8_0-seed: seeded: first vs every repeat": {
+   "calls": 60,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 60,
+   "same_tokens": 60,
+   "same_verdict": 60,
+   "verdict_flips": []
+  },
+  "vllm-bi-seed-seq (0) \u2192 vllm-bi-restart1-seed: seeded: fresh process": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-bi-seed-seq (0) \u2192 vllm-bi-seed-c32: seeded: sequential vs batched 32": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-bi-seed-seq (0) \u2192 vllm-bi-seed-seq: seeded: first vs every repeat": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-bi-seq (0) \u2192 vllm-bi-c32: sequential vs batched 32": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-bi-seq (0) \u2192 vllm-bi-c8: sequential vs batched 8": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-bi-seq (0) \u2192 vllm-bi-restart1: fresh process, cold and warm": {
+   "calls": 60,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 60,
+   "same_tokens": 60,
+   "same_verdict": 60,
+   "verdict_flips": []
+  },
+  "vllm-bi-seq (0) \u2192 vllm-bi-seq: first vs every repeat": {
+   "calls": 150,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 150,
+   "same_tokens": 150,
+   "same_verdict": 150,
+   "verdict_flips": []
+  },
+  "vllm-d-restart1-seed (0) \u2192 vllm-d-restart2-seed: seeded: two fresh processes, same history": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-d-seed-seq (0) \u2192 vllm-d-restart1-seed: seeded: fresh process (warm)": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 24,
+   "cases_all_same_verdict": 29,
+   "same_text": 24,
+   "same_tokens": 24,
+   "same_verdict": 29,
+   "verdict_flips": [
+    "10-urls-bad"
+   ]
+  },
+  "vllm-d-seed-seq (0) \u2192 vllm-d-restart2-seed: seeded: fresh process (warm)": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 24,
+   "cases_all_same_verdict": 29,
+   "same_text": 24,
+   "same_tokens": 24,
+   "same_verdict": 29,
+   "verdict_flips": [
+    "10-urls-bad"
+   ]
+  },
+  "vllm-d-seed-seq (0) \u2192 vllm-d-seed-c32: seeded: sequential vs batched 32": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 17,
+   "cases_all_same_verdict": 30,
+   "same_text": 66,
+   "same_tokens": 66,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-d-seed-seq (0) \u2192 vllm-d-seed-seq: seeded: first vs every repeat": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 90,
+   "same_tokens": 90,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (0) \u2192 vllm-d-restart1: cold vs cold, fresh process": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (0) \u2192 vllm-d-restart2: cold vs cold, fresh process": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (0) \u2192 vllm-d-seq: cold call vs every repeat": {
+   "calls": 300,
+   "cases": 30,
+   "cases_all_same_tokens": 17,
+   "cases_all_same_verdict": 30,
+   "same_text": 183,
+   "same_tokens": 183,
+   "same_verdict": 300,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (1) \u2192 vllm-d-c32: warm vs batched with 32 in flight": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 11,
+   "cases_all_same_verdict": 29,
+   "same_text": 60,
+   "same_tokens": 60,
+   "same_verdict": 89,
+   "verdict_flips": [
+    "07-config-borderline"
+   ]
+  },
+  "vllm-d-seq (1) \u2192 vllm-d-c8: warm vs batched with 8 in flight": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 15,
+   "cases_all_same_verdict": 30,
+   "same_text": 67,
+   "same_tokens": 67,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (1) \u2192 vllm-d-restart1: warm vs warm, fresh process": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (1) \u2192 vllm-d-restart2: warm vs warm, fresh process": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-d-seq (1) \u2192 vllm-d-seq: warm vs warm repeats": {
+   "calls": 270,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 270,
+   "same_tokens": 270,
+   "same_verdict": 270,
+   "verdict_flips": []
+  },
+  "vllm-dnopc-seq (0) \u2192 vllm-d-seq: no prefix cache vs cold call with it": {
+   "calls": 30,
+   "cases": 30,
+   "cases_all_same_tokens": 12,
+   "cases_all_same_verdict": 30,
+   "same_text": 12,
+   "same_tokens": 12,
+   "same_verdict": 30,
+   "verdict_flips": []
+  },
+  "vllm-dnopc-seq (0) \u2192 vllm-dnopc-c32: no prefix cache: sequential vs batched 32": {
+   "calls": 90,
+   "cases": 30,
+   "cases_all_same_tokens": 10,
+   "cases_all_same_verdict": 30,
+   "same_text": 42,
+   "same_tokens": 42,
+   "same_verdict": 90,
+   "verdict_flips": []
+  },
+  "vllm-dnopc-seq (0) \u2192 vllm-dnopc-seq: no prefix cache: first vs every repeat": {
+   "calls": 150,
+   "cases": 30,
+   "cases_all_same_tokens": 30,
+   "cases_all_same_verdict": 30,
+   "same_text": 150,
+   "same_tokens": 150,
+   "same_verdict": 150,
+   "verdict_flips": []
+  }
+ },
+ "within": {
+  "llama-cpu-t1-q8_0-nocache": {
+   "calls": 5,
+   "calls_per_case": {
+    "1": 5
+   },
+   "cases": 5,
+   "distinct_outputs": 5,
+   "same_text": 5,
+   "same_tokens": 5,
+   "same_verdict": 5
+  },
+  "llama-cpu-t16-q8_0-nocache": {
+   "calls": 10,
+   "calls_per_case": {
+    "1": 10
+   },
+   "cases": 10,
+   "distinct_outputs": 10,
+   "same_text": 10,
+   "same_tokens": 10,
+   "same_verdict": 10
+  },
+  "llama-cpu-t8-q4_k_m-nocache": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "llama-cpu-t8-q8_0": {
+   "calls": 20,
+   "calls_per_case": {
+    "2": 10
+   },
+   "cases": 10,
+   "distinct_outputs": 11,
+   "same_text": 9,
+   "same_tokens": 9,
+   "same_verdict": 10
+  },
+  "llama-cpu-t8-q8_0-nocache": {
+   "calls": 60,
+   "calls_per_case": {
+    "2": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "llama-cpu-t8-q8_0-seed": {
+   "calls": 20,
+   "calls_per_case": {
+    "2": 10
+   },
+   "cases": 10,
+   "distinct_outputs": 10,
+   "same_text": 10,
+   "same_tokens": 10,
+   "same_verdict": 10
+  },
+  "llama-gpu-q4_k_m": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "llama-gpu-q4_k_m-nocache": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "llama-gpu-q8_0": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 40,
+   "same_text": 20,
+   "same_tokens": 20,
+   "same_verdict": 30
+  },
+  "llama-gpu-q8_0-nocache": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "llama-gpu-q8_0-seed": {
+   "calls": 60,
+   "calls_per_case": {
+    "2": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-c32": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-c8": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-restart1": {
+   "calls": 60,
+   "calls_per_case": {
+    "2": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-restart1-seed": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-seed-c32": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-seed-seq": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-bi-seq": {
+   "calls": 150,
+   "calls_per_case": {
+    "5": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-d-c32": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 54,
+   "same_text": 12,
+   "same_tokens": 12,
+   "same_verdict": 29
+  },
+  "vllm-d-c8": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 47,
+   "same_text": 15,
+   "same_tokens": 15,
+   "same_verdict": 30
+  },
+  "vllm-d-restart1": {
+   "calls": 60,
+   "calls_per_case": {
+    "2": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 43,
+   "same_text": 17,
+   "same_tokens": 17,
+   "same_verdict": 30
+  },
+  "vllm-d-restart1-seed": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-d-restart2": {
+   "calls": 60,
+   "calls_per_case": {
+    "2": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 43,
+   "same_text": 17,
+   "same_tokens": 17,
+   "same_verdict": 30
+  },
+  "vllm-d-restart2-seed": {
+   "calls": 30,
+   "calls_per_case": {
+    "1": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-d-seed-c32": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 45,
+   "same_text": 18,
+   "same_tokens": 18,
+   "same_verdict": 30
+  },
+  "vllm-d-seed-seq": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  },
+  "vllm-d-seq": {
+   "calls": 300,
+   "calls_per_case": {
+    "10": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 43,
+   "same_text": 17,
+   "same_tokens": 17,
+   "same_verdict": 30
+  },
+  "vllm-dnopc-c32": {
+   "calls": 90,
+   "calls_per_case": {
+    "3": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 54,
+   "same_text": 12,
+   "same_tokens": 12,
+   "same_verdict": 30
+  },
+  "vllm-dnopc-seq": {
+   "calls": 150,
+   "calls_per_case": {
+    "5": 30
+   },
+   "cases": 30,
+   "distinct_outputs": 30,
+   "same_text": 30,
+   "same_tokens": 30,
+   "same_verdict": 30
+  }
+ }
+}

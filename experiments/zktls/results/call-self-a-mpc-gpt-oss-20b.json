@@ -1,0 +1,95 @@
+{
+ "call": {
+  "answer": null,
+  "cost_usd": 1.2510000000000002e-05,
+  "error_body": null,
+  "input_tokens": 93,
+  "latency_ms": 326,
+  "output_tokens": 20,
+  "reasoning_blocks": 1,
+  "stop_reason": "max_tokens"
+ },
+ "date": "2026-11-03T15:24:44Z",
+ "event": "result",
+ "family": "OpenAI",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "gpt-oss-20b",
+ "model_id": "openai.gpt-oss-20b-1:0",
+ "notary": "self-a",
+ "notary_events": [
+  {
+   "attestation_bytes": 533,
+   "event": "attested",
+   "mode": "mpc",
+   "seconds": 4.148875585
+  }
+ ],
+ "offline": {
+  "no_network_namespace": true,
+  "notary_address": "0xCA5064d5dA7A391f1FEd7dAbE591d502B59d7944",
+  "python_ok": true,
+  "python_s": 0.014,
+  "recv_revealed": 493,
+  "rust_ok": true,
+  "rust_output": "verified offline in 0.000 s: server bedrock-runtime.us-east-1.amazonaws.com, V1_2, time 1793719481, sent 1759 B (472 revealed), received 493 B; notary key 0242e14f9b5eddcb6dce3579ae82eb9e59a13f6b3e3561074272c30621c1ad3cf5 (k256)",
+  "rust_wall_s": 0.002,
+  "sent_revealed": 472
+ },
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "result": {
+  "attest_s": 0.01,
+  "attestation_bytes": 533,
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    261,
+    1281
+   ],
+   [
+    1298,
+    1565
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "present_s": 0.0,
+  "presentation_bytes": 6090,
+  "prove_s": 0.342,
+  "recv_len": 493,
+  "response_body": "{\"metrics\":{\"latencyMs\":326},\"output\":{\"message\":{\"content\":[{\"reasoningContent\":{\"reasoningText\":{\"text\":\"We need to answer with one word: PASS or FAIL. The test asserts 2\"}}}],\"role\":\"assistant\"}},\"stopReason\":\"max_tokens\",\"usage\":{\"inputTokens\":93,\"outputTokens\":20,\"serverToolUsage\":{},\"totalTokens\":113}}",
+  "revealed_recv": [
+   [
+    0,
+    493
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    261
+   ],
+   [
+    1281,
+    1298
+   ],
+   [
+    1565,
+    1759
+   ]
+  ],
+  "sent_len": 1759,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 1.101,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 2.607,
+  "tls_version": "V1_2",
+  "total_s": 4.149,
+  "verifier_bytes_down": 4009147,
+  "verifier_bytes_up": 62811847
+ },
+ "run": "call-self-a-mpc-gpt-oss-20b",
+ "wall_s": 4.159
+}

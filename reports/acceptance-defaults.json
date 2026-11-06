@@ -1,0 +1,369 @@
+{
+  "seeds": 20,
+  "weeks": 8,
+  "passed": false,
+  "returns": {
+    "honest": {
+      "honest": {
+        "mean": 3774.6,
+        "min": 3141.89,
+        "max": 4277.23
+      },
+      "hunter": {
+        "mean": 8.48,
+        "min": 2.17,
+        "max": 18.5
+      },
+      "owner": {
+        "mean": 12667.01,
+        "min": 7176.35,
+        "max": 23838.22
+      },
+      "validator": {
+        "mean": 391.67,
+        "min": 0.0,
+        "max": 1166.67
+      }
+    },
+    "spam": {
+      "honest": {
+        "mean": 2453.27,
+        "min": 1873.1,
+        "max": 3067.14
+      },
+      "hunter": {
+        "mean": 30.17,
+        "min": 18.47,
+        "max": 42.23
+      },
+      "owner": {
+        "mean": 10094.36,
+        "min": 6893.84,
+        "max": 14095.44
+      },
+      "spammer": {
+        "mean": 3026.88,
+        "min": 1936.44,
+        "max": 3797.35
+      },
+      "splitter": {
+        "mean": 6533.39,
+        "min": 2082.75,
+        "max": 11544.2
+      },
+      "validator": {
+        "mean": 784.43,
+        "min": 0.0,
+        "max": 1333.33
+      }
+    },
+    "griefing": {
+      "griefer": {
+        "mean": -57.36,
+        "min": -92.03,
+        "max": -28.3
+      },
+      "honest": {
+        "mean": 3790.72,
+        "min": 3046.8,
+        "max": 4184.45
+      },
+      "hunter": {
+        "mean": 7.01,
+        "min": 3.17,
+        "max": 11.6
+      },
+      "owner": {
+        "mean": 13159.03,
+        "min": 9272.06,
+        "max": 20447.59
+      },
+      "validator": {
+        "mean": 1251.41,
+        "min": 1149.14,
+        "max": 1307.7
+      }
+    }
+  },
+  "collusion": [
+    {
+      "share": 0.1,
+      "ring": {
+        "mean": 5592.68,
+        "min": 3857.24,
+        "max": 8891.24
+      },
+      "colluding_validators": {
+        "mean": 68.32,
+        "min": -0.25,
+        "max": 700.0
+      },
+      "ally": {
+        "mean": 5319.39,
+        "min": 3857.24,
+        "max": 7236.72
+      },
+      "escaped_regressions": {
+        "mean": 4.05,
+        "min": 2,
+        "max": 8
+      }
+    },
+    {
+      "share": 0.2,
+      "ring": {
+        "mean": 6151.32,
+        "min": 3857.24,
+        "max": 11804.66
+      },
+      "colluding_validators": {
+        "mean": 227.42,
+        "min": -1.25,
+        "max": 1333.33
+      },
+      "ally": {
+        "mean": 5241.62,
+        "min": 3857.24,
+        "max": 7236.72
+      },
+      "escaped_regressions": {
+        "mean": 3.95,
+        "min": 2,
+        "max": 8
+      }
+    },
+    {
+      "share": 0.3,
+      "ring": {
+        "mean": 6490.42,
+        "min": 3857.24,
+        "max": 12198.71
+      },
+      "colluding_validators": {
+        "mean": 316.95,
+        "min": -0.88,
+        "max": 1666.67
+      },
+      "ally": {
+        "mean": 5222.64,
+        "min": 3857.24,
+        "max": 7236.72
+      },
+      "escaped_regressions": {
+        "mean": 4.2,
+        "min": 2,
+        "max": 8
+      }
+    },
+    {
+      "share": 0.4,
+      "ring": {
+        "mean": 7383.96,
+        "min": 3857.24,
+        "max": 17138.0
+      },
+      "colluding_validators": {
+        "mean": 525.83,
+        "min": -1.88,
+        "max": 2666.67
+      },
+      "ally": {
+        "mean": 5280.64,
+        "min": 3857.24,
+        "max": 6819.04
+      },
+      "escaped_regressions": {
+        "mean": 4.45,
+        "min": 2,
+        "max": 10
+      }
+    },
+    {
+      "share": 0.5,
+      "ring": {
+        "mean": 8478.54,
+        "min": 3857.24,
+        "max": 22471.33
+      },
+      "colluding_validators": {
+        "mean": 772.83,
+        "min": -1.25,
+        "max": 4000.0
+      },
+      "ally": {
+        "mean": 5387.23,
+        "min": 3857.24,
+        "max": 9456.67
+      },
+      "escaped_regressions": {
+        "mean": 4.1,
+        "min": 2,
+        "max": 8
+      }
+    },
+    {
+      "share": 0.6,
+      "ring": {
+        "mean": 8048.86,
+        "min": 3857.24,
+        "max": 17138.0
+      },
+      "colluding_validators": {
+        "mean": 705.51,
+        "min": -1.88,
+        "max": 3000.0
+      },
+      "ally": {
+        "mean": 5226.82,
+        "min": 3857.24,
+        "max": 6936.56
+      },
+      "escaped_regressions": {
+        "mean": 4.1,
+        "min": 2,
+        "max": 8
+      }
+    },
+    {
+      "share": 0.7,
+      "ring": {
+        "mean": 7538.74,
+        "min": 3929.94,
+        "max": 17138.0
+      },
+      "colluding_validators": {
+        "mean": 558.32,
+        "min": -1.88,
+        "max": 2996.88
+      },
+      "ally": {
+        "mean": 5305.48,
+        "min": 3929.94,
+        "max": 6819.04
+      },
+      "escaped_regressions": {
+        "mean": 4.2,
+        "min": 1,
+        "max": 10
+      }
+    }
+  ],
+  "collusion_threshold_measured": {
+    "colluding_validators_profit_from_share": 0.1,
+    "published": 0.3333
+  },
+  "owner": {
+    "honest_payout": {
+      "mean": 12667.01,
+      "min": 7176.35,
+      "max": 23838.22
+    },
+    "self_interested_payout": {
+      "mean": 13006.29,
+      "min": 9728.97,
+      "max": 20064.63
+    },
+    "seeds_where_defecting_pays": 12,
+    "declined_others": {
+      "mean": 22.75,
+      "min": 12,
+      "max": 29
+    }
+  },
+  "risk": [
+    {
+      "multiplier": 1,
+      "honest": {
+        "mean": 2779.03,
+        "min": 2425.7,
+        "max": 3330.38
+      },
+      "spammer": {
+        "mean": 3784.01,
+        "min": 2840.62,
+        "max": 4886.21
+      },
+      "escaped_regressions": {
+        "mean": 7.3,
+        "min": 2,
+        "max": 12
+      }
+    },
+    {
+      "multiplier": 2,
+      "honest": {
+        "mean": 2775.02,
+        "min": 2423.86,
+        "max": 3328.4
+      },
+      "spammer": {
+        "mean": 3778.24,
+        "min": 2838.08,
+        "max": 4880.41
+      },
+      "escaped_regressions": {
+        "mean": 7.3,
+        "min": 2,
+        "max": 12
+      }
+    },
+    {
+      "multiplier": 3,
+      "honest": {
+        "mean": 2771.0,
+        "min": 2422.02,
+        "max": 3326.42
+      },
+      "spammer": {
+        "mean": 3772.47,
+        "min": 2835.55,
+        "max": 4874.61
+      },
+      "escaped_regressions": {
+        "mean": 7.3,
+        "min": 2,
+        "max": 12
+      }
+    }
+  ],
+  "replay": {
+    "contributions": {
+      "mean": 1777.15,
+      "min": 1739,
+      "max": 1805
+    },
+    "honest": {
+      "mean": 1072.57,
+      "min": 1061.74,
+      "max": 1083.31
+    },
+    "validator": {
+      "mean": 748.64,
+      "min": 590.13,
+      "max": 800.0
+    },
+    "hunter": {
+      "mean": 104.47,
+      "min": 77.26,
+      "max": 120.36
+    },
+    "escaped_regressions": {
+      "mean": 21.7,
+      "min": 15,
+      "max": 33
+    },
+    "challenges_upheld": {
+      "mean": 163,
+      "min": 141,
+      "max": 179
+    }
+  },
+  "failures_by_criterion": {
+    "honesty pays / honest": 11,
+    "honesty pays / spam": 4,
+    "attacks lose money / spam": 40,
+    "attacks lose money / collusion": 60,
+    "collusion threshold / collusion": 20,
+    "owner can't gain by defecting / owner": 12
+  }
+}

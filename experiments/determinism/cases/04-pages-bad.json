@@ -1,0 +1,27 @@
+{
+ "id": "04-pages-bad",
+ "label": "bad",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "The last page is lost when it isn't full: with 25 items and 10 per page, page_count() says 2 and page(items, 3, 10) raises IndexError instead of returning the last 5 items.",
+ "commit": "Count a partial last page",
+ "diff": "--- a/pages.py\n+++ b/pages.py\n@@ -1,6 +1,6 @@\n def page_count(total, per_page):\n     \"\"\"How many pages `total` items fill, `per_page` to a page.\"\"\"\n-    return total // per_page\n+    return total // per_page + 1\n \n \n def page(items, number, per_page):\n",
+ "context": [
+  {
+   "path": "pages.py",
+   "text": "    1 def page_count(total, per_page):\n    2     \"\"\"How many pages `total` items fill, `per_page` to a page.\"\"\"\n    3     return total // per_page\n    4 \n    5 \n    6 def page(items, number, per_page):\n    7     \"\"\"Page `number` (1-based) of `items`. Raises IndexError for a page that doesn't exist.\"\"\"\n    8     if number < 1 or number > page_count(len(items), per_page):\n    9         raise IndexError(f\"no page {number}\")\n   10     start = (number - 1) * per_page\n   11     return items[start:start + per_page]"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 1,
+  "results_sha256": "2618b95f1f6be6bfde8537756f85b83845d039001563135b9d59d817446733eb",
+  "logs_sha256": "ac2b9297040edb412869dd423c21b276b713cc9cf578d77f752ad175458846d4"
+ }
+}

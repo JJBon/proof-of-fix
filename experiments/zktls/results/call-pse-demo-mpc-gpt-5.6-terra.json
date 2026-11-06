@@ -1,0 +1,84 @@
+{
+ "bridge_bytes_down": 3879858,
+ "bridge_bytes_up": 62736016,
+ "call": {
+  "answer": "PASS",
+  "cost_usd": null,
+  "error_body": null,
+  "input_tokens": 32,
+  "latency_ms": 381,
+  "output_tokens": 5,
+  "reasoning_blocks": 0,
+  "stop_reason": "end_turn"
+ },
+ "date": "2026-11-03T15:26:15Z",
+ "event": "result",
+ "family": "OpenAI",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "gpt-5.6-terra",
+ "model_id": "us.openai.gpt-5.6-terra",
+ "notary": "pse-demo",
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "prover_exit": 0,
+ "public": {
+  "credential_free": true,
+  "results": 4,
+  "revealed_chars": 970,
+  "signed": false,
+  "type": "session_completed"
+ },
+ "public_ws_s": 19.734,
+ "result": {
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    260,
+    1280
+   ],
+   [
+    1297,
+    1564
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "prove_s": 1.659,
+  "recv_len": 499,
+  "response_body": "{\"metrics\":{\"latencyMs\":381},\"output\":{\"message\":{\"content\":[{\"text\":\"PASS\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":32,\"outputTokens\":5,\"serverToolUsage\":{},\"totalTokens\":37}}",
+  "revealed_recv": [
+   [
+    0,
+    499
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    260
+   ],
+   [
+    1280,
+    1297
+   ],
+   [
+    1564,
+    1758
+   ]
+  ],
+  "sent_len": 1758,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 15.778,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 4.626,
+  "tls_version": "V1_2",
+  "total_s": 22.327,
+  "verifier_bytes_down": 3879858,
+  "verifier_bytes_up": 62736016
+ },
+ "run": "call-pse-demo-mpc-gpt-5.6-terra",
+ "verifier": "wss://demo.tlsnotary.org",
+ "wall_s": 22.339
+}

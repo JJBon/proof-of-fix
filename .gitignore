@@ -1,0 +1,46 @@
+# Upstream clones and build output stay out of the repository (openspec/config.yaml rule 4).
+/upstream/
+/target/
+__pycache__/
+*.pyc
+.venv/
+
+# Foundry build output and the downloaded solc (scripts/contracts.sh, proof-of-fix#56).
+/contracts/out/
+/contracts/cache/
+/contracts/.cache/
+
+# The local bounty loop's scratch clones and forge's broadcast records (scripts/bounty-loop.sh, proof-of-fix#56).
+/.loop/
+/contracts/broadcast/
+
+# B1's rebuilt set of fixes and its download cache (scripts/judge-set.sh, proof-of-fix#85): only the manifest is kept.
+/data/judges/cache/
+/data/judges/cases.jsonl
+/data/judges/fake/
+
+# The private devnet's chain state (scripts/devnet.sh, proof-of-fix#93). Its deployment record is committed.
+/.devnet/
+
+# pofctl's end-to-end run: its throwaway devnet's state and records (scripts/pofctl-e2e.sh, proof-of-fix#104).
+/.devnet-e2e/
+/contracts/deployments/e2e/
+
+# The engineers' demo end to end: its throwaway devnet, records and the nodes' scratch (scripts/demo-e2e.sh, #104),
+# and a v2 node's default receipts, exchange and checkouts (python3 -m oracle run).
+/.devnet-demo/
+/.demo-e2e/
+/contracts/deployments/demo/
+.oracle-receipts/
+.oracle-exchange/
+.oracle-src/
+
+# The remote mode's end-to-end run: its throwaway proxy's files and records (scripts/devnet-remote-e2e.sh, #150). The AWS
+# devnet's own record, contracts/deployments/devnet-aws-v2.json, is committed once the owner has deployed, like devnet.json.
+/.devnet-remote-e2e/
+/contracts/deployments/remote-e2e/
+
+# The first real run (#150): the role seats' nodes' working directory (scripts/devnet-seats.sh) and its end-to-end rig.
+/.devnet-seats/
+/.first-run-e2e/
+/contracts/deployments/first-run-e2e/

@@ -1,0 +1,116 @@
+#!/bin/bash
+# proof-of-fix validator node (#104). Installed once; every boot runs one on-demand check run, then powers off.
+set -euo pipefail
+
+# The first boot comes from `apply`, not from work: it installs and powers off, without a run. It powers off on a failure
+# too, so an instance never sits idle and billing. cloud-init runs this script only once, so a failure also clears
+# cloud-init's marker: the next boot tries the install again, rather than coming up with no service and doing nothing.
+installed=0
+finish() {
+  if [ "$installed" != 1 ]; then rm -f /var/lib/cloud/instance/sem/config_scripts_user; fi
+  systemctl poweroff
+}
+trap finish EXIT
+
+dnf install -y -q docker
+systemctl enable --now docker
+# The fixes' checkouts (#115, #116): the node writes them; the sandbox's bind mount is resolved by this host's Docker,
+# so the directory sits at the same path on the host and inside the node's container. Owned by the node's user.
+install -d -o 10001 -g 10001 -m 0755 /var/lib/pof-node /var/lib/pof-node/src
+# A Forgejo target (forge = "forgejo"): the node's repository host config (bot/forge.py's repos.json: the repository
+# and the Forgejo's base URL; no credentials), mounted read-only into the node's container as ORACLE_REPOS.
+if [ '${forge}' = forgejo ]; then
+  install -d -m 0755 /etc/pof-validator
+  cat > /etc/pof-validator/repos.json <<'JSON'
+${forge_repos_json}
+JSON
+  chmod 0644 /etc/pof-validator/repos.json
+fi
+
+cat > /usr/local/bin/pof-validator-run <<'RUN'
+#!/bin/bash
+# One run: pull the pinned node image, read the secrets into this process only, run the node until it has no work,
+# then power off (the instance stops; the watcher starts it again when there's work).
+set -uo pipefail
+secret() { aws secretsmanager get-secret-value --region ${region} --secret-id "$1" --query SecretString --output text; }
+
+# A private ECR registry: log in first (the password goes over stdin). Any other registry: nothing to do.
+if [ -n '${ecr_registry}' ]; then
+  aws ecr get-login-password --region '${ecr_region}' | docker login --username AWS --password-stdin '${ecr_registry}' >/dev/null
+fi
+docker pull --quiet '${node_image}' >/dev/null
+
+ORACLE_PRIVATE_KEY=$(secret '${validator_key_secret}')
+RPC_API_KEY=""
+if [ -n '${rpc_api_key_secret_arn}' ]; then RPC_API_KEY=$(secret '${rpc_api_key_secret_arn}'); fi
+MODEL_API_KEY=""
+if [ -n '${model_api_secret_arn}' ]; then MODEL_API_KEY=$(secret '${model_api_secret_arn}'); fi
+# A read-only repository token: the node reads the pull requests and fetches each claimed commit with it (#115).
+# GitHub reads it as GITHUB_TOKEN; a Forgejo as FORGEJO_TOKEN, sent with FORGEJO_USER for git over HTTP (bot/forge.py,
+# oracle/fetch.py). Only the variable's name goes on docker's command line, never the token.
+REPO_TOKEN=""
+if [ -n '${repo_token_secret_arn}' ]; then REPO_TOKEN=$(secret '${repo_token_secret_arn}'); fi
+GITHUB_TOKEN=""
+FORGEJO_TOKEN=""
+FORGE_ARGS=()
+if [ '${forge}' = forgejo ]; then
+  FORGEJO_TOKEN=$REPO_TOKEN
+  FORGE_ARGS=(-v /etc/pof-validator/repos.json:/etc/pof-validator/repos.json:ro
+    -e ORACLE_REPOS=/etc/pof-validator/repos.json -e FORGEJO_TOKEN -e FORGEJO_USER='${repo_token_user}')
+else
+  GITHUB_TOKEN=$REPO_TOKEN
+fi
+unset REPO_TOKEN
+export ORACLE_PRIVATE_KEY RPC_API_KEY MODEL_API_KEY GITHUB_TOKEN FORGEJO_TOKEN
+
+# The node runs the fixes' tests in sibling containers through the host's Docker socket (#116): no network, a
+# read-only filesystem and source, no capabilities, CPU, memory, process and time limits. The socket is root on this
+# host, which is why the instance does nothing else and the node's image is pinned: only the node gets it, never the
+# fix's code. The node runs as uid 10001 with the socket's group, not as root, pulls the sandbox's test image (pinned
+# by digest in oracle/sandbox.py) the first time it needs it, and refuses a daemon that can't enforce the limits. A
+# rootless engine is the safer option (the runbook's "The sandbox and its trust boundary").
+# The drawn judges meet through the exchange relay (#117): ORACLE_EXCHANGE_URL. On the RPC's own host the node sends it
+# the RPC's key from RPC_API_KEY (oracle/transport.py); no other secret, and no key to any other host.
+# The judge calls its model directly (#118): ORACLE_JUDGE=direct:<provider>:<model>, within the spending guards. With
+# Bedrock it signs with the instance role's credentials, read from IMDSv2 (hop limit 2 for the node's container only:
+# the sandbox's containers have no network); with an API, MODEL_API_KEY goes only into the provider's header.
+timeout --signal=TERM ${max_run_minutes}m docker run --rm --name pof-node \
+  --log-driver awslogs --log-opt awslogs-region=${region} --log-opt awslogs-group=${log_group} \
+  --log-opt awslogs-stream=$(date -u +%Y%m%dT%H%M%SZ) \
+  -v /var/run/docker.sock:/var/run/docker.sock --group-add "$(stat -c %g /var/run/docker.sock)" \
+  -e ORACLE_SANDBOX=api \
+  -v /var/lib/pof-node:/var/lib/pof-node \
+  -e ORACLE_SRC_ROOT=/var/lib/pof-node/src \
+  -e ORACLE_RECEIPTS=/var/lib/pof-node/receipts \
+  -e ORACLE_RPC='${rpc_url}' -e ORACLE_RPC_API_KEY_HEADER='${rpc_api_key_header}' -e RPC_API_KEY \
+  -e ORACLE_RACE='${race_address}' -e ORACLE_CHAIN_ID='${chain_id}' -e ORACLE_REPO='${repository}' \
+  -e ORACLE_EXCHANGE_URL='${exchange_url}' \
+  -e ORACLE_KEYS=env -e ORACLE_PRIVATE_KEY \
+  -e ORACLE_JUDGE='${oracle_judge}' -e ORACLE_MODEL_ALLOW='${model_allow}' -e ORACLE_MODEL_URL='${model_api_url}' \
+  -e ORACLE_MAX_TOKENS=${max_output_tokens} -e ORACLE_MAX_CALLS=${max_model_calls} -e ORACLE_MAX_RUN_TOKENS=${max_run_tokens} \
+  -e AWS_REGION=${region} -e MODEL_API_KEY -e GITHUB_TOKEN "$${FORGE_ARGS[@]}" \
+  '${node_image}' ${node_command}
+echo "pof-validator: run ended with $?"
+unset ORACLE_PRIVATE_KEY RPC_API_KEY MODEL_API_KEY GITHUB_TOKEN FORGEJO_TOKEN
+systemctl poweroff
+RUN
+chmod 0700 /usr/local/bin/pof-validator-run
+
+cat > /etc/systemd/system/pof-validator.service <<'UNIT'
+[Unit]
+Description=proof-of-fix validator: one on-demand run, then power off
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pof-validator-run
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable pof-validator.service
+# Later boots run the service. The trap powers off.
+installed=1

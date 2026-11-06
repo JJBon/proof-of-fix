@@ -1,0 +1,84 @@
+{
+ "bridge_bytes_down": 3879766,
+ "bridge_bytes_up": 62751393,
+ "call": {
+  "answer": "PASS",
+  "cost_usd": 6.82e-05,
+  "error_body": null,
+  "input_tokens": 37,
+  "latency_ms": 457,
+  "output_tokens": 5,
+  "reasoning_blocks": 0,
+  "stop_reason": "end_turn"
+ },
+ "date": "2026-11-03T15:25:31Z",
+ "event": "result",
+ "family": "Anthropic",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "claude-haiku-4.5",
+ "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+ "notary": "pse-demo",
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "prover_exit": 0,
+ "public": {
+  "credential_free": true,
+  "results": 4,
+  "revealed_chars": 992,
+  "signed": false,
+  "type": "session_completed"
+ },
+ "public_ws_s": 17.976,
+ "result": {
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    282,
+    1302
+   ],
+   [
+    1319,
+    1586
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "prove_s": 1.748,
+  "recv_len": 499,
+  "response_body": "{\"metrics\":{\"latencyMs\":457},\"output\":{\"message\":{\"content\":[{\"text\":\"PASS\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":37,\"outputTokens\":5,\"serverToolUsage\":{},\"totalTokens\":42}}",
+  "revealed_recv": [
+   [
+    0,
+    499
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    282
+   ],
+   [
+    1302,
+    1319
+   ],
+   [
+    1586,
+    1780
+   ]
+  ],
+  "sent_len": 1780,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 15.377,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 4.755,
+  "tls_version": "V1_2",
+  "total_s": 22.142,
+  "verifier_bytes_down": 3879766,
+  "verifier_bytes_up": 62751393
+ },
+ "run": "call-pse-demo-mpc-claude-haiku-4.5",
+ "verifier": "wss://demo.tlsnotary.org",
+ "wall_s": 22.154
+}

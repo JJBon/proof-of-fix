@@ -1,0 +1,1807 @@
+{
+  "seeds": 100,
+  "sweep_seeds": 20,
+  "weeks": 8,
+  "passed": true,
+  "failures": [],
+  "criteria": {
+    "defective:abuser": {
+      "mean_per_contribution": -25.4933,
+      "standard_error": 2.7492,
+      "n": 263,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:gamer": {
+      "mean_per_contribution": -6.5639,
+      "standard_error": 1.1112,
+      "n": 1418,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:honest": {
+      "mean_per_contribution": -17.0775,
+      "standard_error": 2.3682,
+      "n": 4419,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:newcomer": {
+      "mean_per_contribution": -7.6007,
+      "standard_error": 9.0372,
+      "n": 214,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:owner": {
+      "mean_per_contribution": -0.5276,
+      "standard_error": 3.9765,
+      "n": 779,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:padder": {
+      "mean_per_contribution": -13.0587,
+      "standard_error": 4.7504,
+      "n": 753,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:spammer": {
+      "mean_per_contribution": -10.4474,
+      "standard_error": 0.3104,
+      "n": 6552,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:splitter": {
+      "mean_per_contribution": -18.4685,
+      "standard_error": 3.2926,
+      "n": 263,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:stacker": {
+      "mean_per_contribution": -9.6028,
+      "standard_error": 0.7698,
+      "n": 1846,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "defective:sybil": {
+      "mean_per_contribution": -5.673,
+      "standard_error": 0.3529,
+      "n": 10128,
+      "verdict": "loses",
+      "attacker": true
+    },
+    "collusion@0.1": {
+      "mean_gain": -350.07,
+      "standard_error": 120.07,
+      "seeds": 100
+    },
+    "collusion@0.2": {
+      "mean_gain": -593.15,
+      "standard_error": 140.96,
+      "seeds": 100
+    },
+    "collusion@0.3": {
+      "mean_gain": -873.43,
+      "standard_error": 167.02,
+      "seeds": 100
+    },
+    "collusion@0.4": {
+      "mean_gain": -1066.72,
+      "standard_error": 233.05,
+      "seeds": 100
+    },
+    "collusion@0.5": {
+      "mean_gain": -1219.69,
+      "standard_error": 211.23,
+      "seeds": 100
+    },
+    "collusion@0.6": {
+      "mean_gain": -1504.97,
+      "standard_error": 242.3,
+      "seeds": 100
+    },
+    "collusion@0.7": {
+      "mean_gain": -1548.49,
+      "standard_error": 275.68,
+      "seeds": 100
+    },
+    "owner": {
+      "mean_gain": -199.57,
+      "standard_error": 361.93,
+      "seeds": 100
+    },
+    "splitting_total": {
+      "mean_gain": 801.7,
+      "standard_error": 204.68,
+      "seeds": 100
+    },
+    "splitting": {
+      "per": "accepted line",
+      "mean_gain": 0.2778,
+      "standard_error": 0.1701,
+      "split_per_line": 1.4839,
+      "unsplit_per_line": 1.2061,
+      "lines_accepted_split": 1374.7,
+      "lines_accepted_unsplit": 1027.5,
+      "seeds": 100
+    },
+    "collusion_threshold_measured": null,
+    "capital": {
+      "unaffordable_fixed_stake": 1108.64,
+      "unaffordable_proposed": 464.08,
+      "cut": 0.5814,
+      "cut_beyond_target": 275.01,
+      "standard_error": 2.93
+    }
+  },
+  "returns": {
+    "honest": {
+      "honest": {
+        "mean": 3417.98,
+        "min": 2691.9,
+        "max": 4143.27
+      },
+      "hunter": {
+        "mean": 755.15,
+        "min": 101.86,
+        "max": 2238.21
+      },
+      "owner": {
+        "mean": 14098.84,
+        "min": 8211.33,
+        "max": 23776.7
+      },
+      "validator": {
+        "mean": 1788.22,
+        "min": 1028.16,
+        "max": 1989.31
+      }
+    },
+    "spam": {
+      "gamer": {
+        "mean": 1415.6,
+        "min": 524.28,
+        "max": 2653.08
+      },
+      "honest": {
+        "mean": 1997.77,
+        "min": 1410.17,
+        "max": 2649.54
+      },
+      "hunter": {
+        "mean": 2191.89,
+        "min": 1348.53,
+        "max": 3431.46
+      },
+      "owner": {
+        "mean": 11438.56,
+        "min": 7661.55,
+        "max": 21135.84
+      },
+      "padder": {
+        "mean": 3056.84,
+        "min": -499.5,
+        "max": 7094.24
+      },
+      "spammer": {
+        "mean": 1325.88,
+        "min": 595.36,
+        "max": 2387.09
+      },
+      "splitter": {
+        "mean": 2034.18,
+        "min": -375.0,
+        "max": 7496.59
+      },
+      "stacker": {
+        "mean": 2155.12,
+        "min": 448.53,
+        "max": 4751.99
+      },
+      "validator": {
+        "mean": 1843.47,
+        "min": 931.43,
+        "max": 1993.0
+      }
+    },
+    "griefing": {
+      "griefer": {
+        "mean": -230.46,
+        "min": -277.41,
+        "max": -136.46
+      },
+      "honest": {
+        "mean": 3400.16,
+        "min": 2771.49,
+        "max": 3983.63
+      },
+      "hunter": {
+        "mean": 747.14,
+        "min": 138.42,
+        "max": 2826.23
+      },
+      "owner": {
+        "mean": 14027.21,
+        "min": 9457.4,
+        "max": 21399.29
+      },
+      "validator": {
+        "mean": 1866.22,
+        "min": 1642.06,
+        "max": 2010.51
+      }
+    },
+    "sponsorship": {
+      "abuser": {
+        "mean": 1286.11,
+        "min": 221.45,
+        "max": 2487.45
+      },
+      "honest": {
+        "mean": 2218.57,
+        "min": 1336.96,
+        "max": 2962.32
+      },
+      "hunter": {
+        "mean": 1660.29,
+        "min": 805.13,
+        "max": 2764.55
+      },
+      "newcomer": {
+        "mean": 937.25,
+        "min": 65.35,
+        "max": 2269.8
+      },
+      "owner": {
+        "mean": 11886.69,
+        "min": 8002.26,
+        "max": 24045.52
+      },
+      "sybil": {
+        "mean": 452.78,
+        "min": 161.42,
+        "max": 748.58
+      },
+      "validator": {
+        "mean": 1823.58,
+        "min": 904.86,
+        "max": 1979.23
+      }
+    }
+  },
+  "unaffordable_submissions": {
+    "honest": 8.32,
+    "spam": 62.94,
+    "sponsorship": 340.75
+  },
+  "turning_actors": {
+    "stacker-1": {
+      "stake_before": 118.25,
+      "stake_after": 53.9
+    },
+    "gamer-1": {
+      "stake_before": 59.68,
+      "stake_after": 51.78
+    }
+  },
+  "contributors_pool_end": {
+    "honest": {
+      "mean": 15000.0,
+      "min": 15000.0,
+      "max": 15000.0
+    },
+    "spam": {
+      "mean": 15000.0,
+      "min": 15000.0,
+      "max": 15000.0
+    },
+    "sponsorship": {
+      "mean": 15000.0,
+      "min": 15000.0,
+      "max": 15000.0
+    }
+  },
+  "pledges": {
+    "honest": {
+      "made": 2.83,
+      "amount": 181.49,
+      "lost_to_slashes": 1.68,
+      "lost_to_clawbacks": 0.0
+    },
+    "spam": {
+      "made": 13.64,
+      "amount": 417.28,
+      "lost_to_slashes": 6.48,
+      "lost_to_clawbacks": 0.0
+    },
+    "sponsorship": {
+      "made": 5.02,
+      "amount": 225.24,
+      "lost_to_slashes": 2.05,
+      "lost_to_clawbacks": 0.0
+    }
+  },
+  "collusion": [
+    {
+      "share": 0.1,
+      "mean_gain": -350.07,
+      "standard_error": 120.07,
+      "seeds": 100
+    },
+    {
+      "share": 0.2,
+      "mean_gain": -593.15,
+      "standard_error": 140.96,
+      "seeds": 100
+    },
+    {
+      "share": 0.3,
+      "mean_gain": -873.43,
+      "standard_error": 167.02,
+      "seeds": 100
+    },
+    {
+      "share": 0.4,
+      "mean_gain": -1066.72,
+      "standard_error": 233.05,
+      "seeds": 100
+    },
+    {
+      "share": 0.5,
+      "mean_gain": -1219.69,
+      "standard_error": 211.23,
+      "seeds": 100
+    },
+    {
+      "share": 0.6,
+      "mean_gain": -1504.97,
+      "standard_error": 242.3,
+      "seeds": 100
+    },
+    {
+      "share": 0.7,
+      "mean_gain": -1548.49,
+      "standard_error": 275.68,
+      "seeds": 100
+    }
+  ],
+  "owner": {
+    "honest_payout": {
+      "mean": 14098.84,
+      "min": 8211.33,
+      "max": 23776.7
+    },
+    "self_interested_payout": {
+      "mean": 13899.27,
+      "min": 8773.24,
+      "max": 25471.46
+    },
+    "gain": {
+      "mean_gain": -199.57,
+      "standard_error": 361.93,
+      "seeds": 100
+    },
+    "declined_others": {
+      "mean": 3.58,
+      "min": 0,
+      "max": 8
+    },
+    "panels": {
+      "approvals": 11.62,
+      "declines_over_limit": 19.07,
+      "decline_appeals": 1.24,
+      "overturned": 1.19,
+      "split_changes_refused": 1
+    }
+  },
+  "elasticity_verdicts": {
+    "0.0": {
+      "seeds": 100,
+      "passed_except_inconclusive": false,
+      "inconclusive": [],
+      "worst_attacker_margin": -5.2049,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -5.8813,
+      "spammer_defective_per_contribution": -9.2824,
+      "honest_return": 3381.69,
+      "validator_return": 1830.15,
+      "escaped_regressions": 4.84,
+      "splitting_gain": 0.5487,
+      "owner_gain": 11.93,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5826,
+      "unaffordable_proposed": 461.24
+    },
+    "1.0": {
+      "seeds": 100,
+      "passed_except_inconclusive": true,
+      "inconclusive": [],
+      "worst_attacker_margin": -3.5579,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": true,
+      "failed_criteria": [],
+      "worst_defective_per_contribution": -0.5276,
+      "spammer_defective_per_contribution": -10.4474,
+      "honest_return": 3417.98,
+      "validator_return": 1788.22,
+      "escaped_regressions": 4.6,
+      "splitting_gain": 0.2778,
+      "owner_gain": -199.57,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5821,
+      "unaffordable_proposed": 463.26
+    }
+  },
+  "hunt_elasticity_sweep": {
+    "0.0": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": -2.7564,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -5.8873,
+      "spammer_defective_per_contribution": -8.999,
+      "honest_return": 3463.27,
+      "validator_return": 1860.87,
+      "escaped_regressions": 4.75,
+      "splitting_gain": 0.4977,
+      "owner_gain": 479.38,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5717,
+      "unaffordable_proposed": 471.2
+    },
+    "0.5": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "1.0": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5729,
+      "unaffordable_proposed": 473.9
+    }
+  },
+  "review_detection_sweep": {
+    "3000": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": 10.346,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "not shown",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 2.4888,
+      "spammer_defective_per_contribution": -6.7939,
+      "honest_return": 3452.49,
+      "validator_return": 1763.66,
+      "escaped_regressions": 8.2,
+      "splitting_gain": -0.3358,
+      "owner_gain": -25.15,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5711,
+      "unaffordable_proposed": 476.6
+    },
+    "6000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "8000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": -7.0922,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -1.5445,
+      "spammer_defective_per_contribution": -11.8714,
+      "honest_return": 3544.77,
+      "validator_return": 1790.2,
+      "escaped_regressions": 2.45,
+      "splitting_gain": -0.0154,
+      "owner_gain": 743.14,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5708,
+      "unaffordable_proposed": 476.6
+    }
+  },
+  "ablation": {
+    "all rules (defaults)": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "no escrow share for challengers": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -3.268,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -6.1801,
+      "spammer_defective_per_contribution": -10.0821,
+      "honest_return": 3514.71,
+      "validator_return": 1758.37,
+      "escaped_regressions": 4.47,
+      "splitting_gain": -1.083,
+      "owner_gain": -416.44,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5692,
+      "unaffordable_proposed": 473.15
+    },
+    "no review duty": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 35.1939,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "pays",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "not shown",
+        "sybil": "not shown"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)",
+        "honesty pays"
+      ],
+      "worst_defective_per_contribution": 10.1489,
+      "spammer_defective_per_contribution": -4.1414,
+      "honest_return": 3483.71,
+      "validator_return": 122.22,
+      "escaped_regressions": 12.22,
+      "splitting_gain": -0.0247,
+      "owner_gain": -352.67,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5781,
+      "unaffordable_proposed": 468.75
+    },
+    "one instalment (no clawback)": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [],
+      "worst_attacker_margin": 8.5617,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "not shown",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": -6.4899,
+      "spammer_defective_per_contribution": -9.9526,
+      "honest_return": 3366.48,
+      "validator_return": 1718.09,
+      "escaped_regressions": 4.58,
+      "splitting_gain": 0.3019,
+      "owner_gain": 102.04,
+      "collusion_gains_from": null,
+      "capital_cut": 0.6798,
+      "unaffordable_proposed": 262.1
+    },
+    "per-tier weights (not linear)": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 2.14,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -6.3342,
+      "spammer_defective_per_contribution": -12.6115,
+      "honest_return": 3579.18,
+      "validator_return": 1811.26,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 0.6364,
+      "owner_gain": -473.09,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5657,
+      "unaffordable_proposed": 479.5
+    },
+    "no decline limit": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "splitter"
+      ],
+      "worst_attacker_margin": 22.0321,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 4.0945,
+      "spammer_defective_per_contribution": -10.2434,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 4.95,
+      "splitting_gain": -0.3166,
+      "owner_gain": 731.33,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "first defaults' stake (10)": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [],
+      "worst_attacker_margin": 1.4786,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "not shown",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "not shown",
+        "sybil": "not shown"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": 0.4186,
+      "spammer_defective_per_contribution": -0.9277,
+      "honest_return": 690.19,
+      "validator_return": 738.69,
+      "escaped_regressions": 4.92,
+      "splitting_gain": 0.3057,
+      "owner_gain": 454.06,
+      "collusion_gains_from": null,
+      "capital_cut": -0.05,
+      "unaffordable_proposed": 4.2
+    },
+    "no pledges": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": 12.7764,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -1.5414,
+      "spammer_defective_per_contribution": -9.6402,
+      "honest_return": 3426.42,
+      "validator_return": 1694.61,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 0.678,
+      "owner_gain": 658.76,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5886,
+      "unaffordable_proposed": 471.6
+    },
+    "no index (fixed stake)": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -3.0937,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -1.7925,
+      "spammer_defective_per_contribution": -13.789,
+      "honest_return": 3526.48,
+      "validator_return": 1761.98,
+      "escaped_regressions": 3.95,
+      "splitting_gain": 0.1486,
+      "owner_gain": -503.72,
+      "collusion_gains_from": null,
+      "capital_cut": -0.0002,
+      "unaffordable_proposed": 1111.55
+    },
+    "no reward cap": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 29.6711,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 4.6397,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3580.76,
+      "validator_return": 1816.52,
+      "escaped_regressions": 4.8,
+      "splitting_gain": 0.0085,
+      "owner_gain": -205.49,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    }
+  },
+  "pledge_stake_cap_sweep": {
+    "0": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": 12.7764,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -1.5414,
+      "spammer_defective_per_contribution": -9.6402,
+      "honest_return": 3426.42,
+      "validator_return": 1694.61,
+      "escaped_regressions": 4.5,
+      "splitting_gain": 0.678,
+      "owner_gain": 658.76,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5886,
+      "unaffordable_proposed": 471.6
+    },
+    "2500": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": 36.6071,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "not shown",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "not shown",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 6.6667,
+      "spammer_defective_per_contribution": -9.7487,
+      "honest_return": 3382.76,
+      "validator_return": 1743.26,
+      "escaped_regressions": 4.83,
+      "splitting_gain": 0.1585,
+      "owner_gain": 380.01,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5836,
+      "unaffordable_proposed": 473.45
+    },
+    "5000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "7500": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -0.216,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)",
+        "splitting earns nothing"
+      ],
+      "worst_defective_per_contribution": -3.7514,
+      "spammer_defective_per_contribution": -8.1017,
+      "honest_return": 3553.58,
+      "validator_return": 1741.62,
+      "escaped_regressions": 4.78,
+      "splitting_gain": 0.6988,
+      "owner_gain": 94.31,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5764,
+      "unaffordable_proposed": 462.95
+    }
+  },
+  "pledge_escrow_cap_sweep": {
+    "5000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "10000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -3.171,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 16.2466,
+      "spammer_defective_per_contribution": -10.0369,
+      "honest_return": 3461.96,
+      "validator_return": 1777.74,
+      "escaped_regressions": 4.33,
+      "splitting_gain": 0.0095,
+      "owner_gain": 201.92,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5719,
+      "unaffordable_proposed": 476.05
+    }
+  },
+  "stake_index_sweep": {
+    "0": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -3.0937,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "capital criterion",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -1.7925,
+      "spammer_defective_per_contribution": -13.789,
+      "honest_return": 3526.48,
+      "validator_return": 1761.98,
+      "escaped_regressions": 3.95,
+      "splitting_gain": 0.1486,
+      "owner_gain": -503.72,
+      "collusion_gains_from": null,
+      "capital_cut": -0.0002,
+      "unaffordable_proposed": 1111.55
+    },
+    "1500": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [],
+      "worst_attacker_margin": 18.1937,
+      "verdicts": {
+        "abuser": "not shown",
+        "gamer": "not shown",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "not shown",
+        "stacker": "not shown",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money"
+      ],
+      "worst_defective_per_contribution": 5.5054,
+      "spammer_defective_per_contribution": -5.4372,
+      "honest_return": 3440.41,
+      "validator_return": 1736.54,
+      "escaped_regressions": 5.2,
+      "splitting_gain": 0.0484,
+      "owner_gain": 150.33,
+      "collusion_gains_from": null,
+      "capital_cut": 0.7134,
+      "unaffordable_proposed": 318.5
+    },
+    "2500": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 5.6022,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "not shown",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 2.5154,
+      "spammer_defective_per_contribution": -7.2263,
+      "honest_return": 3445.81,
+      "validator_return": 1743.09,
+      "escaped_regressions": 5.03,
+      "splitting_gain": 0.2543,
+      "owner_gain": 44.95,
+      "collusion_gains_from": null,
+      "capital_cut": 0.6694,
+      "unaffordable_proposed": 367.4
+    },
+    "4000": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    }
+  },
+  "pool_buffer_sweep": {
+    "0": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2145.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 464.41,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "1": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.1483,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 18.0252,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3381.2,
+      "validator_return": 1578.44,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 525.44,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "2": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "4": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3509.72,
+      "validator_return": 2085.19,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 482.82,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    }
+  },
+  "reward_cap_sweep": {
+    "0": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 29.6711,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 4.6397,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3580.76,
+      "validator_return": 1816.52,
+      "escaped_regressions": 4.8,
+      "splitting_gain": 0.0085,
+      "owner_gain": -205.49,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    },
+    "4": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 8.0651,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": -5.2075,
+      "spammer_defective_per_contribution": -10.2959,
+      "honest_return": 2592.95,
+      "validator_return": 1420.41,
+      "escaped_regressions": 4.72,
+      "splitting_gain": 0.3763,
+      "owner_gain": 315.66,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5701,
+      "unaffordable_proposed": 477.8
+    },
+    "6": {
+      "seeds": 20,
+      "passed_except_inconclusive": true,
+      "inconclusive": [
+        "abuser"
+      ],
+      "worst_attacker_margin": -4.214,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "loses",
+        "spammer": "loses",
+        "splitter": "loses",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 17.058,
+      "spammer_defective_per_contribution": -10.3278,
+      "honest_return": 3507.15,
+      "validator_return": 1777.08,
+      "escaped_regressions": 3.85,
+      "splitting_gain": -0.1899,
+      "owner_gain": 442.64,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5704,
+      "unaffordable_proposed": 477.45
+    },
+    "8": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "splitter"
+      ],
+      "worst_attacker_margin": 27.6945,
+      "verdicts": {
+        "abuser": "loses",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 1.2591,
+      "spammer_defective_per_contribution": -9.3944,
+      "honest_return": 3642.33,
+      "validator_return": 1815.61,
+      "escaped_regressions": 4.78,
+      "splitting_gain": -0.1578,
+      "owner_gain": 456.47,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    },
+    "16": {
+      "seeds": 20,
+      "passed_except_inconclusive": false,
+      "inconclusive": [
+        "abuser",
+        "splitter"
+      ],
+      "worst_attacker_margin": 29.6711,
+      "verdicts": {
+        "abuser": "inconclusive",
+        "gamer": "loses",
+        "honest": "ok",
+        "newcomer": "ok",
+        "owner": "ok",
+        "padder": "not shown",
+        "spammer": "loses",
+        "splitter": "inconclusive",
+        "stacker": "loses",
+        "sybil": "loses"
+      },
+      "passed": false,
+      "failed_criteria": [
+        "defective work loses money",
+        "defective work loses money (inconclusive)"
+      ],
+      "worst_defective_per_contribution": 4.6397,
+      "spammer_defective_per_contribution": -9.7551,
+      "honest_return": 3621.31,
+      "validator_return": 1817.05,
+      "escaped_regressions": 4.8,
+      "splitting_gain": 0.0085,
+      "owner_gain": 342.58,
+      "collusion_gains_from": null,
+      "capital_cut": 0.5702,
+      "unaffordable_proposed": 477.6
+    }
+  },
+  "reward_to_stake": {
+    "honest": {
+      "reward_to_stake": 5.745,
+      "max": 6.0
+    },
+    "spam": {
+      "reward_to_stake": 2.934,
+      "max": 6.0
+    },
+    "sponsorship": {
+      "reward_to_stake": 3.103,
+      "max": 6.0
+    },
+    "replay": {
+      "reward_to_stake": 1.118,
+      "max": 2.864
+    }
+  },
+  "risk": [
+    {
+      "multiplier": 1,
+      "honest": {
+        "mean": 2556.1,
+        "min": 1894.98,
+        "max": 3172.3
+      },
+      "spammer": {
+        "mean": 2416.01,
+        "min": 1114.34,
+        "max": 3571.2
+      },
+      "escaped_regressions": {
+        "mean": 2.41,
+        "min": 0,
+        "max": 6
+      }
+    },
+    {
+      "multiplier": 2,
+      "honest": {
+        "mean": 2526.88,
+        "min": 1887.73,
+        "max": 3041.65
+      },
+      "spammer": {
+        "mean": 2345.89,
+        "min": 747.24,
+        "max": 3632.68
+      },
+      "escaped_regressions": {
+        "mean": 2.32,
+        "min": 0,
+        "max": 7
+      }
+    },
+    {
+      "multiplier": 3,
+      "honest": {
+        "mean": 2482.48,
+        "min": 1792.24,
+        "max": 3133.11
+      },
+      "spammer": {
+        "mean": 2313.5,
+        "min": 1210.9,
+        "max": 4377.76
+      },
+      "escaped_regressions": {
+        "mean": 2.07,
+        "min": 0,
+        "max": 8
+      }
+    }
+  ],
+  "replay": {
+    "contributions": {
+      "mean": 1310.17,
+      "min": 1254,
+      "max": 1389
+    },
+    "honest": {
+      "mean": 968.06,
+      "min": 913.43,
+      "max": 1006.78
+    },
+    "validator": {
+      "mean": 1112.71,
+      "min": 1009.94,
+      "max": 1169.21
+    },
+    "hunter": {
+      "mean": 675.56,
+      "min": 438.82,
+      "max": 1026.21
+    },
+    "escaped_regressions": {
+      "mean": 9.17,
+      "min": 3,
+      "max": 16
+    },
+    "unaffordable_submissions": {
+      "mean": 464.08,
+      "min": 405,
+      "max": 551
+    },
+    "pledges": {
+      "mean": 76.85,
+      "min": 58,
+      "max": 94
+    }
+  }
+}

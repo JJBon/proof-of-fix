@@ -1,0 +1,14 @@
+{
+ "date": "2026-11-03T15:31:04Z",
+ "error": "no response within 180 s",
+ "event": "result",
+ "kind": "free",
+ "max_sent_records": null,
+ "notary": "self-a",
+ "notary_events": [],
+ "notary_timeout": true,
+ "ok": false,
+ "pad": 40000,
+ "run": "free-self-a-proxy-s65536-r4096-pad40000",
+ "wall_s": 180.99
+}

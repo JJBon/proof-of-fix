@@ -1,0 +1,4680 @@
+{
+  "seeds": 100,
+  "sweep_seeds": 20,
+  "weeks": 8,
+  "passed": false,
+  "failures": [
+    {
+      "criterion": "honest solvers earn more than their cost",
+      "scenario": "market",
+      "seed": "all",
+      "detail": "net of effort -1.74 \u00b1 1.44"
+    },
+    {
+      "criterion": "checking attacks lose",
+      "scenario": "check_sock",
+      "seed": "all",
+      "detail": "gains +3.20 \u00b1 10.83 against honest"
+    }
+  ],
+  "criteria": {
+    "bluffer_gain": {
+      "mean": 5.78,
+      "standard_error": 15.11,
+      "seeds": 100
+    },
+    "bond_change": {
+      "mean": -1.91,
+      "standard_error": 0.76,
+      "seeds": 100
+    },
+    "caught_share": {
+      "mean": 0.9892,
+      "standard_error": 0.0044,
+      "seeds": 100
+    },
+    "check_copy_gain": {
+      "mean": -284.18,
+      "standard_error": 15.46,
+      "seeds": 100
+    },
+    "check_craft_gain": {
+      "mean": -307.95,
+      "standard_error": 14.62,
+      "seeds": 100
+    },
+    "check_half_gain": {
+      "mean": -240.81,
+      "standard_error": 16.08,
+      "seeds": 100
+    },
+    "check_herd_gain": {
+      "mean": -1.89,
+      "standard_error": 0.26,
+      "seeds": 100
+    },
+    "check_lazy_gain": {
+      "mean": -9.01,
+      "standard_error": 1.04,
+      "seeds": 100
+    },
+    "check_plant_gain": {
+      "mean": -251.5,
+      "standard_error": 22.75,
+      "seeds": 100
+    },
+    "check_sock_gain": {
+      "mean": 3.2,
+      "standard_error": 10.83,
+      "seeds": 100
+    },
+    "ci_validators_caught_change": {
+      "mean": -0.0,
+      "standard_error": 0.01,
+      "seeds": 99
+    },
+    "ci_validators_funder_cost_change": {
+      "mean": -1.75,
+      "standard_error": 4.16,
+      "seeds": 98
+    },
+    "ci_validators_solver_change": {
+      "mean": -9.0,
+      "standard_error": 4.33,
+      "seeds": 100
+    },
+    "crowd_out_base": {
+      "mean": 61.23,
+      "standard_error": 0.66,
+      "seeds": 100
+    },
+    "crowd_out_flood": {
+      "mean": 57.38,
+      "standard_error": 0.67,
+      "seeds": 100
+    },
+    "detection_change": {
+      "mean": 0.7347,
+      "standard_error": 0.0172,
+      "seeds": 100
+    },
+    "escalated_share": {
+      "mean": 0.438,
+      "standard_error": 0.01,
+      "seeds": 100
+    },
+    "evaluator": {
+      "mean": 1.32,
+      "standard_error": 0.03,
+      "seeds": 100
+    },
+    "farm_split_unfunded": {
+      "mean": 1,
+      "standard_error": 0.0,
+      "seeds": 100
+    },
+    "flood": {
+      "mean": -493.52,
+      "standard_error": 0.56,
+      "seeds": 100
+    },
+    "fresh_days_change": {
+      "mean": -2.15,
+      "standard_error": 0.32,
+      "seeds": 100
+    },
+    "fresh_funder_cost_change": {
+      "mean": 14.2,
+      "standard_error": 6.66,
+      "seeds": 99
+    },
+    "fresh_paid_change": {
+      "mean": -0.26,
+      "standard_error": 0.32,
+      "seeds": 100
+    },
+    "fresh_price_change": {
+      "mean": -9.19,
+      "standard_error": 1.32,
+      "seeds": 100
+    },
+    "fresh_solver_change": {
+      "mean": 55.5,
+      "standard_error": 6.79,
+      "seeds": 100
+    },
+    "funded_share_change": {
+      "mean": 0.4039,
+      "standard_error": 0.0098,
+      "seeds": 100
+    },
+    "funder_cost_change": {
+      "mean": -6.68,
+      "standard_error": 6.73,
+      "seeds": 93
+    },
+    "good_failed_share": {
+      "mean": 0.2537,
+      "standard_error": 0.0149,
+      "seeds": 100
+    },
+    "half_without_challenge_gain": {
+      "mean": -263.14,
+      "standard_error": 17.91,
+      "seeds": 100
+    },
+    "herd_agreement_gain": {
+      "mean": 3.87,
+      "standard_error": 0.4,
+      "seeds": 100
+    },
+    "lowballer_gain": {
+      "mean": -59.09,
+      "standard_error": 17.03,
+      "seeds": 100
+    },
+    "no_show": {
+      "mean": -415.83,
+      "standard_error": 6.45,
+      "seeds": 100
+    },
+    "owner_gain": {
+      "mean": -0.32,
+      "standard_error": 1.17,
+      "seeds": 100
+    },
+    "pledged_paid_change": {
+      "mean": 4.8,
+      "standard_error": 0.3,
+      "seeds": 100
+    },
+    "rep_farmer": {
+      "mean": -269.04,
+      "standard_error": 10.67,
+      "seeds": 100
+    },
+    "reporter": {
+      "mean": 3.89,
+      "standard_error": 0.11,
+      "seeds": 100
+    },
+    "solver": {
+      "mean": -1.74,
+      "standard_error": 1.44,
+      "seeds": 600
+    },
+    "spam_solver": {
+      "mean": -272.46,
+      "standard_error": 7.7,
+      "seeds": 100
+    },
+    "treasury_junk": {
+      "mean": 517.27,
+      "standard_error": 36.02,
+      "seeds": 100
+    },
+    "validator": {
+      "mean": 12.3,
+      "standard_error": 0.25,
+      "seeds": 600
+    },
+    "validator_net": {
+      "mean": 10.36,
+      "standard_error": 0.29,
+      "seeds": 100
+    },
+    "weak_base": {
+      "mean": 61.23,
+      "standard_error": 0.66,
+      "seeds": 100
+    },
+    "weak_flood": {
+      "mean": 55.29,
+      "standard_error": 0.75,
+      "seeds": 100
+    },
+    "crowd_out_ratio_weak_detection": {
+      "mean": 0.903
+    },
+    "crowd_out_ratio": {
+      "mean": 0.9371
+    },
+    "defective:bluffer": {
+      "mean_per_contribution": -16.0607,
+      "standard_error": 11.0729,
+      "n": 2,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:flood": {
+      "mean_per_contribution": -53.5652,
+      "standard_error": 3.6802,
+      "n": 7,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "defective:lowballer": {
+      "mean_per_contribution": 17.1814,
+      "standard_error": 34.324,
+      "n": 2,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:solver": {
+      "mean_per_contribution": -12.3486,
+      "standard_error": 1.4187,
+      "n": 987,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:spam_solver": {
+      "mean_per_contribution": -7.2357,
+      "standard_error": 4.6589,
+      "n": 27,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "ring@2": {
+      "mean_gain": 24.96,
+      "standard_error": 19.5,
+      "seeds": 100
+    },
+    "ring@3": {
+      "mean_gain": -10.42,
+      "standard_error": 24.13,
+      "seeds": 100
+    },
+    "ring@4": {
+      "mean_gain": -32.7,
+      "standard_error": 26.7,
+      "seeds": 100
+    },
+    "ring@6": {
+      "mean_gain": 0.01,
+      "standard_error": 29.61,
+      "seeds": 100
+    },
+    "ring_gains_from": null
+  },
+  "elasticity_verdicts": {
+    "0.0": {
+      "seeds": 100,
+      "passed": false,
+      "failed_criteria": [
+        "checking attacks lose",
+        "honest solvers earn more than their cost"
+      ],
+      "solver_net_of_effort": -1.91,
+      "validator": 12.33,
+      "spam_solver": -269.0,
+      "no_show": -415.44,
+      "ring_gains_from": null,
+      "rings": {
+        "2": 22.55,
+        "3": -4.57,
+        "4": -35.51,
+        "6": -4.17
+      },
+      "bluffer_gain": 11.44,
+      "lowballer_gain": -60.15,
+      "caught_share": 0.9894,
+      "detection_change": 0.7434,
+      "good_failed_share": 0.2536,
+      "escalated_share": 0.437,
+      "evaluator": 1.32,
+      "check_gains": {
+        "lazy": -9.22,
+        "herd": -1.91,
+        "copy": -289.02,
+        "craft": -329.02,
+        "plant": -245.54,
+        "sock": 4.77,
+        "half": -238.97
+      },
+      "herd_agreement_gain": 3.83,
+      "half_without_challenge_gain": -260.91,
+      "fresh_round": {
+        "days_change": -2.11,
+        "funder_cost_change": 13.98,
+        "paid_change": -0.22,
+        "price_change": -9.22,
+        "solver_change": 53.33
+      },
+      "ci_vs_validators": {
+        "caught_change": -0.0,
+        "funder_cost_change": -2.47,
+        "solver_change": -9.18
+      },
+      "bounties_paid": 24.41,
+      "bounties_unsolved": 64.75,
+      "reporter": 3.88,
+      "funder_cost_change": -6.64,
+      "funded_share_change": 0.4041,
+      "crowd_out_ratio": 0.9348,
+      "crowd_out_weak": 0.9,
+      "rep_farmer": -269.92,
+      "bond_change": -2.03,
+      "farm_gain": null,
+      "farm_split_unfunded": 1
+    },
+    "1.0": {
+      "seeds": 100,
+      "passed": false,
+      "failed_criteria": [
+        "checking attacks lose",
+        "honest solvers earn more than their cost"
+      ],
+      "solver_net_of_effort": -1.73,
+      "validator": 12.29,
+      "spam_solver": -272.35,
+      "no_show": -415.8,
+      "ring_gains_from": null,
+      "rings": {
+        "2": 24.96,
+        "3": -14.88,
+        "4": -35.39,
+        "6": -1.6
+      },
+      "bluffer_gain": 7.25,
+      "lowballer_gain": -58.51,
+      "caught_share": 0.9903,
+      "detection_change": 0.7599,
+      "good_failed_share": 0.2541,
+      "escalated_share": 0.4381,
+      "evaluator": 1.32,
+      "check_gains": {
+        "lazy": -9.2,
+        "herd": -1.89,
+        "copy": -283.65,
+        "craft": -305.42,
+        "plant": -253.38,
+        "sock": 3.19,
+        "half": -239.75
+      },
+      "herd_agreement_gain": 3.81,
+      "half_without_challenge_gain": -262.55,
+      "fresh_round": {
+        "days_change": -2.13,
+        "funder_cost_change": 18.11,
+        "paid_change": -0.3,
+        "price_change": -9.83,
+        "solver_change": 54.74
+      },
+      "ci_vs_validators": {
+        "caught_change": -0.0,
+        "funder_cost_change": -1.73,
+        "solver_change": -9.21
+      },
+      "bounties_paid": 24.44,
+      "bounties_unsolved": 64.57,
+      "reporter": 3.88,
+      "funder_cost_change": -5.87,
+      "funded_share_change": 0.4029,
+      "crowd_out_ratio": 0.9373,
+      "crowd_out_weak": 0.903,
+      "rep_farmer": -269.04,
+      "bond_change": -1.72,
+      "farm_gain": null,
+      "farm_split_unfunded": 1
+    }
+  },
+  "returns": {
+    "evaluator": 1.32,
+    "hunter": 0.09,
+    "owner": 31.95,
+    "pledger": -15.25,
+    "reporter": 3.89,
+    "runner": 0.06,
+    "solver": -4.96,
+    "validator": 10.36
+  },
+  "market": {
+    "bounties": {
+      "open": 0.01,
+      "paid": 24.44,
+      "refunded": 20.35,
+      "unsolved": 64.64
+    },
+    "issues": {
+      "pledged": 48.21,
+      "too_small": 0.02,
+      "treasury": 61.23,
+      "unfunded": 10.48
+    },
+    "price_to_cost": 2.2852,
+    "mean_price": 63.95,
+    "treasury_spend": 8730.65,
+    "deliveries": {
+      "bids": 191.69,
+      "assigned": 41.43,
+      "delivered": 24.51,
+      "delivery_failed": 16.92
+    },
+    "flood_treasury_junk": 517.27,
+    "issue_stakes": {
+      "posted": 0.09,
+      "rewarded": 24.44,
+      "returned": 95.41,
+      "forfeited": 0
+    },
+    "finder_fees": 77.85,
+    "matched": 801.11,
+    "funder_cost_per_paid_bounty": 59.09
+  },
+  "checking": {
+    "appeals": 0.11,
+    "appeals_won": 0.1,
+    "caught_jury": 2.82,
+    "caught_second_jury": 2.25,
+    "caught_share": 0.9892,
+    "caught_tests": 3,
+    "defective": 8.14,
+    "escalations": 16.77,
+    "good": 33.29,
+    "good_failed": 8.85,
+    "good_failed_jury": 8.22,
+    "good_failed_share": 0.2537,
+    "juries": 37.8,
+    "planted": 4.4,
+    "short_juries": 0.76,
+    "too_small": 0.02,
+    "brier": {
+      "evaluator": 0.145
+    }
+  },
+  "sweeps": {
+    "cost per line": {
+      "500000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "bidding your cost is best",
+          "checking attacks lose",
+          "honest mistakes don't pay",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 9.48,
+        "validator": 14.65,
+        "spam_solver": -223.12,
+        "no_show": -405.93,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -41.17,
+          "3": -21.38,
+          "4": -60.09,
+          "6": 12.79
+        },
+        "bluffer_gain": 64.56,
+        "lowballer_gain": -26.64,
+        "caught_share": 0.9897,
+        "detection_change": 0.7214,
+        "good_failed_share": 0.2218,
+        "escalated_share": 0.4209,
+        "evaluator": 1.85,
+        "check_gains": {
+          "lazy": -5.76,
+          "herd": -3.25,
+          "copy": -279.32,
+          "craft": -315.29,
+          "plant": -235.78,
+          "sock": -3.0,
+          "half": -279.68
+        },
+        "herd_agreement_gain": 6.88,
+        "half_without_challenge_gain": -235.83,
+        "fresh_round": {
+          "days_change": -1.3,
+          "funder_cost_change": -0.56,
+          "paid_change": -1,
+          "price_change": -13.49,
+          "solver_change": 51.31
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.02,
+          "funder_cost_change": 0.38,
+          "solver_change": 2.51
+        },
+        "bounties_paid": 35.85,
+        "bounties_unsolved": 53.75,
+        "reporter": 4.82,
+        "funder_cost_change": -1.78,
+        "funded_share_change": 0.4131,
+        "crowd_out_ratio": 0.923,
+        "crowd_out_weak": 0.8971,
+        "rep_farmer": -280.81,
+        "bond_change": -1.62,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "1000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -7.1,
+        "validator": 10.37,
+        "spam_solver": -290.02,
+        "no_show": -438.36,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 58.17,
+          "3": -44.52,
+          "4": 53.64,
+          "6": -33.07
+        },
+        "bluffer_gain": -16.55,
+        "lowballer_gain": 8.58,
+        "caught_share": 0.9917,
+        "detection_change": 0.6773,
+        "good_failed_share": 0.287,
+        "escalated_share": 0.4382,
+        "evaluator": 0.92,
+        "check_gains": {
+          "lazy": -8.2,
+          "herd": -1.95,
+          "copy": -317.97,
+          "craft": -405.86,
+          "plant": -259.52,
+          "sock": 54.74,
+          "half": -240.81
+        },
+        "herd_agreement_gain": 3.3,
+        "half_without_challenge_gain": -217.18,
+        "fresh_round": {
+          "days_change": -2.04,
+          "funder_cost_change": 6.71,
+          "paid_change": -0.55,
+          "price_change": -8.94,
+          "solver_change": 32.11
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.01,
+          "funder_cost_change": -2.04,
+          "solver_change": -4.14
+        },
+        "bounties_paid": 16.7,
+        "bounties_unsolved": 74,
+        "reporter": 2.99,
+        "funder_cost_change": 4.95,
+        "funded_share_change": 0.4043,
+        "crowd_out_ratio": 0.9295,
+        "crowd_out_weak": 0.8783,
+        "rep_farmer": -269.82,
+        "bond_change": -2.61,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "pledged share": {
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "bidding your cost is best",
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -1.0,
+        "validator": 11.8,
+        "spam_solver": -287.08,
+        "no_show": -441.56,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 29.61,
+          "3": 11.94,
+          "4": 14.46,
+          "6": -26.86
+        },
+        "bluffer_gain": 49.84,
+        "lowballer_gain": -84.68,
+        "caught_share": 0.9812,
+        "detection_change": 0.7949,
+        "good_failed_share": 0.2297,
+        "escalated_share": 0.4352,
+        "evaluator": 1.11,
+        "check_gains": {
+          "lazy": -4.97,
+          "herd": -2.19,
+          "copy": -332.2,
+          "craft": -377.31,
+          "plant": -236.5,
+          "sock": 41.06,
+          "half": -299.65
+        },
+        "herd_agreement_gain": 3.83,
+        "half_without_challenge_gain": -252.2,
+        "fresh_round": {
+          "days_change": -3.01,
+          "funder_cost_change": -2.5,
+          "paid_change": -0.6,
+          "price_change": -14.23,
+          "solver_change": 67.24
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.01,
+          "funder_cost_change": -19.54,
+          "solver_change": -6.78
+        },
+        "bounties_paid": 21.65,
+        "bounties_unsolved": 49.35,
+        "reporter": 3.56,
+        "funder_cost_change": 20.21,
+        "funded_share_change": 0.3761,
+        "crowd_out_ratio": 0.9846,
+        "crowd_out_weak": 0.9085,
+        "rep_farmer": -302.61,
+        "bond_change": -1.69,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": -0.42,
+        "validator": 12.63,
+        "spam_solver": -282.52,
+        "no_show": -404.36,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 58.18,
+          "3": 49.77,
+          "4": 43.54,
+          "6": -29.01
+        },
+        "bluffer_gain": 0.8,
+        "lowballer_gain": -30.36,
+        "caught_share": 0.9867,
+        "detection_change": 0.737,
+        "good_failed_share": 0.2474,
+        "escalated_share": 0.4517,
+        "evaluator": 1.38,
+        "check_gains": {
+          "lazy": -8.9,
+          "herd": -2.86,
+          "copy": -306.7,
+          "craft": -236.34,
+          "plant": -206.25,
+          "sock": 40.12,
+          "half": -207.02
+        },
+        "herd_agreement_gain": 4.71,
+        "half_without_challenge_gain": -205.66,
+        "fresh_round": {
+          "days_change": -1.65,
+          "funder_cost_change": 9.66,
+          "paid_change": -1.85,
+          "price_change": -7.59,
+          "solver_change": 60.52
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": 7.73,
+          "solver_change": 1.18
+        },
+        "bounties_paid": 25.45,
+        "bounties_unsolved": 63.9,
+        "reporter": 3.96,
+        "funder_cost_change": 7.86,
+        "funded_share_change": 0.4203,
+        "crowd_out_ratio": 0.9324,
+        "crowd_out_weak": 1.0306,
+        "rep_farmer": -253.43,
+        "bond_change": -4.8,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "treasury junk detection": {
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.41,
+        "validator": 12.41,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9361,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "8500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "9500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 0.07,
+        "validator": 12.52,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.979,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "model correlation within a family": {
+      "0.0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose"
+        ],
+        "solver_net_of_effort": 5.67,
+        "validator": 12.61,
+        "spam_solver": -269.35,
+        "no_show": -410.55,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -29.09,
+          "3": -55.61,
+          "4": 37.14,
+          "6": -9.92
+        },
+        "bluffer_gain": -45.04,
+        "lowballer_gain": -64.01,
+        "caught_share": 0.9929,
+        "detection_change": 0.7588,
+        "good_failed_share": 0.2548,
+        "escalated_share": 0.4994,
+        "evaluator": 1.51,
+        "check_gains": {
+          "lazy": -9.62,
+          "herd": -3.26,
+          "copy": -331.27,
+          "craft": -315.38,
+          "plant": -283.24,
+          "sock": 10.33,
+          "half": -229.94
+        },
+        "herd_agreement_gain": 6.59,
+        "half_without_challenge_gain": -278.18,
+        "fresh_round": {
+          "days_change": -1.52,
+          "funder_cost_change": 3.01,
+          "paid_change": -0.5,
+          "price_change": -11.78,
+          "solver_change": 56.07
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -12.4,
+          "solver_change": -6.38
+        },
+        "bounties_paid": 25,
+        "bounties_unsolved": 62.4,
+        "reporter": 3.91,
+        "funder_cost_change": 0.05,
+        "funded_share_change": 0.4195,
+        "crowd_out_ratio": 0.9257,
+        "crowd_out_weak": 0.919,
+        "rep_farmer": -296.31,
+        "bond_change": -3.82,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "0.5": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "0.8": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -4.39,
+        "validator": 12.02,
+        "spam_solver": -278.34,
+        "no_show": -403.62,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 8.66,
+          "3": 50.01,
+          "4": 54.19,
+          "6": -51.34
+        },
+        "bluffer_gain": 45.59,
+        "lowballer_gain": -43.94,
+        "caught_share": 0.9899,
+        "detection_change": 0.7559,
+        "good_failed_share": 0.2611,
+        "escalated_share": 0.4235,
+        "evaluator": 1.28,
+        "check_gains": {
+          "lazy": -4.71,
+          "herd": -1.93,
+          "copy": -285.95,
+          "craft": -253.22,
+          "plant": -246.31,
+          "sock": 37.78,
+          "half": -200.05
+        },
+        "herd_agreement_gain": 4.08,
+        "half_without_challenge_gain": -183.01,
+        "fresh_round": {
+          "days_change": -1.11,
+          "funder_cost_change": 11.08,
+          "paid_change": -1.85,
+          "price_change": -7.97,
+          "solver_change": 47.49
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -7.8,
+          "solver_change": -12.07
+        },
+        "bounties_paid": 24.55,
+        "bounties_unsolved": 63.7,
+        "reporter": 3.7,
+        "funder_cost_change": -7.98,
+        "funded_share_change": 0.41,
+        "crowd_out_ratio": 0.9519,
+        "crowd_out_weak": 0.9146,
+        "rep_farmer": -222.39,
+        "bond_change": 0.86,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "evaluator cost per verdict": {
+      "100000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 3.67,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -5.59,
+          "copy": -315.43,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 2.62,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "300000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "500000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest checkers earn",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": -1.1,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": 0.72,
+          "copy": -315.11,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 7.97,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "model accuracy (added to every family)": {
+      "-0.05": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "griefing loses money",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -39.11,
+        "validator": 9.59,
+        "spam_solver": -304.38,
+        "no_show": -427.04,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -3.97,
+          "3": -118.53,
+          "4": -116.61,
+          "6": 23.44
+        },
+        "bluffer_gain": 50.94,
+        "lowballer_gain": -79.09,
+        "caught_share": 0.9817,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.4544,
+        "escalated_share": 0.5535,
+        "evaluator": 1.45,
+        "check_gains": {
+          "lazy": -7.62,
+          "herd": -3.06,
+          "copy": -265.23,
+          "craft": -298.15,
+          "plant": -239.24,
+          "sock": 20.29,
+          "half": -214.44
+        },
+        "herd_agreement_gain": 4.79,
+        "half_without_challenge_gain": -220.59,
+        "fresh_round": {
+          "days_change": -2.79,
+          "funder_cost_change": -8.74,
+          "paid_change": -0.95,
+          "price_change": -13.4,
+          "solver_change": 140.81
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -8.54,
+          "solver_change": -3.25
+        },
+        "bounties_paid": 19.3,
+        "bounties_unsolved": 67.9,
+        "reporter": 2.94,
+        "funder_cost_change": -29.94,
+        "funded_share_change": 0.4058,
+        "crowd_out_ratio": 0.9406,
+        "crowd_out_weak": 0.8355,
+        "rep_farmer": -267.33,
+        "bond_change": -0.71,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "0.0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "0.05": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose"
+        ],
+        "solver_net_of_effort": 11.31,
+        "validator": 13.49,
+        "spam_solver": -259.06,
+        "no_show": -416.48,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -32.19,
+          "3": -21.61,
+          "4": 86.32,
+          "6": 110.93
+        },
+        "bluffer_gain": -5.22,
+        "lowballer_gain": -16.8,
+        "caught_share": 1.0,
+        "detection_change": 0.766,
+        "good_failed_share": 0.1384,
+        "escalated_share": 0.3573,
+        "evaluator": 1.22,
+        "check_gains": {
+          "lazy": -7.92,
+          "herd": -2.12,
+          "copy": -297.87,
+          "craft": -335.37,
+          "plant": -260.99,
+          "sock": 17.72,
+          "half": -242.89
+        },
+        "herd_agreement_gain": 3.92,
+        "half_without_challenge_gain": -243.76,
+        "fresh_round": {
+          "days_change": -1.03,
+          "funder_cost_change": 6.15,
+          "paid_change": -0.05,
+          "price_change": -5.59,
+          "solver_change": 18.99
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -7.62,
+          "solver_change": -8.36
+        },
+        "bounties_paid": 27.55,
+        "bounties_unsolved": 58.65,
+        "reporter": 4.37,
+        "funder_cost_change": 6.44,
+        "funded_share_change": 0.39,
+        "crowd_out_ratio": 0.956,
+        "crowd_out_weak": 0.9568,
+        "rep_farmer": -236.7,
+        "bond_change": -4.44,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "0.1": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose"
+        ],
+        "solver_net_of_effort": 21.96,
+        "validator": 14.19,
+        "spam_solver": -244.35,
+        "no_show": -414.86,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -97.5,
+          "3": -1.9,
+          "4": 14.7,
+          "6": -73.61
+        },
+        "bluffer_gain": -40.19,
+        "lowballer_gain": -63.87,
+        "caught_share": 1.0,
+        "detection_change": 0.766,
+        "good_failed_share": 0.0536,
+        "escalated_share": 0.2626,
+        "evaluator": 0.97,
+        "check_gains": {
+          "lazy": -8.06,
+          "herd": -1.94,
+          "copy": -294.77,
+          "craft": -338.33,
+          "plant": -247.24,
+          "sock": 46.79,
+          "half": -207.41
+        },
+        "herd_agreement_gain": 2.99,
+        "half_without_challenge_gain": -250.58,
+        "fresh_round": {
+          "days_change": -0.37,
+          "funder_cost_change": -0.63,
+          "paid_change": -0.55,
+          "price_change": -5.75,
+          "solver_change": 9.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -7.47,
+          "solver_change": -3.01
+        },
+        "bounties_paid": 27.55,
+        "bounties_unsolved": 60.05,
+        "reporter": 4.34,
+        "funder_cost_change": 4.79,
+        "funded_share_change": 0.3979,
+        "crowd_out_ratio": 0.9312,
+        "crowd_out_weak": 0.8964,
+        "rep_farmer": -239.97,
+        "bond_change": -5.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "enclave compromise": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.26,
+        "validator": 12.56,
+        "spam_solver": -285.55,
+        "no_show": -414.17,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -48.23,
+          "3": -47.88,
+          "4": -123.4,
+          "6": -30.97
+        },
+        "bluffer_gain": 39.52,
+        "lowballer_gain": -39.55,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2368,
+        "escalated_share": 0.4152,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.32,
+          "herd": -2.37,
+          "copy": -324.88,
+          "craft": -316.37,
+          "plant": -241.71,
+          "sock": -13.27,
+          "half": -214.84
+        },
+        "herd_agreement_gain": 5.09,
+        "half_without_challenge_gain": -252.64,
+        "fresh_round": {
+          "days_change": -1.84,
+          "funder_cost_change": 7.03,
+          "paid_change": 0.85,
+          "price_change": -15.44,
+          "solver_change": 46.52
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.51,
+          "solver_change": -22.51
+        },
+        "bounties_paid": 25,
+        "bounties_unsolved": 63.35,
+        "reporter": 3.79,
+        "funder_cost_change": 12.81,
+        "funded_share_change": 0.3864,
+        "crowd_out_ratio": 0.9312,
+        "crowd_out_weak": 0.9244,
+        "rep_farmer": -259.23,
+        "bond_change": -0.81,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "50": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -1.24,
+        "validator": 12.51,
+        "spam_solver": -289.12,
+        "no_show": -418.39,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -55.4,
+          "3": -29.74,
+          "4": 51.1,
+          "6": 99.69
+        },
+        "bluffer_gain": 14.06,
+        "lowballer_gain": -57.41,
+        "caught_share": 0.9958,
+        "detection_change": 0.7618,
+        "good_failed_share": 0.2229,
+        "escalated_share": 0.4556,
+        "evaluator": 1.36,
+        "check_gains": {
+          "lazy": -8.59,
+          "herd": -1.99,
+          "copy": -326.09,
+          "craft": -243.21,
+          "plant": -205.53,
+          "sock": 17.51,
+          "half": -194.43
+        },
+        "herd_agreement_gain": 4.38,
+        "half_without_challenge_gain": -241.27,
+        "fresh_round": {
+          "days_change": -1.62,
+          "funder_cost_change": 19.32,
+          "paid_change": -0.1,
+          "price_change": -14.19,
+          "solver_change": 63.89
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.02,
+          "funder_cost_change": -8.09,
+          "solver_change": -13.54
+        },
+        "bounties_paid": 25.1,
+        "bounties_unsolved": 62.5,
+        "reporter": 3.81,
+        "funder_cost_change": 13.47,
+        "funded_share_change": 0.3791,
+        "crowd_out_ratio": 0.9179,
+        "crowd_out_weak": 0.9011,
+        "rep_farmer": -270.87,
+        "bond_change": -2.13,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "bond (stake share)": {
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "no ring gains",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -2.71,
+        "validator": 10.06,
+        "spam_solver": -249.23,
+        "no_show": -241.64,
+        "ring_gains_from": 6,
+        "rings": {
+          "2": -7.38,
+          "3": -37.62,
+          "4": -11.91,
+          "6": 113.49
+        },
+        "bluffer_gain": 39.58,
+        "lowballer_gain": -80.6,
+        "caught_share": 1.0,
+        "detection_change": 0.7631,
+        "good_failed_share": 0.2544,
+        "escalated_share": 0.4405,
+        "evaluator": 1.31,
+        "check_gains": {
+          "lazy": -8.62,
+          "herd": -2.77,
+          "copy": -297.2,
+          "craft": -281.73,
+          "plant": -289.87,
+          "sock": -7.14,
+          "half": -216.23
+        },
+        "herd_agreement_gain": 4.77,
+        "half_without_challenge_gain": -208.12,
+        "fresh_round": {
+          "days_change": -2.54,
+          "funder_cost_change": -10.34,
+          "paid_change": -1.65,
+          "price_change": -10.87,
+          "solver_change": 28.14
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -10.96,
+          "solver_change": -5.3
+        },
+        "bounties_paid": 24.7,
+        "bounties_unsolved": 64.75,
+        "reporter": 3.28,
+        "funder_cost_change": -7.36,
+        "funded_share_change": 0.381,
+        "crowd_out_ratio": 0.9389,
+        "crowd_out_weak": 0.8906,
+        "rep_farmer": -146.52,
+        "bond_change": -0.6,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -3.94,
+        "validator": 13.55,
+        "spam_solver": -250.74,
+        "no_show": -484.83,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 7.89,
+          "3": -64.74,
+          "4": -69.34,
+          "6": -7.24
+        },
+        "bluffer_gain": -1.23,
+        "lowballer_gain": -82.22,
+        "caught_share": 0.995,
+        "detection_change": 0.7498,
+        "good_failed_share": 0.2848,
+        "escalated_share": 0.4743,
+        "evaluator": 1.21,
+        "check_gains": {
+          "lazy": -10.02,
+          "herd": -2.32,
+          "copy": -334.03,
+          "craft": -302.65,
+          "plant": -272.18,
+          "sock": -44.35,
+          "half": -259.48
+        },
+        "herd_agreement_gain": 4.25,
+        "half_without_challenge_gain": -267.55,
+        "fresh_round": {
+          "days_change": -0.62,
+          "funder_cost_change": 9.32,
+          "paid_change": -0.65,
+          "price_change": -12.82,
+          "solver_change": 48.61
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -17.27,
+          "solver_change": -28.66
+        },
+        "bounties_paid": 20.75,
+        "bounties_unsolved": 65.7,
+        "reporter": 3.63,
+        "funder_cost_change": 10.8,
+        "funded_share_change": 0.4198,
+        "crowd_out_ratio": 0.9443,
+        "crowd_out_weak": 0.8641,
+        "rep_farmer": -376.48,
+        "bond_change": -1.81,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "delivery days": {
+      "7": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest mistakes don't pay",
+          "honest solvers earn more than their cost",
+          "no ring gains",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -1.55,
+        "validator": 12.62,
+        "spam_solver": -279.59,
+        "no_show": -491.02,
+        "ring_gains_from": 4,
+        "rings": {
+          "2": 19.59,
+          "3": -16.06,
+          "4": 139.43,
+          "6": -21.53
+        },
+        "bluffer_gain": 11.97,
+        "lowballer_gain": -124.48,
+        "caught_share": 0.9883,
+        "detection_change": 0.7252,
+        "good_failed_share": 0.221,
+        "escalated_share": 0.4181,
+        "evaluator": 1.24,
+        "check_gains": {
+          "lazy": -6.55,
+          "herd": -2.1,
+          "copy": -251.03,
+          "craft": -329.17,
+          "plant": -196.33,
+          "sock": -6.69,
+          "half": -256.05
+        },
+        "herd_agreement_gain": 5.08,
+        "half_without_challenge_gain": -257.41,
+        "fresh_round": {
+          "days_change": -1.18,
+          "funder_cost_change": 24.1,
+          "paid_change": -0.15,
+          "price_change": -13.3,
+          "solver_change": 68.84
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.66,
+          "solver_change": -13.39
+        },
+        "bounties_paid": 24.85,
+        "bounties_unsolved": 67.4,
+        "reporter": 3.82,
+        "funder_cost_change": 3.82,
+        "funded_share_change": 0.427,
+        "crowd_out_ratio": 0.8615,
+        "crowd_out_weak": 0.8527,
+        "rep_farmer": -367.89,
+        "bond_change": -1.97,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "14": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "28": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -1.47,
+        "validator": 12.36,
+        "spam_solver": -268.97,
+        "no_show": -294.57,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -4.13,
+          "funder_cost_change": 0.1,
+          "paid_change": 0.15,
+          "price_change": -9.34,
+          "solver_change": 46.53
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -172.19,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "market fee": {
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 3.6,
+        "validator": 7.75,
+        "spam_solver": -284.8,
+        "no_show": -439.73,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -18.38,
+          "3": -31.65,
+          "4": -37.47,
+          "6": -60.06
+        },
+        "bluffer_gain": -3.81,
+        "lowballer_gain": -94.06,
+        "caught_share": 0.9938,
+        "detection_change": 0.7565,
+        "good_failed_share": 0.2458,
+        "escalated_share": 0.4482,
+        "evaluator": 1.33,
+        "check_gains": {
+          "lazy": -9.92,
+          "herd": -2.76,
+          "copy": -303.59,
+          "craft": -377.58,
+          "plant": -274.26,
+          "sock": -16.45,
+          "half": -273.79
+        },
+        "herd_agreement_gain": 3.79,
+        "half_without_challenge_gain": -278.22,
+        "fresh_round": {
+          "days_change": -1.72,
+          "funder_cost_change": 2.78,
+          "paid_change": -1.1,
+          "price_change": -10.25,
+          "solver_change": 50.34
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -8.78,
+          "solver_change": 1.72
+        },
+        "bounties_paid": 23.9,
+        "bounties_unsolved": 63.75,
+        "reporter": 4.05,
+        "funder_cost_change": 19.77,
+        "funded_share_change": 0.3997,
+        "crowd_out_ratio": 0.972,
+        "crowd_out_weak": 0.92,
+        "rep_farmer": -266.88,
+        "bond_change": -0.52,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "3000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "no ring gains",
+          "owner can't gain by defecting"
+        ],
+        "solver_net_of_effort": -3.41,
+        "validator": 15.77,
+        "spam_solver": -279.72,
+        "no_show": -400.12,
+        "ring_gains_from": 6,
+        "rings": {
+          "2": 13.93,
+          "3": -53.34,
+          "4": 13.97,
+          "6": 139.76
+        },
+        "bluffer_gain": -1.49,
+        "lowballer_gain": -12.78,
+        "caught_share": 0.9904,
+        "detection_change": 0.7501,
+        "good_failed_share": 0.2913,
+        "escalated_share": 0.4634,
+        "evaluator": 1.22,
+        "check_gains": {
+          "lazy": -10.72,
+          "herd": -2.48,
+          "copy": -281.62,
+          "craft": -268.66,
+          "plant": -237.12,
+          "sock": 27.06,
+          "half": -221.45
+        },
+        "herd_agreement_gain": 4.52,
+        "half_without_challenge_gain": -272.05,
+        "fresh_round": {
+          "days_change": -2.17,
+          "funder_cost_change": -6.27,
+          "paid_change": -1.65,
+          "price_change": -10.7,
+          "solver_change": 44.48
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -15.72,
+          "solver_change": -25.29
+        },
+        "bounties_paid": 22,
+        "bounties_unsolved": 63,
+        "reporter": 3.2,
+        "funder_cost_change": -21.57,
+        "funded_share_change": 0.4222,
+        "crowd_out_ratio": 1.0,
+        "crowd_out_weak": 0.9477,
+        "rep_farmer": -238.17,
+        "bond_change": -3.18,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "issue stake": {
+      "2000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -1.25,
+        "validator": 12.43,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9765,
+        "crowd_out_weak": 0.9319,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "20000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.4,
+        "validator": 12.5,
+        "spam_solver": -265.13,
+        "no_show": -415.58,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -55.19,
+          "3": -39.29,
+          "4": -16.5,
+          "6": 4.52
+        },
+        "bluffer_gain": 11.36,
+        "lowballer_gain": -60.44,
+        "caught_share": 0.9816,
+        "detection_change": 0.7537,
+        "good_failed_share": 0.2436,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -314.26,
+          "craft": -309.45,
+          "plant": -262.9,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.3,
+        "half_without_challenge_gain": -267.66,
+        "fresh_round": {
+          "days_change": -2.09,
+          "funder_cost_change": 4.91,
+          "paid_change": 0.8,
+          "price_change": -13.87,
+          "solver_change": 59.24
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -3.91,
+          "solver_change": -18.14
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9823,
+        "crowd_out_weak": 0.9714,
+        "rep_farmer": -256.71,
+        "bond_change": 0.2,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "finder's fee": {
+      "250": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "no ring gains"
+        ],
+        "solver_net_of_effort": -0.15,
+        "validator": 12.88,
+        "spam_solver": -262.26,
+        "no_show": -418.72,
+        "ring_gains_from": 6,
+        "rings": {
+          "2": -7.57,
+          "3": -67.69,
+          "4": -30.71,
+          "6": 137.39
+        },
+        "bluffer_gain": -16.69,
+        "lowballer_gain": -90.8,
+        "caught_share": 0.9705,
+        "detection_change": 0.7366,
+        "good_failed_share": 0.2646,
+        "escalated_share": 0.4524,
+        "evaluator": 1.4,
+        "check_gains": {
+          "lazy": -9.03,
+          "herd": -1.95,
+          "copy": -324.33,
+          "craft": -330.83,
+          "plant": -265.74,
+          "sock": -52.78,
+          "half": -263.97
+        },
+        "herd_agreement_gain": 4.63,
+        "half_without_challenge_gain": -249.51,
+        "fresh_round": {
+          "days_change": -1.86,
+          "funder_cost_change": 4.05,
+          "paid_change": -1.15,
+          "price_change": -10.09,
+          "solver_change": 49.27
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.03,
+          "funder_cost_change": -5.17,
+          "solver_change": -6.17
+        },
+        "bounties_paid": 25.15,
+        "bounties_unsolved": 62.9,
+        "reporter": 2.12,
+        "funder_cost_change": -27.16,
+        "funded_share_change": 0.3925,
+        "crowd_out_ratio": 0.932,
+        "crowd_out_weak": 0.8877,
+        "rep_farmer": -254.72,
+        "bond_change": -4.54,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "owner can't gain by defecting",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -3.87,
+        "validator": 11.45,
+        "spam_solver": -273.83,
+        "no_show": -415.45,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -14.99,
+          "3": -12.86,
+          "4": 12.58,
+          "6": 46.48
+        },
+        "bluffer_gain": -11.31,
+        "lowballer_gain": -112.64,
+        "caught_share": 0.9929,
+        "detection_change": 0.7266,
+        "good_failed_share": 0.2694,
+        "escalated_share": 0.4523,
+        "evaluator": 1.28,
+        "check_gains": {
+          "lazy": -9.78,
+          "herd": -2.23,
+          "copy": -303.28,
+          "craft": -339.4,
+          "plant": -230.68,
+          "sock": 47.83,
+          "half": -271.62
+        },
+        "herd_agreement_gain": 4.5,
+        "half_without_challenge_gain": -258.51,
+        "fresh_round": {
+          "days_change": -0.2,
+          "funder_cost_change": 1.33,
+          "paid_change": -2.05,
+          "price_change": -7.7,
+          "solver_change": 21.89
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": 9.95,
+          "solver_change": 3.94
+        },
+        "bounties_paid": 22.85,
+        "bounties_unsolved": 64.25,
+        "reporter": 6.98,
+        "funder_cost_change": -1.59,
+        "funded_share_change": 0.4122,
+        "crowd_out_ratio": 0.9785,
+        "crowd_out_weak": 0.8702,
+        "rep_farmer": -262.25,
+        "bond_change": -1.78,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "matching share": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "matching gets more pledged issues fixed",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -4.48,
+        "validator": 11.9,
+        "spam_solver": -247.26,
+        "no_show": -427.34,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 98.11,
+          "3": -0.85,
+          "4": -39.05,
+          "6": 34.81
+        },
+        "bluffer_gain": -9.79,
+        "lowballer_gain": -23.46,
+        "caught_share": 0.99,
+        "detection_change": 0.7321,
+        "good_failed_share": 0.2467,
+        "escalated_share": 0.4482,
+        "evaluator": 1.36,
+        "check_gains": {
+          "lazy": -9.06,
+          "herd": -2.27,
+          "copy": -239.38,
+          "craft": -290.05,
+          "plant": -220.99,
+          "sock": 11.56,
+          "half": -208.34
+        },
+        "herd_agreement_gain": 4.62,
+        "half_without_challenge_gain": -210.0,
+        "fresh_round": {
+          "days_change": -1.53,
+          "funder_cost_change": 12.05,
+          "paid_change": 0.45,
+          "price_change": -10.94,
+          "solver_change": 43.39
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -13.83,
+          "solver_change": -10.94
+        },
+        "bounties_paid": 25.05,
+        "bounties_unsolved": 54.55,
+        "reporter": 3.7,
+        "funder_cost_change": 0.0,
+        "funded_share_change": 0.0,
+        "crowd_out_ratio": 0.9915,
+        "crowd_out_weak": 0.9739,
+        "rep_farmer": -241.57,
+        "bond_change": -1.75,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "10000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": -1.4,
+        "validator": 4.31,
+        "spam_solver": -135.52,
+        "no_show": -384.09,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 25.35,
+          "3": -32.68,
+          "4": 13.59,
+          "6": -33.74
+        },
+        "bluffer_gain": 16.81,
+        "lowballer_gain": -92.88,
+        "caught_share": 0.9,
+        "detection_change": 0.699,
+        "good_failed_share": 0.2716,
+        "escalated_share": 0.446,
+        "evaluator": 0.46,
+        "check_gains": {
+          "lazy": -5.6,
+          "herd": -0.82,
+          "copy": -197.74,
+          "craft": -236.79,
+          "plant": -193.86,
+          "sock": -25.18,
+          "half": -147.78
+        },
+        "herd_agreement_gain": 1.86,
+        "half_without_challenge_gain": -139.06,
+        "fresh_round": {
+          "days_change": -3.64,
+          "funder_cost_change": 2.08,
+          "paid_change": -1.1,
+          "price_change": -21.22,
+          "solver_change": 17.01
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -13.11,
+          "solver_change": -8.03
+        },
+        "bounties_paid": 8.2,
+        "bounties_unsolved": 19.25,
+        "reporter": 1.07,
+        "funder_cost_change": -16.16,
+        "funded_share_change": 0.3749,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": -273.28,
+        "bond_change": -4.19,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "trust floor": {
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": -5.71,
+        "validator": 10.81,
+        "spam_solver": -236.7,
+        "no_show": -408.56,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -46.57,
+          "3": 63.56,
+          "4": -46.64,
+          "6": -33.45
+        },
+        "bluffer_gain": -5.6,
+        "lowballer_gain": -47.33,
+        "caught_share": 0.9938,
+        "detection_change": 0.7118,
+        "good_failed_share": 0.2552,
+        "escalated_share": 0.4358,
+        "evaluator": 1.16,
+        "check_gains": {
+          "lazy": -14.16,
+          "herd": -2.02,
+          "copy": -300.42,
+          "craft": -350.23,
+          "plant": -277.25,
+          "sock": 2.29,
+          "half": -265.07
+        },
+        "herd_agreement_gain": 4.72,
+        "half_without_challenge_gain": -280.85,
+        "fresh_round": {
+          "days_change": -3.62,
+          "funder_cost_change": 12.91,
+          "paid_change": -0.6,
+          "price_change": -9.72,
+          "solver_change": 46.75
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -16.6,
+          "solver_change": -21.69
+        },
+        "bounties_paid": 21.25,
+        "bounties_unsolved": 52.75,
+        "reporter": 3.14,
+        "funder_cost_change": -17.84,
+        "funded_share_change": 0.0741,
+        "crowd_out_ratio": 0.8995,
+        "crowd_out_weak": 0.8625,
+        "rep_farmer": -258.34,
+        "bond_change": -2.37,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "bidding your cost is best",
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "match farming doesn't pay",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 1.66,
+        "validator": 14.26,
+        "spam_solver": -233.04,
+        "no_show": -448.17,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -39.75,
+          "3": -14.7,
+          "4": 120.51,
+          "6": 59.42
+        },
+        "bluffer_gain": 65.48,
+        "lowballer_gain": -38.64,
+        "caught_share": 0.9819,
+        "detection_change": 0.7037,
+        "good_failed_share": 0.2524,
+        "escalated_share": 0.4491,
+        "evaluator": 1.57,
+        "check_gains": {
+          "lazy": -9.48,
+          "herd": -2.75,
+          "copy": -255.46,
+          "craft": -277.33,
+          "plant": -283.95,
+          "sock": -21.95,
+          "half": -197.34
+        },
+        "herd_agreement_gain": 5.42,
+        "half_without_challenge_gain": -202.45,
+        "fresh_round": {
+          "days_change": -1.55,
+          "funder_cost_change": 9.58,
+          "paid_change": -1,
+          "price_change": -13.13,
+          "solver_change": 59.78
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": 7.45,
+          "solver_change": 12.69
+        },
+        "bounties_paid": 29.1,
+        "bounties_unsolved": 72.7,
+        "reporter": 4.82,
+        "funder_cost_change": 17.62,
+        "funded_share_change": 0.6547,
+        "crowd_out_ratio": 0.9192,
+        "crowd_out_weak": 0.9339,
+        "rep_farmer": -310.93,
+        "bond_change": -2.34,
+        "farm_gain": 16.46,
+        "farm_split_unfunded": 0
+      }
+    },
+    "bond discount": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 6.42,
+        "validator": 12.62,
+        "spam_solver": -273.76,
+        "no_show": -396.48,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -32.57,
+          "3": -5.69,
+          "4": 63.78,
+          "6": -63.45
+        },
+        "bluffer_gain": 35.41,
+        "lowballer_gain": -68.37,
+        "caught_share": 1.0,
+        "detection_change": 0.7884,
+        "good_failed_share": 0.2311,
+        "escalated_share": 0.4172,
+        "evaluator": 1.28,
+        "check_gains": {
+          "lazy": -11.85,
+          "herd": -2.71,
+          "copy": -328.0,
+          "craft": -305.03,
+          "plant": -286.39,
+          "sock": 15.49,
+          "half": -216.15
+        },
+        "herd_agreement_gain": 4.62,
+        "half_without_challenge_gain": -237.96,
+        "fresh_round": {
+          "days_change": -2.29,
+          "funder_cost_change": -0.33,
+          "paid_change": -0.35,
+          "price_change": -17.76,
+          "solver_change": 65.93
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.03,
+          "funder_cost_change": 7.54,
+          "solver_change": -4.81
+        },
+        "bounties_paid": 25.4,
+        "bounties_unsolved": 63.4,
+        "reporter": 3.78,
+        "funder_cost_change": 12.48,
+        "funded_share_change": 0.3968,
+        "crowd_out_ratio": 0.975,
+        "crowd_out_weak": 0.9067,
+        "rep_farmer": -250.5,
+        "bond_change": 0.0,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "7500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -2.3,
+        "validator": 12.41,
+        "spam_solver": -275.25,
+        "no_show": -430.93,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 42.74,
+          "3": 11.7,
+          "4": -24.86,
+          "6": -20.23
+        },
+        "bluffer_gain": 8.93,
+        "lowballer_gain": -70.89,
+        "caught_share": 0.9944,
+        "detection_change": 0.7421,
+        "good_failed_share": 0.2239,
+        "escalated_share": 0.4391,
+        "evaluator": 1.39,
+        "check_gains": {
+          "lazy": -7.96,
+          "herd": -2.58,
+          "copy": -321.57,
+          "craft": -279.06,
+          "plant": -221.48,
+          "sock": 19.22,
+          "half": -212.85
+        },
+        "herd_agreement_gain": 5.41,
+        "half_without_challenge_gain": -231.23,
+        "fresh_round": {
+          "days_change": -2.21,
+          "funder_cost_change": -3.77,
+          "paid_change": -0.15,
+          "price_change": -11.42,
+          "solver_change": 49.71
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.04,
+          "funder_cost_change": -3.33,
+          "solver_change": -9.15
+        },
+        "bounties_paid": 25.25,
+        "bounties_unsolved": 62.5,
+        "reporter": 3.9,
+        "funder_cost_change": -15.66,
+        "funded_share_change": 0.3969,
+        "crowd_out_ratio": 0.9638,
+        "crowd_out_weak": 0.9082,
+        "rep_farmer": -264.15,
+        "bond_change": -2.03,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "reserve": {
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 2.42,
+        "validator": 8.78,
+        "spam_solver": -203.54,
+        "no_show": -423.44,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -17.95,
+          "3": 13.3,
+          "4": 64.31,
+          "6": 39.46
+        },
+        "bluffer_gain": -3.29,
+        "lowballer_gain": -43.07,
+        "caught_share": 1.0,
+        "detection_change": 0.6966,
+        "good_failed_share": 0.2388,
+        "escalated_share": 0.4634,
+        "evaluator": 1.03,
+        "check_gains": {
+          "lazy": -7.84,
+          "herd": -2.08,
+          "copy": -222.54,
+          "craft": -202.26,
+          "plant": -188.97,
+          "sock": -24.66,
+          "half": -203.67
+        },
+        "herd_agreement_gain": 3.81,
+        "half_without_challenge_gain": -213.36,
+        "fresh_round": {
+          "days_change": -2.8,
+          "funder_cost_change": 23.06,
+          "paid_change": -0.75,
+          "price_change": -5.06,
+          "solver_change": 61.23
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": -3.89,
+          "solver_change": 2.42
+        },
+        "bounties_paid": 18.45,
+        "bounties_unsolved": 70.5,
+        "reporter": 2.49,
+        "funder_cost_change": -1.93,
+        "funded_share_change": 0.4121,
+        "crowd_out_ratio": 0.9133,
+        "crowd_out_weak": 0.8989,
+        "rep_farmer": -319.71,
+        "bond_change": -2.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "7500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "9000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": -1.51,
+        "validator": 14.55,
+        "spam_solver": -332.31,
+        "no_show": -442.4,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 42.82,
+          "3": -11.47,
+          "4": -14.09,
+          "6": -15.93
+        },
+        "bluffer_gain": 55.72,
+        "lowballer_gain": -100.08,
+        "caught_share": 0.9908,
+        "detection_change": 0.7117,
+        "good_failed_share": 0.2377,
+        "escalated_share": 0.4284,
+        "evaluator": 1.44,
+        "check_gains": {
+          "lazy": -5.54,
+          "herd": -3.1,
+          "copy": -352.34,
+          "craft": -375.28,
+          "plant": -328.72,
+          "sock": 105.22,
+          "half": -289.67
+        },
+        "herd_agreement_gain": 5.25,
+        "half_without_challenge_gain": -339.53,
+        "fresh_round": {
+          "days_change": -1.5,
+          "funder_cost_change": 4.91,
+          "paid_change": -1.1,
+          "price_change": -14.38,
+          "solver_change": 25.49
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": 11.47,
+          "solver_change": 1.32
+        },
+        "bounties_paid": 27.5,
+        "bounties_unsolved": 58.85,
+        "reporter": 4.84,
+        "funder_cost_change": 12.07,
+        "funded_share_change": 0.3917,
+        "crowd_out_ratio": 0.9975,
+        "crowd_out_weak": 0.9164,
+        "rep_farmer": -276.65,
+        "bond_change": -3.54,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "10000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": 3.77,
+        "validator": 16.96,
+        "spam_solver": -296.91,
+        "no_show": -405.29,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -95.06,
+          "3": -103.88,
+          "4": -29.53,
+          "6": -0.8
+        },
+        "bluffer_gain": 7.45,
+        "lowballer_gain": -161.03,
+        "caught_share": 0.9866,
+        "detection_change": 0.7893,
+        "good_failed_share": 0.2405,
+        "escalated_share": 0.4511,
+        "evaluator": 1.67,
+        "check_gains": {
+          "lazy": -8.56,
+          "herd": -3.05,
+          "copy": -410.1,
+          "craft": -447.25,
+          "plant": -344.39,
+          "sock": -18.19,
+          "half": -342.54
+        },
+        "herd_agreement_gain": 5.5,
+        "half_without_challenge_gain": -300.27,
+        "fresh_round": {
+          "days_change": -1.5,
+          "funder_cost_change": 3.15,
+          "paid_change": 0.1,
+          "price_change": -11.62,
+          "solver_change": 69.42
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.01,
+          "funder_cost_change": -25.61,
+          "solver_change": -3.89
+        },
+        "bounties_paid": 29.7,
+        "bounties_unsolved": 59.8,
+        "reporter": 5.54,
+        "funder_cost_change": -6.38,
+        "funded_share_change": 0.4309,
+        "crowd_out_ratio": 0.8829,
+        "crowd_out_weak": 0.8566,
+        "rep_farmer": -256.89,
+        "bond_change": -3.07,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "trust points per release": {
+      "1": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 1.74,
+        "validator": 12.37,
+        "spam_solver": -266.92,
+        "no_show": -418.66,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -103.2,
+          "3": -64.49,
+          "4": -0.47,
+          "6": -16.18
+        },
+        "bluffer_gain": -10.57,
+        "lowballer_gain": -65.47,
+        "caught_share": 0.9857,
+        "detection_change": 0.7174,
+        "good_failed_share": 0.2366,
+        "escalated_share": 0.4128,
+        "evaluator": 1.28,
+        "check_gains": {
+          "lazy": -6.86,
+          "herd": -2.52,
+          "copy": -321.74,
+          "craft": -287.56,
+          "plant": -224.41,
+          "sock": -19.15,
+          "half": -189.73
+        },
+        "herd_agreement_gain": 5.51,
+        "half_without_challenge_gain": -256.52,
+        "fresh_round": {
+          "days_change": -1.68,
+          "funder_cost_change": 6.83,
+          "paid_change": 0.9,
+          "price_change": -11.94,
+          "solver_change": 55.96
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": 3.14,
+          "solver_change": -5.9
+        },
+        "bounties_paid": 25.3,
+        "bounties_unsolved": 64.2,
+        "reporter": 4.0,
+        "funder_cost_change": 1.93,
+        "funded_share_change": 0.4019,
+        "crowd_out_ratio": 0.918,
+        "crowd_out_weak": 0.9147,
+        "rep_farmer": -261.27,
+        "bond_change": -2.14,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "100": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 1.72,
+        "validator": 12.36,
+        "spam_solver": -270.19,
+        "no_show": -419.31,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -103.21,
+          "3": -54.67,
+          "4": 0.01,
+          "6": -22.56
+        },
+        "bluffer_gain": -4.25,
+        "lowballer_gain": -72.7,
+        "caught_share": 0.9857,
+        "detection_change": 0.7174,
+        "good_failed_share": 0.2333,
+        "escalated_share": 0.4145,
+        "evaluator": 1.28,
+        "check_gains": {
+          "lazy": -6.8,
+          "herd": -2.52,
+          "copy": -318.72,
+          "craft": -287.56,
+          "plant": -224.41,
+          "sock": -4.73,
+          "half": -189.73
+        },
+        "herd_agreement_gain": 5.45,
+        "half_without_challenge_gain": -256.52,
+        "fresh_round": {
+          "days_change": -1.72,
+          "funder_cost_change": 7.62,
+          "paid_change": 0.9,
+          "price_change": -10.69,
+          "solver_change": 59.42
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": 4.09,
+          "solver_change": -2.92
+        },
+        "bounties_paid": 25.4,
+        "bounties_unsolved": 63.5,
+        "reporter": 4.08,
+        "funder_cost_change": 2.99,
+        "funded_share_change": 0.3966,
+        "crowd_out_ratio": 0.921,
+        "crowd_out_weak": 0.9177,
+        "rep_farmer": -261.27,
+        "bond_change": -1.79,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "planted share": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -3.48,
+        "validator": 12.16,
+        "spam_solver": -273.98,
+        "no_show": -402.25,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 23.93,
+          "3": -140.76,
+          "4": 11.63,
+          "6": 125.25
+        },
+        "bluffer_gain": -37.78,
+        "lowballer_gain": -70.61,
+        "caught_share": 0.9875,
+        "detection_change": 0.7535,
+        "good_failed_share": 0.2665,
+        "escalated_share": 0.4187,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": 1.51,
+          "herd": -2.05,
+          "copy": -306.27,
+          "craft": -247.4,
+          "plant": -215.03,
+          "sock": -29.2,
+          "half": -206.61
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -252.51,
+        "fresh_round": {
+          "days_change": -3.19,
+          "funder_cost_change": 9.21,
+          "paid_change": 0.5,
+          "price_change": -10.36,
+          "solver_change": 41.68
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.01,
+          "funder_cost_change": -8.36,
+          "solver_change": -15.71
+        },
+        "bounties_paid": 25.4,
+        "bounties_unsolved": 64.15,
+        "reporter": 3.89,
+        "funder_cost_change": 10.83,
+        "funded_share_change": 0.4105,
+        "crowd_out_ratio": 0.9445,
+        "crowd_out_weak": 0.9163,
+        "rep_farmer": -232.46,
+        "bond_change": -0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -2.23,
+        "validator": 12.6,
+        "spam_solver": -259.21,
+        "no_show": -413.48,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -24.94,
+          "3": -150.91,
+          "4": 61.31,
+          "6": -68.1
+        },
+        "bluffer_gain": 6.81,
+        "lowballer_gain": -93.0,
+        "caught_share": 0.9788,
+        "detection_change": 0.7447,
+        "good_failed_share": 0.2305,
+        "escalated_share": 0.437,
+        "evaluator": 1.31,
+        "check_gains": {
+          "lazy": -1.78,
+          "herd": -2.19,
+          "copy": -290.86,
+          "craft": -308.06,
+          "plant": -233.53,
+          "sock": 1.47,
+          "half": -246.46
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -266.65,
+        "fresh_round": {
+          "days_change": -2.41,
+          "funder_cost_change": -4.93,
+          "paid_change": -0.3,
+          "price_change": -11.3,
+          "solver_change": 63.98
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -10.92,
+          "solver_change": -18.65
+        },
+        "bounties_paid": 24.75,
+        "bounties_unsolved": 64.55,
+        "reporter": 3.86,
+        "funder_cost_change": -18.93,
+        "funded_share_change": 0.4008,
+        "crowd_out_ratio": 0.925,
+        "crowd_out_weak": 0.9167,
+        "rep_farmer": -243.68,
+        "bond_change": -2.55,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "owner can't gain by defecting",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.76,
+        "validator": 12.79,
+        "spam_solver": -243.21,
+        "no_show": -423.06,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 69.3,
+          "3": 8.7,
+          "4": -6.09,
+          "6": -23.43
+        },
+        "bluffer_gain": -27.25,
+        "lowballer_gain": -117.55,
+        "caught_share": 0.9944,
+        "detection_change": 0.7604,
+        "good_failed_share": 0.245,
+        "escalated_share": 0.4212,
+        "evaluator": 1.34,
+        "check_gains": {
+          "lazy": -12.72,
+          "herd": -3.3,
+          "copy": -321.59,
+          "craft": -364.15,
+          "plant": -266.83,
+          "sock": 9.74,
+          "half": -283.41
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -259.23,
+        "fresh_round": {
+          "days_change": -2.37,
+          "funder_cost_change": 19.14,
+          "paid_change": -0.95,
+          "price_change": -11.33,
+          "solver_change": 51.43
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -14.11,
+          "solver_change": -8.11
+        },
+        "bounties_paid": 24.3,
+        "bounties_unsolved": 65.05,
+        "reporter": 3.7,
+        "funder_cost_change": 0.2,
+        "funded_share_change": 0.407,
+        "crowd_out_ratio": 0.9251,
+        "crowd_out_weak": 0.8795,
+        "rep_farmer": -274.31,
+        "bond_change": -3.29,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "jury accept threshold": {
+      "2": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose"
+        ],
+        "solver_net_of_effort": 20.55,
+        "validator": 13.96,
+        "spam_solver": -244.06,
+        "no_show": -409.27,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 32.53,
+          "3": 39.2,
+          "4": 17.82,
+          "6": -41.64
+        },
+        "bluffer_gain": -25.65,
+        "lowballer_gain": -50.33,
+        "caught_share": 0.9443,
+        "detection_change": 0.7102,
+        "good_failed_share": 0.0948,
+        "escalated_share": 0.1418,
+        "evaluator": 0.7,
+        "check_gains": {
+          "lazy": -11.15,
+          "herd": -1.67,
+          "copy": -275.33,
+          "craft": -319.53,
+          "plant": -244.9,
+          "sock": -20.35,
+          "half": -256.43
+        },
+        "herd_agreement_gain": 2.91,
+        "half_without_challenge_gain": -254.62,
+        "fresh_round": {
+          "days_change": -0.39,
+          "funder_cost_change": 5.77,
+          "paid_change": -1,
+          "price_change": -3.58,
+          "solver_change": 15.54
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.02,
+          "funder_cost_change": 2.16,
+          "solver_change": -3.47
+        },
+        "bounties_paid": 27.25,
+        "bounties_unsolved": 62.3,
+        "reporter": 4.49,
+        "funder_cost_change": 4.1,
+        "funded_share_change": 0.4123,
+        "crowd_out_ratio": 0.9191,
+        "crowd_out_weak": 0.8654,
+        "rep_farmer": -251.21,
+        "bond_change": -4.93,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "3": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "second jury accept threshold": {
+      "5": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "6": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -18.9,
+        "validator": 11.02,
+        "spam_solver": -300.74,
+        "no_show": -416.49,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 37.51,
+          "3": 58.21,
+          "4": -27.69,
+          "6": -26.93
+        },
+        "bluffer_gain": -18.09,
+        "lowballer_gain": -11.24,
+        "caught_share": 0.9938,
+        "detection_change": 0.7597,
+        "good_failed_share": 0.3559,
+        "escalated_share": 0.4398,
+        "evaluator": 1.41,
+        "check_gains": {
+          "lazy": -9.03,
+          "herd": -2.62,
+          "copy": -265.82,
+          "craft": -313.4,
+          "plant": -266.84,
+          "sock": -19.9,
+          "half": -219.87
+        },
+        "herd_agreement_gain": 4.89,
+        "half_without_challenge_gain": -343.03,
+        "fresh_round": {
+          "days_change": -2.7,
+          "funder_cost_change": 7.68,
+          "paid_change": 0,
+          "price_change": -16.63,
+          "solver_change": 87.23
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.01,
+          "funder_cost_change": 14.86,
+          "solver_change": -13.65
+        },
+        "bounties_paid": 22.15,
+        "bounties_unsolved": 67.45,
+        "reporter": 3.39,
+        "funder_cost_change": -8.92,
+        "funded_share_change": 0.3962,
+        "crowd_out_ratio": 0.913,
+        "crowd_out_weak": 0.8927,
+        "rep_farmer": -289.29,
+        "bond_change": 1.33,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "7": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "no ring gains",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -31.63,
+        "validator": 10.28,
+        "spam_solver": -298.13,
+        "no_show": -408.76,
+        "ring_gains_from": 3,
+        "rings": {
+          "2": 32.19,
+          "3": 96.93,
+          "4": -26.92,
+          "6": 148.48
+        },
+        "bluffer_gain": 30.93,
+        "lowballer_gain": -89.25,
+        "caught_share": 0.9899,
+        "detection_change": 0.7559,
+        "good_failed_share": 0.4224,
+        "escalated_share": 0.424,
+        "evaluator": 1.43,
+        "check_gains": {
+          "lazy": -12.7,
+          "herd": -2.81,
+          "copy": -256.92,
+          "craft": -282.91,
+          "plant": -176.03,
+          "sock": 21.57,
+          "half": -203.58
+        },
+        "herd_agreement_gain": 4.72,
+        "half_without_challenge_gain": -299.28,
+        "fresh_round": {
+          "days_change": -2.5,
+          "funder_cost_change": 14.01,
+          "paid_change": -0.8,
+          "price_change": -13.67,
+          "solver_change": 122.19
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.01,
+          "funder_cost_change": 3.88,
+          "solver_change": -3.2
+        },
+        "bounties_paid": 20.7,
+        "bounties_unsolved": 69.65,
+        "reporter": 3.14,
+        "funder_cost_change": -4.13,
+        "funded_share_change": 0.3814,
+        "crowd_out_ratio": 0.9061,
+        "crowd_out_weak": 0.8884,
+        "rep_farmer": -276.52,
+        "bond_change": 0.7,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "attested runners per delivery": {
+      "1": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": 0.75,
+        "validator": 12.84,
+        "spam_solver": -276.19,
+        "no_show": -418.65,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 24.57,
+          "3": -26.45,
+          "4": 97.73,
+          "6": -11.44
+        },
+        "bluffer_gain": 46.83,
+        "lowballer_gain": -52.96,
+        "caught_share": 1.0,
+        "detection_change": 0.766,
+        "good_failed_share": 0.2541,
+        "escalated_share": 0.4365,
+        "evaluator": 1.31,
+        "check_gains": {
+          "lazy": -4.39,
+          "herd": -2.77,
+          "copy": -371.33,
+          "craft": -335.89,
+          "plant": -271.81,
+          "sock": -38.48,
+          "half": -257.74
+        },
+        "herd_agreement_gain": 4.1,
+        "half_without_challenge_gain": -261.47,
+        "fresh_round": {
+          "days_change": -1.43,
+          "funder_cost_change": -12.88,
+          "paid_change": -1.15,
+          "price_change": -10.29,
+          "solver_change": 45.79
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.02,
+          "funder_cost_change": -21.44,
+          "solver_change": -12.18
+        },
+        "bounties_paid": 24.05,
+        "bounties_unsolved": 61.1,
+        "reporter": 3.87,
+        "funder_cost_change": -5.11,
+        "funded_share_change": 0.4062,
+        "crowd_out_ratio": 0.9836,
+        "crowd_out_weak": 0.9862,
+        "rep_farmer": -258.87,
+        "bond_change": -5.8,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "3": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "no ring gains",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -4.33,
+        "validator": 12.03,
+        "spam_solver": -240.83,
+        "no_show": -415.65,
+        "ring_gains_from": 6,
+        "rings": {
+          "2": 53.92,
+          "3": -39.66,
+          "4": -69.47,
+          "6": 203.75
+        },
+        "bluffer_gain": -4.02,
+        "lowballer_gain": -2.51,
+        "caught_share": 0.9806,
+        "detection_change": 0.7465,
+        "good_failed_share": 0.272,
+        "escalated_share": 0.4496,
+        "evaluator": 1.33,
+        "check_gains": {
+          "lazy": -11.51,
+          "herd": -2.59,
+          "copy": -318.51,
+          "craft": -248.34,
+          "plant": -204.82,
+          "sock": 9.93,
+          "half": -207.29
+        },
+        "herd_agreement_gain": 4.66,
+        "half_without_challenge_gain": -246.5,
+        "fresh_round": {
+          "days_change": -2.29,
+          "funder_cost_change": 13.24,
+          "paid_change": -0.8,
+          "price_change": -9.58,
+          "solver_change": 70.64
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -4.92,
+          "solver_change": -16.51
+        },
+        "bounties_paid": 24.05,
+        "bounties_unsolved": 63.2,
+        "reporter": 3.91,
+        "funder_cost_change": 19.15,
+        "funded_share_change": 0.3895,
+        "crowd_out_ratio": 0.9457,
+        "crowd_out_weak": 0.9491,
+        "rep_farmer": -278.06,
+        "bond_change": -0.78,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "jury size": {
+      "1": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest checkers earn",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -16.58,
+        "validator": 14.2,
+        "spam_solver": -276.42,
+        "no_show": -413.17,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -35.77,
+          "3": -45.62,
+          "4": 20.47,
+          "6": 7.2
+        },
+        "bluffer_gain": 32.94,
+        "lowballer_gain": -53.43,
+        "caught_share": 0.9411,
+        "detection_change": 0.7071,
+        "good_failed_share": 0.2104,
+        "escalated_share": 0.0233,
+        "evaluator": -0.17,
+        "check_gains": {
+          "lazy": -9.54,
+          "herd": -0.3,
+          "copy": -234.1,
+          "craft": -203.03,
+          "plant": -187.45,
+          "sock": 21.15,
+          "half": -202.59
+        },
+        "herd_agreement_gain": 1.26,
+        "half_without_challenge_gain": -263.68,
+        "fresh_round": {
+          "days_change": 0.73,
+          "funder_cost_change": -14.56,
+          "paid_change": -0.7,
+          "price_change": -2.84,
+          "solver_change": 5.27
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.05,
+          "funder_cost_change": -5.57,
+          "solver_change": -6.61
+        },
+        "bounties_paid": 23.15,
+        "bounties_unsolved": 63.95,
+        "reporter": 4.02,
+        "funder_cost_change": 11.59,
+        "funded_share_change": 0.3971,
+        "crowd_out_ratio": 1.0154,
+        "crowd_out_weak": 0.9949,
+        "rep_farmer": -234.56,
+        "bond_change": 2.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "3": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "honest solvers earn more than their cost",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": -0.72,
+        "validator": 12.42,
+        "spam_solver": -268.97,
+        "no_show": -415.21,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -60.01,
+          "3": -38.29,
+          "4": -30.97,
+          "6": 4.52
+        },
+        "bluffer_gain": 25.1,
+        "lowballer_gain": -58.46,
+        "caught_share": 0.9816,
+        "detection_change": 0.7476,
+        "good_failed_share": 0.2449,
+        "escalated_share": 0.4207,
+        "evaluator": 1.29,
+        "check_gains": {
+          "lazy": -7.12,
+          "herd": -2.44,
+          "copy": -315.27,
+          "craft": -309.08,
+          "plant": -243.83,
+          "sock": -4.77,
+          "half": -215.9
+        },
+        "herd_agreement_gain": 5.29,
+        "half_without_challenge_gain": -269.51,
+        "fresh_round": {
+          "days_change": -2.08,
+          "funder_cost_change": 6.2,
+          "paid_change": 0.75,
+          "price_change": -14.03,
+          "solver_change": 55.13
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -3.28,
+          "solver_change": -20.82
+        },
+        "bounties_paid": 24.8,
+        "bounties_unsolved": 62.7,
+        "reporter": 3.87,
+        "funder_cost_change": 2.59,
+        "funded_share_change": 0.3798,
+        "crowd_out_ratio": 0.9209,
+        "crowd_out_weak": 0.9361,
+        "rep_farmer": -252.64,
+        "bond_change": 0.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "checking attacks lose",
+          "griefing loses money",
+          "honest solvers earn more than their cost"
+        ],
+        "solver_net_of_effort": -29.6,
+        "validator": 8.43,
+        "spam_solver": -308.29,
+        "no_show": -415.64,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -42.41,
+          "3": -56.86,
+          "4": -112.81,
+          "6": 4.16
+        },
+        "bluffer_gain": 21.38,
+        "lowballer_gain": -101.23,
+        "caught_share": 1.0,
+        "detection_change": 0.766,
+        "good_failed_share": 0.5182,
+        "escalated_share": 0.9475,
+        "evaluator": 3.05,
+        "check_gains": {
+          "lazy": -11.49,
+          "herd": -5.0,
+          "copy": -334.04,
+          "craft": -267.19,
+          "plant": -149.81,
+          "sock": 20.46,
+          "half": -204.78
+        },
+        "herd_agreement_gain": 8.54,
+        "half_without_challenge_gain": -175.66,
+        "fresh_round": {
+          "days_change": -5.53,
+          "funder_cost_change": 72.58,
+          "paid_change": -0.4,
+          "price_change": -21.48,
+          "solver_change": 151.33
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -35.67,
+          "solver_change": -5.7
+        },
+        "bounties_paid": 18.4,
+        "bounties_unsolved": 62.25,
+        "reporter": 2.67,
+        "funder_cost_change": -12.28,
+        "funded_share_change": 0.378,
+        "crowd_out_ratio": 0.9251,
+        "crowd_out_weak": 0.9267,
+        "rep_farmer": -309.66,
+        "bond_change": -2.21,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    }
+  }
+}

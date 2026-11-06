@@ -1,0 +1,95 @@
+{
+ "call": {
+  "answer": "PASS",
+  "cost_usd": 1.6400000000000002e-06,
+  "error_body": null,
+  "input_tokens": 35,
+  "latency_ms": 205,
+  "output_tokens": 3,
+  "reasoning_blocks": 0,
+  "stop_reason": "end_turn"
+ },
+ "date": "2026-11-03T15:24:55Z",
+ "event": "result",
+ "family": "Google",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "gemma-3-4b",
+ "model_id": "google.gemma-3-4b-it",
+ "notary": "self-a",
+ "notary_events": [
+  {
+   "attestation_bytes": 533,
+   "event": "attested",
+   "mode": "mpc",
+   "seconds": 3.757723222
+  }
+ ],
+ "offline": {
+  "no_network_namespace": true,
+  "notary_address": "0xCA5064d5dA7A391f1FEd7dAbE591d502B59d7944",
+  "python_ok": true,
+  "python_s": 0.013,
+  "recv_revealed": 391,
+  "rust_ok": true,
+  "rust_output": "verified offline in 0.000 s: server bedrock-runtime.us-east-1.amazonaws.com, V1_2, time 1793719492, sent 1755 B (468 revealed), received 391 B; notary key 0242e14f9b5eddcb6dce3579ae82eb9e59a13f6b3e3561074272c30621c1ad3cf5 (k256)",
+  "rust_wall_s": 0.003,
+  "sent_revealed": 468
+ },
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "result": {
+  "attest_s": 0.046,
+  "attestation_bytes": 533,
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    257,
+    1277
+   ],
+   [
+    1294,
+    1561
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "present_s": 0.0,
+  "presentation_bytes": 5984,
+  "prove_s": 0.301,
+  "recv_len": 391,
+  "response_body": "{\"metrics\":{\"latencyMs\":205},\"output\":{\"message\":{\"content\":[{\"text\":\"PASS\\n\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"inputTokens\":35,\"outputTokens\":3,\"serverToolUsage\":{},\"totalTokens\":38}}",
+  "revealed_recv": [
+   [
+    0,
+    391
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    257
+   ],
+   [
+    1277,
+    1294
+   ],
+   [
+    1561,
+    1755
+   ]
+  ],
+  "sent_len": 1755,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 1.014,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 2.297,
+  "tls_version": "V1_2",
+  "total_s": 3.758,
+  "verifier_bytes_down": 3945073,
+  "verifier_bytes_up": 62798943
+ },
+ "run": "call-self-a-mpc-gemma-3-4b",
+ "wall_s": 3.77
+}

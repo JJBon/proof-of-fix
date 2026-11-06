@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# pofctl: play proof-of-fix's roles against a devnet (proof-of-fix#104). See pofctl/README.md.
+#   scripts/pofctl status
+#   scripts/pofctl solver quote --bounty 1
+# Keys from OpenBao by default (sign in first); DEVNET_KEYS=insecure-local for a throwaway devnet.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec python3 -m pofctl "$@"

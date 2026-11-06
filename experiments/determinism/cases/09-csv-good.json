@@ -1,0 +1,27 @@
+{
+ "id": "09-csv-good",
+ "label": "good",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "split_line() splits inside quoted fields: 'a,\"b,c\",d' should give ['a', 'b,c', 'd']. Quoted fields must follow RFC 4180, including doubled quotes inside them (\"say \"\"hi\"\"\" is say \"hi\").",
+ "commit": "Parse quoted CSV fields with the csv module",
+ "diff": "--- a/csvline.py\n+++ b/csvline.py\n@@ -1,3 +1,6 @@\n+import csv\n+\n+\n def split_line(line):\n     \"\"\"The fields of one CSV line (RFC 4180), surrounding spaces stripped.\"\"\"\n-    return [field.strip() for field in line.split(\",\")]\n+    return [field.strip() for field in next(csv.reader([line], skipinitialspace=True))]\n",
+ "context": [
+  {
+   "path": "csvline.py",
+   "text": "    1 def split_line(line):\n    2     \"\"\"The fields of one CSV line (RFC 4180), surrounding spaces stripped.\"\"\"\n    3     return [field.strip() for field in line.split(\",\")]"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "018d4cc4905ba0347dc23cc5991ab94423a213472aa4a09f1ff6d8bd2e1c6d00"
+ }
+}
