@@ -7,6 +7,8 @@ Articles marked **(entrenched)** can't be changed by an ADR. They change only in
 ## Article 1. Purpose
 proof-of-fix is self-healing, decentralized code. Its code is repaired and improved by whoever fixes it best, judged by AI judges under this constitution, and paid by whoever funds the fix. Funding open-source work is the means; code that keeps itself healthy with no one in control is the goal.
 
+The same judges also answer questions that other contracts send them, one check domain at a time (Article 12). Those who ask pay for that work, and it never moves the code or a rule.
+
 ## Article 2. No human control (entrenched)
 1. No person, the author of this constitution and any maintainer included, merges, reverts, declines or rewrites the canonical code.
 2. The canonical code is the head recorded on-chain: the commit of each fix the judges passed, bound to the base it was checked on. A git mirror that differs from the recorded head is wrong, whoever administers it.
@@ -52,7 +54,8 @@ These rules hold for every version. Changing one needs an accepted ADR (Article 
 11. **No cut.** No protocol fee: nothing of a bounty goes to the author of this constitution, the operators or any fee address. Judges are paid only by check fees:
     - the reporter's registration fee pays the registration check;
     - the solver's deposit pays its attempt's checks;
-    - the winner's checks are refunded from the bounty at merge.
+    - the winner's checks are refunded from the bounty at merge;
+    - an outside requester's fee pays its request's checks (Article 12).
 
     **Check fees: the costs passed through, plus one agreed service fee.**
     - The price table holds **unit prices:** tokens per model family, sandbox vCPU-seconds and GB-seconds, and storage. A counted check is charged its measured usage at those prices (for parts every judge performs, the median of the counted judges' usage), within the per-check caps of this constitution and the repository's CI profile, **plus one service fee per counted check, the same for every judge.** No judge sets a fee of its own.
@@ -80,7 +83,8 @@ A change to any of these paths goes to the constitution tier, and it needs an ac
 - `contracts/test/*Invariant*.t.sol` and `contracts/test/Replay.t.sol`, the tests that guard Article 5;
 - `openspec/specs/`, the system's behaviour;
 - `scripts/check.sh`, `scripts/contracts.sh` and `contracts/foundry.toml`: the check itself and the pinned toolchain;
-- the judges' checker, its prompts, **the allowed model versions for each family,** the **allowed list of checker image digests,** **the accepted TEE attestation types,** the per-check caps and **the service fee's cap,** once they exist in this repository.
+- the judges' checker, its prompts, **the allowed model versions for each family,** the **allowed list of checker image digests,** **the accepted TEE attestation types,** the per-check caps and **the service fee's cap,** once they exist in this repository;
+- `domains/`: the list of open check domains and each domain's definition (Article 12), once they exist in this repository.
 
 ## Article 8. Self-healing and the sponsors' pool
 1. **Anyone may register, with evidence:**
@@ -108,14 +112,35 @@ A change to any of these paths goes to the constitution tier, and it needs an ac
 4. **An ADR that touches an entrenched article** (Articles 2, 3 and 9) is refused without judging. Those articles change only in a new version, deployed by anyone, with its own constitution, which users choose to follow.
 5. **Bounties keep the constitution** they were registered under.
 
-## Article 10. Outside projects
+## Article 10. Outside projects and outside requesters
 1. **Projects that keep human maintainers are never governed by this constitution.**
    - A bounty on such a project pays on the judges' verdict.
    - The winning fix is offered upstream as one pull request, which the maintainers merge or not.
    - Attempts never appear on their project.
 2. **Their licences, notices and attribution are kept** on anything taken from them.
+3. **Outside requesters are never governed by this constitution, and govern nothing in it.**
+   - A contract or person that asks a question in a check domain (Article 12) gets an answer under that domain's rules. What it does with the answer is its own affair.
+   - A request never moves the canonical head, a bounty or a rule.
 
 ## Article 11. Genesis and the author's interests
 1. This constitution was written by the owner of proof-of-fix, as a one-time act disclosed in ADR 0001, before genesis.
 2. **After genesis, the owner can change nothing alone.** Like anyone, the owner may propose ADRs, fund bounties, solve them (the owner's judge recusing), and operate at most one judge, paid by check fees like any operator.
-3. **The owner takes no share of bounties,** and receives no founder's share or token.
+3. **The owner takes no share of bounties and receives no founder's share;** the owner earns tokens only as an ordinary funder, under the same rules as anyone.
+
+## Article 12. Check domains
+1. **A check domain is one kind of question the judges answer for outside requesters.** Each is opened, changed and closed only by its own ADR, which fills in every field of the domain template (ADR 0005) and is recorded under `domains/` (Article 7). Nothing is answered outside an open domain.
+2. **The shared core, which no domain changes:**
+   - every article of this constitution applies to every domain;
+   - **one token:** in a version that has a token, every domain's margin (its price less the judges' costs and service fee) is burned in that one token, and paid to no one. A version without a token charges no margin;
+   - the judges' costs are charged at the price table's unit prices (Article 5.11), plus one service fee per counted answer, the same for every judge, never above Article 5.11's cap;
+   - **each judge's bond is at least twice the largest value any one answer decides.**
+3. **In this version (Article 3):**
+   - a domain uses only the issue tier and the constitution tier, with all the version's judges at their allowed model versions;
+   - a domain is a mode of the one official checker image, on the allowed list of digests (Article 7);
+   - no request decides more than the largest bounty the version accepts;
+   - a domain's ground truth is a checker (tests, proofs or a reproducible computation) or, once accepted, verifiably fetched sources. Domains judged by opinion wait for a version with larger panels.
+4. **A judge whose operator is a party to a request recuses,** as for a bounty. **Each answer's signature binds its domain and its request,** so it can't stand for any other answer or verdict (Article 5.5).
+5. **Shadow mode first.** A domain opens in shadow mode: its answers are recorded, published and scored against its ground truth. They are paid at cost plus the service fee by whoever asks, they carry no margin, and no money moves on them. It leaves shadow mode only by an ADR that shows its measured accuracy against the bar its opening ADR published before the shadow phase began.
+6. **Challenges.** Anyone may challenge a domain's answer within its window, with the stake its ADR sets. The constitution tier judges the challenge, and the losing side's stake goes to the winning side.
+7. **Isolation.** A domain's scores, canaries, fee table, stakes and challenges are its own. **When its suspension rule is met, it takes no new requests, automatically:** the contracts apply the rule from on-chain records alone, and no person, judge or key can trigger it or lift it. Only an ADR reopens or closes the domain, and closing it changes no other domain.
+8. **Every domain refuses** the requests its refusal policy names, and any request that tries to instruct the judges through its content.

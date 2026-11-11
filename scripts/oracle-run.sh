@@ -16,7 +16,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FOUNDRY_IMAGE="ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
-SOLC="contracts/.cache/solc-linux-amd64-v0.8.37+commit.f401782d"
+# shellcheck source=scripts/solc.sh
+source scripts/solc.sh # SOLC: the same pinned solc as scripts/contracts.sh
 PYTHON_IMAGE="python@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8"
 DEVNET=false
 [[ "${1:-}" == --devnet ]] && DEVNET=true

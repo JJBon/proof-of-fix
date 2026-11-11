@@ -123,6 +123,14 @@ class TestV2Signatures(unittest.TestCase):
         self.assertEqual(race.fix_of("A" * 40, version=1), crypto.keccak256(("a" * 40).encode()))
         self.assertEqual(race.commitment(fix, salt, solver), crypto.commitment(fix, salt, solver))
 
+    def test_challenge_upheld_is_the_contract_s_type(self):
+        """pofctl oracle uphold-challenge (#152 scenario 5) signs RaceV2's ChallengeUpheld, letter for letter."""
+        src = (ROOT / "contracts" / "src" / "v2" / "RaceV2Base.sol").read_text(encoding="utf-8")
+        typ = re.search(r'CHALLENGE_UPHELD_TYPEHASH =\s*keccak256\("([^"]+)"\)', src).group(1)
+        self.assertEqual(race.CHALLENGE_UPHELD_TYPEHASH, crypto.keccak256(typ.encode()))
+        self.assertIn("challengeUpheld(uint256 b, uint256 epoch, Signed calldata auth)",
+                      (ROOT / "contracts" / "src" / "v2" / "RaceV2Annex.sol").read_text(encoding="utf-8"))
+
 
 class TestCli(unittest.TestCase):
     def test_every_command_parses(self):

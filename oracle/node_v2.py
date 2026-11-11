@@ -6,14 +6,18 @@ For each sealed submission (RaceV2's `Committed` events):
 2. the claim: the pull request on the repository host whose body claims the submission (bot/logic.py's claim), whose
    head commit and salt open the sealed commitment (fix = the head commit as bytes32, as Heads keeps commits);
 3. the check: the evidence (the issue, the commit, the diff the node computes itself: oracle/evidence.py, #166), the
-   fix's tests in the sandbox (oracle/sandbox.py), the judge (fake, the provider called directly (oracle/models.py,
+   fix's tests in the sandbox (oracle/sandbox.py), with the repository's own test command read at the pull request's
+   base (oracle/checkconfig.py, #166), the judge (fake, the provider called directly (oracle/models.py,
    #118), or the gateway in development), a receipt;
 4. the usage report, signed and sent to the meter (`Fees.report`) before any result: the judge backend's tokens, the
    sandbox's vCPU-seconds and GB-seconds at the repository's CI profile, the receipt's storage;
 5. seal, then reveal, with the other drawn judges (the exchange); the outcome two of three reach is the verdict;
 6. the agreeing judges sign the verdict v2 (`Result` with an empty fee list: the meter pays), and the lowest-addressed
    one relays `RaceV2.result`;
-7. once the winning pull request is merged on the host, the same judges sign `Merged` and one relays it.
+7. once the winning pull request is merged on the host, the same judges sign `Merged` and one relays it. With
+   ORACLE_MERGE_VIA=radicle (oracle/radicle.py, #201) there's no host merge to wait for: the drawn judges' nodes,
+   the repository's delegates, push the fix to their Radicle copies and sign once it is canonical main by the
+   delegate threshold, on top of Heads' head; any other canonical main is refused.
 
 The exchange is the node's transport (oracle/transport.py, #117): a directory the nodes share (ORACLE_EXCHANGE, one
 machine: the tests and the folder demo) or the exchange service (exchange/, ORACLE_EXCHANGE_URL) for validators on
@@ -34,7 +38,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import crypto, evidence, receipt as receipts, v2
+from . import checkconfig, crypto, evidence, radicle as rad, receipt as receipts, v2
 from .judge import case_for, refused
 from .models import ModelError
 from .keys import KeyProvider
@@ -92,6 +96,7 @@ class NodeV2:
         self.skipped: set = set()
         self._last_not_ready = ""
         self._race_domain = self._fees_domain = None
+        self.radicle: rad.Radicle | None = None  # ORACLE_MERGE_VIA=radicle: the merge is canonical main's (#201)
 
     # ---------- the loop ----------
 
@@ -222,6 +227,26 @@ class NodeV2:
                             c.bounty, issue_id, onchain["reporter"])
         return case_for(self.repo_name, e.issue, e.commit, e.diff, notes=e.notes), e.refusal
 
+    def _test_command(self, p: dict) -> tuple:
+        """(what the sandbox runs, why this fix can't pass, or ""). The repository's own tests come from
+        `.pof/check.json` at the pull request's base, fetched by this node, never from the fix (oracle/checkconfig.py);
+        without that file, or without a fetcher or a base to read it from, the sandbox's own command, as before.
+        Raises NotReady when the base can't be fetched just now: that's not the fix's doing."""
+        fetcher, base = getattr(self, "fetcher", None), p.get("base_sha", "")
+        if fetcher is None or not base:
+            return checkconfig.command(), ""
+        blob = fetcher.file_at(self.src_root, base, checkconfig.PATH, checkconfig.MAX_BYTES)
+        if blob is None:
+            raise evidence.NotReady(f"no {checkconfig.PATH} from the base {base[:12]} yet")
+        if blob.refusal:
+            return checkconfig.command(), f"the repository's test command: {blob.refusal}"
+        if blob.data is None:
+            return checkconfig.command(), ""
+        try:
+            return checkconfig.command(checkconfig.parse(blob.data)), ""
+        except checkconfig.Invalid as e:
+            return checkconfig.command(), f"the repository's {checkconfig.PATH} at its base {base[:12]} is invalid: {e}"
+
     def _check(self, c: Check, sub: dict) -> bool:
         p = c.pull
         # Everything read from the chain and the host comes first: once the tests have run and the model has been paid,
@@ -230,9 +255,12 @@ class NodeV2:
         onchain = self.chain.issue(issue_id)
         profile = self.chain.profile(onchain["repo"])
         case, refusal = self._case(c, onchain, issue_id)
+        command, why = self._test_command(p)
+        refusal = refusal or why
         src = self.src_root / p["head_sha"]
         started = time.monotonic()
-        tests = run_tests(src, runner=self.runner) if self.runner else run_tests(src)
+        tests = (run_tests(src, command=command, runner=self.runner) if self.runner
+                 else run_tests(src, command=command))
         seconds = time.monotonic() - started
         if refusal:
             self.log(f"submission {c.submission}: not sent to the model, and not passed: {refusal}")
@@ -353,17 +381,24 @@ class NodeV2:
         if not self._merge_due(c.submission, sub):
             c.done = True
             return True
-        if c.pull is None:
-            for p in evidence.host_call(self.host.pulls, "all"):
-                if v2.commit_word(p["head_sha"]) == v2.b32(sub["fix"]):
-                    c.pull = {**p, "fix": v2.b32(sub["fix"])}
+        if self.radicle is not None:
+            step = self._radicle_step(c, sub)
+            if step != rad.SIGN:
+                return step == rad.PUSH
+            where = "the fix is canonical main on Radicle"
+        else:
             if c.pull is None:
+                for p in evidence.host_call(self.host.pulls, "all"):
+                    if v2.commit_word(p["head_sha"]) == v2.b32(sub["fix"]):
+                        c.pull = {**p, "fix": v2.b32(sub["fix"])}
+                if c.pull is None:
+                    return False
+            if not evidence.host_call(self.host.pull, c.pull["number"])["merged"]:
+                if c.note != "awaiting merge":
+                    self.log(f"submission {c.submission}: won; waiting for pull request #{c.pull['number']} to merge")
+                    c.note = "awaiting merge"
                 return False
-        if not evidence.host_call(self.host.pull, c.pull["number"])["merged"]:
-            if c.note != "awaiting merge":
-                self.log(f"submission {c.submission}: won; waiting for pull request #{c.pull['number']} to merge")
-                c.note = "awaiting merge"
-            return False
+            where = f"pull request #{c.pull['number']} merged"
         repo = v2.b32(self.chain.issue(self.chain.bounty(c.bounty)["issue"])["repo"])
         fix, rh, seed = v2.b32(sub["fix"]), v2.b32(sub["receipt"]), v2.b32(sub["seed"])
         nonce = v2.verdict_nonce("merged", c.submission, c.bounty, v2.PASS, rh, fix)
@@ -374,7 +409,7 @@ class NodeV2:
                               {"verdict": v.to_json(), "weight": self.merge_weight,
                                "sig": "0x" + self.keys.sign(digest).hex()})
             c.merge_signed, c.sealed_at = True, self.clock()
-            self.log(f"submission {c.submission}: pull request #{c.pull['number']} merged; signed the merge")
+            self.log(f"submission {c.submission}: {where}; signed the merge")
             return True
         signed = {n: m for n, m in self.exchange.all(c.submission, "merged").items()
                   if any(same(n, j) for j in c.judges) and m["verdict"] == v.to_json()
@@ -389,6 +424,30 @@ class NodeV2:
                          ordered)
         self.log(f"submission {c.submission}: relayed the merge ({len(ordered)} signatures)")
         return True
+
+    def _radicle_step(self, c: Check, sub: dict) -> str:
+        """The merge on Radicle (oracle/radicle.py): SIGN once the won fix is canonical main by the delegate threshold;
+        PUSH when this delegate just voted for it; WAIT or REFUSE otherwise (logged once each). A Radicle copy that
+        can't be read is the host not answering: no progress this pass."""
+        r = self.radicle
+        repo = v2.b32(self.chain.issue(self.chain.bounty(c.bounty)["issue"])["repo"])
+        fix, base = rad.sha_of(v2.b32(sub["fix"])), rad.sha_of(v2.b32(sub["base"]))
+        if repo != r.repo_id:
+            d = rad.Decision(rad.REFUSE, f"the bounty's repository 0x{repo.hex()[:12]} isn't {r.rid}'s")
+        else:
+            head = rad.sha_of(self.chain.head(repo)["commit"])
+            try:
+                snap = r.snapshot(extra=[fix])
+                d = rad.decide(fix, base, head, snap, v2.ISSUE_QUORUM)
+                if d.action == rad.PUSH:
+                    r.push(fix)
+            except rad.Unavailable as e:
+                raise evidence.NotReady(str(e)) from None
+        if d.action == rad.PUSH or c.note != d.reason:
+            verb = {rad.PUSH: "pushed main", rad.REFUSE: "refused", rad.SIGN: "merged"}.get(d.action, "waiting")
+            self.log(f"submission {c.submission}: Radicle: {verb}: {d.reason}")
+            c.note = d.reason
+        return d.action
 
     # ---------- domains (read from the contracts, so a node can't sign for the wrong one) ----------
 

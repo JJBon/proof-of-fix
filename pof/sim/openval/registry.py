@@ -37,6 +37,7 @@ class Account:
     checks: int = 0  # counted checks revealed
     shadows: int = 0
     audits: int = 0
+    tokens: float = 0.0  # #142: its share of the validators' slice, in tokens (valued at World.token_price)
 
 
 @dataclass(eq=False)

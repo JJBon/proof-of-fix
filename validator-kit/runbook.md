@@ -5,7 +5,8 @@ every verdict it counts. This runbook sets that up, joins you as a seat, and tea
 
 **Status:** the contracts (v2: seats, the 3-of-7 draw, the metered fees) and the node's v2 mode are in place, and
 `scripts/demo-e2e.sh` runs this whole flow on a devnet with real node processes, and `scripts/first-run-e2e.sh` the first
-real run on a throwaway copy of the AWS devnet ("The first real run" below).
+real run on a throwaway copy of the AWS devnet ("The first real run" below). `scripts/integration.sh --target aws` runs
+the integration suite on the AWS devnet itself, with the fake judge ("The integration suite on the AWS devnet").
 
 ## 1. Prerequisites
 
@@ -295,8 +296,21 @@ main stays at the head on-chain and needs no commit first. Each fix is one commi
 the root and replaces `stats.py` with `bot/fixes/bad_stats.py` (the lower middle value: the tests fail) or `good_stats.py`
 (they pass). The test has to be at the root: the sandbox runs `python -m unittest` there, and in this tree that finds **no
 tests by itself** (exit 5, a failure). Merged, the fix's commit is main's head (fast-forward or rebase, never a merge commit)
-and the head on-chain moves to it, so a later bounty's verdict isn't stale. Those fixes never run the repository's real
-tests, in `tests/`. Pull requests also start `pof / check` on the `test` runner (`.forgejo/workflows/check.yml`).
+and the head on-chain moves to it, so a later bounty's verdict isn't stale. Pull requests also start `pof / check` on the
+`test` runner (`.forgejo/workflows/check.yml`).
+
+**The repository's own tests (#166).** A repository names them in `.pof/check.json`, an object with one key, `commands`:
+a list of argument lists, run in turn in the sandbox before the acceptance test, which always runs last. The node reads
+the file at the pull request's **base**, never from the fix, so a fix can't weaken its own check, and the head on-chain
+only moves on a verdict checked on that head. For `pof-sandbox`:
+
+```json
+{"commands": [["python", "-m", "unittest", "discover", "-s", "bot/sample", "-t", "bot/sample", "-q"]]}
+```
+
+Without the file a check runs only the root, as above. With an invalid file every check fails closed with no model
+call. `pof-sandbox`'s main must stay at the head on-chain, so the file arrives as part of a bounty's fix and takes effect
+from the next bounty.
 
 **Which judges are real.** One: seat 6, the owner's. The 6 role seats run the **fake judge**: free, deterministic, following
 the sandbox's test result. The contracts can't tell the difference: the verdict and the usage report are the same bytes, a
@@ -348,6 +362,83 @@ the night. Run it by day, and if one is cut off, run it again: a new bounty cost
 **Cost.** Well under $0.10: a few short runs of the instance, about $0.005 each (`COSTS.md`); under a cent per real verdict, as
 this prompt is short (`COSTS.md`'s $0.02-0.12 is for a real diff); and pennies a month for the image in ECR. The rest (the host,
 the watcher) runs anyway. Docker, the nodes and every coin on the chain are free.
+
+## The integration suite on the AWS devnet (#152)
+
+For the deployment's owner, after "The first real run": the integration suite's scenarios against the live AWS devnet,
+`pof-sandbox` and the live nodes, with the **fake judge** (free and deterministic), to test the architecture end to end
+before any AI check. `scripts/integration.sh --target aws` plays the roles; it starts no node, and it never resets or
+redeploys anything. The default target stays the throwaway local devnet.
+
+**What runs where:** as in "The first real run": the chain and the relay on the devnet host, the 6 role seats' nodes on your
+PC (`scripts/devnet-seats.sh up`, on the fake judge by default), seat 6 in the sandbox account. The suite replaces
+`first-bounty.sh` in the second terminal.
+
+**What it runs, and what it doesn't**
+
+| Scenario | On AWS | |
+|---|---|---|
+| 2. a failing fix | yes | Fail, the deposit charged for the checks and the rest returned, the bounty stays Open |
+| 3. a race | yes | two passing fixes: the earliest wins, the other is decided and refunded; a fix sealed after the win pays the evaluation fee (TooLate); the winner is merged |
+| 1. the happy path | yes | quoted, sealed, judged by the drawn live nodes, merged, the merge signed, settled (Paid, by **warping the shared clock**, `--no-warp` stops at Merged), the funder's leftover claimed, the issue closed by the bot's settle with a comment linking the payout transaction (#151) |
+| 5. a challenge | yes | merged, then upheld by the quorum (the role keys): the award closes with nothing earned, the bounty reopens |
+| 4. a silent validator | **local-only** | it needs a drawn node not to run; the suite never stops a live node |
+| 6. joining | **local-only** | it needs a vacant seat; all 7 are taken (seat 6 joined this way), so the preflight checks all 7 are active |
+| 7. infrastructure faults | **local-only** | a relay taken away (7a) or a node killed (7b) would disturb the shared nodes; 7c happens on AWS whenever seat 6 is drawn |
+
+The run prints the skipped ones and why. Then: every seat's fees withdrawn (seat 6's too with its key: #150's open item),
+and the books, as deltas at each result's block: each deposit = what the meter charged + what returned; the seats were
+credited what the meter charged; each withdrawal paid the whole credit. Last, the leaderboard (#151): `pofctl leaderboard
+--bounties <the run's>`, computed from the events, must match the same bounties read from the contracts' views exactly.
+Every balance it asserts is a **delta read before and after**, never an absolute value, since the chain keeps earlier
+runs' balances; the leaderboard, narrowed to the run's own new bounties, is that run's delta too.
+
+**What it leaves on the shared devnet:** each scenario opens its own issue (`[integration <tag>] ...`) and its fixes'
+branches (`integration-<tag>-...`); the run closes every issue and pull request and deletes every branch at the end, pass
+or fail (`--cleanup` does it again for an interrupted run). Its bounties stay on the chain, as on-chain records do.
+Scenarios 3, 1 and 5 merge a fix, so `pof-sandbox`'s main and the head on-chain move with them; every fix writes the same
+two root files (`integration_probe.py` and `test_integration_probe.py`), so main keeps no file per run. Scenario 1 warps
+the clock about 35 days, for everyone on the chain.
+
+**The order**
+
+1. **No model call:** set the kit's `model_id = ""` (the fake judge) and apply, then wait until the node shows `stopped`; or
+   `enabled = false` (then a round that draws seat 6 waits the 15-minute seal window and the two others decide: slower,
+   and seat 6 isn't paid for it). Put it back afterwards.
+2. **The seats**, in a terminal you leave open: "The first real run", step 6 (`scripts/devnet-seats.sh up`). Leave
+   `DEVNET_SEATS_JUDGE` unset: the fake judge.
+3. **The suite**, in a second terminal, between 09:00 and 23:00 Bogota (`--anytime` overrides):
+   ```
+   bao login -no-print -method=oidc role=admin
+   read -rs DEVNET_RPC_AUTH && export DEVNET_RPC_AUTH            # <handle>:<key>
+   read -rs FIRST_BOUNTY_TOKEN && export FIRST_BOUNTY_TOKEN      # write:repository, write:issue on pof-sandbox
+   export FIRST_BOUNTY_USER=<that token's user> DEVNET_RPC_URL=https://devnet.example.com
+   read -rs DEVNET_REPO_TOKEN && export DEVNET_REPO_TOKEN        # optional: the seats' token, checked read-only
+   export POFCTL_KEY_ENGINEER=$(aws secretsmanager get-secret-value --secret-id pof-validator/signing-key \
+       --query SecretString --output text)                      # optional: seat 6's fees withdrawn too (#150)
+   scripts/integration.sh --target aws --preflight               # reads only: what's missing
+   scripts/integration.sh --target aws                           # about 20-40 minutes
+   unset DEVNET_RPC_AUTH FIRST_BOUNTY_TOKEN DEVNET_REPO_TOKEN POFCTL_KEY_ENGINEER
+   ```
+   `_FILE` variants name a file instead (`DEVNET_RPC_AUTH_FILE`, `FIRST_BOUNTY_TOKEN_FILE`, `DEVNET_REPO_TOKEN_FILE`,
+   `POFCTL_KEY_ENGINEER_FILE`). `--only 2` runs some scenarios; `--withdraw-only` only withdraws the seats' fees, seat
+   6's included with its key, which closes #150's last item on its own.
+4. **Read the result:** each scenario's steps, `FAILED:` lines, the skipped scenarios, the books and `result:`. Then
+   `scripts/devnet-seats.sh down`, put the kit's judge back, and revoke the write token.
+
+**The preflight** checks, reading only: the RPC answers chain 7193 with your credential; the record's contracts are on
+the chain with their code hashes; the relay serves this race; the role keys are in OpenBao; 7 seats, all active, seats
+0-5 the role seats and seat 6 not a role (and `POFCTL_KEY_ENGINEER` is seat 6's key, if set); the role seats' nodes are up
+on this machine (`--seats-elsewhere` if they run on another); every sender has 0.1 ETH for gas (`scripts/devnet.sh fund`
+in remote mode tops the roles up); the test coins (the run mints what's short); the write token can push and merge, and
+main is at the head on-chain; the seats' token can't write; leftovers of an earlier run; the time of day. It prints
+`missing:` for each gap, and the run itself refuses to start while one is.
+
+**Secrets:** the credential, the tokens and the keys are read once, at the start, into the suite's memory: the role keys
+from OpenBao, the rest from the environment or their files. The RPC must answer chain 7193 before any key is read. No
+child process gets a key: git gets an environment of its own with the token in a header. The run redacts every secret
+from its output, and fails if one shows up there, in any process's command line (sampled every 2 seconds), in the files
+it writes, in the seats' node logs, or in the issues, comments and pull requests it wrote.
 
 ## A Forgejo target (#112)
 

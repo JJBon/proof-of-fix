@@ -200,6 +200,7 @@ class Market:
 
     def __init__(self, p: Params = PARAMS, w: World = WORLD, mw: MarketWorld = MARKET, seed: int = 1):
         self.p, self.w, self.mw, self.seed = p, w, mw, seed
+        self.token_check = 0.0  # #142: a counted check's expected token value (0 without the slice)
         self.genesis = genesis_prices(w.families, mw.gas)
         self.prices = dict(self.genesis)
         self.fee_now = p.FEE_START if mw.fee_start is None else mw.fee_start
@@ -439,11 +440,13 @@ class Market:
         margin = (usage_cost(self.prices, family, self.mw.usage)
                   - usage_cost(self.costs(vid, family, t), family, self.mw.usage))
         slash = outage_slash(p, w, bond, draws)
-        return (checks * (self.fee_now + margin - w.enclave.per_check - slash) - w.enclave.fixed_month
-                - bond * w.capital_rate / 12)
+        return (checks * (self.fee_now + margin + self.token_check - w.enclave.per_check - slash)
+                - w.enclave.fixed_month - bond * w.capital_rate / 12)
 
     def on_tick(self, net: Net) -> None:
         t = net.t
+        # #142: what a counted check is expected to bring in tokens (last week's slice per standing verdict, valued)
+        self.token_check = net.slice.value_per_check() if net.slice is not None else 0.0
         subs = list(net.subs.values())
         for s in subs[self._seen_sids:]:
             if s.tier == ISSUE:

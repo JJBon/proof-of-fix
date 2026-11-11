@@ -49,6 +49,8 @@ ISSUE_FIELDS = ["repo", "reporter", "coin", "registration", "stake", "bounty", "
 USAGE = "(bytes32,uint64,uint64,uint64,uint64,uint64,uint64)"
 REPORTS = [f"(address,address,uint256,{USAGE})[]"]
 PROFILE = ["(bytes32,uint32,uint32,uint32)"]
+HEAD = ["(bytes32,bytes32,uint256,uint256,uint256,bytes32)"]
+HEAD_FIELDS = ["commit", "constitution", "movedAt", "bounty", "submission", "verdict"]
 CAPS = ["(uint64,uint64,uint64,uint64,uint64,uint64)"]
 VERDICT = "(bytes32,bytes32,bytes32,uint256,uint256,uint8,uint8,bytes32,bytes32,bytes32)"
 COMMITTED = "Committed(uint256,uint256,address)"
@@ -281,6 +283,17 @@ class Chain:
         return [{"bounty": int(log["topics"][1], 16), "submission": int(log["topics"][2], 16),
                  "solver": checksum("0x" + log["topics"][3][-40:]), "block": int(log["blockNumber"], 16)}
                 for log in self.rpc.logs(self.race, from_block, [topic], to_block)]
+
+    def heads(self) -> str:
+        """The head registry RaceV2 deployed (Heads)."""
+        if getattr(self, "_heads", None) is None:
+            self._heads = checksum(self.rpc.view(self.race, "heads()", ["address"])[0])
+        return self._heads
+
+    def head(self, repo) -> dict:
+        """Heads.head(repo): the repository's canonical head on-chain (reverts UnknownRepo outside the registry)."""
+        row = self.rpc.view(self.heads(), "head(bytes32)", HEAD, b32(repo))[0]
+        return {k: (b32(v) if isinstance(v, (bytes, str)) else v) for k, v in zip(HEAD_FIELDS, row)}
 
     def charged(self, from_block: int = 0) -> dict:
         """submission -> (judges counted, the total charged), from the meter's Charged events."""

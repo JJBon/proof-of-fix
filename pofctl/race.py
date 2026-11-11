@@ -56,6 +56,7 @@ ROTATION = ["address", "bytes32", "bytes32", "bytes32", "uint64"]
 
 ACCEPT_TYPEHASH = keccak256(b"Accept(uint256 issue,uint256 weight,bytes32 nonce)")
 MERGED_TYPEHASH_V1 = keccak256(b"Merged(uint256 bounty,uint256 submission,uint256 weight,bytes32 nonce)")
+CHALLENGE_UPHELD_TYPEHASH = keccak256(b"ChallengeUpheld(uint256 bounty,uint256 epoch,bytes32 nonce)")
 
 # The events pofctl's history shows: signature -> (name, indexed fields, data fields).
 EVENTS = {
@@ -74,6 +75,9 @@ EVENTS = {
     "Paid(uint256,address,address,uint256)": ("Paid", ["bounty", "coin", "to"], ["amount"]),
     "Refunded(uint256,address,address,uint256)": ("Refunded", ["bounty", "coin", "funder"], ["amount"]),
     "Withdrawn(address,address,address,uint256)": ("Withdrawn", ["account", "coin"], ["to", "amount"]),
+    "Collected(address,address,address,uint256)": ("Collected", ["coin", "from", "to"], ["amount"]),
+    "RefusedSimilar(uint256,uint256)": ("RefusedSimilar", ["issue", "openBounty"], []),
+    "AppealDecided(uint256,bool)": ("AppealDecided", ["appeal"], ["cleared"]),
 }
 # The seats' and the meter's events (v2): the join flow, the usage reports and the charges.
 SEAT_EVENTS = {
@@ -87,8 +91,9 @@ METER_EVENTS = {
 }
 _ALL_EVENTS = {**EVENTS, **SEAT_EVENTS, **METER_EVENTS}
 _TOPICS = {"0x" + keccak256(sig.encode()).hex(): spec for sig, spec in _ALL_EVENTS.items()}
-_ADDRESSES = {"reporter", "solver", "winner", "coin", "funder", "to", "account", "key", "oldKey", "newKey", "judge",
-              "payee"}
+_ADDRESSES = {"reporter", "solver", "winner", "coin", "funder", "to", "from", "account", "key", "oldKey", "newKey",
+              "judge", "payee"}
+_BOOLS = {"cleared"}
 _BYTES32 = {"image", "attestationType", "attestation", "receipt"}
 
 
@@ -161,6 +166,25 @@ class Race:
         winner, fix, window_end, closed, earned = self.rpc.view(self.address, "awards(uint256,uint256)", AWARD, b,
                                                                epoch)
         return {"winner": winner, "fix": fix, "windowEnd": window_end, "closed": closed, "earned": earned}
+
+    def submissions_of(self, b: int) -> list:
+        return list(self.rpc.view(self.address, "submissionsOf(uint256)", ["uint256[]"], b)[0])
+
+    def instalments_paid(self, b: int, epoch: int, coin: str | None = None) -> int:
+        return self.rpc.view(self.address, "instalmentsPaid(uint256,address,uint256)", ["uint256"], b,
+                             coin or self.coin, epoch)[0]
+
+    def price_of(self, b: int, epoch: int, coin: str | None = None) -> int:
+        return self.rpc.view(self.address, "priceOf(uint256,address,uint256)", ["uint256"], b, coin or self.coin,
+                             epoch)[0]
+
+    def pledged(self, b: int, who: str, coin: str | None = None) -> int:
+        return self.rpc.view(self.address, "pledged(uint256,address,address)", ["uint256"], b, coin or self.coin,
+                             who)[0]
+
+    def refunded_to(self, b: int, who: str, coin: str | None = None) -> bool:
+        return self.rpc.view(self.address, "refundedTo(uint256,address,address)", ["bool"], b, coin or self.coin,
+                             who)[0]
 
     def config(self) -> dict:
         names = ["infrastructure", "insurance", "registrationFee", "issueStake", "attemptFee", "evaluationFee",
@@ -316,6 +340,13 @@ class Race:
         receipt = relayer.send(self.address, f"accept(uint256,uint256,{SIGNED})", issue, weight, auth)
         return self._topic(receipt, "BountyOpened(uint256,uint256)", 1)
 
+    def uphold_challenge(self, relayer: Wallet, signers: Signers, b: int, epoch: int) -> dict:
+        """An upheld challenge against a merged bounty's award (RaceV2's challengeUpheld, signed by the quorum): the
+        award keeps what it has earned, and the bounty reopens at its locked price."""
+        nonce = secrets.token_bytes(32)
+        auth = self._signed(signers, keccak256(CHALLENGE_UPHELD_TYPEHASH + word(b) + word(epoch) + nonce), nonce)
+        return relayer.send(self.address, f"challengeUpheld(uint256,uint256,{SIGNED})", b, epoch, auth)
+
     def drawn_signers(self, signers: Signers, s: int) -> list:
         """The stub quorum's keys among the judges drawn for s, in address order: the ones that may report and sign."""
         judges, _ = self.drawn(s)
@@ -402,7 +433,8 @@ class Race:
             for i, f in enumerate(indexed):
                 raw = int(log["topics"][i + 1], 16)
                 fields[f] = checksum("0x%040x" % raw) if f in _ADDRESSES else raw
-            types = ["address" if f in _ADDRESSES else "bytes32" if f in _BYTES32 else "uint256" for f in data]
+            types = ["address" if f in _ADDRESSES else "bytes32" if f in _BYTES32 else "bool" if f in _BOOLS
+                     else "uint256" for f in data]
             values = abi.decode(types, abi.hexdata(log["data"]))
             fields.update((f, checksum(v) if f in _ADDRESSES else v) for f, v in zip(data, values))
             if name == "StateChanged":
@@ -411,8 +443,40 @@ class Race:
                 fields["outcome"] = OUTCOMES[fields["outcome"]]
             if name == "IssueClosed":
                 fields["state"] = ISSUE_STATES[fields["state"]]
-            out.append({"block": int(log["blockNumber"], 16), "event": name, **fields})
+            out.append({"block": int(log["blockNumber"], 16), "event": name, **fields,
+                        "tx": log.get("transactionHash", ""), "logIndex": int(log.get("logIndex") or "0x0", 16)})
+            if log.get("blockTimestamp"):  # some nodes include it; else board_events() asks for the block
+                out[-1]["time"] = int(log["blockTimestamp"], 16)
         return out
+
+    def board_events(self, from_block: int | None = None, with_time: bool = False) -> list:
+        """The race's and the meter's events in chain order, for the leaderboard (#151): with each block's time when
+        `with_time` (a period), read once per block."""
+        events = self.history(from_block) + (self.meter_events(from_block) if self.meter else [])
+        events.sort(key=lambda e: (e["block"], e["logIndex"]))
+        if with_time:
+            times: dict = {}
+            for e in events:
+                if "time" not in e:
+                    if e["block"] not in times:
+                        times[e["block"]] = int(self.rpc.call("eth_getBlockByNumber", [hex(e["block"]), False])
+                                                ["timestamp"], 16)
+                    e["time"] = times[e["block"]]
+        return events
+
+    def now(self) -> tuple:
+        """(the latest block, its time): the chain's clock, warps included."""
+        b = self.rpc.call("eth_getBlockByNumber", ["latest", False])
+        return int(b["number"], 16), int(b["timestamp"], 16)
+
+    def payout(self, b: int, from_block: int | None = None) -> dict | None:
+        """The transaction that closed bounty b Paid (its StateChanged(b, Paid)): {"tx", "block"}, or None."""
+        start = self.record.get("block", 0) if from_block is None else from_block
+        topics = ["0x" + keccak256(b"StateChanged(uint256,uint8)").hex(), "0x%064x" % b]
+        for log in self.rpc.logs(self.address, start, topics):
+            if int(log["data"], 16) == STATES.index("Paid"):
+                return {"tx": log["transactionHash"], "block": int(log["blockNumber"], 16)}
+        return None
 
 
 def stub_usage(receipt: bytes) -> v2.Usage:

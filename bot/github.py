@@ -124,6 +124,11 @@ class GitHubRepo(RepoHost):
         c, _ = self._request("POST", f"{self.api}/repos/{self.full_name}/issues/{number}/comments", {"body": body})
         return {"id": c["id"], "body": c.get("body") or "", "user": (c.get("user") or {}).get("login", "")}
 
+    def close(self, number: int) -> dict:
+        raw, _ = self._request("PATCH", f"{self.api}/repos/{self.full_name}/issues/{number}",
+                               {"state": "closed", "state_reason": "completed"})
+        return self._issue(raw)
+
     def pull(self, number: int) -> dict:
         return pull_of(self._get(f"/repos/{self.full_name}/pulls/{number}"))
 

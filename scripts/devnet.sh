@@ -42,7 +42,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FOUNDRY_IMAGE="ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
-SOLC="contracts/.cache/solc-linux-amd64-v0.8.37+commit.f401782d"
+# shellcheck source=scripts/solc.sh
+source scripts/solc.sh # SOLC: the same pinned solc as scripts/contracts.sh
 NAME=${DEVNET_NAME:-pof-devnet} # a second devnet (e.g. a test run beside the owner's) needs its own name and port
 CHAIN_ID=7193
 HARDFORK=osaka
@@ -146,6 +147,8 @@ deploy() {
 # needs its own); the constitution's hash is read at that head. DEVNET_V2_FAMILIES and DEVNET_V2_PROVIDERS name each
 # seat's model family and provider (fixed for good at genesis, a vacant seat's too; the family sets its token prices),
 # and DEVNET_V2_IMAGES the allowed checker images; DeployV2.s.sol's defaults when unset.
+# DEVNET_V2_GENESIS (#201): instead of DEVNET_V2_HEAD, the genesis head of a repository outside this one (a Radicle
+# repository's first commit, a full SHA-1), as given; the constitution's hash is then this commit's.
 deploy_v2() {
   need_up
   fund >/dev/null
@@ -168,6 +171,10 @@ deploy_v2() {
   head=$(git rev-parse --verify "${DEVNET_V2_HEAD:-$commit}^{commit}")
   constitution=0x$(git show "$head:CONSTITUTION.md" | sha256sum | cut -d' ' -f1)
   [[ -z "${DEVNET_V2_HEAD:-}" ]] || target+=(-e DEPLOY_HEAD="$head")
+  if [[ -n "${DEVNET_V2_GENESIS:-}" ]]; then
+    [[ "$DEVNET_V2_GENESIS" =~ ^[0-9a-f]{40}$ ]] || { echo "DEVNET_V2_GENESIS: a full SHA-1, lower case" >&2; exit 2; }
+    target+=(-e DEPLOY_HEAD="$DEVNET_V2_GENESIS")
+  fi
   # Remote mode keeps the key off even the container's command line: the script reads it from its environment.
   local send='read -r PK; forge script script/DeployV2.s.sol:DeployV2Script --rpc-url '"$RPC"' --broadcast --private-key "$PK" --slow'
   [[ -z "$REMOTE" ]] || send='read -r DEPLOY_SENDER_PK; export DEPLOY_SENDER_PK; forge script script/DeployV2.s.sol:DeployV2Script --rpc-url '"$RPC"' --broadcast --slow'

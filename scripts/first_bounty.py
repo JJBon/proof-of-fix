@@ -11,8 +11,9 @@ The test has to be at the root: the sandbox runs `python -m unittest` there, whi
 The flow (pofctl's roles, with the role keys; the long-running bot, bot/loop.py, is v1's local loop and isn't needed):
   register and accept the issue (the stub quorum signs the registration check), fund it, attempt, then seal failing fixes
   one at a time until the owner's seat is drawn (or --max-fails), each decided by the drawn nodes; seal the passing fix;
-  it wins; merge it on the forge; the drawn nodes sign the merge; warp to the last instalment and settle; the funder's
-  refund; everyone's fees and credits withdrawn. Then the books: who was drawn, who reported, what each was paid.
+  it wins; merge it on the forge; the drawn nodes sign the merge; warp to the last instalment and settle (the bot
+  closes the issue once paid, linking the payout); the funder's refund; everyone's fees and credits withdrawn. Then the
+  books: who was drawn, who reported, what each was paid.
 
 The draw can't be forced or predicted: the seed mixes in the block's RANDAO value, which the solver doesn't know when it
 seals (RaceV2Base._submit). Each submission draws 3 of 7, so one seat is drawn with chance 3/7 per submission, and over n
@@ -343,7 +344,9 @@ class Run:
         for days in range(1, self.a.max_warp_days + 1):
             self.ctl("devnet", "warp", "--days", "1")
             try:
-                if self.ctl("bot", "settle", "--bounty", str(self.bounty))["settled"]:
+                # the bot settles, and closes the issue once paid, with a comment linking the payout (#151)
+                if self.ctl("bot", "settle", "--bounty", str(self.bounty), "--repo", self.a.repo, "--issue",
+                            str(self.gh_issue))["settled"]:
                     break
             except Reverted as e:
                 if e.reason != "NotYet()":

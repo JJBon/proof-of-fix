@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import secrets
+import shlex
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from bot.forge import load_config as load_repos
 from bot.forge import repo_for
 
 from . import keys as keysrc
+from . import leaderboard
 from .race import C, FAIL, PASS, Race, Signers, commitment, fix_of, fmt, load_record
 from .rpc import Reverted, Rpc, RpcError, Wallet, auth_headers
 
@@ -306,6 +308,19 @@ def cmd_merged(ctx: Ctx, a) -> tuple:
              f"the challenge window ends on day {aw['windowEnd']}; instalments follow at each release"])
 
 
+def cmd_uphold(ctx: Ctx, a) -> tuple:
+    ctx.devnet_only("an upheld challenge signed by the stub quorum")
+    if ctx.version < 2:
+        raise Fail("upheld challenges are v2's (RaceV2.challengeUpheld)")
+    epoch = ctx.race.bounty(a.bounty)["epoch"]
+    ctx.race.uphold_challenge(ctx.wallet("oracle"), ctx.stub_quorum(), a.bounty, epoch)
+    b = ctx.race.bounty(a.bounty)
+    aw = ctx.race.award(a.bounty, epoch)
+    return ({"bounty": a.bounty, "epoch": epoch, "state": b["state"], "award": aw},
+            [f"stub quorum upheld a challenge against bounty {a.bounty}'s award {epoch}: the bounty is {b['state']}, "
+             f"the award keeps {aw.get('earned', 0)} instalment(s) earned"])
+
+
 def cmd_link(ctx: Ctx, a) -> tuple:
     repo = ctx.repo(a.repo)
     issue = repo.issue(a.issue)
@@ -323,13 +338,90 @@ def cmd_link(ctx: Ctx, a) -> tuple:
 
 
 def cmd_settle(ctx: Ctx, a) -> tuple:
+    if (a.repo is None) != (a.issue is None):
+        raise Fail("give both --repo and --issue (the bounty's issue, closed once it's paid), or neither")
     before = ctx.race.bounty(a.bounty)["state"]
     ctx.race.settle(ctx.wallet("bot"), a.bounty)
     b = ctx.race.bounty(a.bounty)
     done = b["state"] == "Paid"
     lines = [f"bounty {a.bounty}: {before} -> {b['state']}" + ("" if done else " (not due yet: the instalments are "
                                                                                "released over the coming releases)")]
-    return {"bounty": a.bounty, "state": b["state"], "settled": done}, lines
+    data = {"bounty": a.bounty, "state": b["state"], "settled": done}
+    if done and a.repo:
+        data["issue"] = close_paid(ctx, a.repo, a.issue)
+        lines.append(data["issue"]["line"])
+    return data, lines
+
+
+# ---------- the bot closes a paid bounty's issue (#151's second part) ----------
+# The bot links an issue to its bounty (bot link) and settles it (bot settle): it's the one that sees the payout, so it
+# closes the issue then, with a comment linking the payout transaction. `bot close` is the same step as a watcher's
+# pass, for a bounty someone else settled (anyone can). The validator node never writes to a repository host: it stays
+# host-agnostic. Both hosts work through bot/forge.py's RepoHost (GitHub, and Forgejo for pof-sandbox).
+
+def _explorer(ctx: Ctx) -> str:
+    """An explorer's transaction URL template (with {tx}): the config's "explorer", or $POFCTL_EXPLORER."""
+    return os.environ.get("POFCTL_EXPLORER") or ctx.config.get("explorer") or ""
+
+
+def close_paid(ctx: Ctx, repo_name: str, number: int) -> dict:
+    """Closes `repo_name`#`number` if the bounty it's linked to on this race was paid, with a comment linking the
+    payout transaction. Idempotent: the comment is written once (its marker), and a closed issue stays as it is."""
+    repo = ctx.repo(repo_name)
+    issue = repo.issue(number)
+    comments = repo.comments(number)
+    link = logic.linked(comments)
+    out = {"repo": repo_name, "issue": number, "closed": issue["state"] == "closed", "commented": False}
+    if link is None or link[0].lower() != ctx.race.address.lower():
+        return {**out, "paid": False, "line": f"{repo_name}#{number} isn't linked to a bounty on this race"}
+    bounty = link[1]
+    pay = ctx.race.payout(bounty)
+    out.update(bounty=bounty, paid=pay is not None)
+    if pay is None:
+        return {**out, "line": f"{repo_name}#{number}: bounty {bounty} isn't paid yet; the issue stays open"}
+    out.update(tx=pay["tx"], block=pay["block"])
+    if logic.paid(comments) is None:
+        repo.comment(number, logic.paid_comment(ctx.race.address, bounty, pay["tx"], pay["block"],
+                                                ctx.race.chain_id(), _explorer(ctx)))
+        out["commented"] = True
+    was_closed = out["closed"]
+    if not was_closed:
+        repo.close(number)
+        out["closed"] = True
+    what = "closed" if not was_closed else "already closed"
+    note = ", commented the payout" if out["commented"] else ""
+    return {**out, "line": f"{repo_name}#{number} {what}{note}: bounty {bounty} paid in {pay['tx']} (block "
+                           f"{pay['block']})"}
+
+
+def cmd_close(ctx: Ctx, a) -> tuple:
+    """One pass of the watcher: the issue given, or every open issue labelled for a bounty on the repository."""
+    if ctx.version < 2:
+        raise Fail("closing on payout is v2's (pofctl bot close)")
+    numbers = [a.issue] if a.issue is not None else [i["number"] for i in ctx.repo(a.repo).issues("open", logic.LABEL)]
+    results = [close_paid(ctx, a.repo, n) for n in numbers]
+    lines = [r["line"] for r in results] or [f"no open issue labelled {logic.LABEL!r} on {a.repo}"]
+    return results, lines
+
+
+# ---------- the contributor leaderboard (#151) ----------
+
+def cmd_leaderboard(ctx: Ctx, a) -> tuple:
+    """Rankings from the contracts' events only (pofctl/leaderboard.py). Reading the chain costs nothing: no fee."""
+    if ctx.version < 2:
+        raise Fail("the leaderboard reads v2's events")
+    period = a.period
+    bounties = None
+    if a.bounties:
+        try:
+            bounties = [int(x) for x in a.bounties.split(",") if x.strip()]
+        except ValueError:
+            raise Fail("--bounties takes bounty numbers, comma-separated") from None
+    block, now = ctx.race.now()
+    events = ctx.race.board_events(a.from_block, with_time=period != "all")
+    board = leaderboard.compute(events, a.coin or ctx.race.coin, period, now, bounties, a.role)
+    board["block"] = block
+    return board, leaderboard.render(board)
 
 
 def cmd_claim(ctx: Ctx, a) -> tuple:
@@ -369,7 +461,8 @@ def cmd_history(ctx: Ctx, a) -> tuple:
     events = ctx.race.history(a.from_block)
     lines = []
     for e in events:
-        detail = ", ".join(f"{k} {fmt(v) if k == 'amount' else v}" for k, v in e.items() if k not in ("block", "event"))
+        detail = ", ".join(f"{k} {fmt(v) if k == 'amount' else v}" for k, v in e.items()
+                           if k not in ("block", "event", "tx", "logIndex", "time"))
         lines.append(f"block {e['block']:>6}  {e['event']:<14} {detail}")
     return events, lines or ["no events yet"]
 
@@ -485,6 +578,35 @@ def cmd_validator_withdraw(ctx: Ctx, a) -> tuple:
             [f"{w.role} withdrew {fmt(owed)} in check fees to {a.to or w.address}"])
 
 
+def cmd_verify_head(ctx: Ctx, a) -> tuple:
+    """#201: a repository's canonical main (on Radicle, through its node; or a commit given) is Heads.head(repo).
+    A mismatch is refused (exit 1), with both commits."""
+    from oracle import radicle
+
+    if ctx.version < 2:
+        raise Fail("Heads is v2's")
+    if not a.rid and not a.commit:
+        raise Fail("verify-head: --rid (read canonical main from Radicle) or --commit")
+    repo = _repo_id(ctx, a.repo) if a.repo else radicle.repo_id(a.rid) if a.rid else v2.b32(ctx.record["repo"])
+    chain = v2.Chain(ctx.rpc, ctx.race.address)
+    head = radicle.sha_of(chain.head(repo)["commit"])
+    if a.rid:
+        try:
+            snap = radicle.Radicle(a.rid, shlex.split(a.rad_exec or ""), a.repo_dir or "").snapshot()
+        except radicle.Unavailable as e:
+            raise Fail(str(e)) from None
+        d = radicle.verify_head(head, snap)
+        canonical = radicle.canonical(snap)
+    else:
+        canonical = a.commit.strip().lower()
+        d = (radicle.Decision(radicle.SIGN, f"{canonical} is Heads' head") if canonical == head else
+             radicle.Decision(radicle.REFUSE, f"{canonical} isn't Heads' head {head}"))
+    if d.action != radicle.SIGN:
+        raise Fail(f"verify-head refused: {d.reason}")
+    return ({"repo": "0x" + repo.hex(), "head": head, "canonical": canonical, "match": True},
+            [f"repository 0x{repo.hex()[:12]}: {d.reason}"])
+
+
 def cmd_warp(ctx: Ctx, a) -> tuple:
     ctx.devnet_only("warping time")
     ctx.rpc.call("evm_increaseTime", [a.days * 86_400])
@@ -563,6 +685,10 @@ def parser() -> argparse.ArgumentParser:
     o.add_argument("--repo")
     o.add_argument("--pr", type=int, help="checked merged on the host first")
     o.set_defaults(fn=cmd_merged)
+    o = orc.add_parser("uphold-challenge", help="v2, devnet: a challenge upheld against a merged bounty's award "
+                                                "(reopens the bounty; the award keeps what it has earned)")
+    o.add_argument("--bounty", type=int, required=True)
+    o.set_defaults(fn=cmd_uphold)
 
     val = sub.add_parser("validator").add_subparsers(dest="action", required=True)
     val.add_parser("status", help="seat, draws, verdicts, usage reports and fees earned").set_defaults(fn=cmd_validator)
@@ -589,9 +715,17 @@ def parser() -> argparse.ArgumentParser:
     b.add_argument("--issue", type=int, required=True, help="the repository's issue number")
     b.add_argument("--bounty", type=int, required=True)
     b.set_defaults(fn=cmd_link)
-    b = bot.add_parser("settle", help="settle a merged bounty once its instalments are released")
+    b = bot.add_parser("settle", help="settle a merged bounty once its instalments are released; with --repo and "
+                                      "--issue, close its issue once paid")
     b.add_argument("--bounty", type=int, required=True)
+    b.add_argument("--repo", help="the bounty's repository (owner/name): its issue is closed once the bounty is paid")
+    b.add_argument("--issue", type=int, help="the repository's issue number linked to the bounty")
     b.set_defaults(fn=cmd_settle)
+    b = bot.add_parser("close", help="close a paid bounty's issue with a comment linking the payout transaction; "
+                                     "without --issue, every open bounty issue of the repository (a watcher's pass)")
+    b.add_argument("--repo", required=True)
+    b.add_argument("--issue", type=int, help="the repository's issue number (default: every open one labelled bounty)")
+    b.set_defaults(fn=cmd_close)
 
     w = sub.add_parser("withdraw", help="pay a role's credit in the contract to its wallet")
     w.add_argument("--role", required=True)
@@ -601,9 +735,30 @@ def parser() -> argparse.ArgumentParser:
     bal.add_argument("--roles", default="reporter,funder,solver-a,solver-b")
     bal.set_defaults(fn=cmd_balances)
 
+    lb = sub.add_parser("leaderboard", help="v2: rankings of solvers, reporters, funders and validators from the "
+                                            "contracts' events only (read-only, free; addresses only)")
+    lb.add_argument("--period", choices=sorted(leaderboard.PERIODS), default="all",
+                    help="week (7 days) or month (30 days) back from the latest block's time, or all (default)")
+    lb.add_argument("--role", choices=sorted([*leaderboard.ROLES, *leaderboard.ROLE_ALIASES]),
+                    help="one role's table (default: all four)")
+    lb.add_argument("--bounties", help="only these bounties' events, comma-separated (a run's own on a shared devnet)")
+    lb.add_argument("--coin", help="the coin amounts are counted in (default: the deployment's)")
+    lb.add_argument("--from-block", type=int, help="default: the deployment's block")
+    lb.set_defaults(fn=cmd_leaderboard)
+
     h = sub.add_parser("history", help="the race's events")
     h.add_argument("--from-block", type=int)
     h.set_defaults(fn=cmd_history)
+
+    vh = sub.add_parser("verify-head", help="v2: a repository's canonical main (Radicle, or --commit) is Heads' head; "
+                                            "a mismatch is refused (#201)")
+    vh.add_argument("--rid", help="the Radicle repository (its id in Heads: keccak256 of the RID)")
+    vh.add_argument("--rad-exec", help="a command prefix that reaches its Radicle node (e.g. 'docker exec -i <name>')")
+    vh.add_argument("--repo-dir", help="the working copy on that node (default ~/repo)")
+    vh.add_argument("--commit", help="instead of --rid: a mirror's main to compare")
+    vh.add_argument("--repo", help="the repository's id: 'registry' or a 0x bytes32 (default: from --rid, else the "
+                                   "record's)")
+    vh.set_defaults(fn=cmd_verify_head)
 
     dev = sub.add_parser("devnet").add_subparsers(dest="action", required=True)
     d = dev.add_parser("warp", help="move the devnet's clock (devnet only)")

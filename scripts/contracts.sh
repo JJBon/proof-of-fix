@@ -15,10 +15,9 @@ cd "$(dirname "$0")/.."
 
 # Foundry v1.8.5 (2026-10-05), the newest stable release at least two weeks old on 2026-10-26.
 IMAGE="ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
-# solc 0.8.37 (2026-09-10), linux-amd64 static build, sha256 from binaries.soliditylang.org/linux-amd64/list.json.
-SOLC_BUILD="solc-linux-amd64-v0.8.37+commit.f401782d"
-SOLC_SHA256="5de843c2c93563cc66425c99a4fb13fdbf32b4c4ae07469480faaf126e14404a"
-SOLC="contracts/.cache/$SOLC_BUILD"
+# solc 0.8.37 for this machine's architecture: SOLC_BUILD, SOLC_SHA256, SOLC.
+# shellcheck source=scripts/solc.sh
+source scripts/solc.sh
 
 # Vendored libraries (design D1): forge-std v1.17.0 whole, OpenZeppelin v5.7.0 only what SafeERC20, ECDSA,
 # MessageHashUtils, ReentrancyGuardTransient and ERC20 (for the mock coins) import.
@@ -44,7 +43,7 @@ setup() {
   docker pull -q "$IMAGE"
   if ! solc_ok; then
     mkdir -p contracts/.cache
-    curl -fsSL -o "$SOLC.part" "https://binaries.soliditylang.org/linux-amd64/$SOLC_BUILD"
+    curl -fsSL -o "$SOLC.part" "https://binaries.soliditylang.org/$SOLC_PLATFORM/$SOLC_BUILD"
     echo "$SOLC_SHA256  $SOLC.part" | sha256sum --check --quiet
     chmod 755 "$SOLC.part" && mv "$SOLC.part" "$SOLC"
   fi

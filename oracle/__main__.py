@@ -59,6 +59,12 @@ Configuration (environment):
                      the direct judge's allowlist, endpoint and spending guards (oracle/models.py)
     ORACLE_LIE       1: the fake judge inverts its verdict (a dishonest node, for demos)
     ORACLE_MERGE_WEIGHT   the merge's importance estimate in coins (default 100)
+    ORACLE_MERGE_VIA      "forge" (the default: sign the merge once the host's pull request is merged) or "radicle"
+                     (#201, oracle/radicle.py: push the won fix to this seat's Radicle copy as a delegate and sign once
+                     it's canonical main by the delegate threshold, on top of Heads' head); then ORACLE_RADICLE_RID (the
+                     repository; its id in Heads is keccak256 of it), ORACLE_RADICLE_EXEC (a command prefix that reaches
+                     the seat's Radicle node, e.g. "docker exec -i <container>"; default this machine) and
+                     ORACLE_RADICLE_REPO (the delegate's working copy there, default ~/repo)
     ORACLE_ROUND_TIMEOUT  seconds a round waits for the other drawn judges (default 60)
     ORACLE_POLL           seconds between the node's passes over the chain (default 2)
     ORACLE_RPC_OUTAGE_LIMIT  with --until-idle: seconds the chain may stay away before the run ends with exit 75 (default
@@ -101,7 +107,7 @@ def v2_node(rpc, race_address: str, keys, env=None):
     """The v2 node, configured from the environment (see the module's docstring)."""
     from bot.forge import load_config, repo_for
 
-    from . import fetch, receipt, v2
+    from . import fetch, radicle, receipt, v2
     from .judge import judge_from_env
     from .models import ConfigError
     from .node_v2 import NodeV2
@@ -126,6 +132,10 @@ def v2_node(rpc, race_address: str, keys, env=None):
                   weight, round_timeout=float(env.get("ORACLE_ROUND_TIMEOUT", "60")),
                   log=lambda m: print(f"[{me[:10]}] {m}", flush=True))
     node.fetcher = fetch.from_env(env, repo, host, log=node.log)  # the fix's code, fetched by the node (#115)
+    try:
+        node.radicle = radicle.from_env(env)  # the merge as canonical main on Radicle (#201), or the forge's (None)
+    except ValueError as e:
+        raise SystemExit(f"oracle run: {e}") from None
     rpc.log = node.log  # the retries of a chain that didn't answer (#166)
     if hasattr(judge, "log"):
         judge.log = node.log  # retries and refusals of a direct model call

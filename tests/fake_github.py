@@ -1,6 +1,6 @@
 """A fake GitHub REST API on 127.0.0.1, for bot/github.py's tests and pofctl's end-to-end run (proof-of-fix#104):
-issues (with labels), pull requests (with head sha and merge state), comments, pagination by Link header, and
-injected failures (5xx, rate limits). No network beyond the loopback."""
+issues (with labels, closed by PATCH), pull requests (with head sha and merge state), comments, pagination by Link
+header, and injected failures (5xx, rate limits). No network beyond the loopback."""
 
 from __future__ import annotations
 
@@ -53,6 +53,9 @@ class FakeGitHub:
 
             def do_POST(self):
                 self._handle("POST")
+
+            def do_PATCH(self):
+                self._handle("PATCH")
 
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
@@ -125,6 +128,12 @@ class FakeGitHub:
                 repo["comments"].setdefault(n, []).append(c)
                 return 201, c, None
             return self._page(repo["comments"].get(n, []), u.path, q, host)
+        if method == "PATCH":  # an issue's or a pull request's state (GitHub's PATCH /issues/{n})
+            if body.get("state") in ("open", "closed"):
+                item["state"] = body["state"]
+            if body.get("state_reason"):
+                item["state_reason"] = body["state_reason"]
+            return 200, {k: v for k, v in item.items() if k != "pull_request"} if kind == "pulls" else item, None
         if kind == "pulls":
             if "pull_request" not in item:
                 return 404, {"message": "Not Found"}, None

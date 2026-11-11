@@ -35,6 +35,11 @@ __pycache__/
 .oracle-exchange/
 .oracle-src/
 
+# The integration suite: its throwaway devnet, records and the nodes' scratch (scripts/integration.sh, #152).
+/.devnet-integration/
+/.integration/
+/contracts/deployments/integration/
+
 # The remote mode's end-to-end run: its throwaway proxy's files and records (scripts/devnet-remote-e2e.sh, #150). The AWS
 # devnet's own record, contracts/deployments/devnet-aws-v2.json, is committed once the owner has deployed, like devnet.json.
 /.devnet-remote-e2e/
@@ -44,3 +49,6 @@ __pycache__/
 /.devnet-seats/
 /.first-run-e2e/
 /contracts/deployments/first-run-e2e/
+
+# The Radicle spike's node logs and results (scripts/radicle-spike.sh, proof-of-fix#190).
+/.radicle-spike/

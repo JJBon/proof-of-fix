@@ -293,6 +293,10 @@ class Net:
         self._sid = ACTOR_SID
         self._joined = 0
         self._next_snapshot = 0.0
+        self.slice = None
+        if p.VAL_SLICE_BPS:  # #142
+            from .tokens import TokenSlice
+            self.slice = TokenSlice(self)
         self._start()
 
     # ----- set-up -----
@@ -1022,6 +1026,8 @@ class Net:
         for vid, revealed, vote in sub.family_shadows:
             if revealed:
                 self.family_shadow_outcomes[self.reg.validators[vid].family].append((t, vote == outcome, outcome))
+        if self.slice is not None:
+            self.slice.on_final(sub, outcome)
 
     def weighted(self, votes: Sequence[Tuple[int, bool]]) -> bool:
         """The rejected alternative's tally: True on a strict majority of the votes' weight."""
@@ -1046,6 +1052,8 @@ class Net:
         self.period["active"] = sum(1 for v in reg.validators.values() if v.state == ACTIVE)
         self.period["drawn_validators"] = len(self.period_drawn)
         self.fee.end_period(self, self.period)
+        if self.slice is not None:
+            self.slice.on_day()
         self.period, self.period_drawn = Counter(), set()
         for v in reg.validators.values():
             if v.state in (ACTIVE, CANDIDATE) and v.bond < v.target and self._beh(v).tops_up:
@@ -1111,8 +1119,8 @@ class Net:
             cap_end = self.t  # still locked: its bond is withdrawn only once nothing it judged is open
         months = max(0.0, run_end - v.registered_at) / MONTH
         years = max(0.0, cap_end - v.registered_at) / YEAR
-        return (a.fees + a.rewards + a.gains - a.overhead - a.slashed - months * w.enclave.fixed_month
-                - v.posted * w.capital_rate * years)
+        return (a.fees + a.rewards + a.gains + a.tokens * w.token_price - a.overhead - a.slashed
+                - months * w.enclave.fixed_month - v.posted * w.capital_rate * years)
 
     def party_net(self, party: str) -> float:
         nodes = sum(self.validator_net(v) for v in self.reg.validators.values() if v.party == party)

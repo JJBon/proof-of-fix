@@ -231,6 +231,22 @@ class Params:
     # itself; "all" (round 2, the switch): every bad fix its accomplice passed, whoever judged it
     LONE_CATCH_COUNT: str = "own"
 
+    # #142: the validators' slice of #58's token emission (simulation only, rule 1; 0 turns it off, as before). A
+    # week's slice is VAL_SLICE_BPS of that week's emission, minted after the verdicts' challenge windows close:
+    # "work" sends it to the judges of the period's final verdicts that stood (a reversed verdict earns nothing), each
+    # submission's part in proportion to its bounty, split equally among them, times the family score factor;
+    # "work_rank" sends VAL_RANK_BPS of it to the top RANK_TOP_SHARE of validators ranked by audited quality (audit
+    # agreement, reveal rate, family score, posted cost) instead; "rank" sends all of it that way. VAL_SLICE_BASIS
+    # "paid" counts only bounties closed paid (#142's text); "verdicts" counts every standing verdict, so a judge
+    # earns the same for failing a bad fix as for passing a good one
+    VAL_SLICE_BPS: int = 0
+    VAL_SLICE_MODE: str = "work"
+    VAL_SLICE_BASIS: str = "paid"
+    VAL_RANK_BPS: int = 2_000
+    RANK_TOP_SHARE: float = 0.25
+    RANK_MIN_VERDICTS: int = 10  # final verdicts in the window a validator needs to be ranked at all
+    RANK_WINDOW_WEEKS: int = 4
+
     # ---- lookups (the level field is consulted here, so task 1.5 only changes the panel's level) ----
 
     def k_for(self, n: int, cap: Optional[int] = None) -> int:
@@ -427,6 +443,11 @@ class World:
     enclave: G.Enclave = G.Enclave()
     capital_rate: float = 0.05
     snapshot_weeks: int = 4  # the growth table's period
+    # #142: #58's emission (pof.params.TOKENS: 10,000 tokens a weekly period, less 1 % of it each period) and the
+    # token's price in dollars, the swept assumption (#58 D5: 0.01, 0.05, 0.2); 0 values tokens at nothing
+    token_emission: float = 10_000.0
+    token_decay_bps: int = 100
+    token_price: float = 0.0
 
     def accuracy_of(self, family: str) -> float:
         return dict(self.family_accuracy).get(family, self.accuracy)

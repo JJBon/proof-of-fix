@@ -79,6 +79,14 @@ class Diff:
     message_cut: bool = False  # the message went past COMMIT_MESSAGE_BYTES, and `message` stops there
 
 
+@dataclass(frozen=True)
+class Blob:
+    """One file at a commit (`Fetcher.file_at`): its bytes, None when the commit has no such file, or the reason it
+    can't be read (`refusal`, the same for any node)."""
+    data: Optional[bytes] = None
+    refusal: str = ""
+
+
 def check_url(url: str) -> str:
     """The URL's protocol, if git may fetch from it: https anywhere, http only on loopback, file (local runs)."""
     u = urlsplit(url)
@@ -103,6 +111,7 @@ class Fetcher:
         self._token, self._user = token, user
         self.max_bytes, self.timeout_s, self.retry_s, self.log, self.git = max_bytes, timeout_s, retry_s, log, git
         self._failed: dict = {}  # sha -> when it last failed (monotonic): retried after retry_s, not every pass
+        self._files: dict = {}  # "sha:path" -> Blob: a commit's files never change
 
     def __repr__(self) -> str:  # never the token
         return f"Fetcher({self.url!r}, token={'set' if self._token else 'none'})"
@@ -159,7 +168,56 @@ class Fetcher:
         self._failed.pop(key, None)
         return found
 
+    def file_at(self, root: Path, sha: str, path: str, max_bytes: int) -> Optional[Blob]:
+        """The file at `path` in commit `sha`, fetched by this node (#166: the repository's test command, read at the
+        pull request's base so the fix can't change it). None (logged) when it couldn't be fetched just now: try
+        again. Only a regular file counts; a symlink or a folder there is a refusal. Kept per commit: a commit's
+        content never changes."""
+        sha = (sha or "").strip().lower()
+        if not SHA.match(sha):
+            return Blob(refusal="the pull request has no base commit")
+        key = f"{sha}:{path}"
+        if key in self._files:
+            return self._files[key]
+        last = self._failed.get(key)
+        if last is not None and time.monotonic() - last < self.retry_s:
+            return None
+        Path(root).mkdir(parents=True, exist_ok=True)
+        tmp = Path(tempfile.mkdtemp(prefix=f".file-{sha[:12]}-", dir=root))
+        try:
+            found = self._file_at(tmp, sha, path, max_bytes)
+        except TooLarge as e:
+            found = Blob(refusal=f"its base commit is {e}")
+        except FetchRefused as e:
+            self._failed[key] = time.monotonic()
+            self.log(f"fetch: {path} at {sha[:12]} from {self.url}: {e}")
+            return None
+        finally:
+            remove(tmp)
+        self._failed.pop(key, None)
+        self._files[key] = found
+        return found
+
     # -- internals
+
+    def _file_at(self, tmp: Path, sha: str, path: str, max_bytes: int) -> Blob:
+        self._run(tmp, ["init", "-q"], tmp)
+        self._run(tmp, ["fetch", "-q", "--depth", "1", "--no-tags", "--no-recurse-submodules", "--", self.url, sha], tmp)
+        fetched = self._run(tmp, ["rev-parse", "--verify", "FETCH_HEAD^{commit}"], tmp, capture=True)
+        if fetched != sha:
+            raise FetchRefused(f"the host served commit {fetched[:12]}, not {sha[:12]}")
+        listed, _ = self._bounded(tmp, ["ls-tree", "-z", sha, "--", path], 4_096)
+        entry = listed.split(b"\0", 1)[0]
+        if not entry:
+            return Blob()
+        meta, _, name = entry.partition(b"\t")
+        mode, kind, obj = (meta.split(b" ") + [b"", b"", b""])[:3]
+        if name.decode(errors="replace") != path or kind != b"blob" or mode not in (b"100644", b"100755"):
+            return Blob(refusal=f"{path} isn't a regular file")
+        data, cut = self._bounded(tmp, ["cat-file", "blob", obj.decode()], max_bytes)
+        if cut:
+            return Blob(refusal=f"{path} is larger than {max_bytes:,} bytes")
+        return Blob(data)
 
     def _diff(self, tmp: Path, sha: str, base: str, max_bytes: int) -> Diff:
         self._run(tmp, ["init", "-q"], tmp)

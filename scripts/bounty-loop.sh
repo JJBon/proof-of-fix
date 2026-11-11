@@ -19,7 +19,8 @@ cd "$(dirname "$0")/.."
 
 # The same Foundry image and solc as scripts/contracts.sh (tests/test_bot.py checks they match).
 FOUNDRY_IMAGE="ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
-SOLC="contracts/.cache/solc-linux-amd64-v0.8.37+commit.f401782d"
+# shellcheck source=scripts/solc.sh
+source scripts/solc.sh # SOLC: the same pinned solc as scripts/contracts.sh
 # Forgejo 11.0.16 LTS (built 2026-07-09).
 FORGEJO_IMAGE="codeberg.org/forgejo/forgejo@sha256:946243edbab116d5bb78b73ea68af6f3d69229ba1b1ed958dd82c3481167f3e0"
 # Python 3.12 on Alpine, only to run the fixes' tests (the "AI check" stand-in).

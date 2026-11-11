@@ -1,0 +1,54 @@
+# Tasks
+
+## 1. Simulation: the criteria in the market simulation
+
+- [ ] 1.1 Wire `pof/sim/cyclepool.py`, `pof/sim/repotokens.py` and `pof/sim/fundertoken.py`'s rules (the per-cycle split, the per-fix cap with the cut redistributed, pay up to merit, (b), (c) and the capped fee) into the incentive-simulation acceptance run, off by default. `fundertoken.py`'s own defaults stay, so v1's and v2's reports still reproduce. Verify: a test that the default runs' reports are byte-identical with it off.
+- [ ] 1.2 Add the criterion "overclaiming loses against its honest twin at 80 % detection with up to 5 of 15 colluding" to the acceptance table, with the figures (overpaid share, colluders' draws, honest participants' costs, and self-dealing's and 1-cent pledges' gains over their honest twins). Verify: a test that the criterion is computed from the stored runs against the honest twin and passes on seed 1.
+- [ ] 1.3 Model the finder's fee on outside coin only, and claimed importance with the 30 % estimate error. Verify: tests that self-funding earns no finder's fee, and that honest forfeits stay under 1 % of honest stakes.
+- [ ] 1.4 Model batches with reference fixes, the dollar calibration and their scaling error. Verify: a test that a fix's merit doesn't depend on its batch beyond the set error.
+- [ ] 1.5 Give every attacker an honest twin in the same run (D9): the same fixes claimed at their worth, and the attack's coin funding the pools, or kept when that pays back less. Reuse `invested_gain` and `pays_over_investing` from `pof/sim/fundertoken.py` (#194) rather than a second measure. Verify: tests that an actor that only funds pools gains 0 over its honest twin at every price, and that with funding paying nothing the honest twin's profit equals doing nothing's, so #184's figures are unchanged.
+- [ ] 1.6 The index pool by merit over a window (D13), beside #194's by need, swept over windows of 2, 4 and 8 cycles. Verify: a test that the index's placements are proportional to the window's merit, and the report's table for each window.
+- [ ] 1.7 A blocked coin (D12): the only allowed coin blocked for some cycles. Verify: tests that the cycle's emission is unchanged, that the funders' tokens go to the fixers by merit, and that every credit stays owed.
+
+## 2. The merit judge (frozen before #160)
+
+- [ ] 2.1 The merit prompt: a cycle's fixes compared in dollars of value (issue, claimed importance, diff, test result, funding) beside the reference fixes and their recorded merits, inside the untrusted-text markers, with a fixed output format of one dollar merit per fix. Verify: tests with a stand-in model that every fix's evidence and every reference reach the prompt and the output parses.
+- [ ] 2.2 The calibration and batches in the node: each judge's scores scaled to its reference scores, and batches sharing the references. Verify: a rig test with two batches and a judge that scores 1.2× high.
+- [ ] 2.3 Sealed and revealed merits through the exchange, with the median. Verify: a rig test with 3 judges, one silent.
+- [ ] 2.4 The fake merit panel: a deterministic stand-in beside `FakeJudge` in `oracle/judge.py`, which reads each fix's dollar merit from the suite's fixture, and a lying mode that reveals the claimed importance instead. Verify: unit tests for both modes, and that it never calls a model.
+- [ ] 2.5 Update #160's plan to measure merit in dollars (the error against the reference fixes) and the share of inflated importance caught, on mixed cycles, and to report the values the deployment parameters need. Verify: the plan's hash covers the merit cases, and its report template has the columns.
+
+## 3. Contracts, each step with its integration scenario
+
+Each task adds Foundry tests and one scenario to the integration suite in `tests/integration/` (a new `cycles.py`, run by `suite.py` as scenario 9, with parts 9a, 9b and so on), on the throwaway local devnet with the fake judge and the fake merit panel (task 2.4). Each scenario runs on its own repository and asserts balances and token supply exactly, and the suite's books check at the end covers it. A task is done when its Foundry tests, its scenario and every earlier scenario pass.
+
+- [ ] 3.1 Deployment parameters (D15): `FEE_CAP_BPS`, `MERIT_TOLERANCE`, `TOKENS_PER_COIN`, `EMISSION_RATE`, `EMISSION_CAP`, `PAY_MIN`, `PAY_MAX` and `ASSUMED_DETECTION_BPS` set in the constructor, immutable, with views; the deploy script's devnet test values, and its refusal on any other chain without #160's report hash. Verify: Foundry tests that the views return the constructor's values and no function changes them; scenario 9a deploys with test values and reads them back through `pofctl`.
+- [ ] 3.2 The allow-list (D12): one test stablecoin at deployment, every other coin refused. Verify: Foundry tests for a refused coin and for no function that adds one; scenario 9b funds a bounty and a pool in the allowed coin, and a second mock coin is refused.
+- [ ] 3.3 The cycle pool: funding, per-cycle shares, the close, and forfeited stakes added with no share. Verify: Foundry tests for the merit-cycles pool scenarios; scenario 9c, two funders at 300 and 100 hold 75 % and 25 %.
+- [ ] 3.4 The merit verdict: the panel's sealed and revealed dollar merits, the reference calibration, the median and the challenge window. Verify: Foundry tests with a silent judge and a judge scoring 1.2× high; scenario 9d, three seats' nodes with the fake merit panel reveal, and the recorded merits are the fixture's.
+- [ ] 3.5 Pay up to merit (D10): each claim after its bounty, paid in full or pro rata, the leftover with each funder by share. Verify: Foundry tests for the pool larger than the merit, the short pool, the bounty above the merit and the empty cycle; scenario 9e, the thin cycle: a pool of 2,000 and one 5-dollar fix pays 5 and leaves 1,995 by share.
+- [ ] 3.6 Each funder's leftover choice: roll over by default, withdraw, move. Verify: Foundry tests for each, and that withdrawn coin earns no tokens; scenario 9f, three funders roll over, withdraw and move, and the next cycle's shares match.
+- [ ] 3.7 (b) the pay per merit dollar, clamped by `PAY_MIN` and `PAY_MAX`. Verify: Foundry tests at, below and above the bounds; scenario 9g, a pool of 2,000 against claims of 500 pays at 1.5.
+- [ ] 3.8 (c) the shortfall carried as the first claim on the next cycle. Verify: Foundry tests that the backlog is paid first and minted when paid; scenario 9h, a short cycle, then the next cycle pays the backlog before its own fixes.
+- [ ] 3.9 The network emission and the token (D3): E = min(rate × merit, cap) across repositories, merit shares, the outside-coin cap, the cut redistributed, tokens to funders by coin, none to solvers or to self-funded coin. Replaces `Token.sol`'s per-bounty weights in the new version. Verify: Foundry tests for every token scenario in merit-cycles, and an invariant that a cycle mints at most E; scenario 9i, two repositories in one cycle, with every funder's token balance asserted.
+- [ ] 3.10 The index pool: placement by merit over `INDEX_WINDOW`, the same tokens per coin for its funders, unspent coin returned. Verify: Foundry tests for the index scenarios; scenario 9j, the index places 750 and 250 and its funders' tokens per coin are equal.
+- [ ] 3.11 The published history: events from which each pool's tokens per coin spent is computed, and `pofctl leaderboard` showing it. Verify: scenario 9k, the leaderboard's tokens per coin for every pool so far match the views exactly.
+- [ ] 3.12 The payout fee (D4): the price source fixed at deployment (feed, else the time average, else 0), capped at `FEE_CAP_BPS`, out of the solver's pay, sent to `FEE_SINK`. Verify: Foundry tests with no market, a low price, a high price and a pushed price; scenario 9l, with a mock exchange pool on the devnet, the fee is the token value up to the cap, and 0 before it.
+- [ ] 3.13 Claimed importance and the issue stake with `MERIT_TOLERANCE`, and the finder's fee on outside coin. Verify: Foundry tests for the bounty-market stake scenarios; scenario 9m, an issue claimed at 200 and fixed at merit 5 forfeits its stake to the next pool.
+- [ ] 3.14 Merit challenges and their reward. Verify: Foundry tests with an upheld and a rejected challenge, and a refused challenger with no claim; scenario 9n, a lying fake merit panel overpays a fix, a pool funder challenges, the check upholds it, and the split uses the corrected merit.
+- [ ] 3.15 Judges' merit records and the floor, with re-registration needing a new bond. Verify: Foundry tests where a colluder on a panel that saw through, and a corrected colluding majority, lose standing; scenario 9o, a seat whose fake merit panel lies falls below the floor and isn't drawn.
+- [ ] 3.16 A coin that can't pay (D12): the self-transfer probe, no new funding while blocked, credits kept, the funders' tokens to the fixers by merit within the emission, and lifting. Verify: Foundry tests with `FrozenCoin` paused, with the contract's address frozen (nothing moves), and with only a recipient frozen (not blocked); scenario 9p, the test coin paused at the split, the fixers get the tokens, then unpaused and every credit pulled.
+- [ ] 3.17 Pay for compute (D14): each check paid by its cause, the merit panel from the pool before the split, the margin in the token burned, nothing charged on reads. Verify: Foundry tests that the margin is burned and no account's balance grows by it, and that it's 0 with no price; scenario 9q, the books check: what each payer paid equals what the judges were credited plus the margin burned.
+- [ ] 3.18 The replay: the simulation's runs replayed against the contracts give the same pay, tokens and fees. Verify: the replay test passes.
+
+## 4. End to end
+
+- [ ] 4.1 Several cycles on the local devnet in one run: bounties and pools in two repositories and the index, one overclaimed fix challenged, a short cycle carried over, a funder that withdraws, and the fee and the stake forfeited. Verify: scenario 9r in the suite, with the supply and every balance asserted at the end.
+- [ ] 4.2 The nightly run includes scenario 9, and `--target aws` lists it as local-only until the AWS devnet carries the new version. Verify: the nightly report shows scenario 9's parts.
+- [ ] 4.3 Run the check: `scripts/check.sh` and `scripts/contracts.sh` pass.
+
+## Workflow follow-up
+
+- Archive #58's change before this one's archive, so the `token-emission` spec exists for its weights and emission requirements to be modified then.
+- #160 runs on the build that includes task group 2; its measured values become the real deployment parameters (D15).
+- ADRs before a real version with the token: the allow-list and its first coin (and a protected path for it, Article 7), and the burned margin on bounty-market checks (Articles 5.11 and 5.12).

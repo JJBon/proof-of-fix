@@ -47,6 +47,34 @@ def bounty_comment(race: str, bounty: int, onchain_issue: int, quote: str = "") 
     return body + (f"\n\n```\n{quote.strip()}\n```" if quote else "")
 
 
+PAID_MARKER = re.compile(r"<!-- pof-paid race=(0x[0-9a-fA-F]{40}) bounty=(\d+) tx=(0x[0-9a-fA-F]{64}) -->")
+
+
+def paid(comments: list[dict]) -> tuple[str, int, str] | None:
+    """The (race, bounty, payout transaction) the bot reported paid in a comment, if any (#151's closing step)."""
+    for c in comments:
+        m = PAID_MARKER.search(c.get("body") or "")
+        if m:
+            return m.group(1), int(m.group(2)), m.group(3)
+    return None
+
+
+def tx_link(tx: str, explorer: str = "") -> str:
+    """A transaction as Markdown: a link when an explorer's URL template (with {tx}) is configured, else its hash."""
+    return f"[`{tx}`]({explorer.format(tx=tx)})" if explorer and "{tx}" in explorer else f"`{tx}`"
+
+
+def paid_comment(race: str, bounty: int, tx: str, block: int, chain_id: int, explorer: str = "") -> str:
+    """The comment the bot closes a paid bounty's issue with: the payout transaction, and the marker it reads back."""
+    where = f"chain {chain_id}, block {block}"
+    if not (explorer and "{tx}" in explorer):
+        where += "; no explorer is configured for this chain, so read it with eth_getTransactionReceipt"
+    return (f"Bounty #{bounty} on the Race at `{race}` was paid: its award settled on-chain in transaction "
+            f"{tx_link(tx, explorer)} ({where}). The fix is merged and paid, so this issue is closed. The bot only "
+            f"reports what the contract did: anyone can check the transaction.\n\n"
+            f"<!-- pof-paid race={race} bounty={bounty} tx={tx} -->")
+
+
 def pr_body(issue: int, bounty: int, submission: int, salt: str, solver: str) -> str:
     """A fix's pull request names its bounty and its sealed submission, and reveals the salt to the oracles."""
     return (f"Fixes #{issue}\n\nBounty: {bounty}\nSubmission: {submission}\nSalt: {salt}\nSolver wallet: {solver}\n")

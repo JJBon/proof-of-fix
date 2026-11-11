@@ -91,10 +91,13 @@ come back from the pot at settlement.
 scripts/pofctl oracle merged --bounty 1 --repo acme/demo --pr 8
 ```
 
-**7. The bot** settles once the instalments are released (after the challenge window and the releases), the funder
-claims the leftover, and everyone withdraws their credit.
+**7. The bot** settles once the instalments are released (after the challenge window and the releases), and closes
+the issue once the bounty is paid, with a comment linking the payout transaction (#151). The funder claims the
+leftover, and everyone withdraws their credit.
 ```bash
-scripts/pofctl devnet warp --days 7 && scripts/pofctl bot settle --bounty 1   # repeat until it says Paid
+scripts/pofctl devnet warp --days 7 && scripts/pofctl bot settle --bounty 1 --repo acme/demo --issue 7  # until Paid
+scripts/pofctl bot close --repo acme/demo               # a watcher's pass: every open bounty issue whose bounty is
+                                                        # paid (whoever settled it) is closed the same way
 scripts/pofctl funder claim --bounty 1
 scripts/pofctl withdraw --role solver-a && scripts/pofctl withdraw --role reporter
 ```
@@ -104,7 +107,40 @@ scripts/pofctl withdraw --role solver-a && scripts/pofctl withdraw --role report
 scripts/pofctl balances                                 # wallets and credit: roles, infrastructure, every oracle
 scripts/pofctl --as oracle-0 validator status           # seat, draws, verdicts, usage reports, fees earned
 scripts/pofctl history                                  # every event, decoded
+scripts/pofctl leaderboard                              # who earns what (below)
 ```
+
+**Closing on payout.** The bot links an issue to its bounty (`bot link`) and settles it (`bot settle`), so it's the one
+that sees the payout: with `--repo` and `--issue`, `bot settle` closes the issue then; `bot close` does the same as a
+watcher's pass, for bounties anyone else settled. The comment names the transaction that closed the bounty Paid (its
+`StateChanged`), the chain and the block, and links it when an explorer is configured (`"explorer":
+"https://…/tx/{tx}"` in the config, or `POFCTL_EXPLORER`; the private devnet has none, so the hash is given). It works
+on GitHub and on Forgejo (`repos` in the config). It's written once, and a closed issue stays closed. The validator
+node never writes to a repository host.
+
+## The contributor leaderboard (#151)
+
+```bash
+scripts/pofctl leaderboard                              # all four roles, all time
+scripts/pofctl leaderboard --period week --role solvers # week (7 days) or month (30), back from the latest block
+scripts/pofctl --json leaderboard --bounties 3,4,5      # only these bounties: a run's own on a shared devnet
+```
+Read-only, and computed only from the contracts' events (RaceV2's and the meter's), so anyone can recompute it; reading
+the chain costs nothing, so there's no fee. Addresses only: nothing links an address to a person. Amounts are in the
+deployment's coin (`--coin` for another).
+
+| Role | Ranked by | Also |
+|---|---|---|
+| Solvers | coin earned (instalments paid), fixes merged, passes | bounties won (closed Paid), decided, pass rate, submissions, attempts, late fixes, awards clawed back |
+| Reporters | finder's fees, bounties opened, issues registered | rewarded, refused as similar, junk |
+| Funders | coin pledged, bounties solved with their money, bounties funded | refunds claimed and their amount |
+| Validators | verdicts counted (charged by the meter), fees withdrawn, usage reports | |
+
+Not in v2's events, and said so under the table: a validator's draws (the seed is stored, not emitted), its agreement
+with final outcomes (a judge's own verdict isn't on-chain), its reveal rate (seals and reveals go through the exchange
+until task 5.5), its fees per check (the meter credits each judge without an event; withdrawals are shown), and slashes
+(none in v2: task 5.8). How payouts at settlement are told apart (instalments, the finder's fee, the registration
+refund, the winner's checks refunded): `pofctl/leaderboard.py`'s top.
 
 **A failed fix:** `oracle result --outcome fail`. The bounty stays open, the solver gets its deposit back less the
 checks' fees, and the idle clock restarts.
@@ -126,6 +162,17 @@ scripts/pofctl --as engineer validator withdraw         # pull the check fees to
 The engineer's node runs with the same key (`ORACLE_KEYS=env`, `ORACLE_PRIVATE_KEY`): see `validator-kit/runbook.md`.
 It acts only for the submissions its seat is drawn for, and earns its fee for each check the meter counts;
 `python3 -m oracle withdraw-fees` pulls them too.
+
+## Check a repository's main against the head on-chain (#201)
+
+```bash
+scripts/pofctl verify-head --rid rad:z… --rad-exec "docker exec -i <node>"   # canonical main on Radicle, via its node
+scripts/pofctl verify-head --repo registry --commit <sha>                    # any mirror's main, given by hand
+```
+Heads keeps each registered repository's head (a Radicle repository's id is `keccak256(RID)`). `verify-head` reads
+the canonical `main` the way the node's Radicle adapter does (`oracle/radicle.py`: Radicle's own ref, and the
+delegates' signed branches counted against the threshold, which must agree) and compares it with `Heads.head(repo)`.
+A mismatch is refused (exit 1) with both commits. `scripts/integration.sh --radicle` runs it in scenario 8.
 
 ## Run the whole story automatically
 

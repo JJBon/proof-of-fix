@@ -37,6 +37,10 @@ class RepoHost:
     def comment(self, number: int, body: str) -> dict:
         raise NotImplementedError
 
+    def close(self, number: int) -> dict:
+        """Closes an issue (as completed, where the host says so); returns it."""
+        raise NotImplementedError
+
     def pull(self, number: int) -> dict:
         raise NotImplementedError
 
@@ -78,6 +82,9 @@ class ForgejoRepo(RepoHost):
     def comment(self, number: int, body: str) -> dict:
         c = self.client.api("POST", f"{self._base}/issues/{number}/comments", {"body": body})
         return {"id": c["id"], "body": c.get("body") or "", "user": (c.get("user") or {}).get("login", "")}
+
+    def close(self, number: int) -> dict:
+        return self._issue(self.client.api("PATCH", f"{self._base}/issues/{number}", {"state": "closed"}))
 
     def pull(self, number: int) -> dict:
         return pull_of(self.client.api("GET", f"{self._base}/pulls/{number}"))
