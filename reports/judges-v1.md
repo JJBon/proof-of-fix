@@ -1,6 +1,6 @@
 # Measuring the judges, v1: the set and the planned run (proof-of-fix#85 B1, for #82; 2026-10-30)
 
-**Status: planned run, not yet executed.** The labelled set (task 2.1) is built, and so is the harness that will measure 2.2 and 2.3. No model has been called yet: the run costs money, so it waits for the owner's approval of the plan below. Tasks 2.2 and 2.3 stay open until the run's verdicts are stored and this report is filled in from them.
+**Superseded:** this plan's run is replaced by [`judges-v2.prereg.md`](judges-v2.prereg.md) (#160), which contains all of it. **Status: planned run, not yet executed.** The labelled set (task 2.1) is built, and so is the harness that will measure 2.2 and 2.3. No model has been called yet: the run costs money, so it waits for the owner's approval of the plan below. Tasks 2.2 and 2.3 stay open until the run's verdicts are stored and this report is filled in from them.
 
 ## The question
 #85 lets judges merge fixes with no human in the loop: 2 of 3 for an issue, 5 of 7 for the constitution. That's only safe if the judges are right often enough, and if they don't all fail on the same fixes. B1 measures, for each candidate model family:

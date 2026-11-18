@@ -131,6 +131,15 @@ class Actor:
     def withdraws(self, net: Net, sub: Sub) -> bool:
         return True
 
+    def appeals(self, net: Net, sub: Sub) -> bool:
+        """#236 (D23): does it appeal this rejection of its own fix?"""
+        return False
+
+    def tests(self, net: Net, sub: Sub):
+        """#236 (D21): the test it posts against this standing pass: None, or (accepted, judged). `judged` False: the
+        test passes on the fixed code and falls with no panel."""
+        return None
+
     def behaviour(self, b: object) -> object:
         return None if self.honest else b
 

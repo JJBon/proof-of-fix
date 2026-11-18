@@ -267,7 +267,8 @@ def install(net: Net, weighted: Optional[str] = None) -> Scores:
     rejected alternative)."""
     sc = Scores(net)
     net.scores = sc
-    net.family_ok = sc.ok
+    if getattr(net, "seats", None) is None:  # #236: under seats by rank (`seats.install`) the seat rule decides
+        net.family_ok = sc.ok
     net.fee = ScoredFee(net.fee, sc)
     if weighted == "factor":
         net.vote_weight = sc.weight_factor

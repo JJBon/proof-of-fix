@@ -1,6 +1,6 @@
 # ADR 0004: The parameters of v3's open validators
 
-- **Status:** Proposed. The owner accepts it by merging it (#137). Until then the design's starting values stand.
+- **Status:** Accepted: merged by the owner (#137); group 3 of #132 started on 2026-11-13.
 - **Date:** 2026-11-03
 - **Author:** drafted for the owner (proof-of-fix#137, task 2.1 of `openspec/changes/proof-of-fix-132-open-validators`), from the simulation of #134 and #141's three rounds. Interest disclosed: the owner may run one validator, disclosed and under the same rules as any other (ADR 0003); no founder's share and no token (#142 is separate).
 - **Constitution articles changed:** none of v2's. v3 is a new version (design D15) with its own constitution, written when it is deployed (#138); these values are fixed in it per version (the design's Parameters). v2's constitution and contracts are unchanged.

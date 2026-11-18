@@ -28,7 +28,11 @@ repo=${1:-}
 registry=${BASH_REMATCH[1]} region=${BASH_REMATCH[2]} name=${BASH_REMATCH[3]}
 [[ -z "$(git status --porcelain -- exchange oracle)" ]] || { echo "exchange-image: exchange/ or oracle/ has changes: an image must come from a commit" >&2; exit 1; }
 tag=arm64-$(git rev-parse --short=7 HEAD)
-aws ecr get-login-password --region "$region" | docker login --username AWS --password-stdin "$registry" >/dev/null
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+# shellcheck source=scripts/ecr-login.sh
+source scripts/ecr-login.sh
+ecr_login "$region" "$registry" "$WORK"  # a throwaway Docker config (#213): Docker Desktop's Windows store refuses ECR tokens
 # An image plain enough for the host's compose to pull by digest: one manifest, no attestations.
 docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f exchange/Dockerfile -t "$repo:$tag" --push .
 digest=$(aws ecr describe-images --region "$region" --repository-name "$name" --image-ids "imageTag=$tag" \

@@ -1,0 +1,2903 @@
+{
+ "6891b5f3ee": {
+  "id": "6891b5f3ee",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "src/_pytest/mark/expression.py",
+    "line": 164,
+    "note": "Base code builds ast.Name(ident.value) directly, so the idents True/False/None become Name nodes with reserved ids, which triggers the compiler_nameop assertion on debug builds."
+   },
+   {
+    "file": "src/_pytest/mark/expression.py",
+    "line": 164,
+    "note": "The fix adds IDENT_PREFIX='$' to every Name id, so no Name node ever has a reserved id. '$' cannot appear in a scanned identifier, so no collision with real idents."
+   },
+   {
+    "file": "src/_pytest/mark/expression.py",
+    "line": 175,
+    "note": "MatcherAdapter.__getitem__ strips the prefix before calling the matcher, so the matcher still gets the original identifier, including True/False/None."
+   },
+   {
+    "file": "testing/test_mark_expression.py",
+    "line": 132,
+    "note": "The test change only adds 'None' to test_valid_idents. No test is removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix puts a '$' prefix on every identifier when building the Python AST and strips it again in MatcherAdapter. No Name node is compiled with a reserved id, and every identifier, True/False/None included, still reaches the matcher unchanged."
+ },
+ "a0c7705e41": {
+  "id": "a0c7705e41",
+  "solves": true,
+  "probability": 0.95,
+  "evidence": [
+   {
+    "file": "django/db/models/base.py",
+    "line": 1711,
+    "note": "The related-field loop now resolves 'pk' to _cls._meta.pk instead of calling get_field('pk'). get_field('pk') raised FieldDoesNotExist, which is what caused E015 for 'option__pk'."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 1713,
+    "note": "After a non-relation field, the loop sets _cls = None. A later part then raises AttributeError and is accepted only if fld.get_transform(part) exists. So 'parent__field1__field2' raises E015, and registered lookups such as 'test__lower' still pass."
+   },
+   {
+    "file": "tests/invalid_models_tests/test_models.py",
+    "line": 844,
+    "note": "Adds test_ordering_pointing_to_related_model_pk and test_ordering_pointing_multiple_times_to_model_fields. No existing test is removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix resolves 'pk' to the current model's primary key, so 'parent__pk' no longer raises E015. It also stops a later part from being looked up on the previous model after a non-relation field, which is the gap the earlier rejected fix left open. The change matches the upstream approach, and it adds tests without weakening any existing ones."
+ },
+ "0ea36ee565": {
+  "id": "0ea36ee565",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "django/http/response.py",
+    "line": 213,
+    "note": "delete_cookie now accepts samesite, passes it to set_cookie, and forces secure when the name has a __Secure-/__Host- prefix or samesite is 'none' in any case"
+   },
+   {
+    "file": "django/contrib/messages/storage/cookie.py",
+    "line": 95,
+    "note": "messages cookie deletion now passes samesite=settings.SESSION_COOKIE_SAMESITE, the same value used when the cookie is set"
+   },
+   {
+    "file": "django/contrib/sessions/middleware.py",
+    "line": 41,
+    "note": "session cookie deletion adds only samesite (no httponly or secure), so the header becomes '...Path=/; SameSite=Lax', as the earlier rejection note expects"
+   },
+   {
+    "file": "tests/responses/test_cookie.py",
+    "line": 109,
+    "note": "tests are only added or extended (samesite default '', secure when samesite is none, samesite kept); no existing assertion is removed or weakened"
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds a samesite parameter to delete_cookie, forces the secure flag when samesite is 'none' in any case, and passes the SameSite setting when the messages and sessions code delete their cookies. This covers each requirement in the earlier failure note and matches the expected test shapes. No tests are weakened; the session header assertions are updated to expect the new SameSite attribute."
+ },
+ "46993da690": {
+  "id": "46993da690",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "lib/matplotlib/dates.py",
+    "line": 596,
+    "note": "The regex that keeps letter runs such as month names outside math mode is unchanged, which avoids the earlier rejected fix's mistake."
+   },
+   {
+    "file": "lib/matplotlib/dates.py",
+    "line": 599,
+    "note": "Writes '-' as '{-}' and ':' as '{:}' so TeX does not space them like binary operators, which fixes the wide gaps in times like 00:05."
+   },
+   {
+    "file": "lib/matplotlib/dates.py",
+    "line": 599,
+    "note": "Writes spaces as '\\;' so the space between numbers is not lost in math mode. The whole text is then wrapped, and empty $\\mathdefault{}$ groups are still removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes _wrap_in_tex, where the bug is. Colons become '{:}', spaces become '\\;', and month names stay outside math mode, which is the output the earlier failure note says the project's tests expect (for example '01\\;00{:}05'). No tests or checks are touched."
+ },
+ "d4637012d7": {
+  "id": "d4637012d7",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "lib/matplotlib/text.py",
+    "line": 1459,
+    "note": "_AnnotationBase.__init__ now unpacks xy into a new tuple (x, y). This copies a caller's ndarray, so changing that array later no longer moves the annotation or arrow."
+   },
+   {
+    "file": "lib/matplotlib/text.py",
+    "line": 1392,
+    "note": "OffsetFrom.__init__ copies ref_coord the same way. This fixes the gap that sank the earlier rejected fix, which failed test_annotate_and_offsetfrom_copy_input."
+   },
+   {
+    "file": "lib/matplotlib/text.py",
+    "line": 1447,
+    "note": "The private _get_scale helper is inlined into __call__ and does the same thing (1 for pixels, points_to_pixels(1) otherwise). Rendering behaviour does not change."
+   },
+   {
+    "file": "lib/matplotlib/tests/test_text.py",
+    "line": 991,
+    "note": "Adds test_annotate_and_offsetfrom_copy_input, which changes both the annotate xy array and the OffsetFrom ref_coord array after the call. No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix copies the input coordinates in both places that stored a live reference (Annotation xy and OffsetFrom ref_coord), so the earlier rejected fix's gap is closed. The rest is a refactor that does not change behaviour."
+ },
+ "d41b568ac4": {
+  "id": "d41b568ac4",
+  "solves": false,
+  "probability": 0.02,
+  "evidence": [
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 488,
+    "note": "IsNull is changed from BuiltinLookup to Transform. RegisterLookupMixin.get_lookup returns None for classes that are not Lookup subclasses, so every filter(x__isnull=...) would stop resolving. Transform's constructor and behaviour (Func) also do not match the lhs/rhs Lookup API that as_sql relies on."
+   },
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 489,
+    "note": "Adds output_field = BooleanField(); BooleanField is probably not imported in lookups.py."
+   },
+   {
+    "file": "django/db/models/lookups.py\"",
+    "line": 1,
+    "note": "Creates a malformed duplicate file whose name ends in a quote character and has no imports. It is junk."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Commits a stray scratch script at the repository root, the same pattern seen in earlier rejected fixes."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 1,
+    "note": "The bug is in Model._check_ordering, which only checks get_transform. The correct fix also accepts fld.get_lookup(part) for the last part. That file is not touched."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix does not touch the E015 check in Model._check_ordering, where the bug is. Instead it turns IsNull into a Transform, which would break every isnull filter, and it adds a malformed duplicate file and a scratch script."
+ },
+ "7e8eb7c6e4": {
+  "id": "7e8eb7c6e4",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "astropy/timeseries/core.py",
+    "line": 84,
+    "note": "In the mismatch branch, the message now shows the full required list and colnames[:len(required)] instead of only required_columns[0] and colnames[0]. For ['time','a'] after removing 'a', it gives \"expected ['time', 'a'] as the first columns but found ['time', 'b']\"."
+   },
+   {
+    "file": "astropy/timeseries/core.py",
+    "line": 114,
+    "note": "as_scalar_or_list_str prints a one-item list as 'x', so the existing single-column messages (e.g. \"expected 'time' as the first column but found 'banana'\") do not change."
+   },
+   {
+    "file": "astropy/timeseries/tests/test_sampled.py",
+    "line": 395,
+    "note": "The patch only adds a new assertion for the two-column case. No existing test is weakened or removed, and the existing single-column assertions still hold."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes the message where the bug is. It now reports the expected required columns and the columns actually found, which matches the format the earlier failure note gives for the project test. Single-column messages stay the same."
+ },
+ "bf4cda49fa": {
+  "id": "bf4cda49fa",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "astropy/io/ascii/rst.py",
+    "line": 60,
+    "note": "RST.__init__ now accepts header_rows and passes it to FixedWidth, which removes the TypeError reported in the issue."
+   },
+   {
+    "file": "astropy/io/ascii/rst.py",
+    "line": 65,
+    "note": "write() takes the '=' border from lines[len(header_rows)], the position line that follows all header rows. With the default ['name'] it is still lines[1], so existing output does not change."
+   },
+   {
+    "file": "astropy/io/ascii/rst.py",
+    "line": 30,
+    "note": "The fixed start_line = 3 is removed, and the new read() sets data.start_line = 2 + len(header_rows). That is 3 for the default and 5 for three header rows, so reading honours header_rows. This was the gap that sank the earlier rejected fix."
+   },
+   {
+    "file": "astropy/io/ascii/tests/test_rst.py",
+    "line": 189,
+    "note": "Adds a round-trip test (read then write with name/unit/dtype). No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix makes ascii.rst honour header_rows on both write (border index) and read (data start line), and the default case keeps the old behaviour. It fixes the read-path gap that caused the earlier fix to be rejected, and it leaves the existing tests untouched."
+ },
+ "3ab3eb73f1": {
+  "id": "3ab3eb73f1",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 1040,
+    "note": "_find_signature now loops over the leading docstring lines. A line ending in a backslash means another signature follows, so the loop goes on to the next line and strips the backslash. The first match becomes the main signature and later matches go into self._signatures."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 1084,
+    "note": "format_signature joins the main signature and the extra ones with newlines. The existing add_directive_header already prints multi-line signatures on aligned continuation lines, as the new test expects."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 1171,
+    "note": "Sets documenter.objpath = [None] for the singledispatch sub-documenter. Without it, the hoisted valid_names line (self.objpath[-1]) would raise an IndexError."
+   },
+   {
+    "file": "tests/test_ext_autodoc_configs.py",
+    "line": 375,
+    "note": "Existing test expectations are unchanged. The fix only adds class E, whose two signatures are joined by a backslash, to the init/both/class tests, so nothing was weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes autodoc itself. It collects every leading docstring signature joined by backslashes, including the __init__ and class names for ClassDocumenter, and prints them all in one directive header on aligned continuation lines. This is the behaviour the issue asks for and what the earlier rejection's lesson describes. Existing tests are kept, and the singledispatch path is guarded by setting objpath."
+ },
+ "07a8384a90": {
+  "id": "07a8384a90",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "django/db/models/constraints.py",
+    "line": 25,
+    "note": "BaseConstraint gets a violation_error_code class attribute (default None) and an __init__ kwarg, and deconstruct emits it, so clone() and migrations keep it."
+   },
+   {
+    "file": "django/db/models/constraints.py",
+    "line": 115,
+    "note": "CheckConstraint.validate now raises ValidationError(..., code=self.violation_error_code). __repr__ and __eq__ include the code."
+   },
+   {
+    "file": "django/db/models/constraints.py",
+    "line": 388,
+    "note": "UniqueConstraint passes the code on the expressions path and the condition path. The fields-based path still uses unique_error_message, so the 'unique_together' code is kept, which is what the updated test_validate expects."
+   },
+   {
+    "file": "django/contrib/postgres/constraints.py",
+    "line": 207,
+    "note": "ExclusionConstraint takes violation_error_code, passes it to super(), uses it in both validate branches and adds it to __eq__ and __repr__. This was the gap in the earlier rejected fix."
+   },
+   {
+    "file": "tests/constraints/tests.py",
+    "line": 80,
+    "note": "Tests are only added or extended. No existing assertion is weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds violation_error_code to BaseConstraint, CheckConstraint, UniqueConstraint and ExclusionConstraint, covering construction, deconstruct, __eq__, __repr__ and every ValidationError that uses the violation message. It keeps the fields-based unique_error_message path unchanged, so it avoids both reasons the earlier fix was rejected."
+ },
+ "5e286640fe": {
+  "id": "5e286640fe",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "xarray/core/computation.py",
+    "line": 1730,
+    "note": "where() gains a keep_attrs=None keyword. It defaults to _get_keep_attrs(default=False), so the global option is honoured and the old behaviour stays when nothing is set."
+   },
+   {
+    "file": "xarray/core/computation.py",
+    "line": 1811,
+    "note": "When keep_attrs is True, it becomes the callable lambda attrs, context: attrs[1]. That takes attrs from x, not from cond, which is the failure recorded in the failure memory. It is passed on to apply_ufunc."
+   },
+   {
+    "file": "xarray/tests/test_computation.py",
+    "line": 1925,
+    "note": "The new test_where_attrs expects attrs {'attr': 'x'} when keep_attrs=True. The callable gives that when cond, x and y are all DataArrays."
+   },
+   {
+    "file": "xarray/tests/test_units.py",
+    "line": 2432,
+    "note": "Formatting only: the pytest.param for operator.eq is collapsed onto one line. No test is removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds keep_attrs to xr.where, and when it is True it maps to a callable that keeps the attrs of x, not cond, so it avoids the earlier rejected fix's mistake and passes the test it adds. One edge case remains: when x is a scalar, attrs[1] may point at the wrong object or be missing, but the cases the issue describes are handled."
+ },
+ "8e4e3be573": {
+  "id": "8e4e3be573",
+  "solves": false,
+  "probability": 0.03,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 878,
+    "note": "modelformset_factory gains a can_add=True parameter, but the formset_factory call is unchanged and FormSet.can_add is never set. can_add=False passed to the factory (or forwarded by inlineformset_factory) is silently dropped, so the factories never disallow creation."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 575,
+    "note": "BaseModelFormSet.__init__ takes can_add=None and treats it as True. Only direct instantiation with can_add=False has any effect. The name also differs from the upstream API (edit_only), which hidden tests are likely to call."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 683,
+    "note": "The new clean() raises a formset-level ValidationError for changed extra forms instead of ignoring them. This makes the formset invalid rather than giving an edit-only view."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1,
+    "note": "The diff strips almost every blank line in the module, including the PEP 8 two-line separators between top-level definitions. flake8 would fail, and there are large unrelated changes."
+   },
+   {
+    "file": "test_settings.py",
+    "line": 1,
+    "note": "Adds a stray settings file at the repository root, the same pattern that got earlier fixes rejected."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The can_add flag never reaches the formset through modelformset_factory or inlineformset_factory, so the factory API does not disallow new objects, and it does not match the expected edit_only API. The diff also strips the blank lines from the whole module and adds a stray test_settings.py at the repository root."
+ },
+ "97f65ab5b2": {
+  "id": "97f65ab5b2",
+  "solves": false,
+  "probability": 0.01,
+  "evidence": [
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "The only change in the diff is a new stray reproduction script at the repo root. It does not fix anything."
+   },
+   {
+    "file": "django/forms/fields.py",
+    "line": 200,
+    "note": "Field.__deepcopy__ is unchanged. It still makes a shallow copy and does not deepcopy self.error_messages, so copied fields still share one dict."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix only adds a stray reproduce_error.py script and never changes Field.__deepcopy__ in django/forms/fields.py, so error_messages is still shared between field copies. This is the same stray-script pattern seen in earlier rejected fixes."
+ },
+ "4c3ccf11c0": {
+  "id": "4c3ccf11c0",
+  "solves": true,
+  "probability": 0.72,
+  "evidence": [
+   {
+    "file": "django/core/management/__init__.py",
+    "line": 135,
+    "note": "Base code passes only opt.required options from **options to parse_args, so options in a required mutually exclusive group are left out and argparse raises 'one of the arguments --shop-id --shop is required'."
+   },
+   {
+    "file": "django/core/management/__init__.py",
+    "line": 140,
+    "note": "The patch loops over parser._mutually_exclusive_groups and appends the used group option as '--opt=value'. For call_command(..., shop_id=1) or shop_name='x' this satisfies the required group, which fixes the reported case. Calling with no options still raises the argparse 'required' error."
+   },
+   {
+    "file": "django/core/management/__init__.py",
+    "line": 148,
+    "note": "It applies to every mutually exclusive group, including groups that are not required. It also formats values as '--opt=value', so a store_true/store_const option in such a group would break ('ignored explicit argument'). The upstream approach limits the change to required groups."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Commits a stray debug script at the repo root that calls settings.configure(). Earlier rejected fixes in this repo had the same problem."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch passes kwargs for options in a mutually exclusive group to parse_args, which fixes the reported call_command(shop_id=1) failure and should pass the likely tests. It is wider than it needs to be: it also covers non-required groups, can break store_true/const options, and commits a stray reproduce_error.py."
+ },
+ "b6b90af583": {
+  "id": "b6b90af583",
+  "solves": false,
+  "probability": 0.15,
+  "evidence": [
+   {
+    "file": "xarray/core/dataarray.py",
+    "line": 3534,
+    "note": "integrate now takes `coord` and keeps `dim` as a keyword-only deprecated alias. Using `dim` warns through utils.alias_warning (a FutureWarning), and passing both raises a TypeError. This part matches what the issue and the earlier rejection asked for."
+   },
+   {
+    "file": "xarray/core/dataarray.py",
+    "line": 4084,
+    "note": "An unrelated change sets argmin's default `dim` from None to _default. The value is passed straight to self.variable.argmin(dim, ...), which only treats None as 'all dimensions'. So da.argmin() with no arguments would look up Default.token as a dimension name and raise a ValueError."
+   },
+   {
+    "file": "xarray/core/dataarray.py",
+    "line": 4187,
+    "note": "argmax has the same change from None to _default, so da.argmax() with no arguments also breaks. Existing argmin/argmax tests (for example the aggregation tests in test_units and test_dataarray) would now fail."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The integrate rename and deprecation are done correctly. But the patch also changes the default `dim` of DataArray.argmin and argmax from None to the _default sentinel, which Variable.argmin/argmax do not handle, so calling either with no arguments breaks."
+ },
+ "bdd2350f93": {
+  "id": "bdd2350f93",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 126,
+    "note": "Constant values are now rendered with repr(), so 'abc' keeps its quotes and True/0 stay as written. This matches the expected Text nodes in the new test."
+   },
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 152,
+    "note": "When the subscript head is Literal or typing.Literal, the Text nodes inside the brackets are wrapped in nodes.literal so the later loop does not turn them into pending_xref."
+   },
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 182,
+    "note": "The post-processing loop unwraps literal nodes back to plain Text and only cross-references other Text nodes, so Literal itself stays a pending_xref."
+   },
+   {
+    "file": "tests/test_domain_py.py",
+    "line": 345,
+    "note": "The new test_parse_annotation_Literal expects plain Text \"True\", \"False\", \"0\", \"1\", \"'abc'\", which is what the earlier failure note says the project's tests require. No existing tests are changed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "Values inside Literal[...] now come out as plain repr() Text with no py:class cross-reference, while Literal itself and all other annotations keep their cross-references. This removes the nitpick warning and matches the behaviour the earlier failure notes say the project's tests expect."
+ },
+ "668762a34c": {
+  "id": "668762a34c",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 828,
+    "note": "get_choices now calls order_by only when ordering is non-empty, so an empty ordering no longer clears Meta.ordering and the default manager's ordering is kept."
+   },
+   {
+    "file": "django/db/models/fields/reverse_related.py",
+    "line": 125,
+    "note": "ForeignObjectRel.get_choices gets the same fallback through _default_manager.all(), so reverse relations also keep Meta.ordering. The earlier rejected fix missed this."
+   },
+   {
+    "file": "django/contrib/admin/filters.py",
+    "line": 196,
+    "note": "The new field_admin_ordering helper is shared by both filters. RelatedOnlyFieldListFilter (line 422) now passes ordering=, which fixes the second half of the issue."
+   },
+   {
+    "file": "tests/model_fields/tests.py",
+    "line": 225,
+    "note": "The fixture data changed (foo1 d, bar1 b) so the Meta.ordering tests can tell the orders apart. The existing assertions (ordering by 'a' and '-a') still hold, and no test was weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix applies Meta.ordering when no ordering is given, in both Field.get_choices and ForeignObjectRel.get_choices, and it now passes the ModelAdmin ordering to RelatedOnlyFieldListFilter. This covers both parts of the issue, plus the gap that caused the earlier fix to be rejected."
+ },
+ "36bc54d95d": {
+  "id": "36bc54d95d",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "sympy/printing/mathml.py",
+    "line": 784,
+    "note": "Base code wraps msub/msup/msubsup inside an outer <mi> (x.appendChild(msub)). For 'x2' this gives <mi><msub>, which browsers render as invisible. That is the bug in the issue."
+   },
+   {
+    "file": "sympy/printing/mathml.py",
+    "line": 782,
+    "note": "The patch makes _print_Symbol return mname, msub, msup or msubsup directly. That is what failure memory [1] says the deciding test_presentation_symbol expects of mpp._print(Symbol('x_2'))."
+   },
+   {
+    "file": "sympy/printing/mathml.py",
+    "line": 780,
+    "note": "Bold style moves to the base <mi>, so mat_symbol_style='bold' still gives <mi mathvariant=\"bold\">A</mi> for plain symbols."
+   },
+   {
+    "file": "fix_mathml.py",
+    "line": 1,
+    "note": "Stray scratch scripts are committed: fix_mathml.py rewrites /testbed source, and there are also reproduce_issue.py, verify_fix.py and a root-level test_mathml_structure.py. They are noise but do not affect the library behaviour."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix is in the right place: _print_Symbol now returns the msub, msup or msubsup element directly instead of wrapping it in <mi>, and that wrapping is what made 'x2' invisible. The only drawbacks are the stray scratch scripts committed at the repo root, and the bold attribute now sitting on the base <mi> rather than on the outer element for symbols with scripts."
+ },
+ "1291be4067": {
+  "id": "1291be4067",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "requests/sessions.py",
+    "line": 428,
+    "note": "The bug is on this line. builtin_str(b'GET') on Python 3 gives the literal string \"b'GET'\". The patch changes it to to_native_string(method), which decodes bytes to the native str 'GET' and passes str through unchanged."
+   },
+   {
+    "file": "requests/sessions.py",
+    "line": 21,
+    "note": "to_native_string is already imported from .utils in the base file, so the patch raises no NameError. The cause the failure memory inferred for the earlier rejection does not apply."
+   },
+   {
+    "file": "requests/sessions.py",
+    "line": 16,
+    "note": "Removes the builtin_str import. In the base excerpt, request() was its only use."
+   },
+   {
+    "file": "test_requests.py",
+    "line": 1392,
+    "note": "Adds test_encoded_methods for requests.request(b'GET', ...). No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch replaces builtin_str with to_native_string, which is already imported in sessions.py. On Python 3 a bytes method is now decoded to 'GET' instead of becoming \"b'GET'\", and str methods behave as before. An identical earlier patch was rejected, but the cause the failure memory guessed (a missing import) does not hold here, so I am somewhat less confident."
+ },
+ "7609c8be57": {
+  "id": "7609c8be57",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "lib/matplotlib/contour.py",
+    "line": 1124,
+    "note": "_process_contour_level_args now takes z_dtype. With no levels given and bool z, it uses [.5] for line contours and [0, .5, 1] for filled contours. Other inputs still default to 7."
+   },
+   {
+    "file": "lib/matplotlib/contour.py",
+    "line": 1450,
+    "note": "The quad path now keeps the input dtype (ma.asarray(z) with no float64 cast), both in _contour_args and in _check_xyz, so bool lists, ndarrays and masked arrays reach the level logic as bool. contourpy converts z to float internally."
+   },
+   {
+    "file": "lib/matplotlib/tri/_tricontour.py",
+    "line": 77,
+    "note": "The tri path passes z.dtype and the remaining args to _process_contour_level_args, so tricontour and tricontourf get the same defaults. This answers both reasons the earlier fix was rejected."
+   },
+   {
+    "file": "lib/matplotlib/tests/test_contour.py",
+    "line": 696,
+    "note": "New test_bool_autolevel covers contour, contourf, tricontour and tricontourf on list, ndarray and masked bool inputs. No existing tests were changed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "For bool z with no levels given, the fix defaults line contours to [0.5] and filled contours to [0, 0.5, 1]. It keeps z's dtype in both the quad and tri code paths, which answers both reasons the earlier fix was rejected, and it adds tests without weakening any."
+ },
+ "752ef61e1c": {
+  "id": "752ef61e1c",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "requests/sessions.py",
+    "line": 428,
+    "note": "The bug is here: builtin_str(b'GET') gives \"b'GET'\" on Python 3. The patch replaces it with to_native_string(method), which decodes bytes to 'GET' on Python 3 and leaves str unchanged. This matches the upstream fix."
+   },
+   {
+    "file": "requests/sessions.py",
+    "line": 432,
+    "note": "Request still gets method.upper(), so the decoded str works here. The patch keeps the builtin_str import, so nothing else that uses it breaks."
+   },
+   {
+    "file": "reproduce_issue.py",
+    "line": 1,
+    "note": "This new top-level script makes network calls. It is not a test_* file, so pytest does not collect it. It is noise, but harmless."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch fixes the right line, and to_native_string turns b'GET' into 'GET' on Python 3. It relies on sessions.py already importing to_native_string from .utils, which requests 2.x does for the redirect handling. No tests are weakened. One small risk remains: the diff itself does not show that import."
+ },
+ "85463a0cee": {
+  "id": "85463a0cee",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "sympy/ntheory/residue_ntheory.py",
+    "line": 817,
+    "note": "For prime p, the new `if a % p == 0: return [0]` runs before is_nthpow_residue, so nthroot_mod(17*17, 5, 17) now returns the 0 root."
+   },
+   {
+    "file": "sympy/ntheory/residue_ntheory.py",
+    "line": 815,
+    "note": "Composite moduli now go to _nthroot_mod_composite instead of raising NotImplementedError. So nthroot_mod(0, 7, 100, True) gives every multiple of 10, and solveset with modulus 8 or 9 resolves. This is the gap the earlier rejected fix left open."
+   },
+   {
+    "file": "sympy/ntheory/residue_ntheory.py",
+    "line": 746,
+    "note": "_nthroot_mod_composite solves for each prime power, lifting roots or enumerating them when the derivative vanishes, and combines them with CRT over the cartesian product. A prime power with no roots gives an empty product, so the result is [] (e.g. 4, 3, 3249000)."
+   },
+   {
+    "file": "sympy/ntheory/tests/test_residue.py",
+    "line": 165,
+    "note": "The tests that expected NotImplementedError are replaced with tests of the actual roots. This follows from the new feature and does not weaken the tests."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds the zero root for prime p when a % p == 0. It also implements composite moduli, returning every root including multiples of the prime factors. That covers what the earlier rejected fix was missing, and the code closely matches the shape of sympy's upstream solution."
+ },
+ "0ddd3c6298": {
+  "id": "0ddd3c6298",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "django/core/management/commands/inspectdb.py",
+    "line": 119,
+    "note": "The patch unpacks relations[column_name] into (ref_db_column, ref_db_table). The rest of the code still uses ref_db_table for rel_to, so how rel_to is resolved does not change."
+   },
+   {
+    "file": "django/core/management/commands/inspectdb.py",
+    "line": 131,
+    "note": "When the referenced column is not the target table's primary key, the patch sets to_field to ref_db_column exactly as the database reports it. It does not pass the name through normalize_col_name, so the earlier fix's mistake of stripping '_id' is avoided."
+   },
+   {
+    "file": "django/core/management/commands/inspectdb.py",
+    "line": 163,
+    "note": "to_field goes into extra_params, so it is printed after models.DO_NOTHING, which gives the expected form \"ForeignKey('Model', models.DO_NOTHING, to_field='col_id')\"."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix compares the referenced column with the target table's primary key and emits to_field with the column name as the database reports it. That fixes the issue without changing output for foreign keys that point to a primary key. One small difference from the likely upstream fix is that it also applies to OneToOneField and to target tables without a primary key, but neither should break existing tests."
+ },
+ "38f1c48836": {
+  "id": "38f1c48836",
+  "solves": true,
+  "probability": 0.68,
+  "evidence": [
+   {
+    "file": "django/db/models/enums.py",
+    "line": 34,
+    "note": "Adds cls.do_not_call_in_templates = True in ChoicesMeta.__new__. This is the fix the issue asks for, and every Choices class gets it, so templates no longer call the enum class."
+   },
+   {
+    "file": "django/db/models/enums.py",
+    "line": 72,
+    "note": "The patch also rebases IntegerChoices onto enum.IntEnum and TextChoices onto (str, enum.Enum), neither through Choices. The issue does not need this. Members are no longer isinstance(..., models.Choices), which can break existing code or tests that rely on that hierarchy."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "A stray reproduction script is added at the repo root. It changes no behaviour but should not be in the fix."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The added do_not_call_in_templates flag on ChoicesMeta fixes the template-calling problem in the right place. However, the patch also detaches IntegerChoices and TextChoices from the Choices base class for no reason, so isinstance/issubclass checks against Choices no longer hold and wider tests may fail."
+ },
+ "5a26d6e8db": {
+  "id": "5a26d6e8db",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 1191,
+    "note": "The default 'invalid_choice' message now contains %(value)s, which matches ModelMultipleChoiceField (line 1307) and ChoiceField."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1287,
+    "note": "to_python now raises ValidationError with params={'value': value}, so the default message and any custom message can show the invalid value. The code is still 'invalid_choice'."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "The fix adds a stray scratch script at the repo root. The test runner does not pick it up and it touches no existing tests, but it should not be committed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes ModelChoiceField's default message to include %(value)s and passes the invalid value as a param when it raises the error, which is what the issue asks for and matches how ChoiceField and ModelMultipleChoiceField already behave. The only flaw is a stray reproduce_error.py at the repo root; it does not weaken or remove any test."
+ },
+ "2b673ed149": {
+  "id": "2b673ed149",
+  "solves": false,
+  "probability": 0.12,
+  "evidence": [
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 803,
+    "note": "The patch changes the base Field.get_prep_value, which every field uses, instead of fixing the root cause. The root cause is that the nested Subquery annotation resolves its output_field to the inner annotation's field (an IntegerField) instead of the ForeignKey."
+   },
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 805,
+    "note": "The added `hasattr(value, '_meta')` turns any model instance into `value.pk` for every field type. It ignores to_field, and it hides errors where a model instance is passed to a field that is not a relation. Rejected fixes [1] and [2] in the failure memory were dropped for this same coercion."
+   },
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 804,
+    "note": "The patch forces evaluation by calling str(value). This duck-typed side effect runs on any object that has `_wrapped`. It loads the lazy object only because the model's __str__ happens to work, and it adds a global behaviour change."
+   }
+  ],
+  "constitutional": false,
+  "reason": "This patch makes the issue's example pass by coercing every model instance to its pk in the base Field.get_prep_value. It does not fix the nested Subquery's output_field resolution, which is the real cause. Fixes [1] and [2] in the failure memory were rejected for the same approach."
+ },
+ "84e91c438e": {
+  "id": "84e91c438e",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sklearn/utils/_set_output.py",
+    "line": 130,
+    "note": "The dtypes are put back only after the transformer has already run check_array, which turns the DataFrame into a float ndarray. If a selector gets string category columns (e.g. ['a','b','a']), it fails before the wrapper is reached, so the patch never gets a chance to restore them."
+   },
+   {
+    "file": "sklearn/utils/_set_output.py",
+    "line": 130,
+    "note": "The new code calls astype with the input dtypes for every pandas-output transformer whose output column names match the input names. A StandardScaler on int columns would have its scaled floats truncated back to int, which breaks existing behaviour for transformers that change values."
+   },
+   {
+    "file": "sklearn/utils/_set_output.py",
+    "line": 133,
+    "note": "estimator.get_feature_names_out() is now called directly, without the try/except that _wrap_in_pandas_container uses for the columns callable. Estimators whose get_feature_names_out raises would now error instead of falling back."
+   },
+   {
+    "file": "reproduce_dtype.py",
+    "line": 1,
+    "note": "The patch adds a stray reproduction script at the repository root. SelectorMixin.transform/_transform in sklearn/feature_selection/_base.py is left unchanged, so the input DataFrame is never kept as it is."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch tries to restore dtypes with astype after the input has already been converted to a numeric ndarray, so selectors still fail on string category columns and cannot keep them. It also applies the cast to every transformer, which can corrupt the outputs of transformers that change values, such as scalers on int columns."
+ },
+ "2c1863c0ab": {
+  "id": "2c1863c0ab",
+  "solves": false,
+  "probability": 0.2,
+  "evidence": [
+   {
+    "file": "sympy/core/function.py",
+    "line": 510,
+    "note": "The fix replaces the _imp_ fallback. It now evaluates the args first with arg.evalf(prec), so f(g(2)) gives 16 in the issue example. But prec here is binary precision, while evalf() expects decimal digits."
+   },
+   {
+    "file": "sympy/core/function.py",
+    "line": 510,
+    "note": "When _imp_ returns something that is not a Python int, float or complex, such as a symbolic x+1 from f(x), the fix returns that expression as is. The base code fell into Float(...) TypeError and returned None. So f(x).evalf() would now give x+1 instead of f(x), which breaks the existing behaviour (sympy's test_implemented_function_evalf expects f(x).evalf() == f(x))."
+   },
+   {
+    "file": "sympy/core/function.py",
+    "line": 511,
+    "note": "The fix never returns None for symbolic results. Failure memory note [2] gives the same reason for rejecting an earlier fix (it returned a symbolic expression where it should return None)."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix makes the issue's composed numeric case work, but it returns any non-Python-numeric _imp_ result as is, so f(x).evalf() turns into x+1 instead of staying f(x). That likely breaks the existing implemented-function evalf test, and it also misuses binary prec as decimal digits."
+ },
+ "02a53b7f3e": {
+  "id": "02a53b7f3e",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "django/contrib/admin/options.py",
+    "line": 1041,
+    "note": "The base code calls queryset.filter(or_queries) once per search term. Each call adds a new JOIN for multi-valued relations such as clientoffice__name, which is the cause the issue names."
+   },
+   {
+    "file": "django/contrib/admin/options.py",
+    "line": 1034,
+    "note": "The diff ANDs each term's OR-Q into one Q and calls filter() once, so joins are reused. This matches the upstream approach (filter(Q(*term_queries))). Whitespace-only input gives an empty Q(), which is a no-op."
+   },
+   {
+    "file": "server.log",
+    "line": 1,
+    "note": "The diff commits scratch files (server.log, test.db, testapp/*, tests/__init__.py). They are noise and the review should reject them, but they are unlikely to affect the admin tests. No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix puts all search terms into one filter() call, so the changelist query no longer adds a join per term. This matches the upstream fix and should pass a join-count test. Its flaw is the stray scratch files it commits (server.log, test.db, testapp/, tests/__init__.py)."
+ },
+ "debdef10d6": {
+  "id": "debdef10d6",
+  "solves": true,
+  "probability": 0.83,
+  "evidence": [
+   {
+    "file": "sphinx/pycode/ast.py",
+    "line": 174,
+    "note": "visit_Tuple now wraps a non-empty tuple in parentheses ('(1, 2, 3)'), keeps '()' for an empty tuple and gives '(x,)' for one element. This fixes the default value color=(1, 1, 1) that was rendered as 'color=1, 1, 1', and it meets the lesson from the earlier rejected fix."
+   },
+   {
+    "file": "sphinx/pycode/ast.py",
+    "line": 168,
+    "note": "visit_Subscript leaves out the parentheses when the slice is an ast.Tuple, which keeps Tuple[int, int] correct on Python 3.9 and later. On 3.8 and earlier the tuple is wrapped in ast.Index, so it still goes through visit_Tuple and would print 'Tuple[(int, int)]'. That is a possible regression for annotations, but the same thing happens with a fix that only changes visit_Tuple."
+   },
+   {
+    "file": "setup.py",
+    "line": 17,
+    "note": "Unrelated dependency pins (Jinja2<3.0, markupsafe, sphinxcontrib versions, alabaster) and a tox -rA flag. They are noise for setting up the environment and do not weaken any test or check."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes the code at the root cause: sphinx.pycode.ast's tuple unparsing now adds parentheses, so tuple default values render correctly, and an empty tuple still gives \"()\". The only risk is the Python 3.8 Index path for subscript tuples, and the extra dependency pins are harmless noise."
+ },
+ "94b6a54679": {
+  "id": "94b6a54679",
+  "solves": false,
+  "probability": 0.02,
+  "evidence": [
+   {
+    "file": "sphinx/writers/latex.py",
+    "line": 1789,
+    "note": "The second hunk adds `if hlcode.endswith('\\n'):` at 8-space indent inside the 12-space else-branch of visit_literal_block. The next line, `if self.table and not self.in_footnote:`, stays at 12 spaces, so Python raises IndentationError ('unexpected indent') and sphinx.writers.latex cannot be imported at all."
+   },
+   {
+    "file": "sphinx/writers/latex.py",
+    "line": 1713,
+    "note": "Adding '%' after \\sphinxupquote{ fixes the leading space, which is the right idea. But the trailer is emitted as 'pass}}' with no '%\\n' before '}}', while the expected markup is '...pass%\\n}}'. An exact-string check of the LaTeX output would probably still fail."
+   },
+   {
+    "file": "tox.ini",
+    "line": 32,
+    "note": "The fix adds the unrelated pytest -rA flag. This is noise but does not weaken any tests."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The second hunk is mis-indented inside visit_literal_block, which causes an IndentationError, so the LaTeX writer module cannot be imported and every LaTeX test breaks. The inline trailer also does not match the expected '%\\n}}' form."
+ },
+ "0ad13ff1fc": {
+  "id": "0ad13ff1fc",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sphinx/builders/linkcheck.py",
+    "line": 1129,
+    "note": "Paths are resolved against doc2path(docname, base=None), which is relative, so its dirname falls back to '.' (the current working directory) instead of srcdir. A valid link such as conf.py is reported broken unless the build runs from the source directory."
+   },
+   {
+    "file": "sphinx/builders/linkcheck.py",
+    "line": 1077,
+    "note": "The new loop over target nodes checks the same local URI that the reference loop checks again, so each link is reported twice in output.txt."
+   },
+   {
+    "file": "sphinx/builders/linkcheck.py",
+    "line": 1106,
+    "note": "check_local_link is defined twice (copy-paste). It also never calls write_linkstat, so local links disappear from output.json, and valid ones are still logged as 'local' entries in output.txt."
+   },
+   {
+    "file": "setup.py",
+    "line": 1043,
+    "note": "Unrelated dependency pins, plus many stray helper scripts and files (apply_patch.sh, linkcheck.py.backup/.orig/.debug, test_local_link/conf.py). This matches the pattern of earlier rejected fixes in this repository."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch tries to check local links, but it resolves them against the working directory rather than srcdir and reports each link twice. It also leaves local links out of output.json, so the project's linkcheck output tests will very likely fail. On top of that it adds stray scripts, backup files and unrelated dependency pins."
+ },
+ "9391d639c8": {
+  "id": "9391d639c8",
+  "solves": false,
+  "probability": 0.3,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 1287,
+    "note": "Adding params={'value': value} to the invalid_choice ValidationError is the right core fix: custom messages can now use %(value)s."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1191,
+    "note": "The diff also changes ModelChoiceField's default message from 'That choice is not one of' to '%(value)s is not one of'. Existing tests (for example in model_forms) check the old default text, and the translations use it, so this change is likely to break current behaviour. The upstream fix kept the default text and only added params."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1284,
+    "note": "When a model instance is passed, value has already been replaced by its key, so the param shows the key. This matches upstream behaviour and is a minor point."
+   }
+  ],
+  "constitutional": false,
+  "reason": "Passing params={'value': value} fixes what the issue asks for. But the patch also rewrites ModelChoiceField's default invalid_choice text, which is likely to break existing tests that check the old 'That choice is not one of the available choices' wording; the earlier identical change, recorded in failure memory, was rejected in wider testing."
+ },
+ "444157f1f8": {
+  "id": "444157f1f8",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "xarray/core/computation.py",
+    "line": 1860,
+    "note": "The fix removes the lambda keep_attrs that returned x.attrs for every level. That lambda was why the variable attrs were copied onto the coordinates."
+   },
+   {
+    "file": "xarray/core/computation.py",
+    "line": 1876,
+    "note": "After apply_ufunc, the fix rebuilds the attrs from x. The top-level and data_var attrs come from x, and the special case where a DataArray x is promoted to a Dataset clears the Dataset attrs. Each coordinate's attrs come only from x's own coordinate, or are empty when x is a scalar. This follows the lesson from the earlier rejected fix."
+   },
+   {
+    "file": "xarray/core/computation.py",
+    "line": 1876,
+    "note": "There is no hasattr(result, 'attrs') guard. If every input is a plain numpy array and keep_attrs=True, the result is an ndarray and setting result.attrs would raise. This edge case is outside the issue and probably not in the issue's tests."
+   },
+   {
+    "file": "xarray/tests/test_computation.py",
+    "line": 1927,
+    "note": "test_where_attrs is extended, not weakened. The old checks (attrs taken from x, scalar x and y give no attrs) still exist in a stricter form, and new cases cover coordinates and Datasets."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix stops passing the callable that copied x.attrs onto every variable, coordinates included. It then sets the attrs after the call: the result and its data_vars take x's attrs, and each coordinate takes only x's coordinate attrs. This handles scalar x and a DataArray x promoted to a Dataset, so it should fix the issue. The only gap is a missing guard when the inputs are all plain numpy arrays, which the issue does not cover."
+ },
+ "6e9596e38c": {
+  "id": "6e9596e38c",
+  "solves": false,
+  "probability": 0.2,
+  "evidence": [
+   {
+    "file": "sympy/simplify/radsimp.py",
+    "line": 1116,
+    "note": "The only library change is a guard in _split_gcd that returns (1, [], []) for empty input. This stops the IndexError but leaves the root cause in place."
+   },
+   {
+    "file": "sympy/simplify/sqrtdenest.py",
+    "line": 159,
+    "note": "_sqrt_match is unchanged. It still sends Adds containing imaginary terms (I**2 = -1 is Rational) into split_surds. For example, _sqrt_match(4 + I) now returns [4 + I, 0, 1] instead of [] ('no match'), so callers may go on to try a meaningless denesting."
+   },
+   {
+    "file": "sympy/simplify/radsimp.py",
+    "line": 1080,
+    "note": "With an empty surds list, split_surds now gives g2=1, a=0, b=whole expression. That is a degenerate match, not a clean 'cannot denest' signal. sqrt(2)*sqrt(4+3*I) = 3+I is never simplified, so the full expression is not reduced to I."
+   },
+   {
+    "file": "reproduce_issue.py",
+    "line": 1,
+    "note": "The fix adds about ten stray scratch and debug scripts at the repo root (debug_issue.py, test_expr*.py, test_fix.py and others). Earlier rejected fixes in this repository were faulted for the same thing."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch stops the IndexError, but only with a symptom guard in _split_gcd. _sqrt_match still treats non-surd terms such as I as matchable instead of returning [], so tests like _sqrt_match(4 + I) == [] are likely to fail, and the fix also commits many stray scratch scripts."
+ },
+ "c118a54c8a": {
+  "id": "c118a54c8a",
+  "solves": true,
+  "probability": 0.86,
+  "evidence": [
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 152,
+    "note": "ImmutableDenseNDimArray._new set _loop_size to 0 for an empty shape. The fix sets it to 1, so len(Array(3)) returns 1, which matches iteration and numpy."
+   },
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 177,
+    "note": "The same 0 -> 1 change is made in MutableDenseNDimArray._new, so both dense classes now agree."
+   },
+   {
+    "file": "sympy/tensor/array/sparse_ndim_array.py",
+    "line": 133,
+    "note": "The sparse constructors (lines 133 and 170) get the same change. Sparse __iter__ loops over range(_loop_size), so a rank-0 sparse array now yields its single element instead of nothing."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "A stray scratch script is added at the repository root. It does not affect behaviour, but it should not be committed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix corrects the loop-size default from 0 to 1 for rank-0 arrays in all dense and sparse constructors, which is the root cause of len() returning 0. It matches the expected upstream fix and does not touch any tests. The one remaining risk: integer indexing such as a[0] on a rank-0 array may now succeed where hidden tests might expect a ValueError."
+ },
+ "6e88c294c9": {
+  "id": "6e88c294c9",
+  "solves": false,
+  "probability": 0.15,
+  "evidence": [
+   {
+    "file": "sympy/core/function.py",
+    "line": 510,
+    "note": "The new branch calls result.evalf(prec) whenever the result has an evalf method. For a symbolic argument, f(x) with _imp_ = lambda x: x + 1 now evaluates to x + 1.0 when it should stay unevaluated as f(x). The old code got TypeError from Float(...) and returned None. This breaks existing behaviour, for example the test_implemented_function_evalf check that f(x).evalf() == f(x)."
+   },
+   {
+    "file": "sympy/core/function.py",
+    "line": 510,
+    "note": "prec is binary precision, but arg.evalf(prec) and result.evalf(prec) treat it as decimal digits. This repeats the precision misuse described in the failure memory, and the function no longer always returns a Float or None."
+   },
+   {
+    "file": "test_evalf.py",
+    "line": 1,
+    "note": "Adds a print-only scratch script at the repository root instead of a real test. There is also a stray blank line at the end of function.py."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix probably makes f(g(2)).evalf() return 16, but its new result.evalf branch turns implemented functions with symbolic arguments into expressions (f(x).evalf() gives x + 1.0 rather than f(x)), which breaks existing behaviour. It also treats binary precision as decimal digits, the same mistake that got the earlier fix rejected."
+ },
+ "8e8ee177ea": {
+  "id": "8e8ee177ea",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "sympy/core/basic.py",
+    "line": 316,
+    "note": "Basic.__eq__ now returns NotImplemented instead of False on SympifyError, exactly the change the issue asks for; __ne__ becomes `not self == other`, so Python's reflected fallback is used."
+   },
+   {
+    "file": "sympy/core/basic.py",
+    "line": 1183,
+    "note": "_has_matcher changed from self.__eq__ to a lambda using ==. This avoids a truthy NotImplemented leaking into has()."
+   },
+   {
+    "file": "sympy/core/numbers.py",
+    "line": 1261,
+    "note": "Float, Rational and NumberSymbol __eq__ also return NotImplemented on SympifyError. The NumberSymbol delegation in __gt__/__ge__/__lt__/__le__ is fixed: the reflected operator is now used (gt->lt, ge->le) where it was mismatched before."
+   },
+   {
+    "file": "sympy/core/tests/test_numbers.py",
+    "line": 1656,
+    "note": "Adds test_comparisons_with_unknown_type and test_NumberSymbol_comparison, which check symmetric ==/!= with Foo/Bar and TypeError for ordering. No existing tests are weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch makes Basic, Float, Rational and NumberSymbol __eq__ return NotImplemented for unknown types, and it rewrites __ne__ across the codebase to use == so the reflected method is reached. It also fixes the NumberSymbol reflected-comparison mismatch, adds tests and removes none, and it closely matches the upstream fix."
+ },
+ "4d09ccc8f7": {
+  "id": "4d09ccc8f7",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "sympy/matrices/matrices.py",
+    "line": 195,
+    "note": "The old _find_pivot accepted any truthy entry as the pivot, including symbolic expressions that are really zero (for example a*2 - 2*a in unexpanded form). The fix swaps it for _find_reasonable_pivot with iszerofunc=_is_zero_after_expand_mul, so Bareiss no longer picks, or divides by, a pivot that is symbolically zero. That is the root cause of the nan and zoo results and of the NaN comparison error."
+   },
+   {
+    "file": "sympy/matrices/matrices.py",
+    "line": 34,
+    "note": "Adds the helper _is_zero_after_expand_mul (expand_mul(x) == 0). For polynomial and rational entries it decides zero exactly, while staying cheaper than the default iszerofunc."
+   },
+   {
+    "file": "sympy/matrices/tests/test_matrices.py",
+    "line": 404,
+    "note": "Adds tests that M(5), M(6) and M(7).det() == 0 for the issue's matrix. No existing tests are weakened or removed."
+   },
+   {
+    "file": "sympy/utilities/randtest.py",
+    "line": 16,
+    "note": "Adds an optional tolerance parameter to random_complex_number. The default behaviour does not change."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix goes to the root cause: Bareiss was choosing pivots that are symbolically zero. It now chooses pivots with a zero test based on expand_mul, so the matrices in the issue should give exactly 0, the outcome the earlier rejected fix's lesson asks for. It only adds tests and does not weaken any."
+ },
+ "5947814348": {
+  "id": "5947814348",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sympy/combinatorics/homomorphisms.py",
+    "line": 336,
+    "note": "The diff removes the mapping from presentation free-group generators to domain.generators and always uses s = r[i]. For PermutationGroup domains, the keys of images are permutations, so neither s nor s**-1 is found there."
+   },
+   {
+    "file": "sympy/combinatorics/homomorphisms.py",
+    "line": 340,
+    "note": "When neither lookup matches, w is never multiplied. Every relator then evaluates to the identity, so _check_homomorphism always returns True for PermutationGroups and invalid maps are accepted, e.g. homomorphism(G, G, [a], [a]) no longer raises."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray script at the repository root. This is the same patch recorded as rejected in failure memory [1]."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch makes the issue's example pass only by making the check vacuous: relator letters are never mapped to the domain's permutation generators, so every relator evaluates to the identity and invalid homomorphisms are accepted. The real bug, inverted generators failing the `in gens` test, is not handled."
+ },
+ "90c85f6dd8": {
+  "id": "90c85f6dd8",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "pylint/config/__init__.py",
+    "line": 66,
+    "note": "When PYLINTHOME is unset and home resolves, the default PYLINT_HOME changes from ~/.pylint.d to appdirs.user_cache_dir(\"pylint\") on every OS. This is XDG-compliant on Linux and matches what the failure memory says the project's test expects. The \"~\" -> \".pylint.d\" branch and the PYLINTHOME override are unchanged."
+   },
+   {
+    "file": "pylint/config/__init__.py",
+    "line": 61,
+    "note": "If the old ~/.pylint.d still exists, the fix prints a warning to stderr instead of deleting it or reading from it. This is harmless to behaviour."
+   },
+   {
+    "file": "pylint/config/__init__.py",
+    "line": 86,
+    "note": "Edge case: save_results still calls os.mkdir, not makedirs. If ~/.cache does not exist, creating the cache directory fails and the stats are not saved. The code catches and prints this error, so it does not crash, and the issue's tests are unlikely to cover it."
+   },
+   {
+    "file": "setup.cfg",
+    "line": 45,
+    "note": "Adds appdirs>=1.4.0 to install_requires, plus the isort and mypy settings for it."
+   },
+   {
+    "file": "tests/lint/unittest_lint.py",
+    "line": 634,
+    "note": "The test's expected value is updated to the new default location. The assertion is not weakened or removed, and the PYLINTHOME override test stays."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix moves the default PYLINT_HOME to appdirs.user_cache_dir(\"pylint\"), keeps the \"~\" case and the PYLINTHOME override, and adds the appdirs dependency, which matches the behaviour the project's test expects. The one weak spot is that save_results still uses os.mkdir: if ~/.cache is missing, the stats are not saved, but the error is caught and nothing crashes."
+ },
+ "ad5e4b1726": {
+  "id": "ad5e4b1726",
+  "solves": false,
+  "probability": 0.08,
+  "evidence": [
+   {
+    "file": "sympy/simplify/sqrtdenest.py",
+    "line": 159,
+    "note": "The new guard `any(sqrt_depth(x) for x in pargs)` is True for 4 + I, because sqrt_depth(I) == 1. So 4 + I still goes into split_surds instead of returning [] (no match)."
+   },
+   {
+    "file": "sympy/simplify/radsimp.py",
+    "line": 1078,
+    "note": "I is not a Pow, so surds is empty. With the new _split_gcd guard, split_surds returns (1, 0, 4 + I) and _sqrt_match gives [4 + I, 0, 1], not []. The squares (16 and -1) are never checked for being positive."
+   },
+   {
+    "file": "sympy/simplify/radsimp.py",
+    "line": 1116,
+    "note": "The empty-argument guard in _split_gcd only hides the IndexError. An earlier rejected fix did the same. The failure memory says the expected results are _sqrt_match(4 + I) == [] and that the issue expression denests to I."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix stops the IndexError, but _sqrt_match still treats sums with I as a surd match: it returns [4+I, 0, 1] instead of []. So the issue expression is probably returned unchanged rather than denested to I. The correct check is that every squared term is rational and positive."
+ },
+ "54c6bd14c8": {
+  "id": "54c6bd14c8",
+  "solves": false,
+  "probability": 0.12,
+  "evidence": [
+   {
+    "file": "django/http/response.py",
+    "line": 216,
+    "note": "When secure is None, the new delete_cookie still uses only the __Secure-/__Host- prefix check. Deleting with samesite='None' therefore gives no Secure flag, and browsers reject that cookie, which is the warning the issue reports."
+   },
+   {
+    "file": "django/contrib/sessions/middleware.py",
+    "line": 44,
+    "note": "The session cookie deletion now also sends httponly=SESSION_COOKIE_HTTPONLY or None. That setting defaults to True, so the deletion header gains HttpOnly. Existing exact-string tests of the session-deletion Set-Cookie header (e.g. test_session_delete_on_end) would no longer match."
+   },
+   {
+    "file": "django/contrib/messages/storage/cookie.py",
+    "line": 95,
+    "note": "The messages deletion passes secure, httponly and samesite from the session settings. This covers the reported case but goes beyond preserving samesite."
+   },
+   {
+    "file": "django/http/response.py.backup",
+    "line": 1,
+    "note": "Stray files were added: a response.py.backup copy and test_delete_cookie*.py, verify_fix.py and test_settings.py at the repository root. They are not part of the fix."
+   }
+  ],
+  "constitutional": false,
+  "reason": "delete_cookie now accepts samesite, but it does not set Secure when samesite is 'None', which is the reason browsers reject the cookie. The session middleware also adds HttpOnly to its deletion header, which would likely break the existing exact-header session tests; the patch also adds stray backup and script files."
+ },
+ "a03eb05d28": {
+  "id": "a03eb05d28",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "django/forms/boundfield.py",
+    "line": 235,
+    "note": "When require_all_fields=False and the widget is a MultiWidget, the parent no longer puts required on every subwidget. Each subwidget's required attribute now follows its own subfield.required. This fixes the rendering gap that sank the earlier clean()-only fix."
+   },
+   {
+    "file": "tests/forms_tests/field_tests/test_multivaluefield.py",
+    "line": 189,
+    "note": "The new test_render_required_attributes checks that only f_0 renders as required, f_1 does not, and an all-empty submission is invalid. With required=True, the existing clean() already raises in that case."
+   },
+   {
+    "file": "django/forms/boundfield.py",
+    "line": 108,
+    "note": "It writes subwidget.attrs in place, a side effect on the shared widget instances, but it doesn't break existing tests. No tests are weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch makes each subwidget's HTML required attribute follow its own subfield when require_all_fields=False, which is what the earlier failure note says the project's test expects. Validation with required=True already rejects all-empty input. It doesn't change clean() for the issue's literal required=False case, which leaves a small risk."
+ },
+ "6f8041b3c9": {
+  "id": "6f8041b3c9",
+  "solves": false,
+  "probability": 0.15,
+  "evidence": [
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 1313,
+    "note": "The new code tries str(value) first, so 0.009125 is written as '0.009125' and the issue's own example is fixed."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 1328,
+    "note": "The decimal-point check only looks for an uppercase 'E', but str() gives a lowercase 'e'. For a value like 1e-10, str() gives '1e-10', so the check appends '.0' and makes '1e-10.0'."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 1332,
+    "note": "The lowercase-'e' step then splits '1e-10.0' and calls int('10.0'), which raises ValueError. So Card('X', 1e-10), 1e-05 or 1e+16 now crashes when the card is formatted, which is a regression."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 1332,
+    "note": "The exponent clean-up now only runs on str() output, so the .16G fallback with an uppercase 'E' no longer gets the old Windows zero-padding fix."
+   },
+   {
+    "file": "reproduce.py",
+    "line": 1,
+    "note": "The patch also adds an unrelated scratch script at the repository root."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch fixes the issue's 0.009125 example but breaks floats whose str() has no decimal point, such as 1e-10 and 1e+16: they become '1e-10.0' and int('10.0') raises ValueError. That regression is likely to fail existing or hidden tests."
+ },
+ "bfa6d541a9": {
+  "id": "bfa6d541a9",
+  "solves": true,
+  "probability": 0.83,
+  "evidence": [
+   {
+    "file": "sphinx/directives/other.py",
+    "line": 121,
+    "note": "The patch lets genindex, modindex and search skip the 'nonexisting document' branch. They fall through to the else branch and are recorded as (title, docname) entries and includefiles. This matches the entries [(None,'genindex'),(None,'modindex'),(None,'search')] that the earlier failure note says the decisive test expects."
+   },
+   {
+    "file": "sphinx/directives/other.py",
+    "line": 135,
+    "note": "The 'duplicated entry' warning is suppressed for the three special names, because they are never in all_docnames (found_docs)."
+   },
+   {
+    "file": "sphinx/environment/adapters/toctree.py",
+    "line": 142,
+    "note": "A new branch builds an internal reference for the generated pages, much like the existing 'self' branch, with default titles. modindex maps to py-modindex. This avoids the KeyError on env.tocs[ref] that would otherwise turn into a 'nonexisting document' warning during resolve."
+   },
+   {
+    "file": "sphinx/environment/adapters/toctree.py",
+    "line": 9,
+    "note": "Imports _ for the translated default titles. No tests or checks are weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix treats genindex, modindex and search as generated pages: the directive accepts them with no warning and keeps (None, name) entries, and the resolver renders them as links instead of looking them up in env.tocs. This closely follows the approach Sphinx itself took upstream. A remaining risk is that adding them to includefiles could cause odd behaviour elsewhere, for example in numfig traversal or LaTeX toctree inlining."
+ },
+ "914ad5d9a6": {
+  "id": "914ad5d9a6",
+  "solves": true,
+  "probability": 0.72,
+  "evidence": [
+   {
+    "file": "sympy/geometry/point.py",
+    "line": 155,
+    "note": "The imaginary-coordinate check now runs only when evaluate is true. Under evaluate(False), im(Integer(2)) stays unevaluated and is truthy, which caused the false error. Skipping the check stops the crash in the issue's example."
+   },
+   {
+    "file": "sympy/geometry/point.py",
+    "line": 155,
+    "note": "Under evaluate=False, Point(1+I, 2) is no longer rejected. A narrower fix would test `im(a).is_zero is False` and keep the validation."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray debug script at the repository root. The failure memory shows earlier fixes were rejected partly for this."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix stops the crash for Point2D under evaluate(False) and keeps the check under normal evaluation, so it most likely passes the issue's tests. The cost is that it drops imaginary-coordinate checking whenever evaluate is False, and it adds a stray reproduce_error.py file at the repository root."
+ },
+ "20a32fd706": {
+  "id": "20a32fd706",
+  "solves": false,
+  "probability": 0.04,
+  "evidence": [
+   {
+    "file": "django/db/models/base.py",
+    "line": 807,
+    "note": "The new branch runs whenever the parent's pk attname is None. That includes every ordinary save of a new child instance, not only a reset pk. The branch sets parent_inserted = True and skips the recursive self._save_parents(cls=parent, ...) call."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 810,
+    "note": "The recursion to grandparents is removed for this case. With multi-level inheritance (for example Place <- Restaurant <- ItalianRestaurant), creating a new grandchild never saves the top parent. The middle table's pk (place_ptr_id) is still None when _save_table(force_insert=True) runs for it, so the INSERT has a NULL primary key and fails with an IntegrityError."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 811,
+    "note": "The issue's single-level case does insert a new parent row: the child link is set to None and the parent is force-inserted. But the fix keys on the parent pk being None and not on a deliberate reset, and it does not make the pk setter (pk = None) reset the parent link fields."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root. The failure memory says earlier rejected fixes did the same."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix skips the recursive _save_parents call whenever a parent's pk is None, which is true for every new child instance. In multi-level inheritance the top parent is then never saved, and the middle table is inserted with a NULL pk, breaking normal creation of grandchild models. It may cover the issue's single-level example, but it does not make resetting pk = None clear the parent link fields."
+ },
+ "ce44623e8f": {
+  "id": "ce44623e8f",
+  "solves": false,
+  "probability": 0.12,
+  "evidence": [
+   {
+    "file": "django/contrib/admin/options.py",
+    "line": 467,
+    "note": "The patch adds is_pk_onetoone to the condition, so every primary-key OneToOneField is kept as a relation part. That includes MTI parent links (*_ptr), which must still collapse. This is the same approach that failure memory [1] records as rejected."
+   },
+   {
+    "file": "django/contrib/admin/options.py",
+    "line": 469,
+    "note": "The target-field shortcut is now skipped when the target pk is a OneToOneField. With list_filter=['restaurant'], RelatedFieldListFilter generates 'restaurant__place__exact'. Before the patch this collapsed to the single part 'restaurant' and was allowed. Now relation_parts=['restaurant','place'], which matches neither 'restaurant__place' nor 'restaurant__place__exact' in valid_lookups, so the lookup is disallowed. That is a regression."
+   },
+   {
+    "file": "reproduce.py",
+    "line": 1,
+    "note": "The patch adds an unrelated scratch script at the repository root and blank-line noise in options.py (around lines 500 and 2516)."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch makes the issue's case pass by treating every primary-key OneToOneField as a real relation step. That stops MTI parent links and pk target-field lookups (for example the related filter's fk__pk__exact) from collapsing, which breaks lookups that are allowed today. It is the same flawed approach that was rejected before; a correct fix should exclude only the parent links found in model._meta.parents."
+ },
+ "45b4a39fe8": {
+  "id": "45b4a39fe8",
+  "solves": true,
+  "probability": 0.68,
+  "evidence": [
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 74,
+    "note": "Base code calls lhs.output_field.get_prep_value(self.rhs) directly. With a nested subquery the output_field is the target IntegerField, so int(SimpleLazyObject) raises the TypeError from the traceback."
+   },
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 74,
+    "note": "The new check `isinstance(value._wrapped, Promise)` is dead code. An unevaluated SimpleLazyObject holds the `empty` sentinel, not a Promise, and a model instance is never a Promise either."
+   },
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 74,
+    "note": "The fix actually works through the `hasattr(value, '_meta')` branch. SimpleLazyObject proxies __getattr__, so it evaluates the user and the code then takes value.pk, which turns the rhs into an int and makes the issue's filter work."
+   },
+   {
+    "file": "django/db/models/lookups.py",
+    "line": 74,
+    "note": "The pk conversion is generic. It applies to any non-related lookup whose rhs has _meta, so filter(charfield=obj) now uses the pk instead of str(obj), and an unsaved instance silently becomes None. Related lookups are not affected, because RelatedLookupMixin normalizes the rhs first."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "The diff adds a stray scratch script at the repository root. The script is harmless to tests but should not be part of the fix."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch turns the lazily wrapped model instance into its pk before get_prep_value, so the issue's subquery filter probably works, but it does this in the generic Lookup rather than by fixing the subquery's output_field. The Promise check is dead code, and the change silently alters how model instances are handled in non-related lookups."
+ },
+ "9c4369b3f9": {
+  "id": "9c4369b3f9",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "sympy/core/evalf.py",
+    "line": 1301,
+    "note": "When re is neither 0 nor a number (for example Max(0, y)), no branch set reprec, so line 1310 raised UnboundLocalError. The fix adds else: raise NotImplementedError here."
+   },
+   {
+    "file": "sympy/core/evalf.py",
+    "line": 1307,
+    "note": "The fix adds the same else: raise NotImplementedError for im/imprec, so neither variable can be left unset."
+   },
+   {
+    "file": "sympy/core/evalf.py",
+    "line": 1310,
+    "note": "The tuple r = re, im, reprec, imprec is now built only when both precisions are set. Otherwise NotImplementedError reaches the callers (evalf_mul and EvalfMixin.evalf), which already handle it by returning the expression unevaluated."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds the else: raise NotImplementedError branches the issue suggests, at the exact spot where reprec/imprec could be left unset. Callers already handle NotImplementedError, so Mul(Max(0, y), x).evalf() now returns x*Max(0, y) instead of crashing, and no tests are touched."
+ },
+ "f9b74f115d": {
+  "id": "f9b74f115d",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "astropy/units/format/cds.py",
+    "line": 185,
+    "note": "Rule changed to 'combined_units DIVISION unit_expression', so chained slashes now apply left to right: km/s/Mpc = (km/s)/Mpc and 10+3J/m/s/kpc2 = 1e3 W/(m kpc2). The old right-recursive rule put later divisors in the numerator."
+   },
+   {
+    "file": "astropy/units/format/cds_parsetab.py",
+    "line": 22,
+    "note": "The regenerated tables are consistent with the new grammar. The states after combined_units (3, 17, 19, 29, 38) shift DIVISION into state 18. State 32 (unit_expression after the slash) and state 28 (after a leading '/') have no PRODUCT action, so 'km/s.Mpc-1' and '/s.Mpc' are still rejected. That avoids the failure that sank the earlier fix."
+   },
+   {
+    "file": "astropy/units/tests/test_format.py",
+    "line": 65,
+    "note": "Adds km/s/Mpc, km/(s.Mpc), 10+3J/m/s/kpc2 and /s as cases that must parse, and km/s.Mpc-1 and /s.Mpc as cases that must fail. The case '1.5\u00d710+11m' becomes '1.5\u00d710+11/m' (the ASCII-x variant is still tested), which adds coverage rather than weakening a check."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix makes CDS division left-associative at the grammar rule that caused the bug, so the issue's units now come out correctly. A bare product after a slash is still rejected, which is the requirement the earlier rejected fix broke. The parse tables are regenerated to match, and no existing test is weakened."
+ },
+ "2b4ae0788b": {
+  "id": "2b4ae0788b",
+  "solves": false,
+  "probability": 0.08,
+  "evidence": [
+   {
+    "file": "sympy/physics/quantum/operator.py",
+    "line": 315,
+    "note": "The diff deletes IdentityOperator._represent_default_basis and puts __rmul__ in its place. represent(IdentityOperator(n)) no longer returns eye(n), which breaks the existing test_identity loop over n in [2, 3, 5]."
+   },
+   {
+    "file": "sympy/physics/quantum/operator.py",
+    "line": 308,
+    "note": "The new Mul branch skips commutative factors, so a Mul whose factors are all commutative returns `other`. For example, I*(2*x) returns 2*x and the identity operator is silently dropped."
+   },
+   {
+    "file": "sympy/physics/quantum/dagger.py",
+    "line": 88,
+    "note": "Adding Dagger.__mul__ to return self for an IdentityOperator does address the reported Dagger(A)*I case."
+   },
+   {
+    "file": "sympy/physics/quantum/operator.py.bak",
+    "line": 1,
+    "note": "The diff also adds a .bak copy of operator.py and about 15 scratch scripts at the repo root."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The Dagger.__mul__ change fixes the reported Dagger(A)*I case. But the operator.py edit deletes IdentityOperator._represent_default_basis, which breaks the existing represent(IdentityOperator(n)) == eye(n) assertions in test_identity, and it wrongly drops I when multiplying commutative Mul expressions."
+ },
+ "3b12ca56c0": {
+  "id": "3b12ca56c0",
+  "solves": true,
+  "probability": 0.72,
+  "evidence": [
+   {
+    "file": "django/db/models/base.py",
+    "line": 1749,
+    "note": "Fallback branch only for parts[-1] == 'isnull': re-walks parts[:-1] and, if the path resolves to a field, removes the entry from related_fields and skips E015. Traced 'supply__product__parent__isnull' and 'test__isnull': neither raises an error now."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 1750,
+    "note": "Hardcodes 'isnull' instead of checking fld.get_lookup(part), so other lookups that are not transforms (e.g. __exact) at the end of a related path still raise E015. This is narrower than the real fix, but it covers the case the issue reports."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 1733,
+    "note": "Copy-pasted, repeated filters on 'fields' (pk filter three times, endswith filter on fields that contain no LOOKUP_SEP). They do nothing but are sloppy. Existing checks such as 'parent__field1__field2' still yield exactly one E015."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch stops E015 for orderings that end in __isnull on a valid field path, which is the reported bug, and keeps the existing error cases. It does this with a hardcoded special case for isnull instead of accepting registered lookups in general, and it adds redundant duplicated code."
+ },
+ "29bcb1e6e1": {
+  "id": "29bcb1e6e1",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "requests/sessions.py",
+    "line": 312,
+    "note": "Adds method = builtin_str(method) at the start of Session.request, before method.upper(). On Python 2 this turns u'POST' into a native str, so httplib no longer builds a unicode header string that fails when the binary body is appended."
+   },
+   {
+    "file": "requests/sessions.py",
+    "line": 15,
+    "note": "Imports builtin_str from .compat, which defines it for both Python 2 and 3. This avoids the missing-import problem that sank the earlier rejected fix."
+   },
+   {
+    "file": "test_requests.py",
+    "line": 436,
+    "note": "Adds test_unicode_method_name, which posts a file with method=u'POST'. No existing test is removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix converts the method to a native str in Session.request, the place the issue names. Every api.* call and Session call goes through there, the helper is imported correctly, and the change matches the approach upstream took. Its one limit: a Request prepared by hand and sent without Session.request is not converted, but the issue does not cover that path."
+ },
+ "f48f64da04": {
+  "id": "f48f64da04",
+  "solves": false,
+  "probability": 0.08,
+  "evidence": [
+   {
+    "file": "django/db/models/base.py",
+    "line": 843,
+    "note": "When pk_val is None, it is filled from get_pk_value_on_save (which calls the default, e.g. uuid4) before the shortcut check. So the new 'pk_val is None' condition at the force_insert shortcut is never true for a pk field with a default, and the skip-UPDATE shortcut is lost entirely."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 851,
+    "note": "Because of this, new instances whose pk comes from the default go back to an UPDATE followed by an INSERT. That breaks the #29260 optimization and its existing single-query test (e.g. basic test_save_primary_with_default). It is the same failure mode as the earlier rejected fix in failure memory [1]."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 857,
+    "note": "The diff also adds duplicate 'force_insert = True' lines and many blank lines inside the if-block and at the end of the file. It creates a junk file named 'django/db/models/base.py\"' and adds stray reproduce_issue.py and test_fix.py scripts."
+   },
+   {
+    "file": "django/db/models/base.py",
+    "line": 852,
+    "note": "The upstream-style fix keeps the shortcut and exempts raw saves (loaddata) with 'not raw'. This patch does not tell an explicit pk apart from a pk that came from the default; it just disables the shortcut."
+   }
+  ],
+  "constitutional": false,
+  "reason": "pk_val has already been filled from the default before the new check runs, so 'pk_val is None' is never true there and the force_insert shortcut is disabled for every pk with a default. That breaks the existing single-INSERT behaviour and its test. The patch also adds junk files and duplicate lines."
+ },
+ "4fb8ef0848": {
+  "id": "4fb8ef0848",
+  "solves": true,
+  "probability": 0.75,
+  "evidence": [
+   {
+    "file": "requests/auth.py",
+    "line": 147,
+    "note": "The qop directive in the Authorization header is changed from qop=auth to qop=\"auth\", which is what the issue asks for. This matches RFC 2617 and curl's behaviour."
+   },
+   {
+    "file": "requests/auth.py",
+    "line": 147,
+    "note": "nc stays unquoted and cnonce stays quoted, as RFC 2617 requires. The digest calculation at lines 123-130 does not change, so the response hash is unaffected."
+   },
+   {
+    "file": "requests/auth.py",
+    "line": 129,
+    "note": "The header is only built for qop 'auth'; auth-int returns None earlier, so always sending \"auth\" is consistent."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff quotes the qop value exactly where the header is built and leaves nc, cnonce and the digest calculation unchanged, so it fixes the issue without touching any tests. The failure memory says an identical patch was rejected but cannot name a failing test; the other tests it lists look unrelated to this change (likely environment or network), so confidence is lowered somewhat, not to false."
+ },
+ "9a11306a1f": {
+  "id": "9a11306a1f",
+  "solves": false,
+  "probability": 0.07,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 49,
+    "note": "The patch deletes the whole 'leave defaults for fields omitted from POST data' check (has_default() and value_omitted_from_data). It should have narrowed the check so it applies only when cleaned_data holds an empty value."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 51,
+    "note": "With the check gone, an optional field that has a model default and is missing from POST now gets cleaned_data's empty value ('' or None) written over the default. That breaks the existing default-population behaviour and its tests (e.g. test_default_populated_on_optional_field)."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 55,
+    "note": "The patch replaces the check with a duplicated comment line at column 0, which looks careless."
+   },
+   {
+    "file": "django/forms/models.py.backup",
+    "line": 1,
+    "note": "The patch adds stray files outside the fix: models.py.backup, my_test_settings.py, reproduce_issue.py and run_tests.py."
+   }
+  ],
+  "constitutional": false,
+  "reason": "Deleting the omitted-from-data check does let cleaned_data overwrite defaults. But it also overwrites model defaults with empty values whenever an optional field is missing from POST, which breaks existing behaviour and tests. The correct fix keeps the check and skips only when cleaned_data's value is empty. The patch also adds several stray files."
+ },
+ "5f60f57798": {
+  "id": "5f60f57798",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "django/db/migrations/operations/models.py",
+    "line": 963,
+    "note": "Adds an early return in RenameIndex.database_forwards when old_index.name == self.new_name. For an unnamed index that was already renamed, the database lookup finds 'new_pony_test_idx', so re-applying does nothing instead of raising 'relation already exists'."
+   },
+   {
+    "file": "django/db/migrations/operations/models.py",
+    "line": 970,
+    "note": "database_backwards for old_fields stays a zero-query no-op, so the existing assertNumQueries(0) check still holds. This avoids the reason the earlier fix was rejected."
+   },
+   {
+    "file": "tests/migrations/test_operations.py",
+    "line": 2991,
+    "note": "The test adds a re-apply step and asserts that the index name still exists. No existing assertion is weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix is in database_forwards, where the crash happens: when the index already has the target name, re-applying does nothing, and the backward path stays zero-query. This matches the upstream approach, and no existing tests are weakened."
+ },
+ "d530057ad2": {
+  "id": "d530057ad2",
+  "solves": true,
+  "probability": 0.72,
+  "evidence": [
+   {
+    "file": "sympy/core/numbers.py",
+    "line": 1389,
+    "note": "The Boolean check now runs before the `if not self: return not other` shortcut. A zero Float compared with S.false therefore returns False, the same as S(0) == S.false and S.false == S(0.0). The fix is symmetric and sits in the numeric __eq__."
+   },
+   {
+    "file": "sympy/core/numbers.py",
+    "line": 3969,
+    "note": "The patch adds a blank line at the end of the file, so it ends with two newlines. sympy's code-quality test rejects files that end with more than one newline."
+   },
+   {
+    "file": "reproduce.py",
+    "line": 1,
+    "note": "A stray debug script is committed at the repo root. Earlier fixes were rejected partly for the same thing."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix moves the Boolean check ahead of the zero shortcut in Float.__eq__, so S(0.0) == S.false is now False and matches the other cases, without weakening any test. It is marked down because it also commits a stray reproduce.py and adds an extra newline at the end of numbers.py, which sympy's code-quality test may reject."
+ },
+ "98b4537751": {
+  "id": "98b4537751",
+  "solves": false,
+  "probability": 0.02,
+  "evidence": [
+   {
+    "file": "apply_patch.py",
+    "line": 1,
+    "note": "The autodoc change exists only as an unexecuted helper script that rewrites sphinx/ext/autodoc/__init__.py at runtime. The diff itself never changes sphinx/ext/autodoc/__init__.py."
+   },
+   {
+    "file": "implement_overload_fix.py",
+    "line": 1,
+    "note": "Another stray patcher script with a different add_directive_header approach. Several conflicting scripts were committed, and none of them was applied to the source."
+   },
+   {
+    "file": "setup.py",
+    "line": 18,
+    "note": "Pins dependencies (Jinja2<3.0, markupsafe<=2.0.1, sphinxcontrib versions, alabaster). These pins have nothing to do with the issue."
+   },
+   {
+    "file": "tox.ini",
+    "line": 31,
+    "note": "Adds -rA to the pytest flags. This only changes what pytest reports and does not weaken any tests."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff never changes sphinx/ext/autodoc/__init__.py. It only adds stray patcher and test scripts plus unrelated dependency pins, so autodoc_docstring_signature still picks up only the first signature. No existing tests were weakened; the only tox.ini change is the -rA reporting flag."
+ },
+ "5b7b8d4472": {
+  "id": "5b7b8d4472",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "src/_pytest/reports.py",
+    "line": 330,
+    "note": "serialize_longrepr now writes a 'chain' list of (reprtraceback, reprcrash, description) for ExceptionChainRepr, and writes None otherwise."
+   },
+   {
+    "file": "src/_pytest/reports.py",
+    "line": 415,
+    "note": "_report_kwargs_from_json rebuilds an ExceptionChainRepr from the serialized chain, re-adds the sections, and falls back to ReprExceptionInfo when there is no chain. TestReport and CollectReport both go through this path."
+   },
+   {
+    "file": "testing/test_reports.py",
+    "line": 1052,
+    "note": "New test_chained_exceptions round-trips both report classes and checks chain length, the descriptions, the sections, and that toterminal runs."
+   },
+   {
+    "file": "testing/conftest.py",
+    "line": 996,
+    "note": "TWMock moves into a shared tw_mock fixture. The tests that used it are rewritten to use the fixture with the same assertions, so no test is weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix serializes the full exception chain in reports.py and rebuilds it as an ExceptionChainRepr for both report types, which is the round trip that xdist needs. It matches the upstream fix. Its test changes only move TWMock into a shared fixture and do not weaken any assertion."
+ },
+ "61712ee537": {
+  "id": "61712ee537",
+  "solves": false,
+  "probability": 0.35,
+  "evidence": [
+   {
+    "file": "django/core/management/base.py",
+    "line": 289,
+    "note": "Adds the --skip-checks store_true argument to every command's parser without checking requires_system_checks, so the flag also appears on commands that never run checks."
+   },
+   {
+    "file": "django/core/management/base.py",
+    "line": 288,
+    "note": "--skip-checks is not added to DjangoHelpFormatter's show_last set, so the help ordering puts it among the command-specific options."
+   },
+   {
+    "file": "django/core/management/base.py",
+    "line": 317,
+    "note": "When run from argv, execute() would now receive skip_checks, so the basic CLI behaviour works. But 'skip_checks' is still left in base_stealth_options even though it is now a real option."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff does make `--skip-checks` work from the command line. But it adds the flag to every command, including ones with requires_system_checks False, and leaves `skip_checks` in the stealth options and the help ordering unchanged. This is the same approach as two earlier fixes for this issue that were rejected after wider tests and review."
+ },
+ "6405ec6711": {
+  "id": "6405ec6711",
+  "solves": true,
+  "probability": 0.88,
+  "evidence": [
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 2661,
+    "note": "PropertyDocumenter.can_document_member now also accepts members whose class __dict__ entry is classmethod(property). The new import_object unwraps obj.__func__ and sets isclassmethod."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 2676,
+    "note": "add_directive_header emits '   :classmethod:' for classmethod-wrapped properties. This is the output the earlier rejected fix lacked."
+   },
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 852,
+    "note": "py:property gains a :classmethod: flag. The prefix is built as 'abstract'/'class' + 'property', so it renders 'class property ' and keeps 'abstract property '."
+   },
+   {
+    "file": "sphinx/util/inspect.py",
+    "line": 830,
+    "note": "getdoc walks the MRO for classmethod members and returns the docstring of the wrapped function. filter_members now passes self.object and membername, so the member's own docstring is found and it is not skipped as undocumented."
+   },
+   {
+    "file": "tests/test_domain_py.py",
+    "line": 813,
+    "note": "The existing test is renamed (prop to prop1) and extended, not weakened. The abstract property assertion is kept."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix adds the :classmethod: option to py:property, which renders as \"class property \". PropertyDocumenter now detects and unwraps classmethod(property) members and emits that option, and getdoc can find their docstrings. This covers exactly what the earlier rejected attempt missed, and the existing test expectations are kept."
+ },
+ "a9edb260bd": {
+  "id": "a9edb260bd",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "django/utils/dateparse.py",
+    "line": 32,
+    "note": "Adds a single (?P<sign>-?) group before hours/minutes/seconds and removes '-?' from each component. One leading minus now negates the whole time part, and an inner minus such as '-01:-01' no longer matches."
+   },
+   {
+    "file": "django/utils/dateparse.py",
+    "line": 42,
+    "note": "The iso8601 and postgres regexes already define a 'sign' group, so parse_duration already reads and applies kw['sign']. The new group therefore needs no change to the function. Microseconds are now unsigned, and the sign multiplier negates them correctly (e.g. '-30.1')."
+   },
+   {
+    "file": "tests/utils_tests/test_dateparse.py",
+    "line": 116,
+    "note": "The changed expectations for '-15:30' and '-1:15:30' replace the old buggy behaviour with whole-duration negation. The new cases '-00:01:01', '-01:01' and '-01:-01' -> None cover the lessons in the failure memory. This corrects tests to the intended behaviour; it does not weaken them."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix moves the sign into one leading group that parse_duration already applies to the whole duration. This handles '-00:01:01' and rejects '-01:-01', which matches Django's upstream fix and the lessons from the earlier rejected attempt. The test edits replace expectations that encoded the bug; they don't weaken the tests."
+ },
+ "977d9d5bae": {
+  "id": "977d9d5bae",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "astropy/units/quantity.py",
+    "line": 139,
+    "note": "The whole body of __array_ufunc__ is now inside try: converters_and_unit, the out= check, the initial= conversion, the input converters and the super() call. This covers the out-is-duck path that the earlier rejected fix missed."
+   },
+   {
+    "file": "astropy/units/quantity.py",
+    "line": 200,
+    "note": "The except catches TypeError and ValueError. It returns NotImplemented only if some input or out defines its own __array_ufunc__ (not None, not ndarray's, not Quantity's). Otherwise it re-raises, so plain bad operands such as dicts still raise TypeError."
+   },
+   {
+    "file": "astropy/units/tests/test_quantity.py",
+    "line": 244,
+    "note": "The message check changes from startswith 'Unsupported operand type(s) for ufunc add:' to a regex 'Unsupported operand type\\(s\\) for ufunc .*'. This loosens it slightly but still checks the type and message. It is not a weakened test."
+   },
+   {
+    "file": "astropy/units/tests/test_quantity_ufuncs.py",
+    "line": 321,
+    "note": "Adds TestUfuncReturnsNotImplemented with duck types. It covers unary and binary ufuncs, plus out=None and out=duck."
+   }
+  ],
+  "constitutional": false,
+  "reason": "On TypeError or ValueError anywhere in __array_ufunc__ (out handling included), the fix returns NotImplemented when another operand or out defines its own __array_ufunc__, and it still raises for plain unsupported operands. This matches what the failure-memory lesson asks for. The one test edit only loosens a message match a little."
+ },
+ "a3188ac57e": {
+  "id": "a3188ac57e",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 125,
+    "note": "The patch returns addnodes.desc_sig_keyword, desc_sig_literal_number and desc_sig_literal_string. These node classes are not part of this Sphinx base: the base still uses nodes.Text(' ') for spacing and has only desc_sig_name, desc_sig_operator and desc_sig_punctuation. The diff does not add them to sphinx/addnodes.py, so Literal[True] would raise AttributeError. The surrounding code catches only SyntaxError, so that error escapes."
+   },
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 170,
+    "note": "The Python <3.8 NameConstant path also switches to the missing desc_sig_keyword node."
+   },
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 183,
+    "note": "Even if those nodes existed, the literal values would come out as new node types instead of plain text that is not cross-referenced. Tests that expect Literal[True, False] to give the plain text \"True\" and \"False\" between punctuation nodes would fail."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix calls addnodes classes (desc_sig_keyword, desc_sig_literal_number, desc_sig_literal_string) that do not exist in this Sphinx base and that it never defines, so parsing a Literal annotation would raise AttributeError instead of suppressing the nitpick xref. Even if those classes existed, the output would not match the expected plain-text literal nodes."
+ },
+ "7b11d85267": {
+  "id": "7b11d85267",
+  "solves": false,
+  "probability": 0.3,
+  "evidence": [
+   {
+    "file": "django/db/models/query_utils.py",
+    "line": 88,
+    "note": "The guard now requires the single child to be a length-2 list or tuple before it is subscripted. This stops the TypeError for Q(Exists(...)).deconstruct() and for Q() & Q(Exists(...)) through _combine (lines 47-53)."
+   },
+   {
+    "file": "django/db/models/query_utils.py",
+    "line": 90,
+    "note": "The single-child kwargs special case stays (Q(x=1) still gives kwargs {'x': 1}). This is the 'more backward-compatible' option the issue mentions. The issue prefers removing the special case, as PR 14126 does, so single-child Q objects deconstruct into args. Tests written for that behaviour would expect args=(('x', 1),) and kwargs={}, and this patch would fail them."
+   },
+   {
+    "file": "django/db/models/query_utils.py",
+    "line": 92,
+    "note": "Non-tuple single children now take the args path, so Q(Exists(...)) gives args=(Exists(...),) and round-trips through Q(*args, **kwargs). No existing tests or checks are weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch stops the crash with the backward-compatible length-2 tuple check, but it keeps the single-child kwargs form that the issue prefers to drop, as PR 14126 does. Hidden tests that expect single-child Q objects to deconstruct into args would then fail."
+ },
+ "3410189f15": {
+  "id": "3410189f15",
+  "solves": true,
+  "probability": 0.95,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 51,
+    "note": "The skip for model defaults now also requires cleaned_data.get(f.name) to be in the form field's empty_values. A non-empty value set in cleaned_data therefore overrides the model default. An empty value still keeps the default, and the checkbox and omitted-data logic is unchanged."
+   },
+   {
+    "file": "tests/model_forms/tests.py",
+    "line": 588,
+    "note": "Adds test_default_not_populated_on_non_empty_value_in_cleaned_data, which checks both a non-empty override ('de') and that each empty value keeps the default 'di'. No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes the default-skip condition in construct_instance so that a non-empty value in cleaned_data overrides the model default, and empty values still fall back to it. This matches the lesson from the earlier rejected fix and keeps existing behaviour and tests intact."
+ },
+ "63e6dcc272": {
+  "id": "63e6dcc272",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "django/db/models/sql/query.py",
+    "line": 1778,
+    "note": "set_empty() now also calls set_empty() on each combined query. Before this, the NothingNode was added only to the outer query's WHERE, which the combinator compiler ignores, so none() returned every row."
+   },
+   {
+    "file": "django/db/models/sql/query.py",
+    "line": 305,
+    "note": "clone() now deep-clones combined_queries. Marking the clone empty therefore does not change the original combined queryset's subqueries, which still return [0, 1, 8, 9]."
+   },
+   {
+    "file": "tests/queries/test_qs_combinators.py",
+    "line": 54,
+    "note": "Adds test_union_none, which checks that qs3.none() is empty and that the original union is unchanged. No existing tests were weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix makes set_empty() spread to the combined queries, and it clones combined_queries in clone() so the original combined queryset is not changed. This fixes none() on union, intersection and difference querysets without changing other behaviour."
+ },
+ "2caf171d59": {
+  "id": "2caf171d59",
+  "solves": false,
+  "probability": 0.15,
+  "evidence": [
+   {
+    "file": "lib/matplotlib/axes/_base.py",
+    "line": 2475,
+    "note": "The diff adds a Collection branch to relim(). That treats a symptom: ax2.plot with string x values changes units on the shared x-axis, which fires ax1._unit_change_handler -> relim(), and relim skips the stackplot's PolyCollection. The root cause, twin axes not sharing units when they are created, is left as it is."
+   },
+   {
+    "file": "lib/matplotlib/axes/_base.py",
+    "line": 2461,
+    "note": "The base code says Collections are deliberately left out of relim. The new branch passes self.ignore_existing_data_limits but never sets it to False afterwards, so with several collections each one overwrites the limits set before it. An empty collection's null bbox (inf/-inf) is also passed straight to update_from_data_xy. This changes relim for every scatter or collection user."
+   },
+   {
+    "file": "lib/matplotlib/axes/_base.py",
+    "line": 2447,
+    "note": "_unit_change_handler still runs relim on ax1 when ax2 sets units. Tests that check twinx/twiny copy axis units when the twin is created, which is the likely upstream fix, would still fail."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch hides the inf dataLim for this one reproduction by making relim count Collections. It does not fix the cause, which is twin axes not sharing units when they are created, so ax1 still gets relimmed. It also breaks the existing rule that relim leaves Collections out, and it handles the ignore flag wrongly when there are several collections."
+ },
+ "9039e79d41": {
+  "id": "9039e79d41",
+  "solves": false,
+  "probability": 0.35,
+  "evidence": [
+   {
+    "file": "xarray/core/merge.py",
+    "line": 504,
+    "note": "The override branch changes from `return variable_attrs[0]` to `return copy.deepcopy(variable_attrs[0])`. This stops the shared reference from the issue, but the other modes use a shallow `dict(variable_attrs[0])`, and the issue asked for that too."
+   },
+   {
+    "file": "xarray/core/merge.py",
+    "line": 18,
+    "note": "Adds `import copy` to the third-party import block, only to support the deepcopy."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Stray top-level scratch script committed. A second one, test_edge_cases.py, sits at the repo root, and pytest may collect it because of its test_* name."
+   },
+   {
+    "file": "xarray/core/merge.py",
+    "line": 504,
+    "note": "The failure memory records an identical deepcopy change for this issue that was finally rejected. The lesson was to use `dict(variable_attrs[0])` and not to commit scratch scripts."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The deepcopy does break the aliasing the issue reports. But it is the same change, with the same stray scripts, that the failure memory says was finally rejected, and it is inconsistent with the shallow dict copy the other combine_attrs modes use. It can also be slow or fail on attr values that cannot be deep-copied."
+ },
+ "928e7dcd73": {
+  "id": "928e7dcd73",
+  "solves": true,
+  "probability": 0.6,
+  "evidence": [
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 731,
+    "note": "New lookup runs for every member before extract_metadata. If a member has no docstring, doc becomes the '#:' comment from attr_docs[(namespace, membername)], for example ':meta public:'. prepare_docstring then parses it as a field, so _PUBLIC_CONSTANT is treated as public and kept by the attr_docs branch, and PRIVATE_CONSTANT (':meta private:') is still hidden. This is the lesson from earlier rejected fix [1]."
+   },
+   {
+    "file": "sphinx/util/docstrings.py",
+    "line": 41,
+    "note": "Regression: the new elif `line.startswith(':meta ')` branch also runs when in_other_element is true. A ':meta foo:' line directly after a paragraph, or after a line that is not a field, is now extracted. This contradicts the existing cases in test_util_docstrings::test_extract_metadata, which expect {} and {'foo': 'bar'}."
+   },
+   {
+    "file": "sphinx/util/docstrings.py",
+    "line": 98,
+    "note": "prepare_commentdoc now adds ':' to any ':meta ...' line that does not end in a colon, which changes how real comments render (':meta foo: bar' becomes ':meta foo: bar:'). The change is unneeded because the analyzer already strips '#:'."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray script at the repository root that builds docs. It is unrelated to the fix."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The change in filter_members reads each member's '#:' attr_docs comment into the metadata check, so `_foo = None  #: :meta public:` is now documented and ':meta private:' still hides a member. However, the extra changes to extract_metadata and prepare_commentdoc are unneeded and break existing behaviour: the existing test_extract_metadata cases for field-like text right after a paragraph now fail."
+ },
+ "4e30541204": {
+  "id": "4e30541204",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "django/core/management/base.py",
+    "line": 289,
+    "note": "Adds a '--skip-checks' store_true argument to the parser that every command gets from create_parser, so the option now shows up on the command line."
+   },
+   {
+    "file": "django/core/management/base.py",
+    "line": 323,
+    "note": "run_from_argv passes vars(options) to execute(), so skip_checks=True reaches the existing stealth-option path that skips self.check(). The change works end to end without touching execute()."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root. Earlier rejected fixes in this repository did the same. It is noise but should not break tests."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The new --skip-checks flag goes through run_from_argv into execute(), which already skips system checks when skip_checks is set, so the issue's behaviour is met. The flag is added even to commands with requires_system_checks=False (harmless), and the stray reproduce_error.py script should not have been committed."
+ },
+ "bb63bf9f8e": {
+  "id": "bb63bf9f8e",
+  "solves": false,
+  "probability": 0.03,
+  "evidence": [
+   {
+    "file": "django/core/signing.py",
+    "line": 124,
+    "note": "The fix changes generic signing.dumps rather than SessionBase.encode in django/contrib/sessions/backends/base.py. Sessions still do not use the pre-3.1 legacy session format (base64 of hash:serialized) that Django 3.0 instances can decode, so the issue is not fixed."
+   },
+   {
+    "file": "django/core/signing.py",
+    "line": 127,
+    "note": "loads now falls back to an untimestamped Signer and to other algorithms. A value signed without a timestamp then passes even when max_age is given, which weakens expiry checks for every caller of signing."
+   },
+   {
+    "file": "django/core/signing.py",
+    "line": 93,
+    "note": "When DEFAULT_HASHING_ALGORITHM is sha1, dumps drops the TimestampSigner and moves the compression '.' marker inside the base64 data. That changes the output format of signing.dumps for every caller."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The issue needs SessionBase.encode to produce the legacy session format when DEFAULT_HASHING_ALGORITHM is 'sha1'. Instead, the patch rewrites the general signing.dumps/loads, which still does not give Django 3.0 a format it can decode, breaks timestamp and max_age handling, and adds a stray script."
+ },
+ "d5b7af456e": {
+  "id": "d5b7af456e",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "src/_pytest/capture.py",
+    "line": 391,
+    "note": "Adds newline=\"\" to the EncodedFile (a TextIOWrapper) around the fd capture temporary file. This turns off universal-newline translation on both write and read, so '\\r' and '\\r\\n' come back from readouterr() unchanged."
+   },
+   {
+    "file": "testing/test_capture.py",
+    "line": 517,
+    "note": "Adds a parametrized test, test_cafd_preserves_newlines, for '\\n', '\\r\\n' and '\\r'. No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The bug comes from universal-newline translation in the TextIOWrapper around the fd capture temporary file. Passing newline=\"\" fixes it at that point, which matches how upstream fixed it. The added test covers all three line endings and no existing checks are weakened."
+ },
+ "5c2f8b7fa0": {
+  "id": "5c2f8b7fa0",
+  "solves": true,
+  "probability": 0.74,
+  "evidence": [
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 862,
+    "note": "Root cause in the base code: each CONTINUE chunk is unescaped ('' -> ') here, and then the joined string is wrapped in quotes and unescaped again by _parse_value. That second unescape turns '' into '."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 168,
+    "note": "The fix takes each subcard's parsed card.value, which is unescaped exactly once. Line 185 re-escapes the joined value before it is wrapped, so the later _parse_value unescape gives back the original. For values written by the current writer, the round-trip comes out the same as the upstream fix (dropping the per-chunk replace)."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 195,
+    "note": "The new writer splitter avoids breaking inside an escaped '' pair, using parity within each quote run. Traced by hand: x*65+\"''\", x*100+\"''\", x*100+\"''xxx\" and x*100+\"'' xxx\" all round-trip correctly."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 858,
+    "note": "Behaviour change: the old code returned an unparsable subcard verbatim (return kw, vc). card.value on an invalid subcard can raise VerifyError instead. Also, older files whose CONTINUE chunks split inside a '' pair would be read wrongly, because each chunk is now unescaped on its own. Line 215: the new splitter differs from _words_group in rare edge cases (remaining length exactly 67; a space at the start of a chunk), so the exact card images can change."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix corrects the double unescape of '' when CONTINUE subcards are rejoined, and the reproduction cases from the issue round-trip correctly in a hand trace. Some risk remains: invalid subcards may now raise VerifyError instead of being returned verbatim, legacy files split inside a quote pair may read wrongly, and the rewritten splitter can produce slightly different card images in edge cases. No tests were weakened."
+ },
+ "a909d946a6": {
+  "id": "a909d946a6",
+  "solves": false,
+  "probability": 0.4,
+  "evidence": [
+   {
+    "file": "django/utils/html.py",
+    "line": 286,
+    "note": "The base bug is here: trail = middle[len(stripped):] uses an index from the unescaped string on the escaped string. The proper fix counts the stripped characters (len(middle_unescaped) - len(stripped)) and slices middle[-count:]. The patch's else branch does exactly this, so the issue's example ('&lt!', which has no ';') comes out right."
+   },
+   {
+    "file": "django/utils/html.py",
+    "line": 287,
+    "note": "The new 'if' branch runs whenever any '&' in middle has a ';' after it. It then cuts middle right after that first ';', not just the trailing punctuation. So 'example.com/?a=&lt;b.' gives the trail 'b.' and loses part of the URL, which changes behaviour that was correct before."
+   },
+   {
+    "file": "django/utils/html.py",
+    "line": 288,
+    "note": "Possible hang: for a non-entity like 'example.com/a&b;', html.unescape leaves ';', so rstrip strips it. The if branch then finds entity_end == len(middle), so middle doesn't change but trimmed_something is set True, and the while loop never ends."
+   },
+   {
+    "file": "reproduce.py",
+    "line": 1,
+    "note": "Adds stray scratch files (reproduce.py, test_edge_cases.py) at the repository root. Earlier rejected fixes in this repository did the same thing."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The issue's exact example probably passes through the else branch. But the added entity-preserving branch is wrong: it can cut URL text after the last ';' entity, and it can loop forever on inputs like 'a.com/x&b;'. The simple fix of counting stripped characters would have been enough."
+ },
+ "28f191c1ed": {
+  "id": "28f191c1ed",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "django/forms/models.py",
+    "line": 1180,
+    "note": "The base code sets any defaulted to_field on an unsaved parent to None. That includes a non-pk alternate key like Thing.id (a UUID with default=uuid4), so a bound submit saves the parent with id NULL. This is the reported failure."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1180,
+    "note": "The patch still clears the key when to_field is the parent's pk, so test_inlineformset_factory_ignores_default_pks_on_submit keeps passing. For a non-pk to_field it clears the key only when no form data is bound, so the initial value stays None. This is the behaviour the earlier rejected attempt (memory [1]) got wrong."
+   },
+   {
+    "file": "django/forms/models.py",
+    "line": 1170,
+    "note": "The patch compares attnames against self.fk.remote_field.model._meta.pk.attname. That matches how to_field is resolved from kwargs above. The change stays in add_fields, where the bug is, and no tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch stops clearing a defaulted non-pk to_field (such as Thing.id) when form data is bound. It still clears a defaulted pk, and the unbound initial value stays None. This targets the bug exactly and keeps the existing behaviour the tests check."
+ },
+ "e4cbd3e0d3": {
+  "id": "e4cbd3e0d3",
+  "solves": true,
+  "probability": 0.78,
+  "evidence": [
+   {
+    "file": "src/_pytest/mark/structures.py",
+    "line": 189,
+    "note": "For classes, the fix collects each class's own __dict__['pytestmark'] across obj.__mro__. Marks from multiple bases are merged in MRO order, so the subclass's own marks come first, then those of A and B."
+   },
+   {
+    "file": "src/_pytest/mark/structures.py",
+    "line": 211,
+    "note": "store_mark now calls consider_mro=False, so a class decorator stores only the class's own marks plus the new one. Without this, base marks would be copied into the subclass and counted twice."
+   },
+   {
+    "file": "src/_pytest/mark/structures.py",
+    "line": 197,
+    "note": "Functions and other non-class objects keep the old getattr path, so their behaviour does not change."
+   },
+   {
+    "file": "testing/test_mark.py",
+    "line": 1124,
+    "note": "The new test_mark_mro expects [c, a, b] for C(A, B) and [c] with consider_mro=False, and the fix matches both. No existing tests are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The change fixes the bug in get_unpacked_marks by merging marks from every class in the MRO, and it stops duplication through store_mark's consider_mro=False. It matches the shape of the upstream fix, though the failure memory reports that a similar fix was rejected earlier, which lowers my confidence somewhat."
+ },
+ "8266e38808": {
+  "id": "8266e38808",
+  "solves": false,
+  "probability": 0.1,
+  "evidence": [
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 152,
+    "note": "The rank-0 _loop_size fallback goes from 0 to 1 only in the dense Immutable/Mutable _new. The sparse array classes keep loop_size 0, so len() of a rank-0 sparse array is still 0."
+   },
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 177,
+    "note": "_loop_size also bounds integer index checks in _parse_index, which this diff does not change. With _loop_size 1, a scalar array probably now accepts a[0] and returns the element instead of raising ValueError. The earlier rejected fix that made this same change failed for that reason."
+   },
+   {
+    "file": "reproduce_issue.py",
+    "line": 1,
+    "note": "A scratch script is committed at the repo root, and it imports numpy."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix makes len() of a rank-0 array 1 only for dense arrays; sparse arrays still return 0. Because _loop_size also bounds integer indexes, a[0] on a scalar array is probably accepted instead of raising, the same flaw that got the earlier fix rejected."
+ },
+ "a250ed60da": {
+  "id": "a250ed60da",
+  "solves": false,
+  "probability": 0.01,
+  "evidence": [
+   {
+    "file": "setup.py",
+    "line": 17,
+    "note": "The only change here pins dependency versions (sphinxcontrib-*, Jinja2<3.0, alabaster<0.7.12, markupsafe<=2.0.1). None of these relate to how mocked base classes are named in the Bases line."
+   },
+   {
+    "file": "tox.ini",
+    "line": 31,
+    "note": "Adds -rA to the pytest command. This only changes how test results are reported. It does not change behaviour."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 0,
+    "note": "No change to the code that renders the Bases line (ClassDocumenter.add_directive_header / restify) or to sphinx/ext/autodoc/mock.py, where the mocked class's __qualname__/__name__ produces 'torch.nn.'."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff only pins dependencies in setup.py and adds -rA to tox.ini. It does not touch the autodoc mock or Bases rendering code, so mocked bases will still show as 'torch.nn.' instead of 'torch.nn.Module'."
+ },
+ "9445492f83": {
+  "id": "9445492f83",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "lib/matplotlib/__init__.py",
+    "line": 1090,
+    "note": "rc_context now copies rcParams into a plain dict and removes 'backend' before restoring. A backend resolved inside the context (when the first figure was created) is therefore no longer reset to the auto sentinel on exit, so get_backend() no longer calls switch_backend/close('all')."
+   },
+   {
+    "file": "lib/matplotlib/__init__.py",
+    "line": 1098,
+    "note": "dict.update(rcParams, orig) restores every other key unchanged, so existing rc_context behaviour, including the reset after a failure, is kept."
+   },
+   {
+    "file": "lib/matplotlib/tests/test_rcparams.py",
+    "line": 499,
+    "note": "Adds test_no_backend_reset_rccontext, which matches the expectation in the failure memory. No existing tests are weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix stops rc_context from restoring rcParams['backend'], which removes the root cause: the backend sentinel came back after the context exited, so get_backend() switched the backend and closed all figures. It matches the expected hidden test, and no existing checks are weakened."
+ },
+ "fc1f223bbc": {
+  "id": "fc1f223bbc",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "seaborn/_core/scales.py",
+    "line": 381,
+    "note": "Before format_ticks builds the legend labels, the fix turns off useOffset and scientific notation on the major formatter (guarded by hasattr). Objects Plot legends now show full values instead of offset-relative ones."
+   },
+   {
+    "file": "seaborn/utils.py",
+    "line": 701,
+    "note": "locator_to_legend_entries now makes its ScalarFormatter with set_useOffset(False) and set_scientific(False). This covers the brief numeric legends in relplot and scatterplot that the issue also names. LogFormatter is left alone."
+   },
+   {
+    "file": "tests/_core/test_plot.py",
+    "line": 2054,
+    "note": "Adds test_legend_has_no_offset, which checks that each legend label parses as a float above 1e7. No existing tests are changed or removed."
+   },
+   {
+    "file": "tests/test_relational.py",
+    "line": 677,
+    "note": "Adds the same check for relplot with hue = z + 1e8. Together with the other new test, this answers the earlier rejected attempt's lesson: labels must show full values in both legend paths."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix turns off the offset and scientific notation in both places that format legend labels: the objects Plot scale setup and the classic relational utility. Large values therefore show in full, which fixes the wrong labels in the issue. The new tests only add checks; no existing test or check is weakened."
+ },
+ "f2ddd89059": {
+  "id": "f2ddd89059",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "django/template/defaultfilters.py",
+    "line": 447,
+    "note": "Adds the escapeseq filter with is_safe=True. It returns [conditional_escape(obj) for obj in value], so items already marked safe stay as they are and every other item is escaped into a SafeString. This is what makes it the counterpart of safeseq."
+   },
+   {
+    "file": "tests/template_tests/filter_tests/test_escapeseq.py",
+    "line": 1,
+    "note": "A new test file covers autoescape on and off and chaining with join. Items marked safe are left unescaped. No existing tests are changed or removed."
+   },
+   {
+    "file": "django/template/defaultfilters.py",
+    "line": 444,
+    "note": "Uses conditional_escape rather than escape. This avoids the cause of the earlier rejected fix, which escaped items already marked safe a second time."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The new filter escapes each item with conditional_escape and is registered with is_safe=True, so items come out escaped whether autoescape is on or off and items already marked safe are left alone. This is the behaviour the issue asks for, and it avoids the escape() mistake of the earlier rejected fix; no existing tests are weakened."
+ },
+ "325d851d9a": {
+  "id": "325d851d9a",
+  "solves": true,
+  "probability": 0.92,
+  "evidence": [
+   {
+    "file": "sphinx/writers/latex.py",
+    "line": 1713,
+    "note": "Puts '%' after \\sphinxcode{\\sphinxupquote{ so the newline after the opening brace no longer becomes a space in the PDF."
+   },
+   {
+    "file": "sphinx/writers/latex.py",
+    "line": 1715,
+    "note": "Strips 15 characters (\\n\\end{Verbatim}) instead of 14, which removes the trailing newline after the content."
+   },
+   {
+    "file": "sphinx/writers/latex.py",
+    "line": 1717,
+    "note": "Appends '%' + CR + '}}', so the output ends '...pass}%\\n}}'. This matches the markup the issue expects and the lesson from the failure memory."
+   },
+   {
+    "file": "tests/test_build_latex.py",
+    "line": 1626,
+    "note": "The test is updated to the new expected output ('{%\\n' ... '%\\n}}'), not weakened. The literal-block assertion is left unchanged."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The change touches only the inline code role. It removes both stray spaces by putting '%' after the opening brace and '%' before the final newline, which is exactly the markup the issue proposes, and literal-block output stays the same. The test is changed to assert the new expected string, which does not weaken it."
+ },
+ "c6cc13b54b": {
+  "id": "c6cc13b54b",
+  "solves": false,
+  "probability": 0.04,
+  "evidence": [
+   {
+    "file": "sphinx/domains/python.py",
+    "line": 228,
+    "note": "The only library change makes _pseudo_parse_arglist split on commas outside parentheses. The parentheses are already gone before this point: autodoc builds the signature string by unparsing source defaults with sphinx/pycode/ast.py, which writes the tuple as '1, 1, 1'. This splitter therefore still receives 'color=1, 1, 1'."
+   },
+   {
+    "file": "sphinx/pycode/ast.py",
+    "line": 1,
+    "note": "The root cause, Tuple unparse dropping the surrounding parentheses, is not touched. Hidden tests probably check unparse('(1, 2, 3)') == '(1, 2, 3)' and the autodoc output color=(1, 1, 1)."
+   },
+   {
+    "file": "test_fix.py",
+    "line": 4,
+    "note": "The stray test script imports _split_at_commas_outside_brackets, which does not exist (the helper is named _split_at_commas_outside_parentheses_and_braces). This suggests the fix was never verified end to end."
+   },
+   {
+    "file": "setup.py",
+    "line": 18,
+    "note": "Unrelated dependency pins, a tox.ini change, a python.py.backup copy and many stray root scripts are included as noise. No existing tests are weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The bug comes from sphinx/pycode/ast.py unparsing tuple defaults without parentheses, which autodoc then emits as 'color=1, 1, 1'. The patch changes only the comma-splitting fallback in the Python domain, so the parentheses are already lost before its code runs and the rendered signature stays wrong."
+ },
+ "a417e7b5ac": {
+  "id": "a417e7b5ac",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "sympy/matrices/matrices.py",
+    "line": 195,
+    "note": "The naive truthiness `_find_pivot` is replaced with `_find_reasonable_pivot` (which uses is_zero, then simplify, then equals(0)). Bareiss no longer picks a pivot that is symbolically zero, which is what caused the division by zero and the NaN."
+   },
+   {
+    "file": "sympy/matrices/matrices.py",
+    "line": 211,
+    "note": "`cancel(ret)` used to throw its result away; now it is assigned with `ret = cancel(ret)`. Entries that are really zero become literal 0, so the pivot search sees them as zero at later levels."
+   },
+   {
+    "file": "sympy/matrices/matrices.py",
+    "line": 216,
+    "note": "The final `cancel(bareiss(self))` still normalises the result, so M(5), M(6) and M(7) built from i + a*j should come out as exactly 0. No tests are removed or weakened, and the unused `_find_pivot` helper is left in place, which is harmless."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix goes after the root cause in Bareiss: it picks the pivot with `_find_reasonable_pivot` and keeps the cancelled entries, so zero entries are seen as zero. This should make the determinant exactly 0 for the matrices in the issue. The default iszerofunc/simpfunc (simplify) may be slower than an expand_mul-based zero test, but the results should still be correct."
+ },
+ "7d5d055fa0": {
+  "id": "7d5d055fa0",
+  "solves": false,
+  "probability": 0.3,
+  "evidence": [
+   {
+    "file": "sympy/codegen/ast.py",
+    "line": 898,
+    "note": "Only change is deleting `not_in_args = ['text']`, so Token.__new__ now puts the raw Python str into String.args while is_Atom stays True. This leaves a non-Basic element in args. It is the same change as the earlier rejected fix [1] in failure memory."
+   },
+   {
+    "file": "reproduce.py",
+    "line": 1,
+    "note": "Adds a stray debug script at the repository root; the earlier rejection lesson says not to add stray files."
+   },
+   {
+    "file": "sympy/codegen/ast.py",
+    "line": 1864,
+    "note": "Adds whitespace noise only: an extra blank line in String and a trailing blank line at the end of the file."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch only deletes not_in_args, which may make s.func(*s.args) == s pass, but it puts a non-Basic str into the args of an atom. It is the same as an earlier fix that was rejected, and it also adds a stray reproduce.py and whitespace noise."
+ },
+ "5097eb886b": {
+  "id": "5097eb886b",
+  "solves": false,
+  "probability": 0.2,
+  "evidence": [
+   {
+    "file": "sympy/sets/conditionset.py",
+    "line": 245,
+    "note": "When cond becomes S.true, the fix keeps the old ConditionSet(new, Contains(new, base), base) branch whenever new is a Symbol, and returns base only for non-Symbol values. Only the issue's numeric example (y -> 1/3) is fixed. The bug, where the bound variable is replaced by 'new', remains for symbolic substitutions."
+   },
+   {
+    "file": "sympy/sets/conditionset.py",
+    "line": 246,
+    "note": "ConditionSet(n, n < x, Interval(-oo, 0)).subs(x, p) with n negative and p positive still builds ConditionSet(p, Contains(p, (-oo, 0]), ...), which becomes EmptySet instead of base. The consistent fix, as in __new__, is to return self.func(self.sym, cond, base) or base, ignoring assumptions."
+   },
+   {
+    "file": "analyze_failing_test.py",
+    "line": 7,
+    "note": "Stray debug script that probes the n < x / p case, which suggests the author hit a failing existing test there. The patch also commits several other scratch scripts, .patch files and conditionset.py.backup."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch fixes only the numeric case in the issue. When the substituted value is a Symbol, it keeps the buggy branch that turns the substituted value into the bound variable, so the set's behaviour stays inconsistent with __new__ and the likely hidden tests (e.g. ConditionSet(n, n < x, Interval(-oo, 0)).subs(x, p)) still fail. It also commits many stray scratch files."
+ },
+ "2637b8d538": {
+  "id": "2637b8d538",
+  "solves": true,
+  "probability": 0.75,
+  "evidence": [
+   {
+    "file": "sympy/core/numbers.py",
+    "line": 1389,
+    "note": "Base Float.__eq__ returns `not other` for a zero Float before the Boolean check, so S(0.0) == S.false is True. The patch returns False for Boolean operands inside that branch, which makes the comparison symmetric with S.false == S(0.0) and S(0) == S.false."
+   },
+   {
+    "file": "sympy/logic/boolalg.py",
+    "line": 396,
+    "note": "The new BooleanFalse.__eq__ returns False for Float and Integer and otherwise defers to Basic.__eq__. __hash__ is still defined in the same class, so hashing still works. The method is redundant but harmless."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "A scratch script is left at the repo root. The failure memory records that the same stray file contributed to earlier rejections."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The Float.__eq__ change fixes the zero-Float branch that the asymmetric S(0.0) == S.false comes from, so all four comparisons now return False, and no tests are weakened. The patch adds no regression test and leaves a scratch reproduce_error.py in the repository."
+ },
+ "abd5fe000f": {
+  "id": "abd5fe000f",
+  "solves": false,
+  "probability": 0.01,
+  "evidence": [
+   {
+    "file": "reproduce_issue.py",
+    "line": 1,
+    "note": "New top-level reproduction script only; it prints Complement(a, b) and changes no library behaviour."
+   },
+   {
+    "file": "test_fix.py",
+    "line": 1,
+    "note": "Ad-hoc print script at the repo root, not a test under sympy/sets/tests; it asserts nothing."
+   },
+   {
+    "file": "debug2.py",
+    "line": 1,
+    "note": "Debug script only. No change to sympy/sets/sets.py (Complement.reduce / FiniteSet._complement), where the bug lives."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff only adds four debug and reproduction scripts at the repository root and changes no sympy library code, so Complement(FiniteSet(x, y, 2), Interval(-10, 10)) still returns {x, y} instead of {x, y} \\ [-10, 10]. No tests are weakened, but the issue is not fixed."
+ },
+ "4a4501e1a9": {
+  "id": "4a4501e1a9",
+  "solves": false,
+  "probability": 0.35,
+  "evidence": [
+   {
+    "file": "django/core/management/base.py",
+    "line": 289,
+    "note": "--skip-checks is added to every command's parser, even commands with requires_system_checks False, where it does nothing. This is the same shape as the earlier fix that was rejected."
+   },
+   {
+    "file": "django/core/management/base.py",
+    "line": 289,
+    "note": "'skip_checks' stays in base_stealth_options. DjangoHelpFormatter.show_last is not updated, so the new option is not grouped with the other common options in --help output."
+   },
+   {
+    "file": "django/core/management/commands/runserver.py",
+    "line": 116,
+    "note": "runserver now checks options.get('skip_checks') before running checks and the migration check. This part makes sense, but the 'Performing system checks...' message still prints when checks are skipped."
+   },
+   {
+    "file": "test_management.py",
+    "line": 1,
+    "note": "A stray debug script is committed at the repo root. When run, it starts runserver. It adds no real test under tests/."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff does make --skip-checks reach execute(), so the basic case works. But it repeats the rejected earlier fix almost exactly: the option is added to every command, skip_checks stays a stealth option, the help ordering is not updated, and a debug script is committed at the repo root."
+ },
+ "4af35a1fb6": {
+  "id": "4af35a1fb6",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sympy/combinatorics/homomorphisms.py",
+    "line": 336,
+    "note": "The patch deletes the mapping from presentation generators to domain permutations and always uses s = r[i]. For a PermutationGroup, r[i] is a free-group element, while the keys of images are Permutations."
+   },
+   {
+    "file": "sympy/combinatorics/homomorphisms.py",
+    "line": 340,
+    "note": "Neither 's in images' nor 's**-1 in images' can match for a PermutationGroup domain, so _image returns the identity for every relator and _check_homomorphism always returns True. Invalid images, such as G->G with [a]->[a] where b goes to the identity, are wrongly accepted."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The D3 example stops raising only because the check now does nothing for PermutationGroups: no relator can find its image, so every set of images passes as a homomorphism. The fix should map each presentation symbol, or its inverse, to the matching domain generator."
+ },
+ "092946b367": {
+  "id": "092946b367",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 729,
+    "note": "The patch inserts a fallback just before has_doc. When getdoc gives no doc, it uses the analyzer's attr_docs comment for (namespace, membername). So extract_metadata now sees ':meta public:' for `_foo = None  #: :meta public:`."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 759,
+    "note": "Once isprivate is False through the public metadata, the attr_docs branch sets keep=True for documented module variables. ':meta private:' on a variable now hides it unless private-members is set, which matches the symmetric case."
+   },
+   {
+    "file": "sphinx/ext/autodoc/__init__.py",
+    "line": 722,
+    "note": "For values like None, int or str, the type's own __doc__ is set to None by the class-doc check. That lets the new `doc is None` fallback apply to the common data-variable case."
+   },
+   {
+    "file": "setup.py",
+    "line": 18,
+    "note": "Adds dependency pins that have nothing to do with the issue, plus a tox -rA flag. They are noise, but no test or check is weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "When the member has no docstring, filter_members now falls back to the variable's `#:` doc-comment. As a result, `:meta public:` and `:meta private:` work for module and class variables, which matches what the issue asks for. The setup.py and tox.ini changes are unrelated noise but do not weaken any tests."
+ },
+ "b3213143e9": {
+  "id": "b3213143e9",
+  "solves": true,
+  "probability": 0.93,
+  "evidence": [
+   {
+    "file": "sympy/printing/conventions.py",
+    "line": 10,
+    "note": "The regex changes from ^([a-zA-Z]+)([0-9]+)$ to ^([^\\W\\d_]+)(\\d+)$ with re.U. Any run of Unicode letters is now the name, and any run of Unicode decimal digits (\\d, which includes Nd characters such as \ud835\udfd9) is the trailing subscript. So '\u03c90' splits into ('\u03c9', [], ['0']), which the pretty printer then renders as \u03c9\u2080."
+   },
+   {
+    "file": "sympy/printing/tests/test_conventions.py",
+    "line": 31,
+    "note": "Adds assertions for the ASCII and Unicode-digit cases ('w\ud835\udfd9', 'w\ud835\udfd92\ud835\udfd9', '\u03c9\ud835\udfd92^3\u03b1'). These are the cases the earlier rejected [0-9] fix failed. No existing assertions are removed."
+   },
+   {
+    "file": "sympy/testing/quality_unicode.py",
+    "line": 47,
+    "note": "Adds test_conventions.py to the whitelist of files allowed to contain Unicode, and the test file gets an encoding header. This is the bookkeeping the new Unicode test strings need, not a weakened check."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix changes the one regex that split_super_sub uses, so that Unicode letters (such as Greek) count as the name and Unicode decimal digits count as the subscript. That fixes \u03c90 -> \u03c9\u2080, keeps the ASCII results unchanged, and covers the Unicode-digit cases that sank the earlier rejected fix."
+ },
+ "c2fcff6d59": {
+  "id": "c2fcff6d59",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "sympy/printing/repr.py",
+    "line": 253,
+    "note": "The diff pastes _print_dict four or five times and _print_WildFunction several times into ReprPrinter. Some copies hold an unreachable `return \"{%s}\"` body, so it looks like a corrupted, repeated edit."
+   },
+   {
+    "file": "sympy/printing/repr.py",
+    "line": 253,
+    "note": "The new _print_set always returns \"{%s}\" % reprify(...), so srepr(set()) prints \"{}\", which evaluates back to a dict. This is the same flaw that got the earlier rejected fix turned down. frozenset is not handled either."
+   },
+   {
+    "file": "sympy/printing/repr.py\"",
+    "line": 1,
+    "note": "The diff adds a junk file with a stray quote in its name. It holds a code fragment that is not valid Python (a top-level return followed by indented defs)."
+   },
+   {
+    "file": "test_srepr.py",
+    "line": 1,
+    "note": "The diff leaves a scratch print script at the repository root and adds no real tests to sympy/printing/tests/test_repr.py."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch is a corrupted, repeated edit: it defines the same methods several times, adds a junk file and leaves a scratch script at the root. Its _print_set prints an empty set as \"{}\" instead of \"set()\", so the expected empty-set case fails even though non-empty sets and dicts print their elements through srepr."
+ },
+ "ac0a636243": {
+  "id": "ac0a636243",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "sympy/printing/latex.py",
+    "line": 159,
+    "note": "When mul_symbol is not in mul_symbol_table, the KeyError is caught and the raw string is used as mul_symbol_latex. So latex(3*x**2*y, mul_symbol='\\\\,') gives '3\\,x^{2}\\,y'. The built-in choices still come from the table, so existing output does not change."
+   },
+   {
+    "file": "sympy/printing/latex.py",
+    "line": 162,
+    "note": "For the separator between two numbers, a custom symbol that is spacing-like (such as '\\\\,', '\\\\;', '\\\\quad' or blank) falls back to the 'dot' entry. So latex(1.5*3**x, mul_symbol='\\\\,') gives '1.5 \\cdot 3^{x}'. This avoids the failure recorded for the earlier rejected fix."
+   },
+   {
+    "file": "sympy/printing/tests/test_latex.py",
+    "line": 65,
+    "note": "Only adds two assertions for a custom mul_symbol. No existing test is removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix uses any mul_symbol not in the table exactly as given between factors. For a spacing symbol such as \\, it keeps \\cdot as the separator between two numbers, which matches what the issue implies and avoids the earlier rejected fix's failure (1.5 \\cdot 3^{x}). The built-in mul_symbol choices behave as before, and no tests are weakened."
+ },
+ "f0df330dba": {
+  "id": "f0df330dba",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "sympy/core/mod.py",
+    "line": 169,
+    "note": "This is the spot that raises. Mod.eval calls gcd(p, q), and when p contains a Piecewise (real symbols, divided by z), that call raises PolynomialError 'Piecewise generators do not make sense'. The patch wraps the call in try/except PolynomialError and sets G = S.One."
+   },
+   {
+    "file": "sympy/core/mod.py",
+    "line": 170,
+    "note": "With G = 1 the gcd_terms step is skipped, and evaluation continues with the coefficient handling and doit. Mod either simplifies or stays unevaluated, and it no longer raises. This is the behaviour the failure memory says test_Mod checks."
+   },
+   {
+    "file": "sympy/core/mod.py",
+    "line": 43,
+    "note": "PolynomialError is imported inside the function, next to the existing gcd import, so there is no import-cycle risk. No tests or checks are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch fixes the error at its source. The sinh/cosh/tanh assumption methods compute a modulo by pi, and the gcd call inside Mod.eval is what raises PolynomialError; on that error the patch now uses a gcd of 1. Mod with a Piecewise argument therefore evaluates or stays unevaluated instead of raising, which is what the earlier rejected fix failed to achieve."
+ },
+ "417193dff3": {
+  "id": "417193dff3",
+  "solves": true,
+  "probability": 0.8,
+  "evidence": [
+   {
+    "file": "sympy/codegen/ast.py",
+    "line": 898,
+    "note": "Removes not_in_args = ['text'] from String. Token.__new__ now passes text through to Basic args, so args == ('test',) and func(*args) rebuilds an equal String. kwargs() invariance is unchanged."
+   },
+   {
+    "file": "sympy/codegen/ast.py",
+    "line": 911,
+    "note": "QuotedString and Comment inherit the change, so they get the same args invariance."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray debug script at the repo root. This is hygiene noise, not a correctness problem. It removes no tests or checks."
+   }
+  ],
+  "constitutional": false,
+  "reason": "Removing text from not_in_args puts the string into String.args, so expr.func(*expr.args) == expr holds for String and its subclasses. It is a minimal, targeted change, and its only flaw is the stray reproduce_error.py file."
+ },
+ "35da062374": {
+  "id": "35da062374",
+  "solves": true,
+  "probability": 0.85,
+  "evidence": [
+   {
+    "file": "sympy/sets/sets.py",
+    "line": 220,
+    "note": "In the base code, the FiniteSet branch of Set._complement keeps every element whose contains() is not True. Symbolic members such as x and y stay in a plain FiniteSet, so the interval is dropped."
+   },
+   {
+    "file": "sympy/sets/sets.py",
+    "line": 58,
+    "note": "The patch sorts each element three ways. Elements known to be inside are dropped (2 in [-10,10]), known-outside elements stay in a FiniteSet, and undecided ones are wrapped in Complement(FiniteSet(...), self, evaluate=False). For the issue's input this gives Complement({x, y}, [-10,10]), which equals the unevaluated Complement(FiniteSet(x, y), Interval(-10, 10)) that the hidden test expects. It closely matches the upstream fix, which splits elements on contains() and returns a Union with an unevaluated Complement."
+   },
+   {
+    "file": "sympy/sets/sets.py",
+    "line": 70,
+    "note": "Passing evaluate=False avoids recursing back into this branch. No tests or checks are removed or weakened."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix removes only the elements known to lie in the interval and keeps undecided symbolic elements in an unevaluated Complement. That produces the expected {x, y} \\ [-10,10] and matches the upstream approach. A small risk remains that other existing tests expected undecided elements to stay in a plain FiniteSet."
+ },
+ "bb351ae3f3": {
+  "id": "bb351ae3f3",
+  "solves": false,
+  "probability": 0.05,
+  "evidence": [
+   {
+    "file": "django/db/models/expressions.py",
+    "line": 1702,
+    "note": "The fix flips Window.contains_aggregate to True for every window expression. The original comment says this was kept False on purpose, to avoid adding an unwanted GROUP BY. Now annotate(Window(...)) sets the query to group by every selected column, and filter() on a window would be sent to HAVING. That changes results and breaks existing window tests."
+   },
+   {
+    "file": "django/db/models/expressions.py",
+    "line": 1697,
+    "note": "The bug is in Query.get_aggregation (sql/query.py): it does not push the aggregation into a subquery when an existing annotation has an over clause. That code is left unchanged. The fix works around it through a global flag instead of fixing the logic that decides when to use a subquery."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root. Earlier rejected fixes in this repository were faulted for the same thing."
+   }
+  ],
+  "constitutional": false,
+  "reason": "Marking every Window as an aggregate might push this one aggregate() call into a subquery. But it brings back the unwanted GROUP BY and HAVING behaviour for ordinary window annotations and filters, so wider window and aggregation tests will break. The real fix belongs in get_aggregation's subquery logic for annotations with an over clause."
+ },
+ "0349b16fbe": {
+  "id": "0349b16fbe",
+  "solves": true,
+  "probability": 0.68,
+  "evidence": [
+   {
+    "file": "django/db/models/expressions.py",
+    "line": 1214,
+    "note": "Exists.as_sql now catches EmptyResultSet from the inner query (raised because elide_empty is set) and returns '1=1' when the Exists is negated. This is the correct place for the fix and matches the upstream approach, so ~Exists(none()) no longer drops the whole WHERE clause in a filter or in an annotation."
+   },
+   {
+    "file": "django/db/models/sql/where.py",
+    "line": 82,
+    "note": "Adds a heuristic that treats a negated single-child WhereNode raising EmptyResultSet as '1=1'. Lookups are Expressions with empty_result_set_value, so when it fires, a node that matches nothing becomes one that matches everything. In practice it is almost dead code, because a negated node over an empty lookup returns '' instead of raising."
+   },
+   {
+    "file": "django/db/models/sql/compiler.py",
+    "line": 564,
+    "note": "Adds a similar heuristic and changes the always-false literal from '0 = 1' to '0=1'. This is an unneeded SQL text change that could break any test that matches the old string."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "Adds a stray scratch script at the repository root."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The Exists.as_sql change correctly turns a negated Exists over an empty queryset into an always-true predicate, which resolves the issue for filters and annotations. The extra heuristics in where.py and compiler.py are unneeded and logically wrong when they fire, the '0 = 1' text change could break existing tests, and the patch adds a stray reproduce_error.py, so confidence is moderate."
+ },
+ "fd353ca77a": {
+  "id": "fd353ca77a",
+  "solves": false,
+  "probability": 0.4,
+  "evidence": [
+   {
+    "file": "sympy/matrices/common.py",
+    "line": 479,
+    "note": "The new row_join branch for a 0x0 self rebuilds self._new(other.rows, 0, []) and calls row_join again. When other also has 0 rows, that rebuilt matrix is 0x0 again, so the call never ends. For example, Matrix.zeros(0,0).row_join(Matrix.zeros(0,1)) used to return a 0x1 matrix and now raises RecursionError."
+   },
+   {
+    "file": "sympy/matrices/common.py",
+    "line": 377,
+    "note": "hstack and vstack get a shortcut for the case where every argument has 0 rows (or 0 columns). It returns cls._new(0, total_cols, []) and never calls row_join. That probably fixes the all-empty SparseMatrix case, but only by skipping the join logic: sparse.py's own row_join and col_join ('if not self: return type(self)(other)') are left unchanged."
+   },
+   {
+    "file": "sympy/matrices/common.py",
+    "line": 380,
+    "note": "The shortcut builds the result with cls instead of type(args[0]), so a mixed-type call like Matrix.hstack(SparseMatrix...) now returns a different matrix type than before."
+   },
+   {
+    "file": "reproduce_error.py",
+    "line": 1,
+    "note": "A scratch script was added at the repository root. The patch adds no regression test for SparseMatrix."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The hstack/vstack shortcut probably gives the right shapes for the all-empty cases in the issue, sparse ones included, but the sparse join code that causes the bug is untouched. The rewritten row_join also loops forever when a 0x0 matrix is joined with any other 0-row matrix, which breaks behaviour that worked before."
+ },
+ "fb355cbb8e": {
+  "id": "fb355cbb8e",
+  "solves": false,
+  "probability": 0.25,
+  "evidence": [
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 803,
+    "note": "The patch fixes the symptom in the generic Field.get_prep_value. The root cause, the nested Subquery's output_field losing the relational (FK) field, is not touched. The earlier rejected fix's lesson names exactly that root cause."
+   },
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 803,
+    "note": "LazyObject.__init__ always sets _wrapped to the `empty` sentinel. So `not hasattr(value, '_wrapped')` is never true and _setup() never runs. An unevaluated SimpleLazyObject becomes `empty`, which breaks, for example, saving a lazy value into a CharField. The issue's path only works because earlier hasattr(rhs, 'resolve_expression') calls have already evaluated the object."
+   },
+   {
+    "file": "django/db/models/fields/__init__.py",
+    "line": 803,
+    "note": "It adds a generic model-instance-to-pk coercion (hasattr(value, '_meta')) for every field type. This changes existing behaviour, for example CharField would get str(pk) instead of str(instance). It repeats the coercion that the failure memory says was rejected, only moved from Lookup to Field."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The patch hides the bug with a generic model-instance-to-pk coercion and a lazy-object unwrap in Field.get_prep_value. The unwrap is itself wrong for unevaluated objects, because it returns the `empty` sentinel. The real problem is the nested Subquery's output_field, which the patch does not fix. It also repeats the approach that the earlier rejected fix used."
+ },
+ "55223cbedf": {
+  "id": "55223cbedf",
+  "solves": true,
+  "probability": 0.72,
+  "evidence": [
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 152,
+    "note": "In ImmutableDenseNDimArray._new, the rank-0 _loop_size fallback changes from 0 to 1, so len(Array(3)) becomes 1. This is where the reported bug is, since sympy.Array is ImmutableDenseNDimArray."
+   },
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 177,
+    "note": "The same change is made in MutableDenseNDimArray._new, so both dense variants are consistent."
+   },
+   {
+    "file": "sympy/tensor/array/sparse_ndim_array.py",
+    "line": 0,
+    "note": "The sparse constructors are not touched, so a rank-0 sparse array may still give len 0. That is the gap failure note [2] points to. The issue itself only shows the dense sympy.Array case."
+   },
+   {
+    "file": "sympy/tensor/array/dense_ndim_array.py",
+    "line": 125,
+    "note": "reshape compares the new size with _loop_size. A product of 1 for shape () is the correct element count, so this check stays consistent."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The diff is a minimal, targeted change: the rank-0 fallback for dense arrays goes from 0 to 1, which fixes len(sympy.Array(3)) in the place the issue names, and it adds no stray files and changes no tests. Two risks remain: sparse rank-0 arrays are left unpatched, and a[0] might now be accepted on a scalar array if index checks rely on _loop_size."
+ },
+ "9405e24d06": {
+  "id": "9405e24d06",
+  "solves": true,
+  "probability": 0.9,
+  "evidence": [
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 862,
+    "note": "The CONTINUE branch turned '' into ' for each subcard, then rejoined the parts into a quoted valuecomment. _value_FSC_RE / _parse_value unescapes that string again, so a null string was unescaped twice. The diff removes the per-subcard replace, which leaves a single unescape."
+   },
+   {
+    "file": "astropy/io/fits/card.py",
+    "line": 69,
+    "note": "Adding $ anchors _strg_comment_RE to the end of the subcard, so the non-greedy strg group cannot stop early at an inner '' followed by a space or slash. This handles the issue's second example, where '' sits in the middle of the value."
+   },
+   {
+    "file": "astropy/io/fits/tests/test_header.py",
+    "line": 585,
+    "note": "Adds test_long_string_value_with_quotes, a round-trip test with '' at the end, in the middle, and before a space. No existing tests are weakened or removed."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The fix removes the double unescape of '' in the CONTINUE branch of Card._split and anchors the string/comment regex to the end of the subcard, which fixes both cases in the issue. It is a minimal change that keeps how CONTINUE lines are split and how invalid cards are tolerated, and it adds a round-trip regression test without weakening any existing test."
+ },
+ "4fa71fa132": {
+  "id": "4fa71fa132",
+  "solves": false,
+  "probability": 0.3,
+  "evidence": [
+   {
+    "file": "sphinx/ext/napoleon/docstring.py",
+    "line": 393,
+    "note": "The split on commas sits in _format_docutils_params, which only runs when napoleon_use_param=True. So 'x1, x2' becomes separate :param:/:type: pairs, and the napoleon_use_param=False path keeps the names combined, which is the right behaviour."
+   },
+   {
+    "file": "sphinx/ext/napoleon/docstring.py",
+    "line": 397,
+    "note": "The split happens after the names are escaped, and _escape_args_and_kwargs is unchanged. '*args, **kwargs' is escaped as one string, so only the first name gets escaped and the result is '\\*args' plus an unescaped '**kwargs'. The escape function is not made aware of comma-separated names."
+   },
+   {
+    "file": "sphinx/ext/napoleon/docstring.py",
+    "line": 402,
+    "note": "The split also applies to Google-style and keyword sections that call _format_docutils_params, which widens the change beyond the NumPy Parameters case. Type formatting is not touched."
+   },
+   {
+    "file": "setup.py",
+    "line": 17,
+    "note": "Dependency pins (Jinja2<3.0, markupsafe, sphinxcontrib versions) are unrelated to the issue. The tox.ini -rA change only alters reporting and does not weaken any test."
+   }
+  ],
+  "constitutional": false,
+  "reason": "For the basic x1, x2 case the change is in the right place: names are split only on the use_param=True path and stay combined otherwise. But the split runs after escaping and _escape_args_and_kwargs is unchanged, so combined names like '*args, **kwargs' come out wrongly escaped (a likely hidden test), and the patch also adds unrelated dependency pins."
+ },
+ "4b3184c1bc": {
+  "id": "4b3184c1bc",
+  "solves": false,
+  "probability": 0.3,
+  "evidence": [
+   {
+    "file": "astropy/units/format/cds.py",
+    "line": 182,
+    "note": "The new rule 'division_of_units : division_of_units DIVISION product_of_units' makes division left-associative, so '10+3J/m/s/kpc2' becomes 1e3 J/(m s kpc2) and '10-7J/s/kpc2' becomes 1e-7 J/(s kpc2). The two cases in the issue are fixed."
+   },
+   {
+    "file": "astropy/units/format/cds.py",
+    "line": 184,
+    "note": "Products bind tighter than '/', and a product is allowed after a division. Strings that mix the two ambiguously, such as 'km/s.Mpc-1' (read as km/(s.Mpc-1)) and '/s.Mpc' (read as 1/(s.Mpc)), now parse. The upstream fix ('combined_units DIVISION unit_expression') rejects these, and the project's grammar-failure tests probably expect an error for them."
+   },
+   {
+    "file": "astropy/units/format/cds_parsetab.py",
+    "line": 20,
+    "note": "The parse table was regenerated and matches the new grammar signature."
+   },
+   {
+    "file": "pyproject.toml",
+    "line": 2,
+    "note": "Adds an unrelated setuptools==68.0.0 build pin."
+   }
+  ],
+  "constitutional": false,
+  "reason": "The left-associative grammar fixes the chained divisions in the issue. It also accepts mixed forms like 'km/s.Mpc-1' and '/s.Mpc', which the upstream fix rejects, so the hidden grammar-failure tests will likely fail."
+ }
+}

@@ -77,7 +77,16 @@ class TestKeys(unittest.TestCase):
         roles = re.search(r"^ROLES=\(([^)]*)\)", text, re.M).group(1).split()
         oracles = int(re.search(r"^ORACLES=(\d+)", text, re.M).group(1))
         joiners = re.search(r"^ROLES\+=\((joiner[^)]*)\)", text, re.M).group(1).split()
-        self.assertEqual(keys.ROLES, roles + [f"oracle-{i}" for i in range(oracles)] + joiners)
+        service = re.search(r"^ROLES\+=\((bot-service)\)", text, re.M).group(1).split()
+        self.assertEqual(keys.ROLES, roles + [f"oracle-{i}" for i in range(oracles)] + joiners + service)
+
+    def test_the_bot_services_role_keeps_every_earlier_index(self):
+        """#210: bot-service is appended, so the roles that existed keep their mnemonic index (and their keys)."""
+        before = ["deployer", "bot", "reporter", "funder", "solver-a", "solver-b", "infrastructure", "insurance",
+                  "founder", "oracle-0", "oracle-1", "oracle-2", "oracle-3", "oracle-4", "joiner-0", "joiner-1"]
+        self.assertEqual(keys.ROLES[:len(before)], before)
+        self.assertEqual(keys.ROLES[-1], "bot-service")
+        self.assertNotEqual(keys.ROLES.index("bot-service"), keys.ROLES.index("bot"))
 
     def test_insecure_local_must_be_chosen(self):
         with mock.patch.dict("os.environ", {}, clear=True):
@@ -142,9 +151,33 @@ class TestCli(unittest.TestCase):
                      ["oracle", "accept", "--issue", "1"], ["oracle", "result", "--submission", "1", "--outcome", "pass"],
                      ["oracle", "merged", "--bounty", "1"], ["validator", "status"],
                      ["bot", "link", "--repo", "a/b", "--issue", "1", "--bounty", "1"],
-                     ["bot", "settle", "--bounty", "1"], ["withdraw", "--role", "funder"], ["balances"], ["history"],
+                     ["bot", "settle", "--bounty", "1"], ["bot", "watch", "--until-idle", "600"],
+                     ["withdraw", "--role", "funder"], ["balances"], ["history"],
                      ["devnet", "warp", "--days", "1"]):
             self.assertTrue(callable(p.parse_args(argv).fn), argv)
+
+    def test_register_prints_both_lines_to_paste(self):
+        """#210: the reporter pastes `Registration: N` and `Reporter wallet: 0x…` into the forge issue."""
+        ctx = mock.Mock(version=2)
+        w = mock.Mock(role="reporter", address="0x" + "ab" * 20)
+        ctx.wallet.return_value = w
+        ctx.race.register.return_value = 7
+        ctx.race.config.return_value = {"registrationFee": 2 * 10**6, "issueStake": 5 * 10**6}
+        data, lines = cli.cmd_register(ctx, mock.Mock(repo=None))
+        self.assertIn("Registration: 7", lines)
+        self.assertIn(f"Reporter wallet: {w.address}", lines)
+        self.assertEqual(data["lines"], ["Registration: 7", f"Reporter wallet: {w.address}"])
+        from bot import logic
+
+        body = "\n".join(data["lines"])
+        self.assertEqual((logic.registration(body), logic.wallet(body, "Reporter")), (7, w.address))
+
+    def test_watch_takes_no_secret_option(self):
+        """#210, D6: no option of `bot watch` takes a key, token or credential."""
+        p = cli.parser()
+        bot = next(a for a in p._subparsers._group_actions[0].choices["bot"]._subparsers._group_actions)
+        opts = {o for act in bot.choices["watch"]._actions for o in act.option_strings}
+        self.assertEqual(opts, {"-h", "--help", "--until-idle", "--min-bounty"})
 
     def test_stub_quorum_and_warp_refuse_other_chains(self):
         ctx = mock.Mock()

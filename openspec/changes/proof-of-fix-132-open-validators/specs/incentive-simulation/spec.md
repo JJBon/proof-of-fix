@@ -79,6 +79,39 @@ The simulation SHALL model per-family scores from agreement with final outcomes 
 - **WHEN** a family right 68 % of the time is barred
 - **THEN** the report gives how many times a year it recovers, by fresh blocks and by round 1's test of its last 50 shadow verdicts at each new one
 
+### Requirement: Measured judges in the simulation
+The simulation SHALL run with judges that vote as measured models did on labelled fixes, beside the assumed judges, on the same seeds, and SHALL re-run on them every attacker counted by the acceptance criteria. Every rate the judge measurement did not supply SHALL be named as assumed and swept.
+
+#### Scenario: Assumed against measured
+- **WHEN** the same seeds run with the assumed judges and with the measured ones
+- **THEN** the report gives, for each, the bad fixes merged per 100 paid, the good fixes rejected, the submissions that waited, each family's score beside its score on known answers, and each attacker's return against its twin
+
+#### Scenario: An assumed rate
+- **WHEN** a result depends on how often a failing test is found or a wrong test accepted
+- **THEN** the report gives the result across the swept range and says the rate is assumed
+
+### Requirement: Seats, disputes, deposits and appeals in the simulation
+On the measured judges the simulation SHALL model seats by rank, disputes backed by a failing test, the solver's deposit and the appeal, each as a switch beside v3's rule. It SHALL include a solver that only submits bad fixes, a solver that appeals every rejection, and a party that disputes without evidence.
+
+#### Scenario: The new attackers
+- **WHEN** each of the three runs against a twin that does nothing, on the same seeds
+- **THEN** the report gives its return and says whether it is shown to gain
+
+### Requirement: The appeal on evidence in the simulation
+On the measured judges the simulation SHALL model, each as a switch beside the rule it replaces: the appeal on evidence decided by the seated families, a contender's sponsorship, known-answer issues, and the second draw among few families. The two rates the judge measurement can't supply, how often the panel passes a good fix and a bad fix appealed with a passing test, SHALL be named as assumed and swept.
+
+#### Scenario: The two assumed rates
+- **WHEN** a result depends on how a judge reacts to a passing test
+- **THEN** the report gives it across the swept range, says the rate is assumed, and gives the rate above which a solver of bad fixes gains by appealing
+
+#### Scenario: The attackers of the appeal
+- **WHEN** a solver appeals every rejection with a test it wrote, a contender sponsors every rejection, and a solver tries one issue again while its deposit is held, each against its twin on the same seeds
+- **THEN** the report gives each one's return and says whether it is shown to gain
+
+#### Scenario: A better newcomer
+- **WHEN** a family that scores higher on known answers joins a network seated by a weaker one
+- **THEN** the report gives the share of runs in which it is seated and the week, with and without each rule
+
 ### Requirement: The k = 1 hold in the simulation
 The simulation SHALL model the hold on k = 1 verdicts, the cap on pending k = 1 verdicts per validator, two audits of every k = 1 verdict, shadows scored only against outcomes no lone validator set, and shadows on waiting submissions. It SHALL run the cap at 5, 10 and 20, a batch-sized k = 1 bond in place of the cap, and one audit of every k = 1 verdict instead of two.
 

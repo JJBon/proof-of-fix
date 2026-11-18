@@ -20,6 +20,7 @@ from oracle.crypto import N, address  # noqa: F401  (address re-exported for cal
 ORACLES = 5
 ROLES = ["deployer", "bot", "reporter", "funder", "solver-a", "solver-b", "infrastructure", "insurance", "founder"] + [
     f"oracle-{i}" for i in range(ORACLES)] + ["joiner-0", "joiner-1"]  # the joiners: devnet keys for vacant v2 seats
+ROLES += ["bot-service"]  # the bot as a service's own key (#210), appended so every role above keeps its index
 MNEMONIC = "test test test test test test test test test test test junk"
 MOUNT, PREFIX = "secret", "proof-of-fix/devnet"
 

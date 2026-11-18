@@ -13,6 +13,12 @@
 #   scripts/devnet.sh deploy-v2   deploy v2 beside v1 (#85 task 5.1): Verdicts, RaceV2, Heads (this repository's
 #                                 genesis head and the constitution's hash), Pool, QuoterV2 and a test coin; write
 #                                 contracts/deployments/devnet-v2.json
+#   scripts/devnet.sh deploy-v3   deploy v3 (open validators, #140 task 5.1) beside v2 on this local devnet, for testing
+#                                 only: a test coin, PoolV3, Validators with one genesis validator of the `simulated`
+#                                 proof type, PanelScores, FeesV3, Panels, RaceV3Annex and RaceV3; write
+#                                 contracts/deployments/devnet-v3.json. The genesis validator's key and attestation
+#                                 hash come from DEVNET_V3_GENESIS_PK and DEVNET_V3_ATTESTATION (the caller's test
+#                                 node), the priced model families from DEVNET_V3_FAMILIES. Local only.
 #   scripts/devnet.sh digest-v2 <seat> <key> [nonce]
 #                                 the digest a v2 seat's new key and the co-signing seats sign (#85 task 5.4)
 #   scripts/devnet.sh join-v2 <seat> <role> | join-v2 <seat> --key <address> --sig <signature> --nonce <nonce>
@@ -53,6 +59,7 @@ RPC=http://127.0.0.1:8545 # inside the devnet container
 RECORD=${DEVNET_RECORD:-contracts/deployments/devnet.json}
 STATE=${DEVNET_STATE:-.devnet} # a throwaway devnet (tests, pofctl's end-to-end run) keeps its own state and records
 RECORD_V2=${DEVNET_RECORD_V2:-contracts/deployments/devnet-v2.json}
+RECORD_V3=${DEVNET_RECORD_V3:-contracts/deployments/devnet-v3.json}
 QUORUM=3
 REMOTE=${DEVNET_RPC_URL:-} # set: remote mode, see below
 
@@ -188,6 +195,29 @@ deploy_v2() {
   echo "deployment record: $RECORD_V2"
 }
 
+# v3 beside v2 (#140 task 5.1; design D18): contracts/script/NodeV3Local.s.sol, with its test values and a coin anyone
+# can mint. The `simulated` proof type is accepted on chains 31337 and 7193 only, so this is a devnet's deployment and
+# nothing else's; the AWS devnet's (task 5.2) is not written yet, and remote mode refuses.
+deploy_v3() {
+  [[ -z "$REMOTE" ]] || { echo "deploy-v3 is local only: the AWS devnet's v3 deployment is task 5.2" >&2; exit 2; }
+  need_up
+  fund >/dev/null
+  : "${DEVNET_V3_GENESIS_PK:?the genesis validator's key (a throwaway test key)}"
+  : "${DEVNET_V3_ATTESTATION:?the genesis validator's attestation hash}"
+  local deployer beside=0x0000000000000000000000000000000000000000
+  deployer=$(devnet_key deployer)
+  [[ -f "$RECORD_V2" ]] && beside=$(sed -n 's/.*"race": *"\(0x[0-9a-fA-F]*\)".*/\1/p' "$RECORD_V2" | head -1)
+  mkdir -p "$(dirname "$RECORD_V3")"
+  # Both keys go in on stdin: never on a command line or in the output.
+  printf '%s\n%s\n' "$deployer" "$DEVNET_V3_GENESIS_PK" | in_devnet -e LOCAL_ATTESTATION="$DEVNET_V3_ATTESTATION" \
+    -e LOCAL_FAMILIES="${DEVNET_V3_FAMILIES:-fake}" -e LOCAL_RECORD="${RECORD_V3#contracts/deployments/}" \
+    -e LOCAL_BESIDE="$beside" "$NAME" sh -c \
+    'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK
+     forge script script/NodeV3Local.s.sol:NodeV3LocalScript --rpc-url '"$RPC"' --broadcast --private-key "$PK" --slow' \
+    | sed -n '/== Logs ==/,/^$/p'
+  echo "deployment record: $RECORD_V3 (testing only: the simulated proof type, beside v2 at $beside)"
+}
+
 need_v2() { need_up; [[ -f "$RECORD_V2" ]] || { echo "v2 not deployed: run scripts/devnet.sh deploy-v2" >&2; exit 1; }; }
 verdicts_v2() { sed -n 's/.*"verdicts": *"\(0x[0-9a-fA-F]*\)".*/\1/p' "$RECORD_V2"; }
 
@@ -317,7 +347,7 @@ reset() {
   down >/dev/null 2>&1 || true
   rm -rf "$STATE"
   local record
-  for record in "$RECORD" "$RECORD_V2"; do
+  for record in "$RECORD" "$RECORD_V2" "$RECORD_V3"; do
     if tracked "$record"; then echo "kept $record (committed)"; else rm -f "$record"; fi
   done
   echo "devnet reset ($NAME, state $STATE/)"
@@ -462,7 +492,8 @@ if [[ -n "$REMOTE" ]]; then
     check | status | fund | fund-address | deploy-v2 | digest-v2 | join-v2 | activate-v2 | seats-v2 | fees-v2 | warp) ;;
     up | down | reset) remote_refuse "$1: the remote devnet isn't started or reset from here (unset DEVNET_RPC_URL for the local one)" ;;
     deploy | scenarios) remote_refuse "$1: v1 and its scenarios stay on the local devnet" ;;
-    *) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+    deploy-v3) remote_refuse "$1: local only; the AWS devnet's v3 deployment is task 5.2 of #132" ;;
+    *) sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
   esac
   remote_validate
   remote_start
@@ -480,6 +511,7 @@ case "${1:-}" in
   fund-address) shift; fund_address "$@" ;;
   deploy) deploy ;;
   deploy-v2) deploy_v2 ;;
+  deploy-v3) deploy_v3 ;;
   digest-v2) shift; digest_v2 "$@" ;;
   join-v2) shift; join_v2 "$@" ;;
   activate-v2) shift; activate_v2 "$@" ;;
@@ -488,5 +520,5 @@ case "${1:-}" in
   warp) shift; warp "$@" ;;
   scenarios) scenarios ;;
   reset) reset ;;
-  *) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

@@ -17,8 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests" / "integration"))
 
-from targets import (DEVNET_CHAIN_ID, LOCAL_ONLY, Refused, RedactingStream, Secrets, aws_settings,  # noqa: E402
-                     check_books, check_chain, check_withdrawal, deltas, expect_deltas, plan, split_target)
+from targets import (DEVNET_CHAIN_ID, HOSTED_ONLY, LOCAL_ONLY, Refused, RedactingStream, Secrets,  # noqa: E402
+                     aws_settings, check_books, check_chain, check_withdrawal, deltas, expect_deltas, plan, split_target,
+                     typed_by_the_bot)
 
 AUTH = "sandbox-validator:" + "ab" * 32
 TOKEN = "f0" * 20
@@ -44,14 +45,14 @@ class TestTarget(unittest.TestCase):
 
 class TestPlan(unittest.TestCase):
     def test_local_runs_every_scenario(self):
-        self.assertEqual(plan("local"), (list("12345678"), []))
+        self.assertEqual(plan("local"), ([*"12345678", "10"], []))
 
     def test_aws_runs_what_the_shared_devnet_allows_and_says_why_not_the_rest(self):
         run, skipped = plan("aws")
         self.assertEqual(run, ["2", "3", "1", "5"])  # no merge first, then the merges
-        self.assertEqual([s for s, _ in skipped], ["4", "6", "7", "8"])
+        self.assertEqual([s for s, _ in skipped], ["4", "6", "7", "8", "10"])
         for s, why in skipped:
-            self.assertEqual(why, LOCAL_ONLY[s])
+            self.assertEqual(why, LOCAL_ONLY.get(s) or HOSTED_ONLY[s])
             self.assertTrue(why)
 
     def test_only_narrows_both_lists(self):
@@ -61,6 +62,21 @@ class TestPlan(unittest.TestCase):
     def test_an_unknown_scenario_is_refused(self):
         with self.assertRaisesRegex(Refused, "no scenario 9"):
             plan("aws", "1,9")
+
+    def test_scenario_10_on_aws_needs_the_hosted_bot(self):
+        """#210: with --hosted-bot, the untyped loop runs last; without it, it's listed as skipped with the reason."""
+        self.assertEqual(plan("aws", "10"), ([], [("10", HOSTED_ONLY["10"])]))
+        self.assertEqual(plan("aws", "10", hosted_bot=True), (["10"], []))
+        self.assertEqual(plan("aws", hosted_bot=True)[0], ["2", "3", "1", "5", "10"])
+        self.assertEqual(plan("local", "10,2"), (["2", "10"], []))
+
+    def test_the_bots_commands_are_recognised(self):
+        for argv in (["oracle", "accept", "--issue", "4"], ["bot", "link", "--repo", "a/b"], ["bot", "settle"],
+                     ["bot", "close", "--repo", "a/b"]):
+            self.assertTrue(typed_by_the_bot(argv), argv)
+        for argv in (["oracle", "result", "--submission", "1"], ["oracle", "uphold-challenge"], ["bot", "watch"],
+                     ["reporter", "register"], ["funder", "fund"]):
+            self.assertFalse(typed_by_the_bot(argv), argv)
 
 
 class TestAwsSettings(unittest.TestCase):
@@ -168,6 +184,13 @@ class TestBooks(unittest.TestCase):
         changes = {(100, "A"): 700, (100, "B"): 800, (100, "s0"): 250, (100, "s1"): 250}
         self.assertEqual(check_books(subs, decided, charged, self.owed(changes), self.SEATS), [])
 
+    def test_a_timed_out_deposit_pays_the_evaluation_fee(self):
+        """#210: the hosted bot times out a submission with no result: its deposit = the evaluation fee + its return."""
+        subs = {7: {"solver": "A", "deposit": 1_000, "fee": 100}}
+        self.assertEqual(check_books(subs, {100: [7]}, {}, self.owed({(100, "A"): 900}), self.SEATS), [])
+        self.assertTrue(check_books({7: {"solver": "A", "deposit": 1_000}}, {100: [7]}, {},
+                                    self.owed({(100, "A"): 900}), self.SEATS))
+
     def test_a_deposit_that_doesnt_add_up(self):
         subs = {7: {"solver": "A", "deposit": 1_000}}
         changes = {(100, "A"): 650, (100, "s0"): 300}
@@ -237,6 +260,47 @@ class FakeChain(BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+
+class TestHostedBot(unittest.TestCase):
+    """#210's --hosted-bot, offline: its options, and the suite refusing to type the bot's commands with it."""
+
+    def test_the_options(self):
+        from aws import parser
+
+        a = parser().parse_args(["--hosted-bot", "--only", "10"])
+        self.assertEqual((a.hosted_bot, a.bot_timeout, a.only), (True, 600, "10"))
+        self.assertFalse(parser().parse_args([]).hosted_bot)
+        self.assertEqual(parser().parse_args(["--bot-timeout", "90"]).bot_timeout, 90)
+
+    def test_with_the_hosted_bot_the_suite_never_types_its_commands(self):
+        from aws import AwsRun, parser
+
+        run = AwsRun(parser().parse_args(["--hosted-bot"]), aws_settings(GOOD))
+        run.cfg = Path("/nonexistent/pofctl.json")
+        try:
+            for argv in (["oracle", "accept", "--issue", "4"], ["bot", "settle", "--bounty", "1"],
+                         ["bot", "link", "--repo", "a/b", "--issue", "1", "--bounty", "1"], ["bot", "close"]):
+                with self.assertRaisesRegex(RuntimeError, "never runs pofctl"):
+                    run.ctl(*argv)
+        finally:
+            import shutil
+
+            shutil.rmtree(run.work, ignore_errors=True)
+
+
+class TestSandboxCi(unittest.TestCase):
+    """#219: a run's fix commits start no pof-sandbox workflow, so they don't queue proof-of-fix's checks."""
+
+    def test_a_fix_commit_skips_ci(self):
+        from aws import SKIP_CI, fix_message
+
+        for passing in (True, False):
+            m = fix_message("202611130054-07eb/s1-right", passing)
+            self.assertIn("[skip ci]", m)
+            self.assertEqual(SKIP_CI, "[skip ci]")
+            self.assertIn("202611130054-07eb/s1-right", m)
+            self.assertIn("passing" if passing else "failing", m)
 
 
 class TestScript(unittest.TestCase):

@@ -5,6 +5,11 @@
 #
 #   scripts/judge-set.sh select   choose the pairs and write data/judges/manifest.json, then build
 #   scripts/judge-set.sh build    rebuild data/judges/cases.jsonl from the committed manifest and check it
+#   scripts/judge-set.sh build --set more|pbw, select-more, select-pbw, coverage: #160's sets (scripts/judge_set.py)
+#
+# POF_PATCHDIFF_DIR (select-pbw, coverage): the PatchDiff/ folder of Wang, Pradel and Liu's replication package,
+# extracted outside the repository (reports/judges-v2.prereg.md says how); it is mounted read-only and only its result
+# files are read, each checked against its pinned hash. Nothing in it is run.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -13,6 +18,10 @@ PYTHON_IMAGE="python@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001b
 
 docker image inspect "$PYTHON_IMAGE" >/dev/null 2>&1 || docker pull -q "$PYTHON_IMAGE" >/dev/null
 mkdir -p data/judges
-docker run --rm --user "$(id -u):$(id -g)" --read-only --tmpfs /tmp \
+extra=()
+if [[ -n "${POF_PATCHDIFF_DIR:-}" ]]; then
+  extra=(-v "$(cd "$POF_PATCHDIFF_DIR" && pwd):/ext/patchdiff:ro")
+fi
+docker run --rm --user "$(id -u):$(id -g)" --read-only --tmpfs /tmp "${extra[@]}" \
   -v "$PWD:/work:ro" -v "$PWD/data/judges:/work/data/judges" -w /work \
   -e PYTHONDONTWRITEBYTECODE=1 "$PYTHON_IMAGE" python3 scripts/judge_set.py "$@"

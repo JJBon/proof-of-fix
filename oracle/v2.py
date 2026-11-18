@@ -168,6 +168,24 @@ def ordered_signatures(digest: bytes, sigs) -> list:
     return [by_signer[k] for k in sorted(by_signer, key=lambda a: int(a, 16))]
 
 
+# ---------- the registration check's accept (proof-of-fix#210, D3) ----------
+
+ISSUE_STATES = ["None", "Posted", "Rewarded", "Returned", "Forfeited"]
+POSTED = 1
+REGISTERED = "Registered(uint256,address)"
+
+
+def accept_nonce(race: str, issue: int) -> bytes:
+    """keccak256("pof-accept" ‖ race ‖ word(issue)): every seat derives the same nonce, so their signatures over one
+    registration's accept combine without a round."""
+    return keccak256(b"pof-accept" + bytes.fromhex(race[2:] if race.startswith("0x") else race) + word(issue))
+
+
+def accept_digest(race_domain_separator: bytes, issue: int, weight: int, nonce: bytes) -> bytes:
+    """RaceV2.accept's digest: Accept(issue, weight, nonce) under the race's domain."""
+    return typed(race_domain_separator, keccak256(ACCEPT_TYPEHASH + word(issue) + word(weight) + nonce))
+
+
 # ---------- the meter's usage report ----------
 
 @dataclass(frozen=True)
@@ -283,6 +301,16 @@ class Chain:
         return [{"bounty": int(log["topics"][1], 16), "submission": int(log["topics"][2], 16),
                  "solver": checksum("0x" + log["topics"][3][-40:]), "block": int(log["blockNumber"], 16)}
                 for log in self.rpc.logs(self.race, from_block, [topic], to_block)]
+
+    def registered(self, from_block: int, to_block: int | None = None) -> list:
+        """RaceV2's Registered(issue, reporter) events: [{"issue", "reporter", "block"}]."""
+        topic = "0x" + keccak256(REGISTERED.encode()).hex()
+        return [{"issue": int(log["topics"][1], 16), "reporter": checksum("0x" + log["topics"][2][-40:]),
+                 "block": int(log["blockNumber"], 16)}
+                for log in self.rpc.logs(self.race, from_block, [topic], to_block)]
+
+    def quorum(self) -> int:
+        return self.rpc.view(self.verdicts, "quorum()", ["uint256"])[0]
 
     def heads(self) -> str:
         """The head registry RaceV2 deployed (Heads)."""

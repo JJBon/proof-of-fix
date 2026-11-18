@@ -204,8 +204,134 @@ class Params:
     SCORE_RECOVER_VERDICTS: int = 100
     SCORE_RECOVER_MARGIN: float = 0.10
     MOVE_REREGISTERS: bool = True  # changing model family means registering again, with a new key that qualifies
+    # #236 (switches for the measured-judges study; the defaults are v3's rules): FAMILY_CAP False drops the cap per
+    # model family from the draw (the host and TEE caps stay); PASS_RULE "unanimous" passes an issue-tier fix only
+    # when every counted judge passes it ("majority": (k + 1) / 2)
+    FAMILY_CAP: bool = True
+    PASS_RULE: str = "majority"
+    # ---- #236, design D20-D23 (owner, 2026-11-14; every value is proposed until the new parameters ADR, task 10.2).
+    # Each default below is v3's rule as merged (ADR 0004), so every earlier report reproduces; `D236` sets the
+    # proposal, and reports/open-validators-measured-v3.md sweeps each value ----
+    # D20: which families are drawn for counted panels. "min" (v3, D14): every family at SCORE_MIN or above. "rank":
+    # the seated families only, those at SCORE_MIN or above AND within SEAT_MARGIN of the best-scoring family; every
+    # other family is a contender (it shadow-judges, disputes and may sit on appeal panels)
+    SEAT_RULE: str = "min"
+    SEAT_MARGIN: float = 0.05
+    # D20 (with SEAT_RULE "rank"): the family cap of D6 applies only while at least this many families are seated;
+    # with fewer, a panel may be one family's (the operator, host and TEE-type caps always apply)
+    CAP_MIN_FAMILIES: int = 3
+    # D23: a family with no verdicts yet. "neutral" (v3, D14): drawn at once, at the neutral score. "contender": it
+    # earns its seat on a complete block of SCORE_RECOVER_VERDICTS live shadow verdicts that meets the seat rule (the
+    # genesis validator's family is seated from the start: someone must judge first)
+    NEW_FAMILY_START: str = "neutral"
+    # D23: contender validators drawn as shadows with each counted panel, in all (0: as a barred family's in v3, the
+    # panel's SHADOW_PER_DRAW). It sets how fast a contender fills a block
+    CONTENDER_SHADOWS: int = 0
+    # D22: a fix posts this share of the bounty beside its check deposit (0: none, v3). It is returned when the fix is
+    # paid (or withdrawn unjudged); a fix rejected with no appeal upheld loses it to SOLVER_DEPOSIT_TO: "bounty" (the
+    # owner's decision: the issue's bounty, for the next solver) or "pool" (the sponsors' pool, as D7's ADR deposit:
+    # the alternative); a pass reversed by a failing test loses it to the disputer
+    SOLVER_DEPOSIT_BPS: int = 0
+    SOLVER_DEPOSIT_TO: str = "bounty"
+    # D21, D22: an upheld test dispute pays the disputer the solver's deposit and this share of the bounty; a test
+    # costs its poster the stake, the larger of EVIDENCE_STAKE and EVIDENCE_STAKE_BPS of the bounty, returned when
+    # the dispute is upheld and paid to the solver when it is not
+    EVIDENCE_REWARD_BPS: int = 0
+    EVIDENCE_STAKE: float = 0.0
+    EVIDENCE_STAKE_BPS: int = 0
+    # D23: the solver of a rejected fix may appeal once, within APPEAL_WINDOW_H of the verdict, its deposit at stake.
+    # APPEAL names where the appeal panel (CHALLENGE_K[k] validators, outside the original panel) is drawn from:
+    # "off" (v3: a rejection has no appeal); "others" (the owner's decision: the families that did not judge the
+    # fix, contenders included); "others_seated" (those families, seated ones only); "seated" (the alternative: the
+    # seated families' own next draw). APPEAL_PASS_RULE: the appeal passes the fix on a "majority", or only when
+    # every appeal judge passes it ("unanimous", the other alternative D23 names)
+    APPEAL: str = "off"
+    APPEAL_PASS_RULE: str = "majority"
+    APPEAL_WINDOW_H: float = 72.0
+    # ---- #236, revision 2026-11-15 (design D24-D28; the owner dropped D23's appeal panel and asked for an appeal the
+    # seated judges decide; every rule below is PROPOSED). Each default is the rule as it stood, so reports
+    # measured-v1 to -v3 reproduce; `D236R2` sets the proposal and reports/open-validators-measured-v4.md sweeps it ----
+    # D24: APPEAL "evidence": a rejected fix is appealed once, only with a test that fails on the base code and passes
+    # with the fix (run twice by the machine) and a stake: the larger of APPEAL_STAKE and APPEAL_STAKE_BPS of the
+    # bounty. A fresh draw of the seated families re-judges with the test in view. The stake returns when the appeal
+    # is upheld; lost, it goes to APPEAL_STAKE_TO: "pool" (the sponsors' pool) or "bounty" (the issue's)
+    APPEAL_STAKE: float = 0.0
+    APPEAL_STAKE_BPS: int = 0
+    APPEAL_STAKE_TO: str = "pool"
+    # D25: a contender (a validator of an unseated family) may sponsor the appeal of a fix its model passed: it posts
+    # the stake and the test and pays the appeal panel's checks. When the fix is paid it is paid SPONSOR_REWARD_BPS of
+    # the bounty, out of the bounty
+    SPONSOR: bool = False
+    SPONSOR_REWARD_BPS: int = 0
+    # D26: known-answer issues. Beside each submission, with chance KNOWN_RATE, an issue whose outcome is already
+    # known is judged by one validator of every family, seated or not. Once a family holds KNOWN_MIN such verdicts
+    # its seat score is its balanced agreement with the known answers over its last KNOWN_WINDOW of them (0: off)
+    KNOWN_RATE: float = 0.0
+    KNOWN_WINDOW: int = 200
+    KNOWN_MIN: int = 50
+    # D27: a challenge that cannot draw D4's larger fresh panel. "larger" (D4): it waits, window frozen. "few": while
+    # fewer than CAP_MIN_FAMILIES families can judge, it is judged by a second draw of the original panel's size from
+    # those families, the original judges not excluded, so no verdict waits for a family that is not there. "always":
+    # the same second draw whatever the number of families (the alternative)
+    SECOND_PANEL: str = "larger"
+    # ---- #236, the owner's three deposit-free mechanisms (approved for simulation 2026-11-15; report measured-v5). Each
+    # is off by default and read only by `nodeposit.NDNet` (a plain `Net` refuses them, so no earlier report moves) ----
+    # Reputation before large claims (REP_CAP): an identity's open claims (the bounties of its fixes not yet final)
+    # may add up to at most REP_BASE + REP_MULT x its reputation, the sum of the bounties of its fixes paid and never
+    # reversed. A pass reversed by a test resets its reputation to 0 (REP_ON_REVERSAL "zero") or takes REP_LOSS_X x
+    # that bounty off it ("minus"). A claim over the cap is refused before it is judged, and nothing is charged
+    REP_CAP: bool = False
+    REP_BASE: float = 50.0
+    REP_MULT: float = 1.0
+    REP_ON_REVERSAL: str = "zero"
+    REP_LOSS_X: float = 2.0
+    # The shared pot (POT): no per-issue bounty is paid. An issue's funding goes into the pot of the window it was
+    # listed in; at each POT_WINDOW_WEEKS the window's pot is split over the fixes paid in it (final, standing), in
+    # proportion to a weight: 1 a fix ("equal", report v4's units) or its issue's impact signal ("impact",
+    # `World.impact_corr`). A pass reversed by a test gives its weight to whoever reversed it. With REP_CAP, an
+    # identity's share of a window is capped as its claims are; the excess goes to the next window
+    POT: str = "off"
+    POT_WINDOW_WEEKS: float = 13.0
+    # A fee that only covers the judges' cost (JUDGE_FEE, dollars): every submission pays it on arrival, never
+    # refunded, in place of its panels' per-check charges. 0: those charges, as before
+    JUDGE_FEE: float = 0.0
+    # D9's idle signal: which validators count. "active" (v3): every active validator; "seated" (#236, a switch the
+    # simulation adds): only those of families drawn for counted panels, so contenders, which are never drawn, don't
+    # pull the fee to its floor
+    IDLE_COUNTS: str = "active"
     # D6: the per-TEE-type cap applies from TEE_CAP_FROM_K (5), or from k = 3 while at least TEE_CAP_K3_TYPES TEE types
     # are accepted (round 2: 5; None: never by count, round 1); #134: from 3. Host and family caps from k = 3.
+    # ---- #253 and #252 (design D31-D34, PROPOSED; report measured-v6). Each is off by default and read only by
+    # `capacity.CapNet` and `choice.ChoiceNet` (a plain `Net` refuses them), so every earlier report reproduces ----
+    # D31 (#253): a validator takes at most this many checks in any trailing hour. A counted draw skips a validator at
+    # its capacity (as it skips a non-responder, unslashed) and never lowers k for it: with too few validators free the
+    # submission waits and is drawn again later. Audits, challenge and appeal panels count toward the hour but are
+    # never refused for capacity (spam must not suppress them). None: no capacity
+    MAX_CHECKS_PER_HOUR: Optional[int] = None
+    # D31 (#253): a repository's counted checks drawn in any trailing hour (None: no cap)
+    REPO_CHECKS_PER_HOUR: Optional[int] = None
+    # D32 (#253): the order in which waiting submissions are drawn: "fifo", or "reputation" (those whose identity held
+    # standing reputation, D29, when submitted, first; FIFO within each class)
+    QUEUE_ORDER: str = "fifo"
+    # D32's newcomer lane (#253, POST HOC to report v6, which showed reputation first starving newcomers): this share of
+    # each validator's MAX_CHECKS_PER_HOUR is the only capacity a submission without standing reputation (QUEUE_ORDER's
+    # second class: newcomers, and junk from fresh identities) may be drawn on, first come first served; the rest is
+    # the first class's. Kept per validator as a credit of NEWCOMER_LANE x MAX_CHECKS_PER_HOUR checks an hour, at most
+    # max(1, that) banked; a second-class counted draw skips a validator under 1 credit or at its capacity. 0: no lane
+    NEWCOMER_LANE: float = 0.0
+    # The lane's per-identity rate (#253, POST HOC): an identity without standing reputation may submit at most this
+    # many fixes in any trailing 24 hours; beyond it the submission is refused (never queued, nothing is checked).
+    # Free identities (a testnet) defeat it; it binds only identities that cost something. None: no rate
+    LANE_PER_ID_DAY: Optional[int] = None
+    # D33 (#252): validators' allow and deny lists of repositories, respected by every draw (counted panels, shadows,
+    # audits, challenges, appeals, the k = 1 hold's count)
+    REPO_LISTS: bool = False
+    # D34 (#252): a repository lists bounties only while at least REPO_MIN_ELIGIBLE validators are eligible for it,
+    # counted with at most (REPO_MIN_ELIGIBLE - 1) // 2 of any one TEE type (0: no minimum)
+    REPO_MIN_ELIGIBLE: int = 0
+    # D34's option (#252): a repository's bounty is capped at REPO_STAKE_X x the bonded stake of its eligible
+    # validators outside the TEE type that holds the most of it (0: no cap)
+    REPO_STAKE_X: float = 0.0
     TEE_CAP_FROM_K: int = 5
     TEE_CAP_K3_TYPES: Optional[int] = 5
     # Owner decision 2026-11-03 (spec PR pending): level C (zkTLS) is off at launch, only A and B register; a
@@ -329,6 +455,15 @@ class Params:
             flat, bps = self.SILENCE_SLASH, self.SILENCE_SLASH_BPS
         return max(flat, bps * max(0.0, bounty) / BPS) if bps else flat
 
+    def appeal_stake(self, bounty: float) -> float:
+        """D24: what an appeal with a test stakes on a fix to `bounty`."""
+        return max(self.APPEAL_STAKE, self.APPEAL_STAKE_BPS * max(0.0, bounty) / BPS)
+
+    def evidence_stake(self, bounty: float) -> float:
+        """D21: what a test dispute stakes on a fix to `bounty`: EVIDENCE_STAKE, or EVIDENCE_STAKE_BPS of the bounty
+        when that is larger."""
+        return max(self.EVIDENCE_STAKE, self.EVIDENCE_STAKE_BPS * max(0.0, bounty) / BPS)
+
     def table(self) -> List[Tuple[str, str]]:
         """(name, value) for every parameter, in declaration order: what the report and the ADR cite."""
         return [(f.name, str(getattr(self, f.name))) for f in fields(self)]
@@ -337,6 +472,21 @@ class Params:
 _FOR_TEES: Dict[int, Tuple["Params", Dict[int, "Params"]]] = {}
 
 V2R3 = Params()  # round 3's criteria on round 2's rules: the design (reports/open-validators-v3.1.md)
+# #236's proposal (design D20-D23, "Decided 2026-11-14"; reports/open-validators-measured-v3.md): seats by rank, a
+# contender's start, the solver's deposit to the issue's bounty, disputes paid from it, and one appeal to the families
+# that did not judge. The design gives no value for the stake or the appeal period: $5 (as D16's flat slashes) and 72 h
+# are this simulation's placeholders, set before its runs
+D236 = replace(V2R3, SEAT_RULE="rank", SEAT_MARGIN=0.05, CAP_MIN_FAMILIES=3, NEW_FAMILY_START="contender",
+               SOLVER_DEPOSIT_BPS=2_500, SOLVER_DEPOSIT_TO="bounty", EVIDENCE_REWARD_BPS=1_000, EVIDENCE_STAKE=5.0,
+               APPEAL="others", APPEAL_PASS_RULE="majority", APPEAL_WINDOW_H=72.0)
+# The revision of 2026-11-15 (design D24-D28, all proposed; reports/open-validators-measured-v4.md): the appeal on
+# evidence decided by the seated families, a contender's sponsorship, known-answer issues and the one-family second
+# panel, with the stake D21's rule gives (the larger of $5 and 10 % of the bounty). The solver's deposit (D22) is on
+# hold (owner, 2026-11-15: he is against it): `D236R2` keeps the design's 2,500 only so that it differs from `D236`
+# in the new rules alone, and the report's primary rows set SOLVER_DEPOSIT_BPS to 0
+D236R2 = replace(D236, APPEAL="evidence", APPEAL_STAKE=5.0, APPEAL_STAKE_BPS=1_000, APPEAL_STAKE_TO="pool",
+                 SPONSOR=True, SPONSOR_REWARD_BPS=1_000, KNOWN_RATE=0.05, SECOND_PANEL="few",
+                 EVIDENCE_STAKE_BPS=1_000)
 # round 2 (reports/open-validators-v3.md): round 3 changed only how the criteria are read, so the same simulation
 V2R2 = replace(V2R3, WAIT_CROWD_MAX=0.15, GAIN_TEST="doesnt_gain", LONE_CATCH_COUNT="all")
 
@@ -423,6 +573,53 @@ class World:
     # a family's blind spot (task 1.7): the share of bad fixes that fool every judge of that family at once (a prompt
     # injection that works on that model), on top of its independent errors; none by default
     family_blind: Tuple[Tuple[str, float], ...] = ()
+    # measured judges (#236): when `measured` names a pool of bad fixes ("hidden" or "pbw"), an honest judge's verdict
+    # is its seat's real verdict in proof-of-fix#160 on a case drawn for the submission (`measured.vote`), so
+    # `accuracy`, `family_accuracy` and `family_blind` are not read. `measured_seats` maps each family to a seat of
+    # that run; `measured_same` is the chance a call returns the seat's recorded verdict rather than its opposite
+    # (1: a model judges the same case the same way every time; #160 took one verdict per case, so this is assumed)
+    measured: str = ""
+    measured_seats: Tuple[Tuple[str, str], ...] = ()
+    measured_same: float = 1.0
+    # disputes backed by evidence (#236): after a passing verdict, a contender (anyone running one of the seats in
+    # `evidence_by`, a validator or not) whose model failed the fix looks for evidence a machine can check (a failing
+    # test). It finds it with `evidence_find` when the fix is bad; `evidence_false` is the chance that wrong evidence
+    # against a good fix is accepted. Accepted evidence reverses the verdict half-way through its window, with no
+    # second panel. Both rates are assumed (nothing measured them); 0 switches the mechanism off
+    evidence_find: float = 0.0
+    evidence_false: float = 0.0
+    evidence_by: Tuple[str, ...] = ()
+    # #236, D20/D23: where the seat rule (`Params.SEAT_RULE` "rank") reads a family's score. "live": D23's rule,
+    # the family's agreement with final outcomes (counted verdicts while seated, blocks of shadow verdicts as a
+    # contender; `seats.LiveSeats`). "known": its balanced score on known answers (`measured.balanced`), the score a
+    # perfect source of final outcomes would give: an upper bound, as reports measured-v1 and -v2 ran it
+    seat_scores: str = "live"
+    # #236, D23: the share of honest solvers that appeal a rejection of a good fix, and of a bad one (they believed it
+    # good). Assumed: nothing measures either
+    appeal_good: float = 1.0
+    appeal_bad: float = 0.0
+    # #236, revision 2026-11-15 (D24). The stored verdicts cannot say how a judge reacts to a passing test, so both
+    # rates are ASSUMED and swept: the chance that the seated panel passes a wrongly rejected good fix appealed with
+    # its test (`appeal_accept_good`), and the chance that it passes a correctly rejected bad fix appealed with a test
+    # that passes anyway (`appeal_accept_bad`). One draw per fix: every judge of a family sees the same evidence
+    appeal_accept_good: float = 0.5
+    appeal_accept_bad: float = 0.05
+    # D25: the seats whose contenders sponsor the appeal of every rejected fix their model passed, when its solver did
+    # not appeal (honest contenders: they believe the fix good; their money is not followed)
+    sponsor_by: Tuple[str, ...] = ()
+    # D21 says anyone may dispute a pass with a test. `rival_solvers` honest solvers working the same repository each
+    # search every passed fix of another solver and find a failing test for a bad one with `rival_find`, each on its
+    # own draw (ASSUMED, swept; it may differ from the contenders' `evidence_find`). 0: only contenders dispute
+    rival_solvers: int = 0
+    rival_find: float = 0.0
+    # #236, the deposit-free mechanisms (report measured-v5). ASSUMED, swept: what an honest fix costs to write, as a
+    # share of its bounty (the bounty stands for the issue's difficulty, as `potsplit.EFFORT`); the correlation, in
+    # log space, between an issue's impact signal (#247's graph, not built) and its true impact (its bounty); how far
+    # an inflater raises its fixes' signal (standard deviations of the signal) and what that costs it a fix
+    effort: float = 0.5
+    impact_corr: float = 0.6
+    inflate_sd: float = 1.0
+    inflate_cost: float = 0.0
     reliability: float = 0.995
     # the share of honest outages that strike between the seal and the reveal (a sealed vote not revealed, slashed
     # SEALED_NO_REVEAL_SLASH) rather than before the seal (silence, SILENCE_SLASH); 0 as #134 (every outage before the
@@ -448,6 +645,12 @@ class World:
     token_emission: float = 10_000.0
     token_decay_bps: int = 100
     token_price: float = 0.0
+    # #253, #252 (report measured-v6; read only by `capacity.CapNet`): the repositories honest submissions spread over
+    # evenly (1: one repository, as before), and the reputation honest solvers start with (D29's sense, read by
+    # QUEUE_ORDER "reputation"): the first `new_solvers` of them start at 0, the others at `honest_rep0`. ASSUMED
+    repos: int = 1
+    honest_rep0: float = 0.0
+    new_solvers: int = 0
 
     def accuracy_of(self, family: str) -> float:
         return dict(self.family_accuracy).get(family, self.accuracy)

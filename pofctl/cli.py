@@ -152,11 +152,14 @@ def cmd_register(ctx: Ctx, a) -> tuple:
     w = ctx.wallet("reporter")
     issue = ctx.race.register(w, _repo_id(ctx, a.repo)) if ctx.version == 2 else ctx.race.register(w)
     cfg = ctx.race.config()
+    paste = logic.claim_lines(issue, w.address)
     lines = [f"{w.role} registered on-chain issue {issue}: paid the registration fee "
              f"{fmt(cfg['registrationFee'])} and staked {fmt(cfg['issueStake'])}",
-             f"next: the registration check opens its bounty (pofctl oracle accept --issue {issue})",
-             f"in the issue's body, add: Reporter wallet: {w.address}"]
-    return {"issue": issue, "reporter": w.address}, lines
+             "add these two lines to the forge issue's body, each on its own line (the issue needs the bounty label):",
+             "", *paste, "",
+             "then the judges' registration check opens its bounty and the bot links it (#210); on a devnet without "
+             f"them, the stub quorum: pofctl oracle accept --issue {issue}"]
+    return {"issue": issue, "reporter": w.address, "lines": paste}, lines
 
 
 def cmd_fund(ctx: Ctx, a) -> tuple:
@@ -727,6 +730,18 @@ def parser() -> argparse.ArgumentParser:
     b.add_argument("--issue", type=int, help="the repository's issue number (default: every open one labelled bounty)")
     b.set_defaults(fn=cmd_close)
 
+    b = bot.add_parser("watch", help="the bot as a service (#210): link, hint, settle, the due housekeeping and the "
+                                     "closes, unattended; settings and secret files from POF_BOT_* (see bot/service.py)",
+                       description="The bounty bot as a service (#210). It sends only settle, timeOut, mergeExpired and "
+                                   "sunset, and comments and closes the repository's labelled issues. No option takes "
+                                   "a secret. Exit codes: 0 idle, 2 refused at start, 4 the run's write fuse, 75 the "
+                                   "chain or the forge away too long.",
+                       epilog=None)
+    b.add_argument("--until-idle", type=float, help="exit 0 after this many seconds with no write and nothing waiting")
+    b.add_argument("--min-bounty", type=int, help="leave out bounties numbered below this, and their submissions "
+                                                  "(default POF_BOT_MIN_BOUNTY, else 0)")
+    b.set_defaults(fn=cmd_watch, service=True)
+
     w = sub.add_parser("withdraw", help="pay a role's credit in the contract to its wallet")
     w.add_argument("--role", required=True)
     w.set_defaults(fn=cmd_withdraw)
@@ -767,6 +782,13 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
+def cmd_watch(a) -> int:
+    """`pofctl bot watch`: the long-running service (bot/service.py); returns its exit code, not (data, lines)."""
+    from bot import service
+
+    return service.main(until_idle=a.until_idle, min_bounty=a.min_bounty, rpc_url=a.rpc, record_path=a.record)
+
+
 def run(argv: list) -> tuple:
     """Parses and runs one command; returns (data, lines). Raises on failure (main() prints it)."""
     a = parser().parse_args(argv)
@@ -776,6 +798,9 @@ def run(argv: list) -> tuple:
 def main(argv: list | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     as_json = "--json" in argv
+    a = parser().parse_args(argv)
+    if getattr(a, "service", False):
+        return a.fn(a)
     try:
         data, lines = run(argv)
     except (Fail, RpcError, keysrc.KeyError_, FileNotFoundError, ValueError) as e:

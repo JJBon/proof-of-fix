@@ -16,6 +16,18 @@ fi
 # So is the oracle node's vendored cryptography (proof-of-fix#94: python-ecdsa, six, the Keccak reference).
 (cd oracle/vendor && sha256sum --check --quiet SHA256SUMS)
 
+# POF_CHECK_BASE (set by the workflow on a pull request, proof-of-fix#208): when every changed file since the merge
+# base is documentation no test reads, the Python tests can't be affected and are skipped. Main's run and local runs
+# set no base, so they always run everything.
+if [[ -n "${POF_CHECK_BASE:-}" ]]; then
+  scope=$(python3 scripts/check_scope.py "$POF_CHECK_BASE")
+  echo "$scope"
+  if [[ "$(tail -1 <<<"$scope")" == docs ]]; then
+    echo "check: documentation only; the Python tests are skipped (main runs them all after the merge)"
+    exit 0
+  fi
+fi
+
 if compgen -G "tests/test_*.py" >/dev/null; then
   python3 -m unittest discover -s tests -v
 fi

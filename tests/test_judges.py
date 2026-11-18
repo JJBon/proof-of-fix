@@ -79,6 +79,13 @@ class TestPeople(unittest.TestCase):
         self.assertNotIn("github.com/someone", out)
         self.assertIn("@<user>", out)
 
+    def test_scrub_drops_tracs_last_modified_by(self):
+        text = "Description\n\t \n\t\t(last modified by Jane Q. Doe)\nThe form ignores (last modified by date) bugs"
+        out = D.scrub(text)
+        self.assertNotIn("Jane", out)
+        self.assertEqual(out.count("(last modified by <user>)"), 2)
+        self.assertIn("The form ignores", out)
+
     def test_scrub_keeps_links_to_issues_and_decorators(self):
         text = "see https://github.com/django/django/pull/123 and use @property"
         self.assertIn("github.com/django/django/pull/123", D.scrub(text))

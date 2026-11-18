@@ -50,6 +50,70 @@ ORACLE_RPC=… ORACLE_RACE=0x… python3 -m oracle watch      # ORACLE_KEYS defa
 docker build -f oracle/Dockerfile -t pof-oracle-node .    # pinned base image; its digest is the checker image
 ```
 
+## v3: an open validator's node (#139, task 4.1 of #132)
+
+`ORACLE_VERSION=3` with `ORACLE_RACE` set to a RaceV3 runs `oracle/node_v3.py` on #138's contracts. v2's node is
+unchanged. Nothing is signed by a quorum in v3: each validator posts its own signed statements to Panels, which
+counts the reveals.
+
+| Command | What it does |
+|---|---|
+| `python3 -m oracle register --bond 100` | registers this key as a candidate: signed by the key, bonded from its account. On a devnet the proof type is `simulated`, and its attestation is a quote from the dstack simulator (`ORACLE_KEYS=dstack` with `DSTACK_SIMULATOR_ENDPOINT`, design D18) |
+| `python3 -m oracle leave`, `withdraw-bond` | announces leaving; the bond returns after the unbonding delay |
+| `python3 -m oracle run` | acts on every seat Panels gives the key, posts its cost table once a pricing period, and makes the keeper's calls |
+| `python3 -m oracle challenge <submission>` | re-runs a counted verdict's check; if it disagrees, or finds a false receipt, files a challenge with its evidence |
+| `python3 -m oracle post-table` | posts the table now |
+
+**A seat, whatever its kind** (counted judge, shadow, auditor, challenge judge; on a drawn submission or one that
+waits for a panel): the check, a receipt, the seal; after the seal window the receipt's hash and the reveal; then
+the usage report to RaceV3. All four go through the `onchain` transport (`oracle/transport.py`), v3's default; the
+hosted relay stays optional (`ORACLE_EXCHANGE_TRANSPORT=onchain,http`). In every pass the node sends all its seals
+before any reveal, and a shadow's seal window is the counted panel's, so a shadow's seal is on-chain before any counted
+reveal. A challenge judge also names the original judges' false receipts (the mask), from the receipts it can read
+(`ORACLE_RECEIPT_SOURCES`).
+
+**The receipt on-chain** is `Validators.receiptHash` of its proof type, notary, model, weights, image, the draw's
+seed, the prompt's and the answer's hashes, the tests' result and the proof's hash. The proof is the key provider's
+quote over that receipt and seat (a TEE, or the simulator on a devnet), or a zkTLS proof of the model call. The
+document is kept under that hash in `<ORACLE_RECEIPTS>/v3/`.
+
+**What it signed is on disk before it leaves** (`ORACLE_ROUNDS`, default `.oracle-rounds`): a restarted node reveals
+the same vote with the same salt. A second, different statement for one seat is equivocation, the whole bond.
+
+**The table** (`FeesV3.post`): the validator's own shared-unit costs (`ORACLE_COSTS`) and every family's public list
+price (`pof/costs.py`, or `ORACLE_LIST_PRICES`). A unit or a priced family it has no value for is posted at the price
+in force, so its table still counts.
+
+**zkTLS** (`oracle/zktls.py`): the prover's interface for a node without a TEE, with the offline check of a proof.
+The prover itself (`TlsnProver`, on task 1.9's TLSNotary tools) is a **stub**: it was never run, since it needs the
+pinned Rust build, a notary and a paid model call. Level C is off at launch (`reports/zktls-spike-v1.md`).
+
+**Choices made where the spec was open** (each the narrowest reading; for the owner's review):
+1. **A registration check** is judged by v2's claim rule (#210): it passes when a labelled issue on the host validly
+   claims the registration. With the fake judge only, as in v2. A node with a model judge stays silent on these
+   checks, which costs it the silence slash, until a model's registration check is designed (#160).
+2. **A check that can't be run by the deadline** (no pull request opens the commitment, or no claim) is sealed as not
+   passed 10 minutes before the seal window closes, rather than left silent.
+3. **The fix's base**: the claim's text has no base, so the node tries the pull request's base commit, then 0.
+4. **A false receipt** (a challenge judge's mask, and `challenge`) is one whose document contradicts the chain or
+   this node's own run: another proof type, image, draw or verdict than the seat's, a model it doesn't hash to, or a
+   tests' result that isn't this node's. A receipt the node can't read is left alone. Receipts are read from
+   directories (`ORACLE_RECEIPT_SOURCES`); publishing them anywhere else isn't built.
+5. **The quote** is taken over the receipt, the draw's seed and the key, so no other seat can reuse it.
+   A family's id is keccak256 of its name (D19's `anthropic/claude`), as are a host's and a TEE type's.
+6. **The keeper's calls** are on by default and paid by the validator: `draw`, `advance`, `refill`, `drawAudits`,
+   `drawChallenge`, `settleShadows`, `startWindow`, `finalize`, RaceV3's `signal`, `result`, `payPanel`,
+   `settleChallenge`, `payShadow` and `finish`, and FeesV3's `roll`. `drawAudits` is sent again only after the
+   registry changes: with no auditor eligible each call only re-targets, and the contract doesn't refuse it.
+7. **The hosted relay** can be listed beside `onchain`, but the exchange service wasn't taught v3's messages: it
+   refuses them, and the node goes on without it.
+
+```
+python3 -m unittest discover -s tests -p test_oracle_v3.py   # encodings against the sources; nodes against a fake chain
+scripts/node-v3-e2e.sh                                       # the same nodes against the real contracts on anvil (Docker)
+scripts/node-v3-e2e.sh --grow                                # until the candidates qualify: a panel of 3, an auditor
+```
+
 ## Modes
 
 | | Keys | Attestation | Use |

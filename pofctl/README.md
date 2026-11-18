@@ -118,6 +118,14 @@ watcher's pass, for bounties anyone else settled. The comment names the transact
 on GitHub and on Forgejo (`repos` in the config). It's written once, and a closed issue stays closed. The validator
 node never writes to a repository host.
 
+**The bot as a service (#210).** `pofctl bot watch` does the bot's steps unattended: it links the bounty the seats'
+registration check opened to the labelled issue that names its registration (`Registration: N` and `Reporter wallet:`,
+the two lines `reporter register` prints), settles bounties whose outcome is final, calls `timeOut`, `mergeExpired`
+and `sunset` once they're due, closes the issues of ended bounties (paid, unsolved or refunded) and hints once on a
+labelled issue with no valid claim. Its settings and the files holding its key, the RPC's API key and the forge token
+come from `POF_BOT_*` (bot/service.py); no option takes a secret. `--until-idle 600` exits when there's nothing to do
+(0), and it exits 2 when refused at start, 4 at its 50-write fuse and 75 when the chain or the forge stays away.
+
 ## The contributor leaderboard (#151)
 
 ```bash

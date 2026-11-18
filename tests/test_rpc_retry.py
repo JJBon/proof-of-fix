@@ -364,6 +364,83 @@ class TheRun(unittest.TestCase):
         self.assertTrue(any("sitting the round out" in m for m in self.logs))
 
 
+class TheRoundOnDisk(unittest.TestCase):
+    """#216: a node sealed, its other judges silent, must neither stop on --until-idle inside the round's window nor,
+    restarted, lose the salt that opens its seal."""
+
+    def setUp(self):
+        TheRun.setUp(self)
+        from oracle import rounds
+
+        self.rounds_dir = Path(self.tmp.name) / "rounds"
+        self.node.rounds = rounds.Store(self.rounds_dir, CHAIN, RACE, self.node.address)
+
+    def seal_alone(self):
+        for _ in range(8):
+            self.node.tick(0)
+            if self.node.checks.get(1) and self.node.checks[1].sealed_at:
+                return self.node.checks[1]
+        self.fail("node 0 never sealed")
+
+    def restarted(self, with_store=True):
+        from oracle import rounds
+
+        n = self.node
+        r = NodeV2(self.chain, self.keys[0], mock.Mock(side_effect=AssertionError("judged again")), n.host,
+                   "demo/median", n.src_root, n.exchange, n.store, n.merge_weight,
+                   runner=lambda argv: (_ for _ in ()).throw(AssertionError("tests run again")), clock=self.clock,
+                   log=self.logs.append, wallet=n.wallet)
+        if with_store:
+            r.rounds = rounds.Store(self.rounds_dir, CHAIN, RACE, r.address)
+        return r
+
+    def test_the_round_is_on_disk_private_before_the_seal_leaves(self):
+        c = self.seal_alone()
+        files = list(self.rounds_dir.rglob("1.json"))
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].stat().st_mode & 0o777, 0o600)
+        self.assertEqual(files[0].parent.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(json.loads(files[0].read_text())["salt"], {"hex": c.salt.hex()})
+
+    def test_a_sealed_round_isnt_idleness_until_its_window_closes(self):
+        c = self.seal_alone()
+        with mock.patch("oracle.node_v2.time.sleep"):
+            self.node.run(0, until_idle=5.0, poll=0)
+        self.assertTrue(c.revealed_at, "stopped before revealing")
+        self.assertGreaterEqual(c.revealed_at - c.sealed_at, self.node.round_timeout)
+
+    def test_a_restarted_node_reveals_with_its_first_salt_and_judges_nothing_again(self):
+        first = self.seal_alone()
+        again = self.restarted()
+        self.assertTrue(again.tick(0))
+        self.assertTrue(any("resuming this seat's round from disk (sealed" in m for m in self.logs))
+        self.assertNotIn(1, again.skipped)
+        self.clock.now += again.round_timeout  # the silent judges' window closes
+        for _ in range(3):
+            again.tick(0)
+        reveals = {k.lower(): m for k, m in again.exchange.all(1, "reveal").items()}
+        self.assertIn(again.address.lower(), reveals, self.logs[-5:])
+        reveal = reveals[again.address.lower()]
+        self.assertEqual(reveal["salt"], "0x" + first.salt.hex())
+        self.assertEqual(reveal["receipt"], first.receipt_hash)
+        self.assertEqual(len(self.chain.reports_), 1)  # reported once, by the first run
+
+    def test_without_a_store_a_restarted_node_still_sits_out(self):
+        self.seal_alone()
+        again = self.restarted(with_store=False)
+        self.assertTrue(again.tick(0))
+        self.assertIn(1, again.skipped)
+
+    def test_a_finished_round_leaves_no_file(self):
+        for _ in range(40):
+            for n in self.nodes:
+                n.tick(0)
+        self.assertEqual(len(self.chain.results), 1)
+        for _ in range(5):
+            self.node.tick(0)
+        if self.node.checks[1].done:
+            self.assertEqual(list(self.rounds_dir.rglob("1.json")), [])
+
 class TheCommandLine(unittest.TestCase):
     def test_a_chain_thats_away_exits_75(self):
         from oracle import __main__ as cli

@@ -92,10 +92,14 @@ def excerpt(text: str, ranges: list[tuple[int, int]]) -> str:
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 MENTION = re.compile(r"(?<![\w/@])@[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})")
 PROFILE = re.compile(r"https?://github\.com/(?!(?:[\w.-]+/[\w.-]+/(?:issues|pull|blob|tree|commit)))[A-Za-z0-9-]+/?(?=[\s)\]>.,]|$)")
+# Django's Trac prefixes an edited description with "(last modified by <name>)" (#160: 28 of the sets' issue texts).
+TRAC_EDITOR = re.compile(r"\(last modified by [^)\n]*\)")
 
 
 def scrub(text: str) -> str:
-    """Drops what identifies a person in an issue's text: e-mail addresses, @mentions and profile links."""
+    """Drops what identifies a person in an issue's text: e-mail addresses, @mentions, profile links and Trac's
+    "(last modified by <name>)"."""
+    text = TRAC_EDITOR.sub("(last modified by <user>)", text)
     text = EMAIL.sub("<email>", text)
     text = PROFILE.sub("<profile>", text)
     return MENTION.sub("@<user>", text)
@@ -114,12 +118,15 @@ class Candidate:
 
 
 def select(candidates: list[Candidate], runs: tuple[str, ...], pairs: int = 50, seed: int = 85,
-           size_targets: dict[str, float] | None = None, per_repo: int = 12) -> list[dict]:
+           size_targets: dict[str, float] | None = None, per_repo: int = 12,
+           already: dict[str, int] | None = None) -> list[dict]:
     """Picks `pairs` issues and, for each, a bad fix (a run that failed it) and a good one (the gold patch for half
     the pairs, an agent's accepted patch for the other half when one exists), seeded and stratified:
     - by the gold patch's size, toward `size_targets` (default 40 % small, 40 % medium, 20 % large);
     - at most `per_repo` issues from one repository;
     - the bad fixes spread round-robin over the runs, so no agent dominates.
+    `already` counts issues per repository picked by an earlier selection that this one extends (#160's extension of
+    the v1 set): they count toward `per_repo`, so the cap holds for the union.
     Returns one plan per pair: {instance, repo, bad_run, good: "gold" or a run}."""
     targets = size_targets or {"small": 0.4, "medium": 0.4, "large": 0.2}
     rng = random.Random(seed)
@@ -127,7 +134,7 @@ def select(candidates: list[Candidate], runs: tuple[str, ...], pairs: int = 50, 
     rng.shuffle(pool)
     quota = {s: round(pairs * w) for s, w in targets.items()}
     quota[SIZES[0]] += pairs - sum(quota.values())
-    by_repo: dict[str, int] = {}
+    by_repo: dict[str, int] = dict(already or {})
     chosen: list[Candidate] = []
     for strict in (True, False):  # first fill each size's quota, then top up from any size
         for c in pool:

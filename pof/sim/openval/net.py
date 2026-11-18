@@ -49,6 +49,19 @@ round 1's network unchanged:
   (`dp`, the parameters every draw reads);
 - the flat slashes ($5), the every-wait fee signal, the balanced score and recovery by blocks are read where round 1's
   were (`_run_panel`, `pricing.Market`, `scores.Scores`).
+
+#236's rules (design D20-D23, "Revision 2026-11-14"), each switched by its `Params` field and off by default, so
+every earlier report runs unchanged (`params.D236` sets the proposal):
+- seats by rank (`SEAT_RULE` "rank", `seats.install`): counted panels are drawn from the seated families only, and
+  the family cap applies only while `CAP_MIN_FAMILIES` are seated (`draw_p`);
+- the solver's deposit (`SOLVER_DEPOSIT_BPS`, `_settle_deposit`): returned when the fix is paid or withdrawn; lost to
+  the issue's bounty (`pots`, paid to the issue's next paid fix) or the sponsors' pool when it is rejected; lost to
+  the disputer, with `EVIDENCE_REWARD_BPS` of the bounty, when a failing test reverses its pass;
+- test disputes (`_disputes`, `_tests`): the world's contenders (`World.evidence_find`) and any actor (`Actor.tests`)
+  post tests against a standing pass, each with `Params.evidence_stake`; an accepted one reverses it, a rejected one
+  pays its stake to the solver;
+- the appeal (`APPEAL`, `_appeal`): one per rejected fix, judged afresh by `CHALLENGE_K[k]` validators drawn from
+  `appeal_pool`; upheld, the fix enters a passing verdict's window, open to disputes (`Sub.passed`).
 """
 
 from __future__ import annotations
@@ -58,7 +71,7 @@ import math
 import random
 import zlib
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 
 from . import panels as D
@@ -71,6 +84,12 @@ ACTOR_SID = 2_000_000  # actors' submissions are numbered from here; honest ones
 ACTOR_VID = 1_000_000  # actors' validators likewise
 VOLUNTEER_ID = 0
 HONEST_SOLVERS, HONEST_FUNDERS = 50, 30
+T_APPEAL = 0xA99EA1  # randomness tag: whether an honest solver appeals a rejection (#236)
+T_APPEAL_EV = 0xA99E71D  # ...whether the seated panel passes a fix appealed with a test (D24; an assumed rate)
+T_KNOWN = 0x4B0A15  # ...whether a known-answer issue is judged beside a submission, and which (D26)
+T_RIVAL = 0x21BA1  # ...whether a rival solver finds a failing test for a passed bad fix (D21)
+KNOWN_SID = 5_000_000  # known-answer issues are numbered from here
+KNOWN = 6  # a judge's role on a known-answer issue
 T_BLIND = 0xB11D  # randomness tag of a family's blind spot and of barred families' shadow draws (task 1.7)
 R_CONST_FEW = "constitution: fewer than CONSTITUTION_MIN_ELIGIBLE eligible"
 R_K1_CAP = "k = 1: every eligible validator at its pending k = 1 cap"
@@ -124,6 +143,10 @@ class PartyAccount:
     adrs_passed: int = 0
     deposits: float = 0.0  # ADR_DEPOSIT posted (round 2)
     forfeited: float = 0.0  # ...and forfeited by rejected ADRs and escalated fixes
+    sdeposits_lost: float = 0.0  # #236: solver's deposits it lost (in `costs`)
+    appeals: int = 0  # #236: appeals it filed
+    tests: int = 0  # #236: tests it posted against passes
+    tests_upheld: int = 0
 
 
 @dataclass(eq=False)
@@ -180,17 +203,42 @@ class Sub:
     funder_party: Optional[str] = None  # the actor that funded its issue (an escalated fix), if any
     deposit: float = 0.0  # ADR_DEPOSIT it posted
     queued: List["Challenge"] = field(default_factory=list)  # an auditor's dispute filed while another was judged
+    # #236 (D21-D23)
+    billed: float = 0.0  # the part of `charges` already charged to its party (an appeal's checks come later)
+    sdeposit: float = 0.0  # the solver's deposit it posted (SOLVER_DEPOSIT_BPS of its bounty and pot)
+    sdeposit_to: str = ""  # where it went: "returned", "bounty", "pool" or "disputer"
+    issue: Optional[int] = None  # the issue it answers, when its solver may try the same one again (an actor's)
+    pot: float = 0.0  # what earlier rejected fixes of its issue added to the bounty (paid with it)
+    passed: Optional[bool] = None  # True once an appeal passed it: its standing outcome, whatever `verdict` says
+    appeal: str = ""  # "", "filed", "upheld", "failed", "no panel"
+    appeal_k: int = 0
+    appeal_judges: Tuple[int, ...] = ()  # the appeal panel's judges
+    by_evidence: bool = False  # its pass was reversed by a test
+    disputer: Optional[str] = None  # the party whose test reversed it (None: one of the world's contenders)
+    stakes_won: float = 0.0  # rejected tests' stakes, paid to its solver
+    # #236, revision 2026-11-15 (D24, D25)
+    astake: float = 0.0  # the stake posted with its appeal
+    astake_lost: float = 0.0  # ...lost, when the appeal failed
+    sponsor: Optional[str] = None  # who appealed in the solver's place: an actor's party, or "contender:<seat>"
+    sponsor_charges: float = 0.0  # the appeal panel's checks, paid by the sponsor (inside `charges`)
+    sponsor_fee: float = 0.0  # the sponsor's share of the bounty, paid when the fix was
 
     @property
     def waited(self) -> bool:
         return self.waited_since is not None
+
+    @property
+    def standing(self) -> Optional[bool]:
+        """The outcome that becomes final if nothing more happens: the panel's verdict, or a pass after an upheld
+        appeal (#236)."""
+        return self.verdict if self.passed is None else self.passed
 
 
 @dataclass(eq=False)
 class Challenge:
     sub: Sub
     filed_t: float
-    by: str  # "audit" or "volunteer"
+    by: str  # "audit" or "volunteer"; "appeal" (#236): the solver's appeal of a rejection, judged afresh
     challenger: Optional[int]  # the auditor's id; volunteers aren't validators
     outcome: bool  # disputes the verdict's outcome
     accused: Tuple[int, ...]  # judges whose receipts it disputes
@@ -218,6 +266,7 @@ class Panel:
     finish: float = 0.0
     stall_t: float = 0.0
     challenge: Optional[Challenge] = None
+    second: bool = False  # D27: a second draw that did not exclude the original judges
 
 
 # ---------- behaviours ----------
@@ -261,6 +310,12 @@ class Net:
                  family_ok: Callable[[str], bool] = EVERY_FAMILY,
                  vote_weight: Optional[Callable[[Validator], float]] = None):
         self.seed, self.p, self.w = seed, p, w
+        if (p.REP_CAP or p.POT != "off" or p.JUDGE_FEE) and not getattr(self, "NO_DEPOSIT_RULES", False):
+            raise ValueError("REP_CAP, POT and JUDGE_FEE are read by nodeposit.NDNet only")  # #236, report v5
+        if ((p.MAX_CHECKS_PER_HOUR is not None or p.REPO_CHECKS_PER_HOUR is not None or p.QUEUE_ORDER != "fifo"
+             or p.NEWCOMER_LANE or p.LANE_PER_ID_DAY is not None or p.REPO_LISTS or p.REPO_MIN_ELIGIBLE
+             or p.REPO_STAKE_X) and not getattr(self, "REPO_RULES", False)):
+            raise ValueError("D31-D34's switches are read by capacity.CapNet and choice.ChoiceNet only")  # report v6
         self.fee = fee if fee is not None else FlatFee(w.service_fee)
         self.level_rule, self.family_ok, self.vote_weight = level_rule, family_ok, vote_weight
         self.actors = list(actors)
@@ -290,6 +345,16 @@ class Net:
         self.tee_list: List[str] = list(dict.fromkeys(w.tees))
         self.tees_removed = False
         self.dp = p.for_tees(self._tee_count())
+        # #236: an issue's bounty top-ups from rejected fixes' deposits; the seat rule (D20), installed below
+        self.pots: Dict[int, float] = defaultdict(float)
+        self.n_final = 0
+        self.n_known = 0  # D26: known-answer issues judged, and each family's verdicts on them
+        self.known_outcomes: Dict[str, List[Tuple[float, bool, bool]]] = defaultdict(list)
+        self.seats = None
+        self._nocap: Dict[int, Tuple[Params, Params]] = {}
+        if p.SEAT_RULE == "rank":
+            from .seats import install
+            install(self)
         self._sid = ACTOR_SID
         self._joined = 0
         self._next_snapshot = 0.0
@@ -371,6 +436,9 @@ class Net:
         return self.w.outage_sealed > 0 and D.u(self.seed, D.T_OUTAGE, sub.sid, v.vid, role) < self.w.outage_sealed
 
     def honest_vote(self, sub: Sub, v: Optional[Validator], role: int) -> bool:
+        if self.w.measured and sub.tier == ISSUE:  # #236: the seat's real verdict on a real case (fixes only)
+            from . import measured
+            return measured.vote(self, sub, v, role)
         if (v is not None and not sub.good and self.w.family_blind
                 and D.u(self.seed, T_BLIND, sub.sid, zlib.crc32(v.family.encode())) < self.w.blind_of(v.family)):
             return True  # the family's blind spot: every judge of the family is fooled by this bad fix
@@ -395,11 +463,12 @@ class Net:
     # ----- actors' entry points -----
 
     def submit(self, t: float, bounty: float, good: bool, solver: str, party: Optional[str], tier: str = ISSUE,
-               value: float = 0.0, parties: Optional[Sequence[str]] = None, commitment: Optional[int] = None) -> Sub:
+               value: float = 0.0, parties: Optional[Sequence[str]] = None, commitment: Optional[int] = None,
+               issue: Optional[int] = None) -> Sub:
         sid = self._sid
         self._sid += 1
         sub = Sub(sid, t, bounty, good, solver, frozenset(parties or (solver,)), tier, party,
-                  D.h(self.seed, sid) if commitment is None else commitment, value)
+                  D.h(self.seed, sid) if commitment is None else commitment, value, issue=issue)
         self._at(t, self._arrive, sub)
         return sub
 
@@ -433,6 +502,13 @@ class Net:
             pa = self.parties[sub.party]
             pa.costs += self.w.attempt_fee
             pa.submitted += 1
+        if sub.tier == ISSUE and self.p.KNOWN_RATE > 0 and self.w.measured:
+            self._known(sub)
+        if sub.tier == ISSUE and self.p.SOLVER_DEPOSIT_BPS:  # #236 (D22): the solver's deposit, beside its checks
+            if sub.issue is not None:
+                sub.pot = self.pots[sub.issue]
+            sub.sdeposit = self.p.SOLVER_DEPOSIT_BPS * (sub.bounty + sub.pot) / BPS
+            self.stats["sdep_posted"] += sub.sdeposit
         if sub.tier == CONSTITUTION and self.p.ADR_DEPOSIT > 0:  # round 2 (D7): an ADR's or escalated fix's deposit
             sub.deposit = self.p.ADR_DEPOSIT
             self.stats["deposits"] += sub.deposit
@@ -440,6 +516,29 @@ class Net:
                 self.parties[sub.party].costs += sub.deposit
                 self.parties[sub.party].deposits += sub.deposit
         self._try_draw(sub)
+
+    def _known(self, beside: Sub) -> None:
+        """D26: with chance KNOWN_RATE, a known-answer issue is judged beside this submission by one validator of
+        every family, seated or not (the first drawable one of each, in registry order). Its answer is the truth
+        (assumed: a correct label, and a judge cannot tell it from a live submission); each verdict is recorded
+        against it. The checks are paid as an audit's are, from the fees: counted, charged to no solver."""
+        if D.u(self.seed, T_KNOWN, beside.sid) >= self.p.KNOWN_RATE:
+            return
+        good = D.u(self.seed, T_KNOWN, beside.sid, 1) < self.w.good_share
+        ka = Sub(KNOWN_SID + self.n_known, self.t, beside.bounty, good, "known-answer", frozenset(("known-answer",)))
+        self.n_known += 1
+        seen: Set[str] = set()
+        part = getattr(self.fee, "service_part", None)
+        for v in self.reg.validators.values():
+            if v.family in seen or not self.reg.drawable(v):
+                continue
+            seen.add(v.family)
+            vote = self.honest_vote(ka, v, KNOWN)
+            self.known_outcomes[v.family].append((self.t, vote == good, good))
+            self.stats["known_checks"] += 1
+            self.stats["known_pay"] += ((part(beside) if part is not None else self.w.service_fee)
+                                        + self.w.usage_per_check)
+        self.stats["known_issues"] += 1
 
     def _refund(self, sub: Sub) -> None:
         """D7: the deposit back, when the ADR takes effect or expires."""
@@ -467,9 +566,10 @@ class Net:
             seal = now  # D3: past 256 blocks the draw re-targets to the latest block plus SEED_DELAY
         return D.draw_seed(self.p, self.seed, seal, sub.commitment, sub.bounty, sub.sid)
 
-    def eligible(self, sub: Sub, exclude: Set[int] = frozenset()) -> List[Validator]:
+    def eligible(self, sub: Sub, exclude: Set[int] = frozenset(),
+                 family_ok: Optional[Callable[[str], bool]] = None) -> List[Validator]:
         bounty = 0.0 if sub.tier == CONSTITUTION else sub.bounty
-        out = self.reg.eligible(bounty, sub.parties, frozenset(exclude), self.family_ok)
+        out = self.reg.eligible(bounty, sub.parties, frozenset(exclude), family_ok or self.family_ok)
         if self.tees_removed:  # round 2: a removed TEE type's validators stop being drawn
             out = [v for v in out if self.tee_ok(v)]
         return out
@@ -511,10 +611,23 @@ class Net:
         self.reg.epoch += 1
         return True
 
+    def draw_p(self, families: Optional[int] = None) -> Params:
+        """The parameters a draw reads now: `dp`, and under D20 (#236, SEAT_RULE "rank") without the family cap while
+        fewer than CAP_MIN_FAMILIES families are seated (`families`: the count to read instead, an appeal pool's)."""
+        p = self.dp
+        if p.SEAT_RULE != "rank" or not p.FAMILY_CAP or self.seats is None:
+            return p
+        if (len(self.seats.seated()) if families is None else families) >= p.CAP_MIN_FAMILIES:
+            return p
+        hit = self._nocap.get(id(p))
+        if hit is None or hit[0] is not p:
+            hit = self._nocap[id(p)] = (p, replace(p, FAMILY_CAP=False))
+        return hit[1]
+
     def plan(self, sub: Sub) -> Tuple[int, Optional[D.Draw], str]:
         """The draw a submission would get now: (k, draw, reason it waits). A pure function of the seed and the
         registry, so anyone (a solver, the seed grinder) can compute it once the seed is known."""
-        p = self.dp
+        p = self.draw_p()
         pool = self.eligible(sub)
         seed = self._seed(sub)
         if sub.tier == CONSTITUTION:
@@ -604,7 +717,7 @@ class Net:
             sub.shadows.append((v.vid, act.revealed, act.vote))
         barred = [v for v in self.reg.validators.values()  # specs/judge-scores: drawn only as shadows
                   if self.reg.drawable(v) and v.operator not in sub.parties and not self.family_ok(v.family)]
-        for v in D.shadows(D.h(sub.draw.seed, T_BLIND), barred, s, p):
+        for v in D.shadows(D.h(sub.draw.seed, T_BLIND), barred, p.CONTENDER_SHADOWS or s, p):
             act = self._beh(v).shadow(self, sub, v)
             if act.sealed:
                 v.acct.overhead += w.enclave.per_check
@@ -681,7 +794,8 @@ class Net:
                 panel.votes.append((v.vid, act.vote, act.faked, act.found))
                 panel.finish = max(panel.finish, ts + p.judge_hours)
                 reg.record_counted(v, True, ts)
-                self._pay_check(v, panel.sub, panel.role == COUNTED)
+                # the solver pays its counted panel's checks, and (#236) its appeal panel's
+                self._pay_check(v, panel.sub, panel.role == COUNTED or panel.challenge.by == "appeal")
                 continue
             if reg.record_counted(v, False, ts):
                 self.stats["suspended"] += 1
@@ -708,7 +822,9 @@ class Net:
     def _replace(self, panel: Panel, t: float, fresh: bool = False) -> bool:
         excl = panel.exclude | panel.draw.drawn
         pool = self.eligible(panel.sub, excl)
-        rep = D.replacement(panel.draw, panel.seated, {v.vid: v for v in pool}, self.dp,
+        if panel.challenge is not None and panel.challenge.by == "appeal" and not panel.second:
+            pool = [v for v in self.appeal_pool(panel.sub) if v.vid not in excl]
+        rep = D.replacement(panel.draw, panel.seated, {v.vid: v for v in pool}, self.draw_p(),
                             pool=[v.vid for v in pool] if fresh else None)
         if rep is None:
             return False
@@ -733,6 +849,8 @@ class Net:
             self.k1_bounty[vid] += sub.bounty
             self.k1_live[sub.sid] = sub
         need = self.p.CONSTITUTION_QUORUM if sub.tier == CONSTITUTION else (sub.k + 1) // 2
+        if sub.tier == ISSUE and self.p.PASS_RULE == "unanimous":  # #236
+            need = len(sub.judges)
         if self.vote_weight is not None and sub.tier == ISSUE:
             sub.verdict = self.weighted([(vid, vote) for vid, vote, _ in sub.judges])
         else:
@@ -742,15 +860,20 @@ class Net:
 
     def _after_verdict(self, sub: Sub) -> None:
         p, w, t = self.p, self.w, self.t
-        if sub.party:
-            self.parties[sub.party].costs += sub.charges
+        self._bill(sub)
         if sub.tier == CONSTITUTION:  # a removal takes effect after REMOVAL_WINDOW (D11), anything else ADR_WINDOW
             sub.window_end = t + (p.REMOVAL_WINDOW_H if sub.removal is not None else p.ADR_WINDOW_H)
             sub.state = "window"
             self._at(sub.window_end, self._final, sub, sub.token)
             return
         window = p.window_h(sub.k, sub.level)
+        if p.APPEAL != "off" and not sub.verdict:  # #236 (D23): a rejection is final only after its appeal period
+            window = max(window, p.APPEAL_WINDOW_H)
+            if self.appeals(sub):
+                self._at(t + p.APPEAL_WINDOW_H / 2, self._appeal, sub)
         sub.window_end, sub.state, sub.remaining = t + window, "window", window
+        if sub.verdict:
+            self._disputes(sub, window)  # #236 (D21): tests against a pass
         first = None  # the earliest re-run that disputes the verdict: (time, by, challenger, outcome, accused)
         always = self.always_audit(sub)
         if D.audited(sub.seed, p) or always:
@@ -920,17 +1043,37 @@ class Net:
             sub.held_since = None
         sub.state, sub.challenge = "challenged", ch
         sub.token += 1  # the window is frozen until the challenge is resolved
-        self.stats["challenges"] += 1
+        self.stats["challenges"] += ch.by != "appeal"  # an appeal (#236) is counted on its own
         self.stats[f"challenges_{ch.by}"] += 1
         self._try_challenge(ch)
 
     def _try_challenge(self, ch: Challenge) -> None:
-        sub, p = ch.sub, self.dp
+        sub, p = ch.sub, self.draw_p()
         ch.tried_epoch = self.reg.epoch
         excl = set(sub.draw.drawn) | ({ch.challenger} if ch.challenger is not None else set())
-        pool = self.eligible(sub, excl)
+        if ch.by == "appeal":  # #236 (D23): from the families the rule names, outside the original panel
+            pool = self.appeal_pool(sub)
+            p = self.draw_p(len({v.family for v in pool}))
+        else:
+            pool = self.eligible(sub, excl)
         seed = D.challenge_seed(self.seed, sub.seed, D.block_at(self.t), p)
         d = D.challenge_draw(seed, pool, sub.k, p, self.reg.epoch)
+        second = False
+        evidence = ch.by == "appeal" and self.p.APPEAL == "evidence"
+        if not d.filled and sub.tier == ISSUE and (self.p.SECOND_PANEL != "larger" or evidence):
+            # D24: an appeal with a test is a new judgment on new evidence, so its panel is a fresh draw of the
+            # seated families whoever sat first; D27: a challenge gets one only while few families can judge
+            d2 = self._second_panel(ch, seed, any_count=evidence or self.p.SECOND_PANEL == "always")
+            if d2 is not None:
+                d, second, excl = d2, True, ({ch.challenger} if ch.challenger is not None else set())
+        if not d.filled and ch.by == "appeal" and not pool:
+            # no validator of any family the rule allows: the appeal can't be judged, and the rejection stands
+            if ch.waited and ch in self.ch_waiting:
+                self.ch_waiting.remove(ch)
+            ch.state, ch.resolved_t, sub.appeal = "resolved", self.t, "no panel"
+            self.stats["appeals_no_panel"] += 1
+            self._reopen(sub)
+            return
         if not d.filled:
             if not ch.waited:
                 ch.waited = True
@@ -941,17 +1084,41 @@ class Net:
         if ch.waited and ch in self.ch_waiting:
             self.ch_waiting.remove(ch)
         ch.state, ch.k = "judging", d.k
+        self.stats["second_panels"] += second
         seated = [self.reg.validators[v] for v in d.panel]
         self._run_panel(Panel(CHALLENGE, sub, d, [(v, self.t) for v in seated], list(seated), excl,
-                              finish=self.t, challenge=ch))
+                              finish=self.t, challenge=ch, second=second))
+
+    def _second_panel(self, ch: Challenge, seed: int, any_count: bool = False) -> Optional[D.Draw]:
+        """D27: while fewer than CAP_MIN_FAMILIES families can judge the fix, its challenge or appeal is judged by a
+        second draw of the original panel's size from those families, the original judges not excluded and no family
+        cap (the operator, host and TEE-type caps apply). None when more families can judge, or no such panel fills."""
+        sub = ch.sub
+        excl = {ch.challenger} if ch.challenger is not None else set()
+        pool = self.eligible(sub, excl)
+        few = len({v.family for v in pool}) < self.p.CAP_MIN_FAMILIES
+        if not pool or not (few or any_count):
+            return None
+        p = self.dp
+        if few:
+            hit = self._nocap.get(id(p))
+            if hit is None or hit[0] is not p:
+                hit = self._nocap[id(p)] = (p, replace(p, FAMILY_CAP=False))
+            p = hit[1]
+        d = D.draw(seed, pool, p.k_for(len(pool), cap=sub.k), p, tag=D.T_CHALLENGE, epoch=self.reg.epoch)
+        return d if d.filled else None
 
     def _resolve(self, ch: Challenge, panel: Panel) -> None:
         sub, p, t = ch.sub, self.p, self.t
+        if ch.by == "appeal":
+            self._appeal_resolved(ch, panel)
+            return
         need = (ch.k + 1) // 2
+        cur = sub.standing  # the verdict, or a pass after an upheld appeal (#236)
         if self.vote_weight is not None:
-            upheld = ch.outcome and self.weighted([(vid, vote != sub.verdict) for vid, vote, _, _ in panel.votes])
+            upheld = ch.outcome and self.weighted([(vid, vote != cur) for vid, vote, _, _ in panel.votes])
         else:
-            upheld = ch.outcome and sum(1 for _, vote, _, _ in panel.votes if vote != sub.verdict) >= need
+            upheld = ch.outcome and sum(1 for _, vote, _, _ in panel.votes if vote != cur) >= need
         receipts = tuple(a for a in ch.accused if sum(1 for *_, found in panel.votes if a in found) >= need)
         ch.upheld, ch.receipts, ch.resolved_t, ch.state = upheld, receipts, t, "resolved"
         for a in receipts:
@@ -964,7 +1131,7 @@ class Net:
         if upheld:
             sub.reversed = True
             self.stats["reversed"] += 1
-            self._finalize(sub, not sub.verdict)
+            self._finalize(sub, not cur)
             return
         if not receipts:
             self.stats["challenges_rejected"] += 1
@@ -973,6 +1140,241 @@ class Net:
             nxt = sub.queued.pop(0)
             nxt.filed_t = t
             self._file(nxt)
+
+    # ----- #236: test disputes (D21), the solver's deposit (D22) and the appeal (D23) -----
+
+    def _bill(self, sub: Sub) -> None:
+        """Charge its party the checks not yet charged (the counted panel's at the verdict, an appeal panel's later)."""
+        due = sub.charges - sub.billed
+        sub.billed = sub.charges
+        if sub.party and due:
+            self.parties[sub.party].costs += due
+
+    def _disputes(self, sub: Sub, window: float) -> None:
+        """D21: the tests posted against a standing pass, judged half-way through its window. Each is (party, accepted,
+        judged): an actor's (`Actor.tests`), then the world's contenders' (`World.evidence_find`: `measured.evidence`
+        decides whether one of them holds accepted evidence; party None)."""
+        tests: List[Tuple[Optional[str], bool, bool]] = []
+        for a in self.actors:
+            post = getattr(a, "tests", None)
+            r = post(self, sub) if post is not None else None
+            if r is not None:
+                tests.append((a.party, r[0], r[1]))
+        if self.w.evidence_find > 0:
+            from . import measured
+            if measured.evidence(self, sub):
+                tests.append((None, True, True))
+        if self.w.rival_solvers and self.w.rival_find > 0 and not sub.good and not tests:
+            # D21: a rival solver of the same repository holds a failing test (each searches on its own draw)
+            self.stats["rival_searches"] += self.w.rival_solvers
+            if any(D.u(self.seed, T_RIVAL, sub.sid, i) < self.w.rival_find for i in range(self.w.rival_solvers)):
+                self.stats["rival_tests"] += 1
+                tests.append((None, True, True))
+        if tests:
+            self._at(self.t + window / 2, self._tests, sub, tests)
+
+    def _tests(self, sub: Sub, tests: Sequence[Tuple[Optional[str], bool, bool]]) -> None:
+        """D21, D22: each posted test in turn. A test that passes on the fixed code falls with no panel; one that
+        fails is judged by a challenge panel on one question (`judged`: the panel's cost is counted, its answer is the
+        poster's `accepted`). Accepted: the pass is reversed before payment (a machine ran the test: no re-judging),
+        the disputer gets its stake back, the solver's deposit and EVIDENCE_REWARD_BPS of the bounty. Not accepted:
+        the stake goes to the solver."""
+        if sub.state == "challenged":  # after the pending challenge, unless that one reverses it
+            self._at(self.t + 1.0, self._tests, sub, tests)
+            return
+        if sub.state not in ("window", "held"):
+            return
+        p = self.p
+        stake = p.evidence_stake(sub.bounty)
+        for party, accepted, judged in tests:
+            self.stats["tests_posted"] += 1
+            if party:
+                self.parties[party].tests += 1
+            if judged:
+                self.stats["test_panels"] += 1
+                part = getattr(self.fee, "service_part", None)  # the market's quoted fee, or the flat one
+                self.stats["test_panel_pay"] += p.challenge_k(sub.k) * (
+                    (part(sub) if part is not None else self.w.service_fee) + self.w.usage_per_check)
+            if not accepted:
+                self.stats["stakes_lost"] += stake
+                sub.stakes_won += stake
+                if party:
+                    self.parties[party].costs += stake
+                if sub.party:
+                    self.parties[sub.party].gains += stake
+                continue
+            sub.reversed = sub.by_evidence = True
+            sub.disputer = party
+            reward = p.EVIDENCE_REWARD_BPS * sub.bounty / BPS
+            self.stats["reversed"] += 1
+            self.stats["evidence_reversed"] += 1
+            self.stats["evidence_wrong"] += sub.good
+            self.stats["evidence_reward"] += reward
+            if party:
+                self.parties[party].gains += reward
+                self.parties[party].tests_upheld += 1
+            self._finalize(sub, False)
+            return
+
+    def _evidence(self, sub: Sub) -> None:
+        """#236 (reports measured-v2): accepted evidence from one of the world's contenders reverses a pass."""
+        self._tests(sub, [(None, True, True)])
+
+    def _settle_deposit(self, sub: Sub, to: str) -> None:
+        """D22: the solver's deposit goes back to it ("returned": the fix was paid, or withdrawn unjudged), to its
+        issue's bounty or the sponsors' pool (rejected), or to the disputer (its pass reversed by a test). Never to a
+        judge, the funder or the reporter. A party is charged a deposit only when it loses it."""
+        d = sub.sdeposit
+        if not d or sub.sdeposit_to:
+            return
+        sub.sdeposit_to = to
+        self.stats[f"sdep_{to}"] += d
+        if to == "returned":
+            return
+        if sub.party:
+            pa = self.parties[sub.party]
+            pa.costs += d
+            pa.sdeposits_lost += d
+        if to == "bounty" and sub.issue is not None:
+            self.pots[sub.issue] += d  # the next solver of the same issue is paid more
+        elif to == "disputer" and sub.disputer:
+            self.parties[sub.disputer].gains += d
+
+    def appeals(self, sub: Sub) -> bool:
+        """D23: does the solver of this rejected fix appeal? An actor decides for its own (`Actor.appeals`); an honest
+        solver appeals a good fix with `World.appeal_good` and a bad one with `World.appeal_bad` (assumed)."""
+        if sub.party:
+            own = any(a.appeals(self, sub) for a in self.actors
+                      if getattr(a, "party", None) == sub.party and hasattr(a, "appeals"))
+        else:
+            own = D.u(self.seed, T_APPEAL, sub.sid) < (self.w.appeal_good if sub.good else self.w.appeal_bad)
+        if own or self.p.APPEAL != "evidence" or not self.p.SPONSOR:
+            return own
+        sub.sponsor = self._sponsor(sub)
+        return sub.sponsor is not None
+
+    def _sponsor(self, sub: Sub) -> Optional[str]:
+        """D25: who sponsors the appeal of a rejected fix its solver did not appeal: an actor (`Actor.sponsors`), or a
+        contender of `World.sponsor_by` whose family is registered and unseated and whose model passed the fix."""
+        for a in self.actors:
+            ask = getattr(a, "sponsors", None)
+            if ask is not None and ask(self, sub):
+                return a.party
+        if self.w.sponsor_by and self.w.measured:
+            from . import measured
+            case = measured.case_of(self, sub)
+            seats = dict(self.w.measured_seats)
+            here = {v.family for v in self.reg.validators.values() if self.reg.drawable(v)}
+            for f in self.w.sponsor_by:
+                if f in here and not self.family_ok(f) and case[seats[f]]:
+                    return f"contender:{f}"
+        return None
+
+    def appeal_pool(self, sub: Sub) -> List[Validator]:
+        """D23: who may sit on a fix's appeal panel, outside its original panel: validators of the families that did
+        not judge it, contenders included (APPEAL "others"), of those that are seated ("others_seated"), or of the
+        seated families, the ones that judged it included ("seated")."""
+        mode = self.p.APPEAL
+        judged = {self.reg.validators[vid].family for vid, _, _ in sub.judges}
+        if mode == "others":
+            ok = lambda f: f not in judged  # noqa: E731
+        elif mode == "others_seated":
+            ok = lambda f: f not in judged and self.family_ok(f)  # noqa: E731
+        elif mode in ("seated", "evidence"):  # "evidence" (D24): a fresh draw of the seated families
+            ok = self.family_ok
+        else:
+            raise ValueError(mode)
+        return self.eligible(sub, set(sub.draw.drawn), ok)
+
+    def _appeal(self, sub: Sub) -> None:
+        """D23: the solver's one appeal of a rejection, filed like a challenge (the window is frozen while a fresh
+        panel judges the fix)."""
+        if sub.state == "challenged":  # after the pending challenge, unless that one already passes the fix
+            self._at(self.t + 1.0, self._appeal, sub)
+            return
+        if sub.state not in ("window", "held") or sub.appeal or sub.standing:
+            return
+        sub.appeal = "filed"
+        self.stats["appeals"] += 1
+        self.stats["appeals_good"] += sub.good
+        if self.p.APPEAL == "evidence":
+            sub.astake = self.p.appeal_stake(sub.bounty)  # D24: posted with the test, by the solver or its sponsor
+            self.stats["appeals_sponsored"] += sub.sponsor is not None
+        if sub.sponsor and not sub.sponsor.startswith("contender:"):
+            self.parties[sub.sponsor].appeals += 1
+        elif sub.party and not sub.sponsor:
+            self.parties[sub.party].appeals += 1
+        ch = Challenge(sub, self.t, "appeal", None, True, ())
+        self._file(ch)
+        self._at(self.t + self.p.APPEAL_WINDOW_H, self._appeal_lapse, ch)
+
+    def _appeal_lapse(self, ch: Challenge) -> None:
+        """An appeal still waiting for a panel one appeal period after it was filed lapses, and the rejection stands
+        (the simulation's reading: D23 doesn't say, and D4's "the challenge waits" would leave the fix never final and
+        its deposit locked for good)."""
+        if ch.state == "judging" and self.p.APPEAL == "evidence":
+            # D24: so does one whose panel has stalled on a silent judge nobody can replace; its stake comes back
+            stalled = [pn for pn in self.stalled if pn.challenge is ch]
+            if not stalled:
+                self._at(self.t + self.p.APPEAL_WINDOW_H, self._appeal_lapse, ch)
+                return
+            self.stalled.remove(stalled[0])
+        elif ch.state != "waiting":
+            return
+        if ch in self.ch_waiting:
+            self.ch_waiting.remove(ch)
+        ch.state, ch.resolved_t, ch.sub.appeal = "resolved", self.t, "no panel"
+        self.stats["appeals_no_panel"] += 1
+        self.stats["appeals_lapsed"] += 1
+        self._reopen(ch.sub)
+
+    def _appeal_resolved(self, ch: Challenge, panel: Panel) -> None:
+        sub, p = ch.sub, self.p
+        yes = sum(1 for _, vote, _, _ in panel.votes if vote)
+        need = len(panel.votes) if p.APPEAL_PASS_RULE == "unanimous" else (ch.k + 1) // 2
+        ch.upheld, ch.resolved_t, ch.state = yes >= need, self.t, "resolved"
+        if p.APPEAL == "evidence":
+            # D24: the panel re-judges with the test in view. How a judge reacts to a passing test is not in #160's
+            # verdicts: one draw per fix at the assumed rate (the panel is drawn and paid; its recorded votes, which
+            # would only repeat the first verdict, are not read)
+            rate = self.w.appeal_accept_good if sub.good else self.w.appeal_accept_bad
+            ch.upheld = D.u(self.seed, T_APPEAL_EV, sub.sid) < rate
+        sub.appeal_k, sub.appeal_judges = ch.k, tuple(vid for vid, _, _, _ in panel.votes)
+        payer = None
+        if sub.sponsor:  # D25: the sponsor pays the appeal panel's checks
+            sub.sponsor_charges = sub.charges - sub.billed
+            sub.billed = sub.charges
+            if not sub.sponsor.startswith("contender:"):
+                payer = self.parties[sub.sponsor]
+                payer.costs += sub.sponsor_charges
+        else:
+            self._bill(sub)  # the appeal panel's checks are the appellant's
+            payer = self.parties[sub.party] if sub.party else None
+        if not ch.upheld:
+            sub.appeal = "failed"
+            self.stats["appeals_failed"] += 1
+            if sub.astake:  # D24: a failed appeal loses its stake, to the pool or the issue's bounty; never to a judge
+                self.stats["astake_lost"] += sub.astake
+                self.stats["astake_lost_sponsor"] += sub.astake if sub.sponsor else 0.0
+                if not sub.sponsor:
+                    sub.astake_lost = sub.astake
+                if payer is not None:
+                    payer.costs += sub.astake
+                if p.APPEAL_STAKE_TO == "bounty" and sub.issue is not None:
+                    self.pots[sub.issue] += sub.astake
+            self._reopen(sub)  # the rejection's window resumes; final, its deposit goes to the bounty
+            if sub.queued and sub.state in ("window", "held"):
+                nxt = sub.queued.pop(0)
+                nxt.filed_t = self.t
+                self._file(nxt)
+            return
+        sub.appeal, sub.passed = "upheld", True
+        self.stats["appeals_upheld"] += 1
+        self.stats["appeals_upheld_bad"] += not sub.good
+        window = p.window_h(sub.k, sub.level)
+        sub.remaining = window  # a passing verdict's window, open to disputes as for any pass
+        self._reopen(sub)
+        self._disputes(sub, window)
 
     def queues(self, ch: Challenge) -> bool:
         """Round 2 (D13, "Every lone verdict is audited twice"): a mismatch from either auditor of a k = 1 verdict opens
@@ -983,11 +1385,12 @@ class Net:
 
     def _final(self, sub: Sub, token: int) -> None:
         if token == sub.token and sub.state == "window":
-            self._finalize(sub, sub.verdict)
+            self._finalize(sub, sub.standing)
 
     def _finalize(self, sub: Sub, outcome: bool) -> None:
         t = self.t
         sub.final, sub.final_t, sub.state = outcome, t, "final"
+        self.n_final += 1
         for vid, _, _ in sub.judges:
             self.open_by[vid].discard(sub.sid)
         if sub.k1_judge is not None:
@@ -1002,10 +1405,28 @@ class Net:
             if outcome:
                 self.stats["paid"] += 1
                 self.stats["bad_merged"] += not sub.good
+                if sub.sponsor and sub.appeal == "upheld" and self.p.SPONSOR_REWARD_BPS:
+                    # D25: the sponsor's share, out of the bounty its appeal won for the solver
+                    sub.sponsor_fee = self.p.SPONSOR_REWARD_BPS * sub.bounty / BPS
+                    self.stats["sponsor_fees"] += sub.sponsor_fee
+                    if not sub.sponsor.startswith("contender:"):
+                        self.parties[sub.sponsor].gains += sub.sponsor_fee
                 if pa is not None:
-                    pa.gains += sub.bounty
+                    pa.gains += sub.bounty - sub.sponsor_fee
                     pa.paid += 1
                     pa.bad_paid += not sub.good
+                if sub.issue is not None and self.pots[sub.issue]:  # #236 (D22): the bounty as rejections grew it
+                    self.stats["pots_paid"] += self.pots[sub.issue]
+                    if pa is not None:
+                        pa.gains += self.pots[sub.issue]
+                    self.pots[sub.issue] = 0.0
+                self.stats["appeal_paid"] += sub.appeal == "upheld"
+                self.stats["appeal_paid_bad"] += sub.appeal == "upheld" and not sub.good
+                self._settle_deposit(sub, "returned")
+            elif sub.by_evidence:
+                self._settle_deposit(sub, "disputer")
+            else:
+                self._settle_deposit(sub, "bounty" if self.p.SOLVER_DEPOSIT_TO == "bounty" else "pool")
         else:
             if outcome:
                 self.stats["adrs_passed"] += 1
@@ -1054,6 +1475,8 @@ class Net:
         self.fee.end_period(self, self.period)
         if self.slice is not None:
             self.slice.on_day()
+        if self.seats is not None:
+            self.seats.on_day()
         self.period, self.period_drawn = Counter(), set()
         for v in reg.validators.values():
             if v.state in (ACTIVE, CANDIDATE) and v.bond < v.target and self._beh(v).tops_up:
@@ -1071,6 +1494,7 @@ class Net:
                 del self.waiting[sub.sid]
                 sub.state = "withdrawn"  # the deposit comes back; nothing was metered
                 self.stats["withdrawn"] += 1
+                self._settle_deposit(sub, "returned")
             elif sub.tried_epoch != reg.epoch:
                 self._try_draw(sub)
         if self.k1_live and self.p.K1_HOLD:

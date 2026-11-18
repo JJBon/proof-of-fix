@@ -23,6 +23,8 @@ ROLES=(deployer bot reporter funder solver-a solver-b infrastructure insurance f
 for ((i = 0; i < ORACLES; i++)); do ROLES+=("oracle-$i"); done
 # Keys for vacant v2 seats to join with (#85 task 5.4, #104): appended last, so the roles above keep their indices.
 ROLES+=(joiner-0 joiner-1)
+# The bot as a service's own key (#210: pofctl bot watch; never the `bot` key people use): appended last too.
+ROLES+=(bot-service)
 # anvil's public test mnemonic, for DEVNET_KEYS=insecure-local only.
 MNEMONIC="test test test test test test test test test test test junk"
 

@@ -1,0 +1,2676 @@
+{
+ "about": "#160's stronger ground truth: for every hidden-test-labelled case, the published full-test and manual verdicts on the same patch (by sha256), the issue-level evidence of weak hidden tests, and why a person should review it. Rebuild with scripts/judge-set.sh coverage.",
+ "sources": {
+  "patchdiff": {
+   "doi": "10.5281/zenodo.17074796",
+   "record": "https://zenodo.org/records/17074796",
+   "file": "PatchDiff_0908.7z",
+   "md5": "ec317f442b40122e646e46bb09eb1350",
+   "sha256": "26366405ba37cb3f8052ddd49e23f62e11925dc4a5512744cf03037d30e9204a",
+   "licence": "CC-BY-4.0"
+  },
+  "patchdiff_files": {
+   "results/RQ1_CodeStory_runall.json": "30b2e153be517c08731a5ba273ebd0df91c509b7fd17d5cce12d5fb5acee033d",
+   "results/RQ1_LearnByInteract_runall.json": "b6471f1b6a4d66cb3dc08c001d2a908e9a9ca179f273edb4083bfa20cd004cf7",
+   "results/RQ1_OpenHands_runall.json": "9e6913c0f169d5d62261ba8266400675cdbda3f531cd6d9cc3a92d5b6465421c",
+   "results/RQ34.csv": "44ac55898d4a9212ba0d3a980d1cb6401c59c562bfc1aee40aa8dadfcd623289",
+   "results/RQ2_CodeStory_difftests.json": "606bfdc0b8338aa60a542698ced2d9ae8d5660172994f0646e17bb14c6763a64",
+   "results/RQ2_LearnByInteract_difftests.json": "2a7817091e633b77c8772aa567f59d7ffb0c6c6302e045e23d13acbbf8e18404",
+   "results/RQ2_OpenHands_difftests.json": "0386857b2addcef4e65394a69986c4642320bde6409d87341bdac19e602a2685"
+  },
+  "utboost": {
+   "repo": "github.com/CUHK-Shenzhen-SE/UTBoost",
+   "commit": "4f32782517f23940d3ede8cd1f250667873cc0c6",
+   "licence": "MIT",
+   "aug_tests": "assets/useful_scripts/augTest.json",
+   "parser_lists": "update_SWE_Bench/updated_parser_test_instance_dict_verified.json"
+  }
+ },
+ "utboost_reparsed_instances": 271,
+ "manifest.json": {
+  "cases": [
+   {
+    "id": "django__django-16877:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-16877:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4661:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4661:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7324:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7324:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-13195:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-13195:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-4687:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-4687:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14034:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14034:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14369:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14369:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-10999:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-10999:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-15695:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-15695:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-20916:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-20916:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-13158:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-13158:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-21568:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-21568:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11820:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11820:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11400:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11400:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-23299:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-23299:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-17318:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-17318:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "psf__requests-2317:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "psf__requests-2317:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13372:good",
+    "hidden_tests": "pass",
+    "patch_level": {
+     "tool": "OpenHands",
+     "full_tests": "pass",
+     "manual": null
+    },
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13372:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7521:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7521:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7748:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7748:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "psf__requests-1724:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "psf__requests-1724:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14598:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14598:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "mwaskom__seaborn-3187:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "mwaskom__seaborn-3187:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8056:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8056:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-16560:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-16560:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-16950:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-16950:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": true,
+    "review": [
+     "bad fix whose failing hidden tests UTBoost's re-parse doesn't list"
+    ]
+   },
+   {
+    "id": "django__django-11433:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11433:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-15037:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-15037:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-5787:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-5787:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-21379:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sympy__sympy-21379:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13091:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13091:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "psf__requests-1766:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "psf__requests-1766:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9602:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9602:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-7229:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-7229:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-10435:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-10435:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-18199:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-18199:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9461:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9461:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13033:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13033:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14182:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-14182:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-3993:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "pydata__xarray-3993:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-10356:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-10356:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-10673:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sphinx-doc__sphinx-10673:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13977:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13977:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13798:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13798:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-26466:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-26466:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13615:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sympy__sympy-13615:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13877:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13877:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-15976:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-15976:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-24870:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-24870:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8265:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8265:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   }
+  ],
+  "summary": {
+   "cases": 100,
+   "patch_level_verdict": 1,
+   "issue_level_evidence": 54,
+   "for_review": 5
+  }
+ },
+ "manifest-more.json": {
+  "cases": [
+   {
+    "id": "sphinx-doc__sphinx-9258:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9258:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11790:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11790:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-16100:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-16100:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": true,
+    "review": [
+     "bad fix whose failing hidden tests UTBoost's re-parse doesn't list"
+    ]
+   },
+   {
+    "id": "django__django-12193:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-12193:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "scikit-learn__scikit-learn-12973:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "scikit-learn__scikit-learn-12973:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14534:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14534:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-21596:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-21596:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-14725:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14725:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-13794:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-13794:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-19495:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-19495:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-17630:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-17630:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-11133:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "django__django-11133:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-21612:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-21612:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-12325:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-12325:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": true,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-25775:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-25775:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-19783:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sympy__sympy-19783:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "django__django-14140:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14140:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13974:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13974:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-26208:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-26208:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11087:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-11087:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14311:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-14311:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "pydata__xarray-2905:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "pydata__xarray-2905:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-10554:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "django__django-10554:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-11510:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-11510:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-25479:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-25479:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-20859:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-20859:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-22080:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-22080:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "scikit-learn__scikit-learn-25102:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 2,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "scikit-learn__scikit-learn-25102:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 2,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9658:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9658:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-15599:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sympy__sympy-15599:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-10614:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-10614:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4604:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4604:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "mwaskom__seaborn-3069:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "mwaskom__seaborn-3069:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-20428:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-20428:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "psf__requests-5414:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "psf__requests-5414:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 3,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8593:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": [
+     "agent-written good fix on an issue whose hidden tests are known to pass wrong fixes"
+    ]
+   },
+   {
+    "id": "sphinx-doc__sphinx-8593:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 1,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-20676:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "matplotlib__matplotlib-20676:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8548:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-8548:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13398:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-13398:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7985:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7985:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7236:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pytest-dev__pytest-7236:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 1,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9229:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-9229:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-8898:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-8898:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7462:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7462:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4551:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "pylint-dev__pylint-4551:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7590:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sphinx-doc__sphinx-7590:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-8707:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "astropy__astropy-8707:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": false
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-14248:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-14248:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13878:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-13878:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 2,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-16597:good",
+    "hidden_tests": "pass",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": null,
+    "review": []
+   },
+   {
+    "id": "sympy__sympy-16597:bad",
+    "hidden_tests": "fail",
+    "patch_level": null,
+    "issue_level": {
+     "patchdiff_full_test_failures": 0,
+     "patchdiff_suspicious": 0,
+     "utboost_insufficient_tests": false,
+     "utboost_reparsed": true
+    },
+    "reparse_drops_failing_tests": false,
+    "review": []
+   }
+  ],
+  "summary": {
+   "cases": 100,
+   "patch_level_verdict": 0,
+   "issue_level_evidence": 60,
+   "for_review": 6
+  }
+ }
+}

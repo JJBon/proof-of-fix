@@ -1,7 +1,7 @@
 # Design
 
 ## Context
-- **v2 (built, on the devnet).** `Verdicts` holds 7 seats fixed at deployment. Vacant seats are reserved for named operators, a join is co-signed by 5 other seats, and the issue tier always draws 3 by a Fisher-Yates shuffle over the active keys (ADR 0002). `Fees` meters each check and pays each drawn judge the median usage plus the service fee (#111). Seals, reveals and receipts on-chain (#85 tasks 5.5, 5.6, #122), bonds and challenges (5.8) and attestation (#94) are specified but not built.
+- **v2 (built, on the devnet).** `Verdicts` holds 7 seats fixed at deployment. Vacant seats are reserved for named operators, a join is co-signed by 5 other seats, and the issue tier always draws 3 by a Fisher-Yates shuffle over the active keys (ADR 0002). `Fees` meters each check and pays each drawn judge the median usage plus the service fee (#111). Seals, reveals and receipts on-chain (#85 tasks 5.5, 5.6, #122), bonds and challenges (5.8) and attestation (#94) are specified but not built in v2; v3 builds them itself (D18).
 - **The node (built).** It fetches the claimed commit (#115), runs the sandbox from inside its container (#116), exchanges seals over a pluggable transport (#117), and calls its model directly with spending guards (#118). One real Bedrock call has been checked.
 - **Why this change:** see proposal.md. The behaviour is in `specs/validator-admission`, `specs/judge-panels`, `specs/judge-scores`, `specs/check-pricing` and the `incentive-simulation` delta. This document covers how, the parameters, and the order of work.
 - **Revised 2026-11-03 (#141)** after #134's simulation ([`reports/open-validators-v1.md`](../../../reports/open-validators-v1.md)) met only 4 of its 10 acceptance criteria. See the revision note below.
@@ -144,6 +144,51 @@ Numbered as in report v3's "Spec findings".
 6. **The deposit's honest cost isn't simulated:** group 8 adds an honest ADR author on a grown network (task 8.3). It measures the share of its good ADRs rejected and the deposits it forfeits, beside D7's hand estimate (2.6 %, about $0.39 an ADR).
 
 **Report v3's other findings** don't change the design. They confirm round 2's rules, name the trust points the ADR records (one TEE type holding the majority of about 77 % of panels of 3 until five types are accepted; answer shopping at 3 in 10 once level C is on; a silence bribe above the slash, decision 4), and list the switches to drop (report v3, "What's left to change").
+
+## Revision 2026-11-14 (#236): measured judges
+**Status: the direction is decided (owner, 2026-11-14); the values are not.** The owner agreed that one family may hold every seat while it is ahead by more than the margin (D20), that a rejected fix's deposit goes to the issue's bounty (D22), that an appeal panel is drawn from the families that didn't judge the fix, contenders included (D23), and that ADR 0004 is replaced, not amended, once group 10's runs are in. Every value (`SEAT_MARGIN`, `CAP_MIN_FAMILIES`, `SOLVER_DEPOSIT_BPS`, `EVIDENCE_REWARD_BPS`, `EVIDENCE_STAKE`, `APPEAL_WINDOW`) stays proposed until task 10.1, and no contract changes before the new ADR.
+
+**Why.** v3's judges were assumed: right 85–95 % of the time, each call independent. #160 measured nine models on 228 real fixes ([`reports/judges-v2.md`](../../../reports/judges-v2.md)), and the simulation was re-run on those verdicts ([`open-validators-measured-v1.md`](../../../reports/open-validators-measured-v1.md), [`-v2.md`](../../../reports/open-validators-measured-v2.md); 40 seeds, exploratory). Five findings change the design:
+
+| # | Finding (measured) | Evidence | What it breaks |
+|---|---|---|---|
+| 1 | One family is far ahead on fixes the tests fail: Opus 5.5 scores 88 % on known answers, the next 65 %, the five others 50–60 % | judges-v2, measured-v1 §4 | D6's family cap forces weaker families onto every panel of k ≥ 3 |
+| 2 | v3 as designed merges 10–18 bad fixes per 100 paid, against the 1.1 assumed, and 43–77 % of submissions wait | measured-v1 §2 | ADR 0004's bonds and windows were sized on 1.1 |
+| 3 | The score ranks the judges wrongly: the best family scores 71 % and is barred 69 % of the year, while families right half the time score 75–77 % | measured-v1 §3 | D14 scores agreement with the panel's own outcome |
+| 4 | A second panel repeats the first: 1–2 reversals a year, because a model asked again gives the same verdict | measured-v1 §3 | D4's and D13's challenges and audits were the source of truth for the score |
+| 5 | A solver that only submits bad fixes gains $10–28 a fix on a flat fee, with no collusion | measured-v2 §5 | a rejected fix costs its solver only the attempt fee and its checks |
+
+**What the proposal does (D20–D23).** Seats go to the best-scoring families, and every other model earns by disputing their passes with a failing test. A solver posts a deposit it loses on rejection. The score rule stays D14's; what changes is where final outcomes come from.
+
+**What the simulation supports, and what it doesn't yet.**
+
+| Decision | Supported by a run | Not yet simulated or measured |
+|---|---|---|
+| D20: seats by rank, the family cap only among near-equals | the best family alone: 6.0 bad fixes per 100 paid, 0.1 % waiting (measured-v1 §4) | `SEAT_MARGIN`'s value; a prompt injection that fools the one seated family |
+| D21: a failing test reverses a pass | 6.0 → 4.4 per 100 paid if a flagged bad fix yields a test 1 time in 2; 3.5 at 3 in 4 (measured-v2 §3) | how often a test can be found, and how often a wrong test is accepted: both assumed. The next paid run measures them |
+| D22: the solver's deposit | exact counts: about $19 on an $86 bounty with Opus alone, $1.13 a good fix (measured-v2 §5) | not played out in the network; where the forfeit goes |
+| D23: outcomes from evidence and appeals | evidence puts the families in the right order on fixes the tests fail (Opus 70.8 % → 87.5 %) | appeals are not simulated; without them a judge that rejects good fixes rises (measured-v2 §4) |
+
+**How.** Task group 10: the simulation first (appeals, the deposit, `SEAT_MARGIN`, all on measured verdicts), then one paid measurement of the two assumed rates, then the contracts. The confirmatory run (group 9) waits for these rules to be frozen.
+
+## Revision 2026-11-15 (#236): the appeal on evidence
+**Status: one decision, the rest proposed.** Task 10.1 ([`open-validators-measured-v3.md`](../../../reports/open-validators-measured-v3.md)) showed that D23's appeal panel, drawn from the families that did not judge, overturns 81 % of the correct rejections appealed to it, and that a panel of the seated families alone overturns nothing.
+
+**Decided by the owner, 2026-11-15:**
+- **the appeal as D23 designed it is dropped.** Wrong rejections get a challenge that does not hand the decision to weaker judges: **the seated judges decide the appeal** (D24);
+- **the solver's deposit (D22) is on hold.** The owner is against it and wants the market's own incentives to stop bad fixes. It is no longer "decided"; its share is not to be read as 2,500 or as 4,000 until he rules (D28).
+
+**Proposed, not decided, each part for the owner to accept, change or reject** (D24–D28; simulated in [`open-validators-measured-v4.md`](../../../reports/open-validators-measured-v4.md), 40 seeds, exploratory):
+
+| # | Proposed rule | What the simulation says | Recommendation |
+|---|---|---|---|
+| D24 | An appeal needs a test (fails on the base code, passes with the fix) and a stake; a fresh draw of the seated families decides | It restores as many wrongly rejected good fixes as the panel accepts (assumed 25–100 %). With no deposit, a solver of bad fixes loses by appealing while the panel passes under about 1 in 5 of its tests (assumed); with a deposit of 2,500, under about 1 in 7. Above that it gains | adopt, with the stake at the larger of $5 and 10 % of the bounty, **on the condition that task 11.3 measures the two rates** |
+| D25 | A contender may sponsor an appeal | A sponsor of every rejection loses in every row, and so does an honest sponsor unless its model is clearly better than the seated one and its share is 2,500. It seats a better newcomer in 2–5 % of runs on fixes the tests fail (50–62 % with six shadows a draw), and in 0–12 % on fixes that pass them | adopt only as a permission; do not count on it for seating |
+| D26 | Known-answer issues score every family | At 5 % a better newcomer is seated in 95 % and 68 % of runs by week 41–44; at 10 %, in 100 % and 92 % by week 25–28, for $81 and $163 of checks a year. At 2 % nothing changes within a year | adopt at 10 %, **if a source of known answers with no privileged author exists** (#136: not designed) |
+| D27 | While fewer than three families can judge, a second draw from them decides a challenge | Verdicts never final fall from 23.6 % and 23.0 % to 0.1 % and 0.0 % under v3's seats, and from 2.7 % to 0.0 % under seats by rank | adopt |
+| D28 | The deposit is held until the appeal period closes; the appeal stake is separate | Holding it opens no gain to a solver that tries an issue again. With no deposit at all, a solver of bad fixes gains unless about ten rival solvers each find a test 1 time in 4 | on hold with D22 |
+
+**What the stored verdicts cannot say:** how a judge reacts to a passing test. Both rates of D24 are assumed and swept, and every number that depends on them is conditional.
 
 ## Goals / Non-Goals
 **Goals:**
@@ -307,6 +352,7 @@ A panel voting on its own pay is a built-in cartel. So v3 splits the price into 
     - **Every unit, every validator (#141):** its own costs for the shared units (sandbox time, storage, gas), and **every model family's public list price** for tokens. A table missing a unit doesn't count.
     - **Why:** in #134, 3 validators of one family could set its token price (+$42 ± 22, the price at 1.16 × instead of 0.98 ×). With every family's list price posted by everyone, the gain disappeared (−$3 ± 14).
     - **An open-weight family** is posted at the price of a public hosted endpoint for it.
+    - **Families aren't listed** (D19): a table prices every family already priced, and may price new ones.
   - At the end of each `PRICE_PERIOD`, each unit's price moves toward the median of the latest tables, by at most `PRICE_STEP_MAX`, never above `PRICE_CAP_X` × genesis, and only if at least `MEDIAN_MIN_POSTERS` posted.
   - **For an even count, the median is the lower middle value** (`MEDIAN_LOW_EVEN`): it halved the inflaters' gain alone.
   - The median resists any minority. Moving it takes half the counting validators, which the caps and bonds make expensive.
@@ -452,6 +498,8 @@ v3 sets its own slashes; v2's `BAD_RECEIPT_SLASH_BPS` and `NO_REVEAL_SLASH_BPS` 
 
 Shadow judges aren't slashed for silence or withholding: a miss counts against their qualification's reveal rate.
 
+- **A reveal missed after the majority revealed (owner, 2026-11-13, option 2 of #227):** when a counted judge sealed but didn't reveal in time and the verdicts revealed with receipts already hold (k + 1) / 2 on one side (at the constitution tier, the threshold of 5 passes, or 3 fails), it pays `SEALED_NO_REVEAL_SLASH` and counts a miss as before, but isn't replaced: the verdict counts with the revealed majority. **Why:** a replacement seals after the others' reveals are public, so it can copy them; this removes that copying where it couldn't change the outcome. With no majority yet, the judge is replaced as before, and a revealed majority too weak for the bounty's (k, level) limit doesn't count this way. The cost: such a verdict carries fewer independent votes (scores and audits see the revealed ones), and a level C pass counted with a missing seat is treated as split, so it's audited.
+
 - **Why flat amounts, not a share of the bond (#141):**
   - v2's 5 % of the bond per missed seal, at 1 honest outage in 200 draws, cost an honest validator $2.05 a month against $0.74 of fees.
   - At a $1,250 bond it's $0.31 a draw, more than the fee's ceiling. So 88 % of market validators sat at $250 bonds, big bounties waited, and the fee froze at its ceiling.
@@ -508,6 +556,39 @@ Shadow judges aren't slashed for silence or withholding: a miss counts against t
 - **excluded:** counterfactuals (the seed fixed at the seal), "without levels" rows, and switches that restore #134's rules (`V1`) or round 1's (`V2R1`).
 - **round 3** counts the same attackers; the silence-slash sweep's rows are switches until ADR 0004 picks a value.
 
+### D18. v3 builds its own seals, receipts and bonds; attestation on devnets is simulated (owner, 2026-11-13)
+- **The decision:** group 3 starts now. It doesn't wait for #122, #85 5.5, 5.6 and 5.8 or #94 to land in v2 first.
+- **Why not in v2 first:**
+  - v2 is keyless and deployed. Seals on-chain, receipts and bonds in v2 would mean a v2.1 deployment (D15), and then building the same pieces again in v3.
+  - v3's specs already require them: `judge-panels` counts only verdicts sealed and revealed on-chain with their receipt, and `validator-admission` has the bonds and D16's slashes.
+- **Where each piece goes:**
+  - **seals, reveals and receipts** go in `Panels` (task 3.2), with the node's `onchain` transport as v3's default (task 4.1);
+  - **bonds and provable faults** go in `Validators` (task 3.1), with D16's amounts;
+  - **receipt challenges** go through the challenge panels (tasks 3.2 and 3.5).
+- **Attestation:** quotes are checked off-chain by the drawn panel, as before (Non-goals).
+  - On devnets, a `simulated` proof type stands in for a TEE: the node's quote comes from the dstack simulator.
+  - A deployment record may list `simulated` only for a devnet chain id (31337, 7193); the contracts refuse it on any other chain.
+  - On a devnet, `simulated` counts as level A, so the genesis rule, the all-TEE panels and the TEE-type cap can be exercised. It proves nothing about the hardware, and that's acceptable only because a devnet holds no real money (rule 1).
+  - Real attestation (AWS Nitro on the seats host, or a Phala dstack VM, #94's phase 2) is an outward step, taken only with the owner's approval.
+- **The judge check (#160) is the last evaluation before v3 goes to a test blockchain (owner, 2026-11-13).** Until then, v3 is built and tested with the fake judge on the devnets. A real model's accuracy as a judge (B1) stays unmeasured until #160 runs, after group 5 and before any deployment beyond the devnets.
+- **v2 stays frozen** and its integration suite keeps passing. Group 5 moves the suite to a panel interface, so both versions share the scenarios (task 5.0).
+
+### D19. Model families are open: ranked, not listed (owner, 2026-11-13)
+- **The decision:** v3 keeps no list of model families. Any family may register, and the market ranks them: the scores (D14) scale their pay, the minimum score stops drawing one that keeps getting outcomes wrong, and the family cap (D6) keeps any one model from deciding a panel alone. A model released after deployment competes without a new version or an ADR.
+- **Why:** the contract is open by rule. A list of families would be a gate somebody has to keep, and would exclude models by name rather than by how they judge. #222's first draft fixed the families at deployment, as v2 did, only because each family's token prices needed a starting value.
+- **The family's name:** the provider's model line, as its receipts name the model (`anthropic/claude`, `openai/gpt`, `google/gemini`, `meta/llama`, ...). It's what the cap and the scores group by. A receipt naming a model outside the declared family is already a false verdict (D16), so declaring a made-up name to slip past the cap costs the whole bond.
+- **A new family's first price:**
+  - the lower median of the values posted for it, once `MEDIAN_MIN_POSTERS` counting tables price it **and** at least that many come from validators of other families, so its own validators can't set it (#134's inflation attack);
+  - at most `PRICE_CAP_X` × the most expensive priced family's token price at that moment;
+  - then the normal rule: `PRICE_STEP_MAX` per period, never above `PRICE_CAP_X` × its first price.
+  - From the next period, a table must price it to count, as for every priced family (#141's rule).
+- **Before it's priced,** its validators aren't drawn, not even as shadows, so nobody is paid at a price that doesn't exist. The nodes post every family's public list price automatically (task 4.1), so this is about one period.
+- **Kept on purpose:** the minimum score (`SCORE_MIN`). It excludes by measured performance, not by name, protects the funders from a model that is consistently wrong, and a barred family returns through shadow verdicts on fresh blocks (D14).
+- **Alternatives rejected:**
+  - **families fixed at deployment** (v2, #222's first draft): a new model would need a new version;
+  - **families added by ADR:** a vote on which models may compete, which is exactly what the scores make unnecessary;
+  - **a new family priced at the cheapest or the median family's price until posted:** underpays an expensive model or overpays a cheap one, and still needs the other validators' word to correct it.
+
 ### Parameters
 All are fixed per version (entrenched). The starting values are proposals for the simulation to test (tasks 1.x, 6.x, 7.x and 8.x). Rows marked **#141** changed in round 1, rows marked **round 2** in round 2 and rows marked **round 3** in round 3; the old values are in the three tables after this one.
 
@@ -539,8 +620,9 @@ All are fixed per version (entrenched). The starting values are proposals for th
 | `TEE_CAP_FROM_K` (**round 2**) | 3 while at least `TEE_CAP_K3_TYPES` (5) TEE types are accepted, otherwise 5 (the host and family caps from k = 3) | with 3 TEE types, the cap at k = 3 lowered k on 39 % of growing draws; from k = 5, one type held the majority of 77 % of panels of 3 (D6) | growth; draws lowered by the caps; one-type majorities; three and five types, even and skewed |
 | `PRICE_PERIOD` | 1 day | quick enough to follow provider price changes; few enough updates to stay cheap | the fee finds the validators' cost |
 | `PRICE_STEP_MAX` | 25 % per period (unit prices) | v2's bound per update | inflating validators |
-| `PRICE_CAP_X` | 2 × genesis | a safety bound: never bound in #134 (best 1.68 ×), kept for tiny networks | inflating validators on a small network |
+| `PRICE_CAP_X` | 2 × genesis, or 2 × a new family's first price (D19) | a safety bound: never bound in #134 (best 1.68 ×), kept for tiny networks | inflating validators on a small network |
 | `MEDIAN_MIN_POSTERS` | 3, of tables that post every unit (**#141**) | a median of fewer is one validator's word | inflating validators on a small network |
+| `PENDING_PERIODS` | 7 periods (D19; owner, 2026-11-13) | a new family announced but not priced within 7 periods (a week at `PRICE_PERIOD`) leaves the pricing queue, and anyone can announce it again; bounds `FeesV3.roll`'s work on families nobody prices | a flood of made-up families announced to slow the roll |
 | `MEDIAN_LOW_EVEN` (**#141**) | the lower middle value | an absurd value can't pull it up (gap 15) | inflating validators |
 | `FEE_START` (**#141**) | `FEE_CEILING` | from $0.05, 28 of 40 runs collapsed | the fee finds the validators' cost |
 | `FEE_STEP` | 5 % per period, both ways | slow enough that a one-day spike doesn't swing it; it doubles in about 15 days of sustained shortage | the cartel, the spammer; `FEE_STEP_UP` 10 % |
@@ -622,6 +704,175 @@ All are fixed per version (entrenched). The starting values are proposals for th
 | `SILENCE_SLASH_BPS`, `SEALED_NO_REVEAL_SLASH_BPS` | none (a flat $5) | a switch: max($5, x % of the bounty), x = 0 until ADR 0004 | the 10 % bribe: +$311 ± 21 at $5 |
 | An upheld receipt challenge (judge-panels) | the spec: the verdict "doesn't count"; the code: the challenge panel decides | the code's reading, now in the spec | report v3's finding 4 |
 
+### D20. Seats go to the best-scoring families; the family cap applies only among near-equals (owner, 2026-11-14; values proposed)
+- **The rule:** a counted panel is drawn from the **seated** families: those whose score is at least `SCORE_MIN` and within `SEAT_MARGIN` (5 points) of the best-scoring family. Every other family is a **contender** (D21, D23).
+- **The family cap** ((k − 1) / 2 per panel, D6) applies only while at least `CAP_MIN_FAMILIES` (3) families are seated. With fewer, a panel may be one family's. The operator, host and TEE-type caps are unchanged.
+- **Why:** measured, a panel of the best family merges 6.0 bad fixes per 100 paid; adding the next two families under the cap gives 13.6, and v3 as designed 17.8. With one family qualifying and the cap kept, 82 % of submissions wait. A weaker model on a panel only outvotes a better one.
+- **Why a margin, not "the top one":** on fixes that pass the tests and are wrong, three families were within two points (75, 75 and 74 %). Near-equals should share seats, and then the cap does its job: no one model decides.
+- **What is lost:** D14's "diversity pays" and its protection against one model's blind spot. While one family is seated, a prompt injection that fools it decides the panel. Disputes (D21) are the remaining defence, and #160's injection arm (exploratory) found that injected fixes pass more often. This is a named trust point until a second family is within the margin, and the owner accepted it (2026-11-14).
+- **`SEAT_MARGIN` and `CAP_MIN_FAMILIES` are proposed values:** task 10.1 sweeps them.
+- **Alternatives rejected:**
+  - **keep the cap and lower the bar:** it seats families right half the time (finding 1);
+  - **every judge must pass:** the top two families together merge 5.6 per 100 paid but reject 30 % of good fixes;
+  - **votes weighted by score:** rejected in D14 and still rejected; a wrong score would change verdicts directly.
+
+### D21. A failing test reverses a pass (#236; values proposed, two rates to measure)
+- **The rule:** within a passing verdict's window, anyone may post a test and the published stake (`EVIDENCE_STAKE`). The official checker image runs it in the sandbox against the fixed code.
+  - **The machine's part:** the test fails on the fixed code, twice, and touches nothing but test files.
+  - **The judged part:** a challenge panel (D4's sizes) answers one narrow question: does this test state what the issue asks for? It doesn't re-judge the fix.
+  - **Upheld:** the verdict is reversed, the fix isn't paid, and the disputer gets its stake back and the reward (D22).
+  - **Rejected:** the stake goes to the solver, for the delay.
+- **Who disputes:** anyone, with any model, validator or not. The measured cover is in measured-v2 §2: of the 18 bad fixes Opus passed, the other eight models failed 11.
+- **Why a test and not a second opinion:** finding 4. A model asked again repeats itself, so a panel of the same models is no check. A failing test is something a machine can run.
+- **Why it pays to contend with a good model:** a contender pays for every fix it searches and is paid per reversal. Opus contending against a GPT-6.1 panel searches 2.4 fixes per reversal; six open-weight models against Opus search 35.
+- **No slash for the judges that passed the fix.** A wrong honest verdict is not a provable fault (D16). They lose score (D23), not bond.
+- **The existing challenge** (re-run the check, D4 and D13) stays for fabricated receipts, where a re-run does prove the fault.
+- **Assumed, to be measured before any contract (task 10.3):** how often a contender finds a failing test for a bad fix, and how often the panel accepts a test that states the wrong requirement. Accepted 1 time in 20, wrong tests reject another 3 % of good fixes.
+
+### D22. A solver's deposit, lost on rejection, to the issue's bounty (owner, 2026-11-14; share proposed; **on hold, owner 2026-11-15**)
+- **On hold (owner, 2026-11-15):** the owner is against a solver's deposit and wants the market's incentives to stop bad fixes. Nothing below is decided until he rules; D28 has what the simulation says with and without it.
+- **The rule:** a submission posts `SOLVER_DEPOSIT_BPS` (2,500: a quarter of the bounty) beside its check deposit. It is returned when the fix is paid.
+  - **Rejected by the panel:** the deposit is added to the issue's bounty, so the next solver is paid more for the same issue. It never goes to the judges, who would then earn by rejecting, nor to the funder or reporter, who could be the attacker (as D7's ADR deposit).
+  - **Reversed by evidence (D21):** the deposit is the disputer's reward, with `EVIDENCE_REWARD_BPS` (1,000) of the bounty.
+- **Why:** finding 5. A bad fix that passes is paid the bounty, and one that fails costs about a dollar. The deposit at which a bad fix stops paying is p / (1 − p) of the bounty, with p the share of bad fixes the seated panel passes: about $19 on an $86 bounty at Opus's 18 %.
+- **What it costs honest solvers:** a good fix is rejected 6 % of the time by Opus, so $1.13 a fix on average, less what an appeal returns (D23). With a judge that rejects 30 % of good fixes the same protection costs $6.14, which is one more reason to seat the best family.
+- **Why a fixed share and not one computed from the panel's rate:** the rate isn't known on-chain without known answers, and a fixed share is quotable before the attempt (check-pricing, "An attempt is charged the prices it was quoted").
+- **To size (task 10.1):** the share, on the measured verdicts, against the bad-fix solver and v3's judged spammer, with the market fee.
+
+### D23. Final outcomes come from evidence and appeals; a new family starts as a contender (owner, 2026-11-14; values proposed)
+- **The score rule is D14's, unchanged:** balanced agreement with final outcomes over the last `SCORE_WINDOW` verdicts. What changes is what makes an outcome final.
+  - **A pass** is final when its window ends with no dispute upheld (D21).
+  - **A rejection** is final when its appeal period ends with no appeal, or the appeal fails.
+- **Superseded 2026-11-15 by D24:** the appeal panel described in this bullet and in "The appeal panel includes contenders" below is dropped (owner). The rest of D23 stands.
+- **The appeal (as it stood):** the solver of a rejected fix may appeal once, within `APPEAL_WINDOW`, leaving its deposit at stake. A panel of `CHALLENGE_K[k]` validators drawn from the families that did not judge it, contenders included, judges the fix afresh.
+  - **Upheld:** the fix passes, its window runs with disputes open as for any pass, and when it is final the rejecting judges are scored as wrong.
+  - **Rejected:** the deposit goes to the bounty as in D22.
+- **Why both sides:** evidence corrects only passes. Fed by evidence alone, GPT-6.1, which rejects 30 % of good fixes, scores 76–89 % against 65–75 % on known answers. An appeal is the known answer for a rejection.
+- **Contenders are scored the same way,** on their shadow verdicts (D14's blocks). A contender is seated when a block reaches the seat rule of D20, and a seated family that falls outside it becomes a contender.
+- **A new family starts as a contender,** not neutral: it shadow-judges and earns its seat on a block. D14's neutral start drew an unmeasured model at once, and five of the nine models measured pass 70–92 % of bad fixes.
+  - **At genesis** the genesis validator's family is seated, since someone must judge first.
+- **Past cases are public, so a replay proves nothing:** a contender's seat is earned on live shadow verdicts only.
+- **The appeal panel includes contenders (owner, 2026-11-14),** on the condition the simulation sets: task 10.1 must show that a solver of bad fixes doesn't gain by appealing to weaker models. If it does, the alternatives are the seated families' own next draw, or an appeal that needs every judge to pass, and the question returns to the owner.
+- **Not simulated yet (task 10.1):** the appeal and its cost to honest solvers.
+- **Canaries (#136)** remain the cleaner source of known answers on both sides, and remain a research item.
+
+### D24. The seated families decide an appeal, on new evidence (owner, 2026-11-15: the seated judges decide; the evidence and the stake are proposed)
+- **Decided:** a rejected fix's one appeal is judged by the seated families. No contender sits on it.
+- **Proposed: the appeal needs new evidence.** A test that fails on the base code and passes with the fix, run twice each way by the official checker image, touching test files only (D21's machine, pointed the other way), and a stake.
+  - **The panel:** a fresh draw of the seated families, of D4's size where it can be drawn outside the original panel; otherwise a fresh draw of the original size in which the original judges may sit again. It is a new judgment on new evidence, not a second opinion. Without this, 380 of 383 appeals a year found no panel with one family seated (10.1).
+  - **The panel sees the test and its results,** and re-judges the fix. A rejection stands unless the panel passes it.
+  - **Upheld:** the fix enters a passing verdict's window, open to disputes (D21), and the judges that rejected it lose score.
+- **Why evidence:** a model asked again repeats itself (finding 4), so the same family with nothing new overturns nothing: 0 % of wrongly rejected good fixes restored (10.1).
+- **What the machine's part does not do:** it stops nothing by itself. The author of a bad fix can always write a test that fails before and passes after. The panel's judgment is the whole filter, and #160's verdicts do not say how a judge reacts to a passing test.
+- **Assumed, swept (report v4, sections 2 and 3):** the share of wrongly rejected good fixes the panel passes on appeal (25–100 %), and the share of correctly rejected bad fixes it passes when shown a passing test (0–50 %).
+  - at 50 % and 5 %, good fixes wrongly unpaid fall from 8.9 % to 6.1 % (the tests fail them) and from 9.0 % to 6.2 %, and bad fixes merged per 100 paid rise from 4.5 to 5.0 and from 8.5 to 8.7 if every rejected solver appeals;
+  - with no deposit, a solver of bad fixes that appeals every rejection loses $1,766 ± 114 and $1,375 ± 89 a year at 5 %, breaks even near 20 % (+$153 ± 194 and +$85 ± 178), and gains $3,835 ± 302 and $2,927 ± 284 at 50 %. With a deposit of 2,500 it breaks even near 15 %: an upheld appeal returns the deposit too, so the prize is larger;
+  - ten rival solvers each finding a test 1 time in 4 make appealing lose at every rate tried (−$1,025 ± 62 at 50 %).
+- **The stake (proposed):** `APPEAL_STAKE`, the larger of $5 and 10 % of the bounty, separate from any deposit. It returns when the appeal passes or finds no panel. Lost, it goes to the sponsors' pool, never to a judge. The appellant pays the panel's checks.
+  - **Why 10 %:** an appeal pays above stake / (stake + what it wins). With no deposit and test disputes reversing half the passes it wins, that is about 1 in 6 at 10 %. $5 flat lets the appealing solver break even at 1 in 10; 25 % holds to about 1 in 4 and costs an honest solver more.
+- **Alternatives rejected:** D23's panel of other families (81 % of correct rejections overturned); every appeal judge must pass (31–39 %); the seated families with no evidence (restores nothing).
+- **To measure before any contract (task 11.3):** both rates, on labelled fixes.
+
+### D25. A contender may sponsor an appeal (proposed)
+- **The rule:** a validator of an unseated family may appeal in the solver's place for a fix its model passed: it posts the test and the stake and pays the panel's checks. Still one appeal a fix; the solver's own appeal comes first. When the fix is paid the sponsor gets `SPONSOR_REWARD_BPS` (1,000) of the bounty, out of the bounty.
+- **How it earns rank:** as a successful D21 dispute does, through the final outcome. An upheld appeal makes the outcome a pass, so the sponsor's family is right on its shadow verdict and the seated family is wrong on its counted ones. Nothing else is added to its score.
+- **What the simulation says (report v4, section 4):**
+  - **the appeal moves the score whoever files it.** With solvers appealing their own good fixes and no sponsor, a better newcomer (Opus 5.5 into a network GPT-6.1 seats) is seated in 5 % ± 7 of runs; with sponsorship alone, 2 % ± 5. With six contender shadows a draw: 62 % ± 16 and 50 % ± 16, around week 33. Where three families are level: 12 % and 8 %;
+  - **it does not pay at 1,000.** An honest contender running Opus 5.5 against a GPT-6.1 panel nets −$671 ± 80 and −$1,601 ± 70 a year at 1,000, and +$1,257 ± 130 and +$531 ± 116 at 2,500. A contender no better than the panel loses at both;
+  - **a sponsor of every rejection loses in every row** (−$3,487 ± 84 to −$101 ± 88), but while it loses it gets 6 to 78 more bad fixes paid a year.
+- **Recommendation:** allow it; it costs the network nothing when the panel judges tests well. Do not rely on it to seat a better family: D26 does that.
+
+### D26. Known-answer issues score every family, seated or not (proposed)
+- **The rule:** at `KNOWN_RATE`, an issue whose outcome is already known is judged beside a live submission by one validator of every registered family, drawn by the seed. Each verdict is recorded against the known outcome. Once a family holds `KNOWN_MIN` (50) of them, the seat rule (D20) reads its balanced agreement with the known outcomes over its last `KNOWN_WINDOW` (200), in place of its agreement with the network's own outcomes or its shadow block.
+- **Is it D13's audit?** No, though it reuses its machinery. An audit re-runs a live submission whose truth is unknown, by one validator. This takes D13's draw by the seed and its funding from the fees, and adds what an audit lacks: a known answer and every family.
+- **What the simulation says (report v4, section 5):**
+  - a better family is seated from a network a strict family started: on fixes the tests fail in every run, first by week 34 ± 2 at 5 %, 18 ± 1 at 10 % and 9 at 20 %; on fixes that pass them in 80–98 % of runs. At 2 % nothing changes within a year: 31 known-answer issues are under `KNOWN_MIN`;
+  - the newcomer of 10.1 that was never seated is seated in 95 % ± 7 and 68 % ± 15 of runs at 5 %, and in 100 % and 92 % ± 8 at 10 %;
+  - the checks cost $81 ± 3, $163 ± 5 and $327 ± 7 a year at 5, 10 and 20 % with the fee at its floor ($0.05, $0.10 and $0.21 a submission); about 2.6 times that with the fee at $0.24;
+  - where three families are level, a window of 200 is too noisy to seat all three at once: they hold the seats 80 %, 44 % and 39 % of the year at 10 %.
+- **Assumed, and the whole difficulty:** that known answers exist with correct labels, and that a judge cannot tell a known-answer issue from a live one. D14 named the problem: someone who writes them holds a privileged role. Keyless known answers (#136) are a research item with no design. **This rule cannot be adopted before task 11.6.**
+- **Recommendation:** adopt at 10 % once 11.6 names a source. It is the only rule here that reliably seats a better newcomer.
+
+### D27. Among few families, a second draw decides a challenge (proposed)
+- **The rule:** while fewer than `CAP_MIN_FAMILIES` (3) families can judge a fix, a challenge that cannot draw D4's larger fresh panel is judged by a second draw of the original panel's size from those families, the original judges not excluded. The operator, host and TEE-type caps apply.
+- **Why:** D4 asks for a fresh panel larger than the original. With one family on seven seats there are rarely seven more, and the challenge waits for good.
+- **What the simulation says (report v4, section 6):** verdicts never final fall from 23.6 % ± 2.5 and 23.0 % ± 2.4 to 0.1 % and 0.0 % under v3's seats, and from 2.7 % ± 0.2 to 0.0 % under seats by rank with one family. With three families seated the rule does not apply and 0.3 % ± 0.1 stay open; the second draw whenever the larger panel cannot be drawn closes those too (the alternative, `SECOND_PANEL` "always").
+- **What it is not:** a check. The same family repeats its verdict, so the second draw confirms it. It ends the wait; it corrects nothing. Wrong verdicts are corrected by tests (D21, D24).
+- **Recommendation:** adopt; consider "always".
+
+### D28. The solver's deposit around an appeal, and its size (proposed; D22 on hold, owner 2026-11-15)
+- **Proposed, if the deposit stays:**
+  1. a rejected fix's deposit is held, not paid to the issue's bounty, until the appeal period closes;
+  2. no appeal in the period: it goes to the issue's bounty, as D22 says;
+  3. the appeal passes: it returns to the solver with the bounty, and the appeal stake returns to whoever posted it;
+  4. the appeal fails: it goes to the issue's bounty, and the appeal stake goes to the sponsors' pool;
+  5. if the issue's bounty was already paid when the deposit is released, it goes to the sponsors' pool.
+- **Holding it opens no gain** (report v4, section 3): a solver that tries each issue up to 21 times earns +$13,019 ± 1,825 with the deposit held against +$12,152 ± 2,283 without (2,500, fixes that pass the tests), and loses in every row at 4,000. Submitting again while the deposit is held earns less, not more.
+- **The share: on hold.** 10.1 found 2,500 too low on fixes that pass the tests and proposed 4,000. That stays a finding, not a recommendation: the owner is against the deposit.
+- **With no deposit (report v4, sections 7 to 9):**
+  - a solver of bad fixes gains $2,741 ± 204 and $6,126 ± 370 a year from contenders' disputes alone;
+  - rival solvers as disputers (D21: anyone may dispute) bring that to nothing only at about ten rivals each finding a failing test 1 time in 4 (assumed), for Opus 5.5 and for GPT-6.1 alike;
+  - with per-issue bounties and no deposit, a rival's search of every passed fix does not pay at a reward of 1,000 of the bounty (−$0.10 to −$0.35 a search), so those ten rivals are not paid to look;
+  - trying the same issue again is the hole only a cost per attempt closes. Report v4 names the non-money limits and says which the simulation supports.
+- **A shared pot split by standing fixes** (the owner's idea, 2026-11-15) pays the disputer from the reversed fix's share with no deposit. Report v4, section 10, tests it as a hypothesis on expected values only; it is not part of this change.
+
+### D29. Reputation before large claims (PROPOSED, report measured-v5; no deposit)
+- **The rule:** an identity's open claims (the bounties of its fixes not yet final) add up to at most `REP_BASE` + `REP_MULT` × its reputation. Reputation is the sum of the bounties of its fixes paid and never reversed. A claim over the cap is refused before it is judged and costs nothing. A pass reversed by a test takes `REP_LOSS_X` × its bounty off the reputation.
+- **Proposed values:** `REP_BASE` $50, `REP_MULT` 1, `REP_LOSS_X` 2 (`REP_ON_REVERSAL` "minus").
+  - The rule fixed before the runs reset reputation to 0 on a reversal. The sweep showed the reset costs honest solvers $637–773 a year (Opus 5.5) through their own reversed mistakes, and "minus 2×" costs $58–112 with attackers unchanged. That choice is post hoc (report v5, sections 2 and 6).
+- **Only with D30.** Alone it closes nothing with 1–3 active honest solvers (report v5, section 2).
+- **What the simulation says (report v5, sections 5 and 6), with D30, no deposit, each active honest solver finding a failing test 1 time in 4 (assumed):**
+  - with 3 or 10 active honest solvers, every attacker tried (solver of bad fixes, free identities, retrier on one or fresh identities, long con, reputation sale) earns at or below its twin, for Opus 5.5 and GPT-6.1 seated alone and both kinds of bad fix;
+  - with 1, gains of $237–3,870 a year per attacker remain; a deposit of 2,500 closes them in the post hoc rows, 1,000 does not;
+  - at a find rate of 10 % it fails with 3 solvers too;
+  - an honest newcomer may claim a median bounty within a week.
+- **Not to raise:** at a base of $100, free identities gain again (+$670 to +$2,075 a year).
+- **What it needs that the simulation does not have:** identities on chain with their reputation; the claim registered before judging; reversals by test recorded against the identity. A pot share must not be capped by it: capping a window's share at the window's close confiscated $18,000–20,000 a year from honest solvers (report v5, section 4).
+
+### D30. A fee that covers the judges' cost (PROPOSED, report measured-v5)
+- **The rule:** every submission pays `JUDGE_FEE` on arrival, never refunded and never more on rejection, in place of its panels' per-check charges. It is set to the measured cost of judging: every check the network paid for in a period (counted panels, audits, challenge and test panels), at the break-even service fee plus usage, over the submissions.
+- **Proposed value:** re-measured each period. On report v5's base network: $5.03 a submission (7.6 checks at $0.53 + $0.13), against $0.96–1.55 charged now at the fee's floor.
+- **Why:** it is the price of judging, not a defence. Alone it stops no attacker with one active honest solver; stopping the solver of bad fixes by fee alone would take $8.71–62.54, which is a deposit honest solvers pay on every fix. With D29 it bounds each attempt's margin, which is what makes the cap hold from 3 solvers.
+- **Its cost:** $3.48–4.07 more a submission. With GPT-6.1 seated alone, which rejects 30 % of good fixes, an honest solver's year turns negative with 3 or more solvers (−$448 and −$1,000).
+
+### D31. A validator's capacity, and a repository's cap (PROPOSED, #253, report measured-v6)
+- **The rule:** a validator takes at most `MAX_CHECKS_PER_HOUR` checks in any trailing hour. A counted draw skips a validator at its capacity, as it skips a non-responder, with no slash. **k is set from every eligible validator and is never lowered for capacity:** with too few free validators the submission waits and is drawn again later; nothing fails. Audits, challenge and appeal panels count toward the hour but are never refused for it, so spam can't suppress them.
+- **A repository's cap:** at most `REPO_CHECKS_PER_HOUR` counted checks drawn for one repository in any trailing hour; its submissions wait beyond it.
+- **Why k is never lowered:** otherwise spam would shrink honest fixes' panels, trading a delay for a security loss.
+- **What the simulation says (report measured-v6, simulation A; 40 seeds, Opus 5.5 and GPT-6.1 seated alone, no fee, junk from free identities):**
+  - **a capacity is a spend limit, not a spam defence:** a validator runs about 24 × N checks a day under spam (N = 5: 118 checks, $2.36–14.18 a day at $0.02–0.12 a check, against $4.78–28.66 with no capacity at 10 junk fixes an hour and 7 validators);
+  - once spam exceeds validators × N, the backlog never clears: in arrival order every honest fix waits behind the junk (100 % over 24 hours, 90 % withdrawn at 7 validators, N = 5, 10 junk fixes an hour);
+  - the rule fixed before the runs names N = 10 (the smallest that holds at 7 validators against 1 and 10 junk fixes an hour, with D32), but at 7 validators that is the spam's own demand, so it caps nothing;
+  - a repository's cap of 7 counted checks an hour confines spam aimed at one repository (0.4–0.6 % of honest fixes withdrawn, spend down from $14.18 to $3.27 a day) and does nothing against spam spread over every repository.
+- **Post hoc (report measured-v6, "the newcomer lane"):** at the testnet's launch, with one repository, a repository cap is a network-wide cap: 7 counted checks an hour judges one panel an hour, and failed the rule even at 1 junk fix an hour (newcomers' fixes 97 % over 24 hours, all honest fixes 4.6–6.9 %).
+- **Proposed values:** `MAX_CHECKS_PER_HOUR` from what a validator will spend (5: about $14 a day at the dearest model call); `REPO_CHECKS_PER_HOUR` 7 **only once there are several repositories, none at the launch with one** (or one at or above the network's capacity); with D32, and with identities that cost something for a newcomer's first fix (D32).
+
+### D32. The queue's order under a backlog (PROPOSED, #253, report measured-v6)
+- **The rule:** waiting submissions are drawn first for identities holding standing reputation (D29) when they submitted, in arrival order within each class (`QUEUE_ORDER` "reputation"); the alternative is plain arrival order ("fifo").
+- **What the simulation says (report measured-v6):** under spam beyond the network's capacity, established solvers' fixes are drawn within the hour (median 0.6 hours, about 0 % over 24 hours) where arrival order makes every honest fix wait; newcomers' fixes are withdrawn instead (85–87 % at 7 validators, N = 5, 10 junk fixes an hour), and a newcomer never earns the reputation to move up.
+- **What it does not cover:** a newcomer's first fix waits behind junk from fresh identities; a reputable identity's junk is served first, bounded only by D29's cap on its open claims (about 28 junk fixes at once for an identity of $5,000; no honest fix waited).
+- **A newcomer lane does not fix it (post hoc, report measured-v6, "the newcomer lane"; switches `NEWCOMER_LANE`, `LANE_PER_ID_DAY`, not proposed):** a share of each validator's capacity reserved for fixes without reputation, first come first served, passed the rule at no share (10, 25, 50 %) and no capacity (5, 10), because junk from free identities queues in the lane with the newcomers. At 7 validators and 10 junk fixes an hour it withdrew more honest fixes than no lane (15–19 % against 8.7–11.1 %). A per-identity rate refuses nothing when identities are free.
+- **What lets a newcomer through: identities that cost something.** Then D29's $50 of room per reputationless identity bounds its junk in flight: with a pool of 10 identities, reputation first with a lane of 25 % held in every cell run (7 and 15 validators, one repository, with or without its cap), and so did a pool of 10 with no rate. How a testnet identity costs something (one per account at the faucet, a charge in test ETH) is task 13.7.
+
+### D33. Validators choose repositories: allow and deny lists, respected everywhere (owner, 2026-11-17, #252; PROPOSED)
+- **The rule:** a validator may publish an allow list and a deny list of repositories. Every draw (counted panels, shadows, audits, challenge and appeal panels, the k = 1 hold's count) keeps only validators that allow the submission's repository (no allow list: every repository) and don't deny it (`REPO_LISTS`).
+- **Enclaves only (owner, #252):** with levels A and B only, choosing a repository can't buy answer shopping or a fabricated receipt unless a TEE type is broken; report measured-v6 simulates that case.
+
+### D34. A repository's minimum of eligible validators, and its stake cap (PROPOSED, #252, report measured-v6)
+- **The rule:** a repository lists bounties only while at least `REPO_MIN_ELIGIBLE` validators are eligible for it, counted with at most (`REPO_MIN_ELIGIBLE` − 1) / 2 of any one TEE type (and, once `CAP_MIN_FAMILIES` families are seated, of any one family); otherwise its fixes are not listed and cost nobody anything.
+- **The option:** a listed bounty capped at `REPO_STAKE_X` × the bonded stake of the repository's eligible validators outside the TEE type that holds the most of it.
+- **What the simulation says (report measured-v6, simulation B; Opus 5.5 seated alone, 28 honest validators, the target allowed by h of them):**
+  - a broken TEE type's validators allow-listing a small repository gain +$3,732 to +$3,950 a year with h = 1 and +$1,163 to +$2,762 with h = 3 (fixes the tests fail), because the caps step k down to 3, where one of three TEE types may hold every seat; from h = 5 the per-TEE-type cap holds them at or below their twins;
+  - **M = 5 (at most 2 of one TEE type counted)** keeps them at or below their twins in every cell on fixes the tests fail, and removes the broken TEE's part on fixes that pass the tests (the rest there is report v5's solver of bad fixes, which D29 addresses; D29 with M = 5 was not run together); M = 3 does not (h = 3: +$1,163 and +$2,762). The price: repositories allowed by fewer than about 5 honest validators across three TEE types list nothing;
+  - the stake cap at X = 0.1 changes nothing that matters (+$3,422 with h = 1);
+  - **silence is not stopped by any minimum:** it loses money but cuts the target's good fixes healed from 87–91 % to 3–6 % (h = 1), 77–82 % (h = 3) and 82–86 % (h = 5), mostly through counted panels whose sample runs out of replacements and that nothing releases (3–28 % of the target's fixes stuck). A rule that ends such a panel is needed (task 14.2).
+- **Proposed values:** `REPO_MIN_ELIGIBLE` 5, `REPO_STAKE_X` 0 (not adopted), with D29 and D30.
+
+### The pot by impact (report measured-v5; NOT proposed)
+- Simulated in the network: equal units, and an impact weight correlated 0.3, 0.6 and 0.9 with true impact (assumed; #247 is not built).
+- **Not proposed now.** At correlation 0.6 an inflater gains $13,600–15,000 a year at an assumed $20 a fix, and a farmer of the cheapest issues $6,575; inflating stops paying only above $50–100 a fix. The pot also raises the solver of bad fixes' gain over bounties. It pays honest solvers to search ($1–7 a pass, against $0.06–0.37 with bounties).
+- **Revisit when #247 is measured:** correlation near 0.9, and inflating a fix's signal by a standard deviation costing more than about $75 or being caught.
+
 ## Risks / Trade-offs
 - **[k = 1 trusts one validator]** → Mitigations (#141):
   - the bounty cap per k ($50 at level A);
@@ -665,13 +916,33 @@ All are fixed per version (entrenched). The starting values are proposals for th
 ## Migration Plan
 - **Order of work:**
   1. simulation (task group 1), then its re-run with #141's rules (group 6), then the round-2 re-run (group 7), then round 3's criteria and sweeps (group 8), then the parameters ADR (group 2);
-  2. contracts, after bonds and challenges (5.8), seals and receipts on-chain (5.5/5.6, #122) and attestation (#94);
+  2. contracts, building v3's own seals, receipts, bonds and slashes, with attestation simulated on devnets (D18; owner, 2026-11-13);
   3. node and kit;
   4. a devnet deployment beside v2.
 - **v2 keeps running** for the demo. v3 is deployed as a new version, its bounties open in v3, and v2's finish in v2 (D15).
 - **Rollback:** a new version, as D15 says. There's no switch, by design.
 
 ## Open Questions
+- **Decided 2026-11-15 (#236):** D23's appeal panel is dropped; the seated judges decide an appeal (D24). The solver's deposit (D22) is on hold.
+- **For the owner, after task 11.1 (#236), each to accept, change or reject:**
+  - D24: that an appeal needs a test and a stake, the stake's size (the larger of $5 and 10 % of the bounty) and where a lost stake goes (the sponsors' pool);
+  - D25: sponsorship, and `SPONSOR_REWARD_BPS` (1,000 does not pay an honest sponsor; 2,500 does when its model is better);
+  - D26: known-answer issues, `KNOWN_RATE` (10 % proposed), and whether to wait for #136;
+  - D27: the second draw, and whether it applies only among few families or always;
+  - D28 and D22: whether there is a deposit at all; if so its share and the hold; if not, which limit stands in for it;
+  - whether to spend a paid run on D24's two rates (task 11.3), without which D24's safety is an assumption.
+- **For the owner, after task 12.1 (#236, report measured-v5), each to accept, change or reject:**
+  - D29: the reputation cap, its base ($50), its multiplier (×1) and what a reversal costs (2 × its bounty, not a reset);
+  - D30: the judges' fee at measured cost ($5.03 a submission on the base network), in place of per-check charges;
+  - the pot by impact: not proposed until #247 is measured;
+  - D22 again, on a narrower question: R+F needs no deposit with 3 or more active honest solvers finding a test 1 time in 4 (assumed); with one, gains of $237–3,870 a year remain and only about 2,500 closed them. Whether to accept that, keep a deposit, or keep one only while a repository has fewer than three active solvers (not simulated).
+- **For the owner, after task 10.1 (#236):** `EVIDENCE_REWARD_BPS`, `EVIDENCE_STAKE`, `SEAT_MARGIN`, `CAP_MIN_FAMILIES` and `APPEAL_WINDOW`. `SOLVER_DEPOSIT_BPS` is on hold (2026-11-15), and the appeal panel was answered on 2026-11-15 (D24).
+- **Decided 2026-11-14 (#236):**
+  - one family may hold every seat while it is more than `SEAT_MARGIN` ahead (D20), with the blind-spot trust point named;
+  - a rejected fix's deposit goes to the issue's bounty (D22), not to the sponsors' pool (the deposit itself: on hold since 2026-11-15);
+  - the appeal panel is drawn from the families that didn't judge the fix, contenders included (D23), subject to task 10.1 (**dropped 2026-11-15**: 10.1's condition was not met);
+  - ADR 0004 is replaced by a new ADR once group 10's runs are in: its bonds and windows were sized on 1.1 bad fixes per 100 paid.
+- **A shared graph of code, tests, fixes and outcomes** as context for judges and contenders, and for merit (#186), is a separate proposal (owner, 2026-11-14). It doesn't change D20–D23.
 - The dollar values in the k table and `BOND_FLOOR` are starting points. The simulation sets them, and the owner confirms them in an ADR (task 2.1). This doesn't change the structure.
 - The randomness beacon (drand, a VRF), if the L2 chosen at D1 makes block hashes weak. It sits behind D3's interface either way.
 - Keyless canaries for the scores (D14, #136): whether mutations of past merged fixes, generated from the chain's seed, can stay indistinguishable from real submissions. The scores work without them; canaries would make them sharper.
@@ -682,6 +953,11 @@ All are fixed per version (entrenched). The starting values are proposals for th
   - whether a challenge panel should exclude the validators that judged the same solver's other pending fixes (round 3, finding 3: proposed, not decided);
   - the value of an ADR to a coalition that `ADR_DEPOSIT` is sized for ($1,000 in the simulation);
   - the TEE types for the deployment record, confirmed by region (D6's list is from knowledge, not checked against vendor documentation).
+- **For the owner, after tasks 13.1 and 14.1 (#253, #252, report measured-v6), each to accept, change or reject:**
+  - D31: a validator's capacity as a spend limit (5 an hour proposed; the rule fixed before the runs named 10, which at 7 validators caps nothing), and a repository's cap of 7 counted checks an hour once there are several repositories (none at the launch with one: post hoc, it fails there even at 1 junk fix an hour);
+  - D32: reputation first, and how a newcomer's first fix gets through under spam: not a lane (task 13.6, post hoc: no share passes), but identities that cost something on the testnet (task 13.7);
+  - D33 and D34: allow and deny lists with a minimum of 5 eligible validators per repository, at most 2 of one TEE type counted, only with D29 and D30; repositories below it list no bounties;
+  - what ends a counted panel that can never complete (silence on a small repository leaves 3–28 % of its fixes stuck).
 - **Decided 2026-11-03:**
   - level C is off at launch, so answer shopping is a trust point only once an ADR switches C on (D10);
   - one vendor's types count separately: Intel's SGX and TDX may together hold a k = 3 majority once five types are accepted. The cap counts types, not vendors; more chip makers are expected to balance this over time;

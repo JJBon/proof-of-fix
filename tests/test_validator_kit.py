@@ -58,6 +58,8 @@ class FakeRpc:
             q = params[0]
             assert q["address"] == RACE
             lo, hi = int(q["fromBlock"], 16), int(q["toBlock"], 16)
+            if isinstance(q["topics"][0], list):  # bot_work()'s (#210): none here (tests/test_watcher_bot_work.py)
+                return []
             if q["topics"] == [watcher.COMMITTED_TOPIC]:
                 return [log for log in self.logs if lo <= int(log["blockNumber"], 16) <= hi]
             assert q["topics"] == [watcher.STATE_CHANGED_TOPIC]
@@ -354,6 +356,198 @@ class WatcherTest(unittest.TestCase):
         ssm, ec2 = FakeSsm("150"), FakeEc2()
         self.assertEqual(watcher.run(ENV, rpc, ssm, ec2)["action"], "idle")
         self.assertEqual(ssm.value, "200")
+
+
+SEATS = ["0x" + "5%d" % i * 20 for i in range(6)]  # the seats host's six role seats
+SEATS_ENV = {**{k: v for k, v in ENV.items() if k != "SEAT_ADDRESS"}, "SEAT_ADDRESSES": ",".join(SEATS),
+             "STATE_PARAM": "/pof-seats/watcher/state"}
+
+
+class FakeBot:
+    """bot_work()'s stand-in: what's due each call, and the arguments it got."""
+
+    def __init__(self, due=None, state=None, error=None):
+        self.due, self.state, self.error, self.calls = due or {}, state, error, []
+
+    def __call__(self, env, rpc, race, start, end, state, now):
+        self.calls.append({"start": start, "end": end, "state": dict(state), "now": now})
+        if self.error:
+            raise self.error
+        return self.due, (self.state if self.state is not None else state)
+
+
+class SeatsWatcherTest(unittest.TestCase):
+    """The seats host's watcher (#152, platform#219): six seats on one instance, its API key from SSM, and the bot
+    service's work behind BOT_WORK (#210, PR #211's D7). The kit's own tests above run the same code unchanged."""
+
+    def test_a_draw_of_any_of_the_seats_starts_the_host(self):
+        for seat in (SEATS[0], SEATS[5]):
+            rpc = FakeRpc(200, [_log(1, 7, SOLVER, 180)], draws={7: [OTHER[0], seat.upper().replace("0X", "0x"),
+                                                                   OTHER[1]]})
+            ssm, ec2 = FakeSsm("150"), FakeEc2()
+            result = watcher.run(SEATS_ENV, rpc, ssm, ec2)
+            self.assertEqual((result["action"], result["submissions"], ec2.started), ("started", [7], 1), seat)
+
+    def test_a_draw_of_none_of_the_seats_leaves_the_host_stopped(self):
+        rpc = FakeRpc(200, [_log(1, 7, SOLVER, 180)], draws={7: OTHER})
+        ssm, ec2 = FakeSsm("150"), FakeEc2()
+        result = watcher.run(SEATS_ENV, rpc, ssm, ec2)
+        self.assertEqual((result["action"], ec2.started, ssm.value), ("idle", 0, "200"))
+
+    def test_a_won_bounty_judged_by_one_of_the_seats_starts_the_host_until_merged(self):
+        rpc = FakeRpc(200, [], draws={7: [SEATS[3]] + OTHER[:2]}, bounties={4: (2, 7)}, won=[(4, 2, 190)])
+        ssm, ec2 = FakeSsm("150"), FakeEc2()
+        self.assertEqual(watcher.run(SEATS_ENV, rpc, ssm, ec2, now=lambda: 10_000.0)["merges"], [4])
+        rpc.bounties[4] = (3, 7)
+        ec2.state = "stopped"
+        self.assertEqual(watcher.run(SEATS_ENV, rpc, ssm, ec2, now=lambda: 20_000.0)["action"], "idle")
+
+    def test_seat_addresses_parsing(self):
+        self.assertEqual(watcher.seats_of({"SEAT_ADDRESSES": f" {SEATS[1]}, {SEATS[0].upper().replace('0X', '0x')}\n"
+                                                             f"{SEATS[1]} "}), sorted([SEATS[0], SEATS[1]]))
+        # SEAT_ADDRESSES takes SEAT_ADDRESS's place; the kit's single seat still works alone.
+        self.assertEqual(watcher.seats_of({"SEAT_ADDRESSES": SEATS[2], "SEAT_ADDRESS": SEAT}), [SEATS[2]])
+        self.assertEqual(watcher.seats_of({"SEAT_ADDRESS": SEAT}), [SEAT])
+        self.assertEqual(watcher.seats_of({}), [])
+        with self.assertRaisesRegex(ValueError, "0x1234"):
+            watcher.seats_of({"SEAT_ADDRESSES": f"{SEATS[0]},0x1234"})
+
+    def test_a_malformed_seat_fails_before_any_state_is_touched(self):
+        rpc, ssm, ec2 = FakeRpc(200, [_log(1, 7, SOLVER, 180)]), FakeSsm("150"), FakeEc2()
+        with self.assertRaises(ValueError):
+            watcher.run({**SEATS_ENV, "SEAT_ADDRESSES": "oracle-0"}, rpc, ssm, ec2)
+        self.assertEqual((ssm.value, ec2.started), ("150", 0))
+
+    def test_the_api_key_from_an_ssm_parameter(self):
+        class Ssm:
+            calls = []
+
+            def get_parameter(self, **kw):
+                self.calls.append(kw)
+                return {"Parameter": {"Value": "pof-seats-watcher:k3y\n"}}
+
+        def no_secrets_manager():
+            raise AssertionError("the seats host's watcher never creates a Secrets Manager client")
+
+        ssm = Ssm()
+        key = watcher.rpc_api_key({"RPC_API_KEY_PARAM": "/pof-seats/watcher/rpc-auth"}, ssm, no_secrets_manager)
+        self.assertEqual(key, "pof-seats-watcher:k3y")
+        self.assertEqual(ssm.calls, [{"Name": "/pof-seats/watcher/rpc-auth", "WithDecryption": True}])
+        self.assertEqual(watcher.Rpc("u", key).headers()["Authorization"],
+                         "Basic " + __import__("base64").b64encode(b"pof-seats-watcher:k3y").decode())
+
+    def test_the_kits_secrets_manager_key_and_none(self):
+        class Sm:
+            def get_secret_value(self, SecretId):
+                assert SecretId == "arn:key"
+                return {"SecretString": "alice:k3y"}
+
+        self.assertEqual(watcher.rpc_api_key({"RPC_API_KEY_SECRET_ARN": "arn:key"}, None, Sm), "alice:k3y")
+        self.assertIsNone(watcher.rpc_api_key({}, None, None))
+
+    def test_an_empty_key_fails_without_printing_anything_of_it(self):
+        class Ssm:
+            def get_parameter(self, **kw):
+                return {"Parameter": {"Value": "  \n"}}
+
+        with self.assertRaisesRegex(RuntimeError, "empty"):
+            watcher.rpc_api_key({"RPC_API_KEY_PARAM": "/p"}, Ssm(), None)
+
+    def test_the_bot_hook_finds_nothing_until_the_bot_lands(self):
+        """#210: with no bot work on the chain, BOT_WORK=true changes nothing (tests/test_watcher_bot_work.py has the
+        work itself). No new block and nothing kept: not even a chain call."""
+        self.assertEqual(watcher.bot_work({}, None, RACE, 11, 10, {}, 0.0), ({}, {}))
+        rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("150"), FakeEc2()
+        result = watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2)
+        self.assertEqual((result["action"], ec2.started, ssm.value), ("idle", 0, "200"))
+
+    def test_each_kind_of_bot_work_starts_the_host_and_is_named(self):
+        for kind in watcher.BOT_KINDS:
+            rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("150"), FakeEc2()
+            bot = FakeBot(due={kind: [12]}, state={"seen": [12]})
+            result = watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2, now=lambda: 5_000.0, bot_check=bot)
+            self.assertEqual((result["action"], result[kind], ec2.started), ("started", [12], 1), kind)
+            self.assertEqual(json.loads(ssm.value)["bot"], {"seen": [12]})  # the hook's own state, saved with the rest
+            self.assertEqual((bot.calls[0]["start"], bot.calls[0]["end"]), (151, 200))  # the seats' scan's blocks
+
+    def test_the_hooks_state_comes_back_to_it_and_unknown_kinds_are_ignored(self):
+        rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm(json.dumps({"last": 150, "bot": {"settle": {"4": 1.0}}})), FakeEc2()
+        bot = FakeBot(due={"something-else": [1], "ended": []})
+        result = watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2, bot_check=bot)
+        self.assertEqual(bot.calls[0]["state"], {"settle": {"4": 1.0}})
+        self.assertEqual((result["action"], ec2.started), ("idle", 0))
+        self.assertNotIn("something-else", result)
+        self.assertEqual(json.loads(ssm.value), {"last": 200, "bot": {"settle": {"4": 1.0}}})
+
+    def test_nothing_new_on_chain_still_asks_the_bot(self):
+        """A bounty due to settle needs no new block: the hook runs with an empty range (start > end)."""
+        rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("200"), FakeEc2()
+        bot = FakeBot(due={"settle": [4]})
+        result = watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2, bot_check=bot)
+        self.assertEqual((bot.calls[0]["start"], bot.calls[0]["end"]), (201, 200))
+        self.assertEqual((result["action"], result["settle"]), ("started", [4]))
+
+    def test_without_bot_work_the_hook_is_never_asked(self):
+        """No bot work on the instance (BOT_WORK unset or false, the kit's case): the seats' draws and merges alone."""
+        for env in (SEATS_ENV, ENV, {**SEATS_ENV, "BOT_WORK": "false", "BOT_ENABLED": "true"}):
+            bot = FakeBot(due={"ended": [3]})
+            rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("150"), FakeEc2()
+            result = watcher.run(env, rpc, ssm, ec2, bot_check=bot)
+            self.assertEqual((bot.calls, result["action"], ec2.started), ([], "idle", 0))
+
+    def test_the_bots_switch_off_leaves_the_seats_registration_check(self):
+        """BOT_ENABLED=false: the bot's own work starts nothing, a registration waiting for the seats' check still does."""
+        env = {**SEATS_ENV, "BOT_WORK": "true", "BOT_ENABLED": "false"}
+        rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("150"), FakeEc2()
+        result = watcher.run(env, rpc, ssm, ec2, bot_check=FakeBot(due={"ended": [3], "settle": [4]}))
+        self.assertEqual((result["action"], ec2.started), ("idle", 0))
+        self.assertNotIn("ended", result)
+        result = watcher.run(env, FakeRpc(200, []), FakeSsm("150"), ec2,
+                             bot_check=FakeBot(due={"ended": [3], "registrations": [9]}))
+        self.assertEqual((result["action"], result["registrations"], ec2.started), ("started", [9], 1))
+        self.assertNotIn("ended", result)
+
+    def test_the_bots_switch_off_keeps_its_state_and_no_bot_work_drops_it(self):
+        saved = json.dumps({"last": 150, "bot": {"registrations": {"9": {"starts": 1}}}})
+        ssm = FakeSsm(saved)
+        keep = lambda env, rpc, race, start, end, state, now: ({}, state)  # noqa: E731 (bot_work's own state, as is)
+        watcher.run({**SEATS_ENV, "BOT_WORK": "true", "BOT_ENABLED": "false"}, FakeRpc(200, []), ssm, FakeEc2(),
+                    bot_check=keep)
+        self.assertEqual(json.loads(ssm.value)["bot"], {"registrations": {"9": {"starts": 1}}})
+        ssm = FakeSsm(saved)
+        watcher.run(SEATS_ENV, FakeRpc(200, []), ssm, FakeEc2())
+        self.assertEqual(ssm.value, "200")
+
+    def test_the_bot_and_the_seats_share_the_days_fuse(self):
+        env = {**SEATS_ENV, "BOT_WORK": "true", "MAX_STARTS_PER_DAY": "1"}
+        day = 86_400.0 * 20_000
+        rpc, ssm, ec2 = FakeRpc(200, [_log(1, 7, SOLVER, 180)], draws={7: [SEATS[0]] + OTHER[:2]}), FakeSsm("150"), FakeEc2()
+        self.assertEqual(watcher.run(env, rpc, ssm, ec2, now=lambda: day, bot_check=FakeBot())["action"], "started")
+        ec2.state = "stopped"
+        tripped = watcher.run(env, rpc, ssm, ec2, now=lambda: day + 60, bot_check=FakeBot(due={"opened": [5]}))
+        self.assertEqual((tripped["action"], tripped["opened"], ec2.started), ("fuse", [5], 1))
+
+    def test_a_chain_failure_in_the_hook_saves_nothing_and_starts_nothing(self):
+        rpc, ssm, ec2 = FakeRpc(200, [_log(1, 7, SOLVER, 180)], draws={7: [SEATS[0]] + OTHER[:2]}), FakeSsm("150"), FakeEc2()
+        with self.assertRaises(OSError):
+            watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2, bot_check=FakeBot(error=OSError("502")))
+        self.assertEqual((ssm.value, ec2.started), ("150", 0))  # the same blocks next minute, for the seats and the bot
+
+    def test_a_host_on_its_way_down_saves_none_of_the_bots_state(self):
+        rpc, ssm, ec2 = FakeRpc(200, []), FakeSsm("150"), FakeEc2("stopping")
+        bot = FakeBot(due={"ended": [3]}, state={"ended": [3]})
+        result = watcher.run({**SEATS_ENV, "BOT_WORK": "true"}, rpc, ssm, ec2, bot_check=bot)
+        self.assertEqual((result["action"], ssm.value), ("stopping", "150"))
+
+    def test_the_kits_result_line_is_unchanged(self):
+        rpc, ssm, ec2 = FakeRpc(200, [_log(1, 7, SOLVER, 180)]), FakeSsm("150"), FakeEc2()
+        self.assertEqual(sorted(watcher.run(ENV, rpc, ssm, ec2)), ["action", "from", "submissions", "to"])
+
+    def test_the_watcher_image(self):
+        dockerfile = (KIT / "lambda" / "Dockerfile").read_text()
+        self.assertRegex(dockerfile, r"(?m)^FROM public\.ecr\.aws/lambda/python:3\.12@sha256:[0-9a-f]{64}$")
+        self.assertIn("COPY validator-kit/lambda/watcher.py ${LAMBDA_TASK_ROOT}/watcher.py", dockerfile)
+        self.assertIn('CMD ["watcher.handler"]', dockerfile)
 
 
 class ModuleTest(unittest.TestCase):

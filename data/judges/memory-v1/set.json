@@ -1,0 +1,2597 @@
+{
+ "drift": [
+  "astropy__astropy-13033:good",
+  "astropy__astropy-14598:bad",
+  "django__django-11292:pbw:LearnByInteract",
+  "django__django-11292:pbw:OpenHands",
+  "django__django-11880:pbw:CodeStory",
+  "django__django-12663:pbw:LearnByInteract",
+  "django__django-13012:pbw:CodeStory",
+  "django__django-13933:pbw:CodeStory",
+  "django__django-14034:good",
+  "django__django-15022:pbw:OpenHands",
+  "django__django-15695:good",
+  "django__django-16100:bad",
+  "django__django-16661:pbw:LearnByInteract",
+  "matplotlib__matplotlib-24870:good",
+  "psf__requests-1724:good",
+  "pydata__xarray-2905:bad",
+  "pydata__xarray-3993:good",
+  "pydata__xarray-7393:pbw:LearnByInteract",
+  "pytest-dev__pytest-7324:bad",
+  "pytest-dev__pytest-7521:good",
+  "scikit-learn__scikit-learn-25102:pbw:LearnByInteract",
+  "sphinx-doc__sphinx-8265:good",
+  "sphinx-doc__sphinx-9258:bad",
+  "sphinx-doc__sphinx-9602:bad",
+  "sympy__sympy-15017:pbw:OpenHands",
+  "sympy__sympy-17318:bad",
+  "sympy__sympy-17318:good",
+  "sympy__sympy-22456:pbw:CodeStory",
+  "sympy__sympy-22714:pbw:CodeStory",
+  "sympy__sympy-24443:pbw:LearnByInteract"
+ ],
+ "label": {
+  "astropy__astropy-13033:good": "good",
+  "astropy__astropy-13977:bad": "bad",
+  "astropy__astropy-13977:good": "good",
+  "astropy__astropy-14182:bad": "bad",
+  "astropy__astropy-14182:good": "good",
+  "astropy__astropy-14369:bad": "bad",
+  "astropy__astropy-14369:good": "good",
+  "astropy__astropy-14508:pbw:LearnByInteract": "bad",
+  "astropy__astropy-14598:bad": "bad",
+  "astropy__astropy-14598:good": "good",
+  "django__django-10999:good": "good",
+  "django__django-11292:pbw:CodeStory": "bad",
+  "django__django-11292:pbw:LearnByInteract": "bad",
+  "django__django-11292:pbw:OpenHands": "bad",
+  "django__django-11400:good": "good",
+  "django__django-11433:bad": "bad",
+  "django__django-11433:good": "good",
+  "django__django-11749:pbw:OpenHands": "bad",
+  "django__django-11820:good": "good",
+  "django__django-11880:pbw:CodeStory": "bad",
+  "django__django-12209:pbw:CodeStory": "bad",
+  "django__django-12209:pbw:LearnByInteract": "bad",
+  "django__django-12209:pbw:OpenHands": "bad",
+  "django__django-12273:pbw:CodeStory": "bad",
+  "django__django-12304:pbw:CodeStory": "bad",
+  "django__django-12325:bad": "bad",
+  "django__django-12663:pbw:CodeStory": "bad",
+  "django__django-12663:pbw:LearnByInteract": "bad",
+  "django__django-12663:pbw:OpenHands": "bad",
+  "django__django-12858:pbw:LearnByInteract": "bad",
+  "django__django-12858:pbw:OpenHands": "bad",
+  "django__django-13012:pbw:CodeStory": "bad",
+  "django__django-13028:pbw:LearnByInteract": "bad",
+  "django__django-13112:pbw:CodeStory": "bad",
+  "django__django-13121:pbw:CodeStory": "bad",
+  "django__django-13158:bad": "bad",
+  "django__django-13158:good": "good",
+  "django__django-13195:bad": "bad",
+  "django__django-13195:good": "good",
+  "django__django-13279:pbw:CodeStory": "bad",
+  "django__django-13933:pbw:CodeStory": "bad",
+  "django__django-13933:pbw:OpenHands": "bad",
+  "django__django-14034:good": "good",
+  "django__django-14140:bad": "bad",
+  "django__django-14539:pbw:OpenHands": "bad",
+  "django__django-14725:bad": "bad",
+  "django__django-14771:pbw:CodeStory": "bad",
+  "django__django-15022:pbw:OpenHands": "bad",
+  "django__django-15037:good": "good",
+  "django__django-15161:pbw:CodeStory": "bad",
+  "django__django-15268:pbw:CodeStory": "bad",
+  "django__django-15268:pbw:OpenHands": "bad",
+  "django__django-15382:pbw:CodeStory": "bad",
+  "django__django-15695:bad": "bad",
+  "django__django-15695:good": "good",
+  "django__django-15863:pbw:CodeStory": "bad",
+  "django__django-16100:bad": "bad",
+  "django__django-16560:good": "good",
+  "django__django-16661:pbw:CodeStory": "bad",
+  "django__django-16661:pbw:LearnByInteract": "bad",
+  "django__django-16877:bad": "bad",
+  "django__django-16877:good": "good",
+  "django__django-16950:bad": "bad",
+  "django__django-16950:good": "good",
+  "django__django-17084:pbw:LearnByInteract": "bad",
+  "matplotlib__matplotlib-21568:good": "good",
+  "matplotlib__matplotlib-23299:good": "good",
+  "matplotlib__matplotlib-24870:good": "good",
+  "matplotlib__matplotlib-26208:bad": "bad",
+  "matplotlib__matplotlib-26466:bad": "bad",
+  "matplotlib__matplotlib-26466:good": "good",
+  "mwaskom__seaborn-3187:bad": "bad",
+  "mwaskom__seaborn-3187:good": "good",
+  "psf__requests-1724:good": "good",
+  "psf__requests-1766:good": "good",
+  "psf__requests-2317:good": "good",
+  "psf__requests-2317:pbw:LearnByInteract": "bad",
+  "psf__requests-5414:bad": "bad",
+  "pydata__xarray-2905:bad": "bad",
+  "pydata__xarray-3993:bad": "bad",
+  "pydata__xarray-3993:good": "good",
+  "pydata__xarray-4629:pbw:OpenHands": "bad",
+  "pydata__xarray-4687:good": "good",
+  "pydata__xarray-7229:bad": "bad",
+  "pydata__xarray-7229:good": "good",
+  "pydata__xarray-7393:pbw:LearnByInteract": "bad",
+  "pylint-dev__pylint-4661:good": "good",
+  "pytest-dev__pytest-10356:good": "good",
+  "pytest-dev__pytest-5787:good": "good",
+  "pytest-dev__pytest-7324:bad": "bad",
+  "pytest-dev__pytest-7324:good": "good",
+  "pytest-dev__pytest-7521:good": "good",
+  "scikit-learn__scikit-learn-25102:bad": "bad",
+  "scikit-learn__scikit-learn-25102:pbw:LearnByInteract": "bad",
+  "scikit-learn__scikit-learn-25102:pbw:OpenHands": "bad",
+  "sphinx-doc__sphinx-10435:bad": "bad",
+  "sphinx-doc__sphinx-10435:good": "good",
+  "sphinx-doc__sphinx-10614:bad": "bad",
+  "sphinx-doc__sphinx-10673:bad": "bad",
+  "sphinx-doc__sphinx-10673:good": "good",
+  "sphinx-doc__sphinx-11510:bad": "bad",
+  "sphinx-doc__sphinx-7590:bad": "bad",
+  "sphinx-doc__sphinx-7748:bad": "bad",
+  "sphinx-doc__sphinx-7748:good": "good",
+  "sphinx-doc__sphinx-7985:bad": "bad",
+  "sphinx-doc__sphinx-8056:bad": "bad",
+  "sphinx-doc__sphinx-8056:good": "good",
+  "sphinx-doc__sphinx-8265:bad": "bad",
+  "sphinx-doc__sphinx-8265:good": "good",
+  "sphinx-doc__sphinx-8593:bad": "bad",
+  "sphinx-doc__sphinx-8593:pbw:CodeStory": "bad",
+  "sphinx-doc__sphinx-9229:bad": "bad",
+  "sphinx-doc__sphinx-9258:bad": "bad",
+  "sphinx-doc__sphinx-9461:bad": "bad",
+  "sphinx-doc__sphinx-9461:good": "good",
+  "sphinx-doc__sphinx-9602:bad": "bad",
+  "sphinx-doc__sphinx-9602:good": "good",
+  "sphinx-doc__sphinx-9658:bad": "bad",
+  "sympy__sympy-12096:pbw:LearnByInteract": "bad",
+  "sympy__sympy-12096:pbw:OpenHands": "bad",
+  "sympy__sympy-13031:pbw:CodeStory": "bad",
+  "sympy__sympy-13091:good": "good",
+  "sympy__sympy-13372:good": "good",
+  "sympy__sympy-13615:bad": "bad",
+  "sympy__sympy-13615:good": "good",
+  "sympy__sympy-13798:good": "good",
+  "sympy__sympy-13877:good": "good",
+  "sympy__sympy-13877:pbw:LearnByInteract": "bad",
+  "sympy__sympy-14248:bad": "bad",
+  "sympy__sympy-15017:pbw:CodeStory": "bad",
+  "sympy__sympy-15017:pbw:LearnByInteract": "bad",
+  "sympy__sympy-15017:pbw:OpenHands": "bad",
+  "sympy__sympy-15976:good": "good",
+  "sympy__sympy-17318:bad": "bad",
+  "sympy__sympy-17318:good": "good",
+  "sympy__sympy-18199:good": "good",
+  "sympy__sympy-19346:pbw:CodeStory": "bad",
+  "sympy__sympy-19346:pbw:LearnByInteract": "bad",
+  "sympy__sympy-19495:bad": "bad",
+  "sympy__sympy-19783:bad": "bad",
+  "sympy__sympy-20801:pbw:CodeStory": "bad",
+  "sympy__sympy-20801:pbw:LearnByInteract": "bad",
+  "sympy__sympy-20916:good": "good",
+  "sympy__sympy-21379:good": "good",
+  "sympy__sympy-22456:pbw:CodeStory": "bad",
+  "sympy__sympy-22456:pbw:LearnByInteract": "bad",
+  "sympy__sympy-22456:pbw:OpenHands": "bad",
+  "sympy__sympy-22714:pbw:CodeStory": "bad",
+  "sympy__sympy-24443:pbw:CodeStory": "bad",
+  "sympy__sympy-24443:pbw:LearnByInteract": "bad",
+  "sympy__sympy-24443:pbw:OpenHands": "bad"
+ },
+ "memory": {
+  "astropy__astropy-13033:good": [
+   [
+    "astropy__astropy-13033:bad",
+    "same_issue",
+    "e3ebcdc30a"
+   ]
+  ],
+  "astropy__astropy-13977:bad": [
+   [
+    "astropy__astropy-13398:bad",
+    "same_file",
+    "213f545562"
+   ]
+  ],
+  "astropy__astropy-13977:good": [
+   [
+    "astropy__astropy-13977:bad",
+    "same_issue",
+    "d8fb1adbfb"
+   ]
+  ],
+  "astropy__astropy-14182:bad": [
+   [
+    "astropy__astropy-13977:bad",
+    "same_file",
+    "d8fb1adbfb"
+   ],
+   [
+    "astropy__astropy-13398:bad",
+    "same_file",
+    "213f545562"
+   ]
+  ],
+  "astropy__astropy-14182:good": [
+   [
+    "astropy__astropy-14182:bad",
+    "same_issue",
+    "89773475de"
+   ]
+  ],
+  "astropy__astropy-14369:bad": [
+   [
+    "astropy__astropy-14182:bad",
+    "same_file",
+    "89773475de"
+   ],
+   [
+    "astropy__astropy-13977:bad",
+    "same_file",
+    "d8fb1adbfb"
+   ],
+   [
+    "astropy__astropy-13398:bad",
+    "same_file",
+    "213f545562"
+   ]
+  ],
+  "astropy__astropy-14369:good": [
+   [
+    "astropy__astropy-14369:bad",
+    "same_issue",
+    "6d57904897"
+   ]
+  ],
+  "astropy__astropy-14508:pbw:LearnByInteract": [
+   [
+    "astropy__astropy-8707:bad",
+    "same_file",
+    "02bf2d0ac3"
+   ]
+  ],
+  "astropy__astropy-14598:bad": [
+   [
+    "astropy__astropy-14508:pbw:LearnByInteract",
+    "same_file",
+    "fc68ffbbc7"
+   ],
+   [
+    "astropy__astropy-8707:bad",
+    "same_file",
+    "02bf2d0ac3"
+   ]
+  ],
+  "astropy__astropy-14598:good": [
+   [
+    "astropy__astropy-14598:bad",
+    "same_issue",
+    "2935c33127"
+   ],
+   [
+    "astropy__astropy-14508:pbw:LearnByInteract",
+    "same_file",
+    "fc68ffbbc7"
+   ],
+   [
+    "astropy__astropy-8707:bad",
+    "same_file",
+    "02bf2d0ac3"
+   ]
+  ],
+  "django__django-10999:good": [
+   [
+    "django__django-10999:bad",
+    "same_issue",
+    "87dd83d2d1"
+   ]
+  ],
+  "django__django-11292:pbw:CodeStory": [
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-11292:pbw:LearnByInteract": [
+   [
+    "django__django-11292:pbw:CodeStory",
+    "same_issue",
+    "281c465dc9"
+   ]
+  ],
+  "django__django-11292:pbw:OpenHands": [
+   [
+    "django__django-11292:pbw:CodeStory",
+    "same_issue",
+    "281c465dc9"
+   ],
+   [
+    "django__django-11292:pbw:LearnByInteract",
+    "same_issue",
+    "1da34d63d4"
+   ]
+  ],
+  "django__django-11400:good": [
+   [
+    "django__django-11400:bad",
+    "same_issue",
+    "a6ac9ad5c3"
+   ]
+  ],
+  "django__django-11433:bad": [
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "same_file",
+    "faca6870b8"
+   ],
+   [
+    "django__django-11133:bad",
+    "same_file",
+    "a94ba5375a"
+   ]
+  ],
+  "django__django-11433:good": [
+   [
+    "django__django-11433:bad",
+    "same_issue",
+    "1d4abbc194"
+   ]
+  ],
+  "django__django-11749:pbw:OpenHands": [
+   [
+    "django__django-11292:pbw:CodeStory",
+    "same_file",
+    "281c465dc9"
+   ],
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-11820:good": [
+   [
+    "django__django-11820:bad",
+    "same_issue",
+    "1e54ebbac8"
+   ]
+  ],
+  "django__django-11880:pbw:CodeStory": [
+   [
+    "django__django-11749:pbw:OpenHands",
+    "same_file",
+    "2f00965a4e"
+   ],
+   [
+    "django__django-11292:pbw:CodeStory",
+    "same_file",
+    "281c465dc9"
+   ],
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-12209:pbw:CodeStory": [
+   [
+    "django__django-11880:pbw:CodeStory",
+    "same_file",
+    "5ecb7f1b2e"
+   ],
+   [
+    "django__django-11820:bad",
+    "same_file",
+    "1e54ebbac8"
+   ],
+   [
+    "django__django-11749:pbw:OpenHands",
+    "same_file",
+    "2f00965a4e"
+   ]
+  ],
+  "django__django-12209:pbw:LearnByInteract": [
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_issue",
+    "a00ad301fb"
+   ],
+   [
+    "django__django-11820:bad",
+    "same_file",
+    "1e54ebbac8"
+   ],
+   [
+    "django__django-11433:bad",
+    "same_file",
+    "1d4abbc194"
+   ]
+  ],
+  "django__django-12209:pbw:OpenHands": [
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_issue",
+    "a00ad301fb"
+   ],
+   [
+    "django__django-12209:pbw:LearnByInteract",
+    "same_issue",
+    "1798bf476b"
+   ],
+   [
+    "django__django-11820:bad",
+    "same_file",
+    "1e54ebbac8"
+   ]
+  ],
+  "django__django-12273:pbw:CodeStory": [
+   [
+    "django__django-12304:pbw:CodeStory",
+    "same_file",
+    "1905e96ec2"
+   ],
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_file",
+    "a00ad301fb"
+   ],
+   [
+    "django__django-12209:pbw:LearnByInteract",
+    "same_file",
+    "1798bf476b"
+   ]
+  ],
+  "django__django-12304:pbw:CodeStory": [
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_file",
+    "a00ad301fb"
+   ],
+   [
+    "django__django-11880:pbw:CodeStory",
+    "same_file",
+    "5ecb7f1b2e"
+   ],
+   [
+    "django__django-11749:pbw:OpenHands",
+    "same_file",
+    "2f00965a4e"
+   ]
+  ],
+  "django__django-12325:bad": [
+   [
+    "django__django-12273:pbw:CodeStory",
+    "same_file",
+    "757fff4b48"
+   ],
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_file",
+    "a00ad301fb"
+   ],
+   [
+    "django__django-12209:pbw:LearnByInteract",
+    "same_file",
+    "1798bf476b"
+   ]
+  ],
+  "django__django-12663:pbw:CodeStory": [
+   [
+    "django__django-12273:pbw:CodeStory",
+    "same_file",
+    "757fff4b48"
+   ],
+   [
+    "django__django-12304:pbw:CodeStory",
+    "same_file",
+    "1905e96ec2"
+   ],
+   [
+    "django__django-12209:pbw:CodeStory",
+    "same_file",
+    "a00ad301fb"
+   ]
+  ],
+  "django__django-12663:pbw:LearnByInteract": [
+   [
+    "django__django-12663:pbw:CodeStory",
+    "same_issue",
+    "9d31a3aa67"
+   ]
+  ],
+  "django__django-12663:pbw:OpenHands": [
+   [
+    "django__django-12663:pbw:CodeStory",
+    "same_issue",
+    "9d31a3aa67"
+   ],
+   [
+    "django__django-12663:pbw:LearnByInteract",
+    "same_issue",
+    "653934b8d6"
+   ]
+  ],
+  "django__django-12858:pbw:LearnByInteract": [
+   [
+    "django__django-12663:pbw:CodeStory",
+    "same_file",
+    "9d31a3aa67"
+   ],
+   [
+    "django__django-12273:pbw:CodeStory",
+    "same_file",
+    "757fff4b48"
+   ],
+   [
+    "django__django-12304:pbw:CodeStory",
+    "same_file",
+    "1905e96ec2"
+   ]
+  ],
+  "django__django-12858:pbw:OpenHands": [
+   [
+    "django__django-12858:pbw:LearnByInteract",
+    "same_issue",
+    "78cac006b4"
+   ],
+   [
+    "django__django-12325:bad",
+    "same_file",
+    "72d86d790d"
+   ],
+   [
+    "django__django-12273:pbw:CodeStory",
+    "same_file",
+    "757fff4b48"
+   ]
+  ],
+  "django__django-13012:pbw:CodeStory": [
+   [
+    "django__django-12858:pbw:LearnByInteract",
+    "same_file",
+    "78cac006b4"
+   ],
+   [
+    "django__django-12663:pbw:CodeStory",
+    "same_file",
+    "9d31a3aa67"
+   ],
+   [
+    "django__django-12273:pbw:CodeStory",
+    "same_file",
+    "757fff4b48"
+   ]
+  ],
+  "django__django-13028:pbw:LearnByInteract": [
+   [
+    "django__django-12125:pbw:LearnByInteract",
+    "same_file",
+    "49260b4c44"
+   ],
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "same_file",
+    "faca6870b8"
+   ]
+  ],
+  "django__django-13112:pbw:CodeStory": [
+   [
+    "django__django-13012:pbw:CodeStory",
+    "same_file",
+    "6d5509c9fa"
+   ],
+   [
+    "django__django-12858:pbw:LearnByInteract",
+    "same_file",
+    "78cac006b4"
+   ],
+   [
+    "django__django-12663:pbw:CodeStory",
+    "same_file",
+    "9d31a3aa67"
+   ]
+  ],
+  "django__django-13121:pbw:CodeStory": [
+   [
+    "django__django-13112:pbw:CodeStory",
+    "same_file",
+    "827f9a9968"
+   ],
+   [
+    "django__django-13012:pbw:CodeStory",
+    "same_file",
+    "6d5509c9fa"
+   ],
+   [
+    "django__django-12858:pbw:LearnByInteract",
+    "same_file",
+    "78cac006b4"
+   ]
+  ],
+  "django__django-13158:bad": [
+   [
+    "django__django-12209:pbw:LearnByInteract",
+    "same_file",
+    "1798bf476b"
+   ],
+   [
+    "django__django-11433:bad",
+    "same_file",
+    "1d4abbc194"
+   ],
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "same_file",
+    "faca6870b8"
+   ]
+  ],
+  "django__django-13158:good": [
+   [
+    "django__django-13158:bad",
+    "same_issue",
+    "cb43631226"
+   ],
+   [
+    "django__django-13028:pbw:LearnByInteract",
+    "same_file",
+    "e889a45bcc"
+   ],
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "same_file",
+    "faca6870b8"
+   ]
+  ],
+  "django__django-13195:bad": [
+   [
+    "django__django-11133:bad",
+    "same_file",
+    "a94ba5375a"
+   ]
+  ],
+  "django__django-13195:good": [
+   [
+    "django__django-13195:bad",
+    "same_issue",
+    "63f4b0d89b"
+   ],
+   [
+    "django__django-11133:bad",
+    "same_file",
+    "a94ba5375a"
+   ]
+  ],
+  "django__django-13279:pbw:CodeStory": [
+   [
+    "django__django-13121:pbw:CodeStory",
+    "same_file",
+    "7cc9ca0343"
+   ],
+   [
+    "django__django-13112:pbw:CodeStory",
+    "same_file",
+    "827f9a9968"
+   ],
+   [
+    "django__django-13012:pbw:CodeStory",
+    "same_file",
+    "6d5509c9fa"
+   ]
+  ],
+  "django__django-13933:pbw:CodeStory": [
+   [
+    "django__django-13279:pbw:CodeStory",
+    "same_file",
+    "a7abbf819d"
+   ],
+   [
+    "django__django-13121:pbw:CodeStory",
+    "same_file",
+    "7cc9ca0343"
+   ],
+   [
+    "django__django-13112:pbw:CodeStory",
+    "same_file",
+    "827f9a9968"
+   ]
+  ],
+  "django__django-13933:pbw:OpenHands": [
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_issue",
+    "39376636c5"
+   ],
+   [
+    "django__django-11433:bad",
+    "same_file",
+    "1d4abbc194"
+   ]
+  ],
+  "django__django-14034:good": [
+   [
+    "django__django-14034:bad",
+    "same_issue",
+    "556dfacd54"
+   ],
+   [
+    "django__django-14534:bad",
+    "same_file",
+    "272a27437f"
+   ]
+  ],
+  "django__django-14140:bad": [
+   [
+    "django__django-14017:pbw:OpenHands",
+    "same_file",
+    "7c94fcf4fc"
+   ]
+  ],
+  "django__django-14539:pbw:OpenHands": [
+   [
+    "django__django-13028:pbw:LearnByInteract",
+    "same_file",
+    "e889a45bcc"
+   ],
+   [
+    "django__django-12125:pbw:LearnByInteract",
+    "same_file",
+    "49260b4c44"
+   ]
+  ],
+  "django__django-14725:bad": [
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_file",
+    "39376636c5"
+   ],
+   [
+    "django__django-13933:pbw:OpenHands",
+    "same_file",
+    "73dc817a04"
+   ],
+   [
+    "django__django-11433:bad",
+    "same_file",
+    "1d4abbc194"
+   ]
+  ],
+  "django__django-14771:pbw:CodeStory": [
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_file",
+    "39376636c5"
+   ],
+   [
+    "django__django-13279:pbw:CodeStory",
+    "same_file",
+    "a7abbf819d"
+   ],
+   [
+    "django__django-13121:pbw:CodeStory",
+    "same_file",
+    "7cc9ca0343"
+   ]
+  ],
+  "django__django-15022:pbw:OpenHands": [
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-15037:good": [
+   [
+    "django__django-15037:bad",
+    "same_issue",
+    "214fa3e4f0"
+   ]
+  ],
+  "django__django-15161:pbw:CodeStory": [
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_file",
+    "c318b77dfa"
+   ],
+   [
+    "django__django-14771:pbw:CodeStory",
+    "same_file",
+    "5c886403ba"
+   ],
+   [
+    "django__django-14017:pbw:OpenHands",
+    "same_file",
+    "7c94fcf4fc"
+   ]
+  ],
+  "django__django-15268:pbw:CodeStory": [
+   [
+    "django__django-14771:pbw:CodeStory",
+    "same_file",
+    "5c886403ba"
+   ],
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_file",
+    "39376636c5"
+   ],
+   [
+    "django__django-13279:pbw:CodeStory",
+    "same_file",
+    "a7abbf819d"
+   ]
+  ],
+  "django__django-15268:pbw:OpenHands": [
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_issue",
+    "c318b77dfa"
+   ]
+  ],
+  "django__django-15382:pbw:CodeStory": [
+   [
+    "django__django-15161:pbw:CodeStory",
+    "same_file",
+    "2a6fa0bb80"
+   ],
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_file",
+    "c318b77dfa"
+   ],
+   [
+    "django__django-14771:pbw:CodeStory",
+    "same_file",
+    "5c886403ba"
+   ]
+  ],
+  "django__django-15695:bad": [
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_file",
+    "c318b77dfa"
+   ],
+   [
+    "django__django-15268:pbw:OpenHands",
+    "same_file",
+    "337093719f"
+   ]
+  ],
+  "django__django-15695:good": [
+   [
+    "django__django-15695:bad",
+    "same_issue",
+    "018b1b98c3"
+   ],
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_file",
+    "c318b77dfa"
+   ],
+   [
+    "django__django-15268:pbw:OpenHands",
+    "same_file",
+    "337093719f"
+   ]
+  ],
+  "django__django-15863:pbw:CodeStory": [
+   [
+    "django__django-15382:pbw:CodeStory",
+    "same_file",
+    "5ca6217228"
+   ],
+   [
+    "django__django-15161:pbw:CodeStory",
+    "same_file",
+    "2a6fa0bb80"
+   ],
+   [
+    "django__django-15268:pbw:CodeStory",
+    "same_file",
+    "c318b77dfa"
+   ]
+  ],
+  "django__django-16100:bad": [
+   [
+    "django__django-15022:pbw:OpenHands",
+    "same_file",
+    "58826826cc"
+   ],
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-16560:good": [
+   [
+    "django__django-16560:bad",
+    "same_issue",
+    "a848cc9086"
+   ]
+  ],
+  "django__django-16661:pbw:CodeStory": [
+   [
+    "django__django-16100:bad",
+    "same_file",
+    "74af995a1f"
+   ],
+   [
+    "django__django-15022:pbw:OpenHands",
+    "same_file",
+    "58826826cc"
+   ],
+   [
+    "django__django-11149:pbw:CodeStory",
+    "same_file",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-16661:pbw:LearnByInteract": [
+   [
+    "django__django-16661:pbw:CodeStory",
+    "same_issue",
+    "2ce004535a"
+   ],
+   [
+    "django__django-16100:bad",
+    "same_file",
+    "74af995a1f"
+   ],
+   [
+    "django__django-15022:pbw:OpenHands",
+    "same_file",
+    "58826826cc"
+   ]
+  ],
+  "django__django-16877:bad": [
+   [
+    "django__django-15863:pbw:CodeStory",
+    "same_file",
+    "b0c39c1dd3"
+   ],
+   [
+    "django__django-13794:bad",
+    "same_file",
+    "2d642a957f"
+   ]
+  ],
+  "django__django-16877:good": [
+   [
+    "django__django-16877:bad",
+    "same_issue",
+    "96554c4183"
+   ],
+   [
+    "django__django-15863:pbw:CodeStory",
+    "same_file",
+    "b0c39c1dd3"
+   ],
+   [
+    "django__django-13794:bad",
+    "same_file",
+    "2d642a957f"
+   ]
+  ],
+  "django__django-16950:bad": [
+   [
+    "django__django-14725:bad",
+    "same_file",
+    "20fe6bce5b"
+   ],
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_file",
+    "39376636c5"
+   ],
+   [
+    "django__django-13933:pbw:OpenHands",
+    "same_file",
+    "73dc817a04"
+   ]
+  ],
+  "django__django-16950:good": [
+   [
+    "django__django-16950:bad",
+    "same_issue",
+    "1c86650c5c"
+   ],
+   [
+    "django__django-14725:bad",
+    "same_file",
+    "20fe6bce5b"
+   ],
+   [
+    "django__django-13933:pbw:CodeStory",
+    "same_file",
+    "39376636c5"
+   ]
+  ],
+  "django__django-17084:pbw:LearnByInteract": [
+   [
+    "django__django-15863:pbw:CodeStory",
+    "same_file",
+    "b0c39c1dd3"
+   ],
+   [
+    "django__django-15382:pbw:CodeStory",
+    "same_file",
+    "5ca6217228"
+   ],
+   [
+    "django__django-15161:pbw:CodeStory",
+    "same_file",
+    "2a6fa0bb80"
+   ]
+  ],
+  "matplotlib__matplotlib-21568:good": [
+   [
+    "matplotlib__matplotlib-21568:bad",
+    "same_issue",
+    "2cc25726b8"
+   ]
+  ],
+  "matplotlib__matplotlib-23299:good": [
+   [
+    "matplotlib__matplotlib-23299:bad",
+    "same_issue",
+    "01ab2e6ffa"
+   ]
+  ],
+  "matplotlib__matplotlib-24870:good": [
+   [
+    "matplotlib__matplotlib-24870:bad",
+    "same_issue",
+    "0ab040e16d"
+   ]
+  ],
+  "matplotlib__matplotlib-26208:bad": [
+   [
+    "matplotlib__matplotlib-14623:pbw:LearnByInteract",
+    "same_file",
+    "39ff7bcfb9"
+   ]
+  ],
+  "matplotlib__matplotlib-26466:bad": [
+   [
+    "matplotlib__matplotlib-25775:bad",
+    "same_file",
+    "c684d61157"
+   ]
+  ],
+  "matplotlib__matplotlib-26466:good": [
+   [
+    "matplotlib__matplotlib-26466:bad",
+    "same_issue",
+    "8a7ec600c1"
+   ],
+   [
+    "matplotlib__matplotlib-25775:bad",
+    "same_file",
+    "c684d61157"
+   ]
+  ],
+  "mwaskom__seaborn-3187:bad": [
+   [
+    "mwaskom__seaborn-3069:bad",
+    "same_file",
+    "2d7191389d"
+   ]
+  ],
+  "mwaskom__seaborn-3187:good": [
+   [
+    "mwaskom__seaborn-3187:bad",
+    "same_issue",
+    "b9aab4a1d9"
+   ]
+  ],
+  "psf__requests-1724:good": [
+   [
+    "psf__requests-1724:bad",
+    "same_issue",
+    "ab50109795"
+   ]
+  ],
+  "psf__requests-1766:good": [
+   [
+    "psf__requests-1766:bad",
+    "same_issue",
+    "c115529647"
+   ]
+  ],
+  "psf__requests-2317:good": [
+   [
+    "psf__requests-2317:bad",
+    "same_issue",
+    "07b5b13770"
+   ]
+  ],
+  "psf__requests-2317:pbw:LearnByInteract": [
+   [
+    "psf__requests-2317:bad",
+    "same_issue",
+    "07b5b13770"
+   ]
+  ],
+  "psf__requests-5414:bad": [
+   [
+    "psf__requests-2317:pbw:LearnByInteract",
+    "same_file",
+    "0e88337abb"
+   ],
+   [
+    "psf__requests-1724:bad",
+    "same_file",
+    "ab50109795"
+   ]
+  ],
+  "pydata__xarray-2905:bad": [
+   [
+    "pydata__xarray-3993:bad",
+    "same_file",
+    "c65f623379"
+   ]
+  ],
+  "pydata__xarray-3993:bad": [
+   [
+    "pydata__xarray-4094:pbw:LearnByInteract",
+    "same_file",
+    "32bb3b64e3"
+   ]
+  ],
+  "pydata__xarray-3993:good": [
+   [
+    "pydata__xarray-3993:bad",
+    "same_issue",
+    "c65f623379"
+   ],
+   [
+    "pydata__xarray-4094:pbw:LearnByInteract",
+    "same_file",
+    "32bb3b64e3"
+   ]
+  ],
+  "pydata__xarray-4629:pbw:OpenHands": [
+   [
+    "pydata__xarray-4629:pbw:LearnByInteract",
+    "same_issue",
+    "91a2dd1218"
+   ]
+  ],
+  "pydata__xarray-4687:good": [
+   [
+    "pydata__xarray-4687:bad",
+    "same_issue",
+    "7d887adf64"
+   ]
+  ],
+  "pydata__xarray-7229:bad": [
+   [
+    "pydata__xarray-4687:bad",
+    "same_file",
+    "7d887adf64"
+   ]
+  ],
+  "pydata__xarray-7229:good": [
+   [
+    "pydata__xarray-7229:bad",
+    "same_issue",
+    "9741eef3d4"
+   ],
+   [
+    "pydata__xarray-4687:bad",
+    "same_file",
+    "7d887adf64"
+   ]
+  ],
+  "pydata__xarray-7393:pbw:LearnByInteract": [
+   [
+    "pydata__xarray-4629:pbw:LearnByInteract",
+    "same_file",
+    "91a2dd1218"
+   ],
+   [
+    "pydata__xarray-4629:pbw:OpenHands",
+    "same_file",
+    "f54aaaa15e"
+   ]
+  ],
+  "pylint-dev__pylint-4661:good": [
+   [
+    "pylint-dev__pylint-4661:bad",
+    "same_issue",
+    "5689358d6c"
+   ]
+  ],
+  "pytest-dev__pytest-10356:good": [
+   [
+    "pytest-dev__pytest-10356:bad",
+    "same_issue",
+    "164f21d7af"
+   ]
+  ],
+  "pytest-dev__pytest-5787:good": [
+   [
+    "pytest-dev__pytest-5787:bad",
+    "same_issue",
+    "58f0b79120"
+   ]
+  ],
+  "pytest-dev__pytest-7324:bad": [
+   [
+    "pytest-dev__pytest-5787:bad",
+    "same_file",
+    "58f0b79120"
+   ]
+  ],
+  "pytest-dev__pytest-7324:good": [
+   [
+    "pytest-dev__pytest-7324:bad",
+    "same_issue",
+    "b93b1d548f"
+   ]
+  ],
+  "pytest-dev__pytest-7521:good": [
+   [
+    "pytest-dev__pytest-7521:bad",
+    "same_issue",
+    "c8d303263d"
+   ]
+  ],
+  "scikit-learn__scikit-learn-25102:bad": [
+   [
+    "scikit-learn__scikit-learn-12973:bad",
+    "same_file",
+    "339706446a"
+   ]
+  ],
+  "scikit-learn__scikit-learn-25102:pbw:LearnByInteract": [
+   [
+    "scikit-learn__scikit-learn-25102:bad",
+    "same_issue",
+    "ea787b7840"
+   ]
+  ],
+  "scikit-learn__scikit-learn-25102:pbw:OpenHands": [
+   [
+    "scikit-learn__scikit-learn-25102:bad",
+    "same_issue",
+    "ea787b7840"
+   ],
+   [
+    "scikit-learn__scikit-learn-25102:pbw:LearnByInteract",
+    "same_issue",
+    "3bb68b3cdb"
+   ],
+   [
+    "scikit-learn__scikit-learn-14496:pbw:LearnByInteract",
+    "same_file",
+    "bc0ec80563"
+   ]
+  ],
+  "sphinx-doc__sphinx-10435:bad": [
+   [
+    "sphinx-doc__sphinx-9658:bad",
+    "same_file",
+    "a18afdfa34"
+   ],
+   [
+    "sphinx-doc__sphinx-9461:bad",
+    "same_file",
+    "167ab989a0"
+   ],
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ]
+  ],
+  "sphinx-doc__sphinx-10435:good": [
+   [
+    "sphinx-doc__sphinx-10435:bad",
+    "same_issue",
+    "cd91f65a66"
+   ]
+  ],
+  "sphinx-doc__sphinx-10614:bad": [
+   [
+    "sphinx-doc__sphinx-10673:bad",
+    "same_file",
+    "c27721b7b4"
+   ],
+   [
+    "sphinx-doc__sphinx-10435:bad",
+    "same_file",
+    "cd91f65a66"
+   ],
+   [
+    "sphinx-doc__sphinx-9658:bad",
+    "same_file",
+    "a18afdfa34"
+   ]
+  ],
+  "sphinx-doc__sphinx-10673:bad": [
+   [
+    "sphinx-doc__sphinx-10435:bad",
+    "same_file",
+    "cd91f65a66"
+   ],
+   [
+    "sphinx-doc__sphinx-9658:bad",
+    "same_file",
+    "a18afdfa34"
+   ],
+   [
+    "sphinx-doc__sphinx-9461:bad",
+    "same_file",
+    "167ab989a0"
+   ]
+  ],
+  "sphinx-doc__sphinx-10673:good": [
+   [
+    "sphinx-doc__sphinx-10673:bad",
+    "same_issue",
+    "c27721b7b4"
+   ]
+  ],
+  "sphinx-doc__sphinx-11510:bad": [
+   [
+    "sphinx-doc__sphinx-10614:bad",
+    "same_file",
+    "73204d73c1"
+   ],
+   [
+    "sphinx-doc__sphinx-10673:bad",
+    "same_file",
+    "c27721b7b4"
+   ],
+   [
+    "sphinx-doc__sphinx-10435:bad",
+    "same_file",
+    "cd91f65a66"
+   ]
+  ],
+  "sphinx-doc__sphinx-7590:bad": [
+   [
+    "sphinx-doc__sphinx-7462:bad",
+    "same_file",
+    "b9be410995"
+   ]
+  ],
+  "sphinx-doc__sphinx-7748:bad": [
+   [
+    "sphinx-doc__sphinx-7590:bad",
+    "same_file",
+    "2dfc361d9c"
+   ],
+   [
+    "sphinx-doc__sphinx-7462:bad",
+    "same_file",
+    "b9be410995"
+   ]
+  ],
+  "sphinx-doc__sphinx-7748:good": [
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "same_issue",
+    "cf359a3918"
+   ]
+  ],
+  "sphinx-doc__sphinx-7985:bad": [
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "same_file",
+    "cf359a3918"
+   ],
+   [
+    "sphinx-doc__sphinx-7590:bad",
+    "same_file",
+    "2dfc361d9c"
+   ],
+   [
+    "sphinx-doc__sphinx-7462:bad",
+    "same_file",
+    "b9be410995"
+   ]
+  ],
+  "sphinx-doc__sphinx-8056:bad": [
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "same_file",
+    "6aec55046e"
+   ],
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "same_file",
+    "cf359a3918"
+   ],
+   [
+    "sphinx-doc__sphinx-7590:bad",
+    "same_file",
+    "2dfc361d9c"
+   ]
+  ],
+  "sphinx-doc__sphinx-8056:good": [
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "same_issue",
+    "585dadd8d8"
+   ],
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "same_file",
+    "6aec55046e"
+   ],
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "same_file",
+    "cf359a3918"
+   ]
+  ],
+  "sphinx-doc__sphinx-8265:bad": [
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "same_file",
+    "585dadd8d8"
+   ],
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "same_file",
+    "6aec55046e"
+   ],
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "same_file",
+    "cf359a3918"
+   ]
+  ],
+  "sphinx-doc__sphinx-8265:good": [
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "same_issue",
+    "619ff87ff9"
+   ],
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "same_file",
+    "585dadd8d8"
+   ],
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "same_file",
+    "6aec55046e"
+   ]
+  ],
+  "sphinx-doc__sphinx-8593:bad": [
+   [
+    "sphinx-doc__sphinx-8548:bad",
+    "same_file",
+    "54f6d0de53"
+   ],
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "same_file",
+    "619ff87ff9"
+   ],
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "same_file",
+    "585dadd8d8"
+   ]
+  ],
+  "sphinx-doc__sphinx-8593:pbw:CodeStory": [
+   [
+    "sphinx-doc__sphinx-8593:bad",
+    "same_issue",
+    "0a42bb6340"
+   ],
+   [
+    "sphinx-doc__sphinx-8548:bad",
+    "same_file",
+    "54f6d0de53"
+   ]
+  ],
+  "sphinx-doc__sphinx-9229:bad": [
+   [
+    "sphinx-doc__sphinx-8593:bad",
+    "same_file",
+    "0a42bb6340"
+   ],
+   [
+    "sphinx-doc__sphinx-8593:pbw:CodeStory",
+    "same_file",
+    "1c9e7d90f4"
+   ],
+   [
+    "sphinx-doc__sphinx-8548:bad",
+    "same_file",
+    "54f6d0de53"
+   ]
+  ],
+  "sphinx-doc__sphinx-9258:bad": [
+   [
+    "sphinx-doc__sphinx-8593:bad",
+    "same_file",
+    "0a42bb6340"
+   ],
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "same_file",
+    "619ff87ff9"
+   ],
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "same_file",
+    "585dadd8d8"
+   ]
+  ],
+  "sphinx-doc__sphinx-9461:bad": [
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-9229:bad",
+    "same_file",
+    "48a645be37"
+   ],
+   [
+    "sphinx-doc__sphinx-8593:bad",
+    "same_file",
+    "0a42bb6340"
+   ]
+  ],
+  "sphinx-doc__sphinx-9461:good": [
+   [
+    "sphinx-doc__sphinx-9461:bad",
+    "same_issue",
+    "167ab989a0"
+   ],
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-9229:bad",
+    "same_file",
+    "48a645be37"
+   ]
+  ],
+  "sphinx-doc__sphinx-9602:bad": [
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "same_file",
+    "619ff87ff9"
+   ],
+   [
+    "sphinx-doc__sphinx-7462:bad",
+    "same_file",
+    "b9be410995"
+   ]
+  ],
+  "sphinx-doc__sphinx-9602:good": [
+   [
+    "sphinx-doc__sphinx-9602:bad",
+    "same_issue",
+    "d8ee264561"
+   ],
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "same_file",
+    "619ff87ff9"
+   ]
+  ],
+  "sphinx-doc__sphinx-9658:bad": [
+   [
+    "sphinx-doc__sphinx-9461:bad",
+    "same_file",
+    "167ab989a0"
+   ],
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "same_file",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-8593:bad",
+    "same_file",
+    "0a42bb6340"
+   ]
+  ],
+  "sympy__sympy-12096:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "same_issue",
+    "42cf207ab5"
+   ]
+  ],
+  "sympy__sympy-12096:pbw:OpenHands": [
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "same_issue",
+    "42cf207ab5"
+   ],
+   [
+    "sympy__sympy-12096:pbw:LearnByInteract",
+    "same_issue",
+    "715077e2d1"
+   ]
+  ],
+  "sympy__sympy-13031:pbw:CodeStory": [
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "same_file",
+    "42cf207ab5"
+   ]
+  ],
+  "sympy__sympy-13091:good": [
+   [
+    "sympy__sympy-13091:bad",
+    "same_issue",
+    "c18d22bde7"
+   ]
+  ],
+  "sympy__sympy-13372:good": [
+   [
+    "sympy__sympy-13372:bad",
+    "same_issue",
+    "000f8ec011"
+   ]
+  ],
+  "sympy__sympy-13615:bad": [
+   [
+    "sympy__sympy-13372:bad",
+    "same_file",
+    "000f8ec011"
+   ]
+  ],
+  "sympy__sympy-13615:good": [
+   [
+    "sympy__sympy-13615:bad",
+    "same_issue",
+    "d36adc004e"
+   ]
+  ],
+  "sympy__sympy-13798:good": [
+   [
+    "sympy__sympy-13798:bad",
+    "same_issue",
+    "0ae54276ad"
+   ]
+  ],
+  "sympy__sympy-13877:good": [
+   [
+    "sympy__sympy-13877:bad",
+    "same_issue",
+    "0e63727d0e"
+   ]
+  ],
+  "sympy__sympy-13877:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-13877:bad",
+    "same_issue",
+    "0e63727d0e"
+   ]
+  ],
+  "sympy__sympy-14248:bad": [
+   [
+    "sympy__sympy-13798:bad",
+    "same_file",
+    "0ae54276ad"
+   ],
+   [
+    "sympy__sympy-13615:bad",
+    "same_file",
+    "d36adc004e"
+   ],
+   [
+    "sympy__sympy-13372:bad",
+    "same_file",
+    "000f8ec011"
+   ]
+  ],
+  "sympy__sympy-15017:pbw:CodeStory": [
+   [
+    "sympy__sympy-13031:pbw:CodeStory",
+    "same_file",
+    "16d1c80754"
+   ],
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "same_file",
+    "42cf207ab5"
+   ]
+  ],
+  "sympy__sympy-15017:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "same_issue",
+    "6ea3388049"
+   ],
+   [
+    "sympy__sympy-14248:bad",
+    "same_file",
+    "a8e5e948a8"
+   ],
+   [
+    "sympy__sympy-13615:bad",
+    "same_file",
+    "d36adc004e"
+   ]
+  ],
+  "sympy__sympy-15017:pbw:OpenHands": [
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "same_issue",
+    "6ea3388049"
+   ],
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "same_issue",
+    "498b274710"
+   ]
+  ],
+  "sympy__sympy-15976:good": [
+   [
+    "sympy__sympy-15976:bad",
+    "same_issue",
+    "c0fb6fffa9"
+   ],
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "same_file",
+    "498b274710"
+   ],
+   [
+    "sympy__sympy-14248:bad",
+    "same_file",
+    "a8e5e948a8"
+   ]
+  ],
+  "sympy__sympy-17318:bad": [
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "same_file",
+    "498b274710"
+   ],
+   [
+    "sympy__sympy-14248:bad",
+    "same_file",
+    "a8e5e948a8"
+   ],
+   [
+    "sympy__sympy-13615:bad",
+    "same_file",
+    "d36adc004e"
+   ]
+  ],
+  "sympy__sympy-17318:good": [
+   [
+    "sympy__sympy-17318:bad",
+    "same_issue",
+    "b59cb728cd"
+   ]
+  ],
+  "sympy__sympy-18199:good": [
+   [
+    "sympy__sympy-18199:bad",
+    "same_issue",
+    "640667fbee"
+   ]
+  ],
+  "sympy__sympy-19346:pbw:CodeStory": [
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "same_file",
+    "6ea3388049"
+   ],
+   [
+    "sympy__sympy-13031:pbw:CodeStory",
+    "same_file",
+    "16d1c80754"
+   ],
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "same_file",
+    "42cf207ab5"
+   ]
+  ],
+  "sympy__sympy-19346:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-19346:pbw:CodeStory",
+    "same_issue",
+    "6f6e19ad5a"
+   ]
+  ],
+  "sympy__sympy-19495:bad": [
+   [
+    "sympy__sympy-17318:bad",
+    "same_file",
+    "b59cb728cd"
+   ],
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "same_file",
+    "498b274710"
+   ],
+   [
+    "sympy__sympy-14248:bad",
+    "same_file",
+    "a8e5e948a8"
+   ]
+  ],
+  "sympy__sympy-19783:bad": [
+   [
+    "sympy__sympy-19495:bad",
+    "same_file",
+    "c7bad2ac15"
+   ],
+   [
+    "sympy__sympy-17318:bad",
+    "same_file",
+    "b59cb728cd"
+   ],
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "same_file",
+    "498b274710"
+   ]
+  ],
+  "sympy__sympy-20801:pbw:CodeStory": [
+   [
+    "sympy__sympy-19346:pbw:CodeStory",
+    "same_file",
+    "6f6e19ad5a"
+   ],
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "same_file",
+    "6ea3388049"
+   ],
+   [
+    "sympy__sympy-13031:pbw:CodeStory",
+    "same_file",
+    "16d1c80754"
+   ]
+  ],
+  "sympy__sympy-20801:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "same_issue",
+    "47856a277c"
+   ],
+   [
+    "sympy__sympy-13757:pbw:LearnByInteract",
+    "same_file",
+    "7c35a6b814"
+   ]
+  ],
+  "sympy__sympy-20916:good": [
+   [
+    "sympy__sympy-20916:bad",
+    "same_issue",
+    "1d3d934b0f"
+   ]
+  ],
+  "sympy__sympy-21379:good": [
+   [
+    "sympy__sympy-21379:bad",
+    "same_issue",
+    "e4d1869400"
+   ]
+  ],
+  "sympy__sympy-22456:pbw:CodeStory": [
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "same_file",
+    "47856a277c"
+   ],
+   [
+    "sympy__sympy-19346:pbw:CodeStory",
+    "same_file",
+    "6f6e19ad5a"
+   ],
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "same_file",
+    "6ea3388049"
+   ]
+  ],
+  "sympy__sympy-22456:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-22456:pbw:CodeStory",
+    "same_issue",
+    "8d07bc1ef3"
+   ],
+   [
+    "sympy__sympy-20801:pbw:LearnByInteract",
+    "same_file",
+    "ff10c53195"
+   ],
+   [
+    "sympy__sympy-13757:pbw:LearnByInteract",
+    "same_file",
+    "7c35a6b814"
+   ]
+  ],
+  "sympy__sympy-22456:pbw:OpenHands": [
+   [
+    "sympy__sympy-22456:pbw:CodeStory",
+    "same_issue",
+    "8d07bc1ef3"
+   ],
+   [
+    "sympy__sympy-22456:pbw:LearnByInteract",
+    "same_issue",
+    "e57406224a"
+   ]
+  ],
+  "sympy__sympy-22714:pbw:CodeStory": [
+   [
+    "sympy__sympy-22456:pbw:CodeStory",
+    "same_file",
+    "8d07bc1ef3"
+   ],
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "same_file",
+    "47856a277c"
+   ],
+   [
+    "sympy__sympy-19346:pbw:CodeStory",
+    "same_file",
+    "6f6e19ad5a"
+   ]
+  ],
+  "sympy__sympy-24443:pbw:CodeStory": [
+   [
+    "sympy__sympy-22714:pbw:CodeStory",
+    "same_file",
+    "138d83ab2f"
+   ],
+   [
+    "sympy__sympy-22456:pbw:CodeStory",
+    "same_file",
+    "8d07bc1ef3"
+   ],
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "same_file",
+    "47856a277c"
+   ]
+  ],
+  "sympy__sympy-24443:pbw:LearnByInteract": [
+   [
+    "sympy__sympy-24443:pbw:CodeStory",
+    "same_issue",
+    "b79e11ceff"
+   ],
+   [
+    "sympy__sympy-22714:pbw:CodeStory",
+    "same_file",
+    "138d83ab2f"
+   ],
+   [
+    "sympy__sympy-22456:pbw:CodeStory",
+    "same_file",
+    "8d07bc1ef3"
+   ]
+  ],
+  "sympy__sympy-24443:pbw:OpenHands": [
+   [
+    "sympy__sympy-24443:pbw:CodeStory",
+    "same_issue",
+    "b79e11ceff"
+   ],
+   [
+    "sympy__sympy-24443:pbw:LearnByInteract",
+    "same_issue",
+    "573ce7d1fc"
+   ]
+  ]
+ },
+ "other": {
+  "astropy__astropy-13033:good": [
+   [
+    "astropy__astropy-8707:bad",
+    "other_issue",
+    "02bf2d0ac3"
+   ],
+   [
+    "astropy__astropy-13398:bad",
+    "other_issue",
+    "213f545562"
+   ]
+  ],
+  "astropy__astropy-13977:good": [
+   [
+    "astropy__astropy-13398:bad",
+    "other_issue",
+    "213f545562"
+   ],
+   [
+    "astropy__astropy-13033:bad",
+    "other_issue",
+    "e3ebcdc30a"
+   ]
+  ],
+  "astropy__astropy-14182:good": [
+   [
+    "astropy__astropy-13977:bad",
+    "other_issue",
+    "d8fb1adbfb"
+   ],
+   [
+    "astropy__astropy-13398:bad",
+    "other_issue",
+    "213f545562"
+   ]
+  ],
+  "astropy__astropy-14369:good": [
+   [
+    "astropy__astropy-14182:bad",
+    "other_issue",
+    "89773475de"
+   ],
+   [
+    "astropy__astropy-13977:bad",
+    "other_issue",
+    "d8fb1adbfb"
+   ]
+  ],
+  "astropy__astropy-14598:good": [
+   [
+    "astropy__astropy-14508:pbw:LearnByInteract",
+    "other_issue",
+    "fc68ffbbc7"
+   ],
+   [
+    "astropy__astropy-8707:bad",
+    "other_issue",
+    "02bf2d0ac3"
+   ]
+  ],
+  "django__django-10999:good": [
+   [
+    "django__django-11133:bad",
+    "other_issue",
+    "a94ba5375a"
+   ],
+   [
+    "django__django-11149:pbw:CodeStory",
+    "other_issue",
+    "0c600ea3eb"
+   ]
+  ],
+  "django__django-11400:good": [
+   [
+    "django__django-11433:bad",
+    "other_issue",
+    "1d4abbc194"
+   ],
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "other_issue",
+    "faca6870b8"
+   ]
+  ],
+  "django__django-11433:good": [
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "other_issue",
+    "faca6870b8"
+   ],
+   [
+    "django__django-11292:pbw:CodeStory",
+    "other_issue",
+    "281c465dc9"
+   ]
+  ],
+  "django__django-11820:good": [
+   [
+    "django__django-11749:pbw:OpenHands",
+    "other_issue",
+    "2f00965a4e"
+   ],
+   [
+    "django__django-11400:bad",
+    "other_issue",
+    "a6ac9ad5c3"
+   ]
+  ],
+  "django__django-13158:good": [
+   [
+    "django__django-13028:pbw:LearnByInteract",
+    "other_issue",
+    "e889a45bcc"
+   ],
+   [
+    "django__django-11265:pbw:LearnByInteract",
+    "other_issue",
+    "faca6870b8"
+   ]
+  ],
+  "django__django-13195:good": [
+   [
+    "django__django-11133:bad",
+    "other_issue",
+    "a94ba5375a"
+   ],
+   [
+    "django__django-13158:bad",
+    "other_issue",
+    "cb43631226"
+   ]
+  ],
+  "django__django-14034:good": [
+   [
+    "django__django-14534:bad",
+    "other_issue",
+    "272a27437f"
+   ],
+   [
+    "django__django-14017:pbw:OpenHands",
+    "other_issue",
+    "7c94fcf4fc"
+   ]
+  ],
+  "django__django-15037:good": [
+   [
+    "django__django-14771:pbw:CodeStory",
+    "other_issue",
+    "5c886403ba"
+   ],
+   [
+    "django__django-14034:bad",
+    "other_issue",
+    "556dfacd54"
+   ]
+  ],
+  "django__django-15695:good": [
+   [
+    "django__django-15268:pbw:CodeStory",
+    "other_issue",
+    "c318b77dfa"
+   ],
+   [
+    "django__django-15268:pbw:OpenHands",
+    "other_issue",
+    "337093719f"
+   ]
+  ],
+  "django__django-16560:good": [
+   [
+    "django__django-15863:pbw:CodeStory",
+    "other_issue",
+    "b0c39c1dd3"
+   ],
+   [
+    "django__django-16100:bad",
+    "other_issue",
+    "74af995a1f"
+   ]
+  ],
+  "django__django-16877:good": [
+   [
+    "django__django-15863:pbw:CodeStory",
+    "other_issue",
+    "b0c39c1dd3"
+   ],
+   [
+    "django__django-13794:bad",
+    "other_issue",
+    "2d642a957f"
+   ]
+  ],
+  "django__django-16950:good": [
+   [
+    "django__django-14725:bad",
+    "other_issue",
+    "20fe6bce5b"
+   ],
+   [
+    "django__django-13933:pbw:CodeStory",
+    "other_issue",
+    "39376636c5"
+   ]
+  ],
+  "matplotlib__matplotlib-21568:good": [
+   [
+    "matplotlib__matplotlib-14623:pbw:LearnByInteract",
+    "other_issue",
+    "39ff7bcfb9"
+   ],
+   [
+    "matplotlib__matplotlib-23299:bad",
+    "other_issue",
+    "01ab2e6ffa"
+   ]
+  ],
+  "matplotlib__matplotlib-23299:good": [
+   [
+    "matplotlib__matplotlib-21568:bad",
+    "other_issue",
+    "2cc25726b8"
+   ],
+   [
+    "matplotlib__matplotlib-14623:pbw:LearnByInteract",
+    "other_issue",
+    "39ff7bcfb9"
+   ]
+  ],
+  "matplotlib__matplotlib-24870:good": [
+   [
+    "matplotlib__matplotlib-23299:bad",
+    "other_issue",
+    "01ab2e6ffa"
+   ],
+   [
+    "matplotlib__matplotlib-21568:bad",
+    "other_issue",
+    "2cc25726b8"
+   ]
+  ],
+  "matplotlib__matplotlib-26466:good": [
+   [
+    "matplotlib__matplotlib-25775:bad",
+    "other_issue",
+    "c684d61157"
+   ],
+   [
+    "matplotlib__matplotlib-24870:bad",
+    "other_issue",
+    "0ab040e16d"
+   ]
+  ],
+  "mwaskom__seaborn-3187:good": [
+   [
+    "mwaskom__seaborn-3069:bad",
+    "other_issue",
+    "2d7191389d"
+   ]
+  ],
+  "psf__requests-1724:good": [
+   [
+    "psf__requests-1766:bad",
+    "other_issue",
+    "c115529647"
+   ],
+   [
+    "psf__requests-2317:bad",
+    "other_issue",
+    "07b5b13770"
+   ]
+  ],
+  "psf__requests-1766:good": [
+   [
+    "psf__requests-1724:bad",
+    "other_issue",
+    "ab50109795"
+   ],
+   [
+    "psf__requests-2317:bad",
+    "other_issue",
+    "07b5b13770"
+   ]
+  ],
+  "psf__requests-2317:good": [
+   [
+    "psf__requests-1766:bad",
+    "other_issue",
+    "c115529647"
+   ],
+   [
+    "psf__requests-1724:bad",
+    "other_issue",
+    "ab50109795"
+   ]
+  ],
+  "pydata__xarray-3993:good": [
+   [
+    "pydata__xarray-4094:pbw:LearnByInteract",
+    "other_issue",
+    "32bb3b64e3"
+   ],
+   [
+    "pydata__xarray-4629:pbw:LearnByInteract",
+    "other_issue",
+    "91a2dd1218"
+   ]
+  ],
+  "pydata__xarray-4687:good": [
+   [
+    "pydata__xarray-3993:bad",
+    "other_issue",
+    "c65f623379"
+   ],
+   [
+    "pydata__xarray-4629:pbw:LearnByInteract",
+    "other_issue",
+    "91a2dd1218"
+   ]
+  ],
+  "pydata__xarray-7229:good": [
+   [
+    "pydata__xarray-4687:bad",
+    "other_issue",
+    "7d887adf64"
+   ],
+   [
+    "pydata__xarray-3993:bad",
+    "other_issue",
+    "c65f623379"
+   ]
+  ],
+  "pylint-dev__pylint-4661:good": [],
+  "pytest-dev__pytest-10356:good": [
+   [
+    "pytest-dev__pytest-7521:bad",
+    "other_issue",
+    "c8d303263d"
+   ],
+   [
+    "pytest-dev__pytest-7324:bad",
+    "other_issue",
+    "b93b1d548f"
+   ]
+  ],
+  "pytest-dev__pytest-5787:good": [
+   [
+    "pytest-dev__pytest-7324:bad",
+    "other_issue",
+    "b93b1d548f"
+   ],
+   [
+    "pytest-dev__pytest-7521:bad",
+    "other_issue",
+    "c8d303263d"
+   ]
+  ],
+  "pytest-dev__pytest-7324:good": [
+   [
+    "pytest-dev__pytest-5787:bad",
+    "other_issue",
+    "58f0b79120"
+   ],
+   [
+    "pytest-dev__pytest-7521:bad",
+    "other_issue",
+    "c8d303263d"
+   ]
+  ],
+  "pytest-dev__pytest-7521:good": [
+   [
+    "pytest-dev__pytest-7324:bad",
+    "other_issue",
+    "b93b1d548f"
+   ],
+   [
+    "pytest-dev__pytest-5787:bad",
+    "other_issue",
+    "58f0b79120"
+   ]
+  ],
+  "sphinx-doc__sphinx-10435:good": [
+   [
+    "sphinx-doc__sphinx-9658:bad",
+    "other_issue",
+    "a18afdfa34"
+   ],
+   [
+    "sphinx-doc__sphinx-9602:bad",
+    "other_issue",
+    "d8ee264561"
+   ]
+  ],
+  "sphinx-doc__sphinx-10673:good": [
+   [
+    "sphinx-doc__sphinx-10435:bad",
+    "other_issue",
+    "cd91f65a66"
+   ],
+   [
+    "sphinx-doc__sphinx-9658:bad",
+    "other_issue",
+    "a18afdfa34"
+   ]
+  ],
+  "sphinx-doc__sphinx-7748:good": [
+   [
+    "sphinx-doc__sphinx-7590:bad",
+    "other_issue",
+    "2dfc361d9c"
+   ],
+   [
+    "sphinx-doc__sphinx-7462:bad",
+    "other_issue",
+    "b9be410995"
+   ]
+  ],
+  "sphinx-doc__sphinx-8056:good": [
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "other_issue",
+    "6aec55046e"
+   ],
+   [
+    "sphinx-doc__sphinx-7748:bad",
+    "other_issue",
+    "cf359a3918"
+   ]
+  ],
+  "sphinx-doc__sphinx-8265:good": [
+   [
+    "sphinx-doc__sphinx-8056:bad",
+    "other_issue",
+    "585dadd8d8"
+   ],
+   [
+    "sphinx-doc__sphinx-7985:bad",
+    "other_issue",
+    "6aec55046e"
+   ]
+  ],
+  "sphinx-doc__sphinx-9461:good": [
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "other_issue",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-9229:bad",
+    "other_issue",
+    "48a645be37"
+   ]
+  ],
+  "sphinx-doc__sphinx-9602:good": [
+   [
+    "sphinx-doc__sphinx-9258:bad",
+    "other_issue",
+    "abffe11b31"
+   ],
+   [
+    "sphinx-doc__sphinx-8265:bad",
+    "other_issue",
+    "619ff87ff9"
+   ]
+  ],
+  "sympy__sympy-13091:good": [
+   [
+    "sympy__sympy-13031:pbw:CodeStory",
+    "other_issue",
+    "16d1c80754"
+   ],
+   [
+    "sympy__sympy-12096:pbw:CodeStory",
+    "other_issue",
+    "42cf207ab5"
+   ]
+  ],
+  "sympy__sympy-13372:good": [
+   [
+    "sympy__sympy-13091:bad",
+    "other_issue",
+    "c18d22bde7"
+   ],
+   [
+    "sympy__sympy-13031:pbw:CodeStory",
+    "other_issue",
+    "16d1c80754"
+   ]
+  ],
+  "sympy__sympy-13615:good": [
+   [
+    "sympy__sympy-13372:bad",
+    "other_issue",
+    "000f8ec011"
+   ],
+   [
+    "sympy__sympy-13091:bad",
+    "other_issue",
+    "c18d22bde7"
+   ]
+  ],
+  "sympy__sympy-13798:good": [
+   [
+    "sympy__sympy-13757:pbw:LearnByInteract",
+    "other_issue",
+    "7c35a6b814"
+   ],
+   [
+    "sympy__sympy-13615:bad",
+    "other_issue",
+    "d36adc004e"
+   ]
+  ],
+  "sympy__sympy-13877:good": [
+   [
+    "sympy__sympy-13798:bad",
+    "other_issue",
+    "0ae54276ad"
+   ],
+   [
+    "sympy__sympy-13757:pbw:LearnByInteract",
+    "other_issue",
+    "7c35a6b814"
+   ]
+  ],
+  "sympy__sympy-15976:good": [
+   [
+    "sympy__sympy-15017:pbw:LearnByInteract",
+    "other_issue",
+    "498b274710"
+   ],
+   [
+    "sympy__sympy-14248:bad",
+    "other_issue",
+    "a8e5e948a8"
+   ]
+  ],
+  "sympy__sympy-17318:good": [
+   [
+    "sympy__sympy-15976:bad",
+    "other_issue",
+    "c0fb6fffa9"
+   ],
+   [
+    "sympy__sympy-15017:pbw:CodeStory",
+    "other_issue",
+    "6ea3388049"
+   ]
+  ],
+  "sympy__sympy-18199:good": [
+   [
+    "sympy__sympy-17318:bad",
+    "other_issue",
+    "b59cb728cd"
+   ],
+   [
+    "sympy__sympy-15976:bad",
+    "other_issue",
+    "c0fb6fffa9"
+   ]
+  ],
+  "sympy__sympy-20916:good": [
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "other_issue",
+    "47856a277c"
+   ],
+   [
+    "sympy__sympy-20801:pbw:LearnByInteract",
+    "other_issue",
+    "ff10c53195"
+   ]
+  ],
+  "sympy__sympy-21379:good": [
+   [
+    "sympy__sympy-20916:bad",
+    "other_issue",
+    "1d3d934b0f"
+   ],
+   [
+    "sympy__sympy-20801:pbw:CodeStory",
+    "other_issue",
+    "47856a277c"
+   ]
+  ]
+ }
+}

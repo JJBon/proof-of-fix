@@ -39,7 +39,14 @@ ERRORS = ["NotOracle()", "TooFewSignatures()", "DuplicateSigner()", "Replayed()"
           "NotRace()", "Undecided()", "AlreadyReported()", "AlreadySettled()", "OutOfBounds(uint256)",
           "UnknownRepo(bytes32)", "NotMover()", "StaleVerdict(bytes32,bytes32,bytes32)", "NothingOwed()",
           "WithdrawOnlyMode(address)", "ZeroAmount()", "NotRefundable(uint256,address)", "NotYours(uint256)",
-          "ERC20InsufficientBalance(address,uint256,uint256)", "ERC20InsufficientAllowance(address,uint256,uint256)"]
+          "ERC20InsufficientBalance(address,uint256,uint256)", "ERC20InsufficientAllowance(address,uint256,uint256)",
+          # v3's (Validators, Panels and its libraries, FeesV3, RaceV3)
+          "NotPanels()", "BadRegistration()", "ProofTypeNotAccepted()", "TeeTypeNotAccepted()", "NoAttestation()",
+          "BadLevel()", "BadSignature()", "BondTooSmall()", "NothingArrived()", "Unknown()", "NotAllowed()",
+          "WrongState()", "Locked()", "FirmwareTooOld()", "WrongStatus()", "BadBounty()", "Busy()", "TooLate()",
+          "NothingChanged()", "NotOpen()", "NotSeated()", "AlreadySealed()", "NotSealed()", "AlreadyRevealed()",
+          "AlreadyReceipted()", "EmptyHash()", "NothingDue()", "NotReady()", "NotActive()", "BadTable()",
+          "NotRegistered()", "AlreadyOpen()", "Unpriced(bytes32)", "RollInProgress()"]
 _BY_SELECTOR = {abi.selector(e).hex(): e for e in ERRORS}
 
 TRANSIENT_STATUS = frozenset({429, 502, 503, 504})
@@ -210,6 +217,8 @@ class Wallet:
         """This account's signature over a digest (an EIP-712 one: a join, a usage report)."""
         return _sign(self._secret, digest)
 
+    poll_s = 0.4  # between two looks for a receipt; a test chain that mines at once is asked sooner (tests set it)
+
     def send(self, to: str, signature: str, *args, value: int = 0, wait: float = 60) -> dict:
         data = abi.call_data(signature, *args)
         key = (to.lower(), data, value)
@@ -243,7 +252,7 @@ class Wallet:
                 if int(receipt["status"], 16) != 1:
                     raise Reverted(f"{signature.split('(')[0]} reverted in block {int(receipt['blockNumber'], 16)}")
                 return receipt
-            time.sleep(0.4)
+            time.sleep(self.poll_s)
         if spent:  # its nonce went to another transaction and this one never ran: a later call signs afresh
             self._unconfirmed.pop(key, None)
         raise Unavailable(f"no receipt for {tx_hash} after {wait:.0f}s")

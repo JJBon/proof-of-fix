@@ -8,9 +8,24 @@
 #   scripts/integration.sh                     every scenario (about 15-25 minutes)
 #   scripts/integration.sh --only 2,3          some of them (6, joining, always runs first)
 #   scripts/integration.sh --with-first-run    then scripts/first-run-e2e.sh: scenario 7c, the owner's seat from cold
+#   scripts/integration.sh --only 10           scenario 10 (#210, always last): the untyped loop, `pofctl bot watch` as
+#                                              its own process and the seats' registration check, with no bot command
+#                                              typed by the suite
 #   scripts/integration.sh --radicle           also scenario 8, Radicle merges (#201): a local Radicle network on an
 #                                              --internal Docker network (tests/integration/radicle.py) starts first,
 #                                              and Heads' genesis is its repository; --radicle --only 8 for it alone
+#
+#   scripts/integration.sh --version 3         v3, open validators (#140, task 5.0 of #132), on the same throwaway
+#                                              devnet: v2 deployed, v3 beside it (scripts/devnet.sh deploy-v3, its
+#                                              record contracts/deployments/integration/devnet-v3.json), then
+#                                              tests/integration/suite_v3.py: registration and qualification
+#                                              (scenario 6), the replacement of a silent judge (scenario 4), the k = 1
+#                                              hold and its audits, a waiting bounty, and a challenge reversed by a
+#                                              fresh panel. It reads who is drawn and what decides through
+#                                              tests/integration/panel.py, as the v2 suite does. --heal adds the time
+#                                              to heal of a paid fix. Local only: --target aws --version 3 is task 5.2.
+#                                              v2's scenarios 1-3, 5, 7 and 10 go through pofctl, the bot and the
+#                                              relay, which don't speak v3 yet: they are not run for v3.
 #
 # POF_INTEGRATION_PORT picks the devnet's port (default 8556); POF_INTEGRATION_KEEP=1 keeps the devnet.
 #
@@ -29,6 +44,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TARGET=local
+VERSION=2
 FIRST_RUN=0
 RADICLE=0
 ARGS=()
@@ -40,6 +56,12 @@ while (($#)); do
       shift 2
       ;;
     --target=*) TARGET=${1#--target=}; shift ;;
+    --version)
+      (($# >= 2)) || { echo "integration: --version needs 2 or 3" >&2; exit 2; }
+      VERSION=$2
+      shift 2
+      ;;
+    --version=*) VERSION=${1#--version=}; shift ;;
     *)
       [[ "$1" == --with-first-run ]] && FIRST_RUN=1
       [[ "$1" == --radicle ]] && RADICLE=1
@@ -48,6 +70,18 @@ while (($#)); do
       ;;
   esac
 done
+case "$VERSION" in
+  2) ;;
+  3)
+    [[ "$TARGET" == local ]] || { echo "integration: --version 3 runs on the local devnet only for now (the AWS devnet is task 5.2 of #132)" >&2; exit 2; }
+    # The same throwaway devnet as v2's run (name, port, state, records), started and removed by devnet-v3-e2e.sh.
+    export POF_V3_E2E_NAME=${POF_INTEGRATION_NAME:-pof-devnet-integration} POF_V3_E2E_PORT=${POF_INTEGRATION_PORT:-8556} \
+      POF_V3_E2E_STATE=.devnet-integration POF_V3_E2E_RECORDS=integration POF_V3_E2E_WORK=.integration \
+      POF_V3_E2E_KEEP=${POF_INTEGRATION_KEEP:-}
+    exec scripts/devnet-v3-e2e.sh "${ARGS[@]}"
+    ;;
+  *) echo "integration: unknown version $VERSION: 2 or 3" >&2; exit 2 ;;
+esac
 case "$TARGET" in
   local) ;;
   aws) exec python3 tests/integration/aws.py "${ARGS[@]}" ;; # the shared devnet: nothing below (start, reset) runs

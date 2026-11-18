@@ -17,10 +17,10 @@ The node's transport is a pluggable interface (`oracle/transport.py`, `ORACLE_EX
 |-----------|------|--------|
 | `folder`  | a directory the nodes share (`ORACLE_EXCHANGE`) | one machine: the unit tests and the folder demo |
 | `http`    | the hosted exchange service (`exchange/`, `ORACLE_EXCHANGE_URL`) | built here: a **convenience relay** |
-| `onchain` | seals, reveals and signatures posted to the contracts | interface + TODO: **#122 (task 5.5), the target primary path** |
+| `onchain` | seals, reveals, receipts and usage reports posted to the contracts | **v3's default** (#139, design D18 of #132): Panels takes the seals and RaceV3 the reports. v2's contracts take none, so on v2 it stays unavailable |
 | `p2p`     | gossip between the judges (libp2p, Waku…) | interface only |
 
-Several at once (`http,onchain` once 5.5 lands; `http,folder` on one machine) fan out: a node posts to each and reads
+Several at once (`onchain,http` on v3; `http,folder` on one machine) fan out: a node posts to each and reads
 the union, so no single transport, the hosted service included, is required. The **hosted service is a convenience
 relay, never a dependency**: the nodes relay the result themselves, building the verdict from the chain's own data
 (the domain, the submission, its seed and the draw) and the signatures they read, and they see on-chain when someone

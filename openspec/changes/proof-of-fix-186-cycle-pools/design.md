@@ -188,10 +188,10 @@ The merit prompt (comparing a cycle's fixes in dollars, the batches and the refe
 - **An early-risk multiplier for funders:** whether funding a repository or the network early earns more tokens per coin than later funding, and how it would decay. Not simulated; it would change D3's split to funders, not the per-fix cap.
 - **Whether a capped fix's cut goes to the uncapped fixes or isn't minted.** The spec follows #194's recommendation and D3: redistribute, which removes the 16 % dilution 1-cent pledges cause. An equivalent rule counts each fix's merit in the network total only up to its coin.
 - **What a pool share gives beyond tokens:** a vote on priorities, a claim on the fee sink, or nothing. It changes the pool's attractiveness, not these rules.
-- **The index pool's weighting window (`INDEX_WINDOW`):** #194's investors and index looked at 4 cycles.
+- **The index pool's weighting window (`INDEX_WINDOW`):** decided by the owner, 2026-11-13: **4 cycles** (28 days), as #194 simulated. One cycle of merit is noisy, so one big fix would swing where the whole index goes; repositories are still paid every cycle.
 
 **Parameters and follow-ups** that don't change the requirements' structure:
-- **Cycle length (`CYCLE_DAYS`).** The simulations used a week.
+- **Cycle length (`CYCLE_DAYS`):** decided by the owner, 2026-11-13: **7 days**, as the simulations used.
 - **The merit panel's size:** #132's k rule, or a larger fixed k for cycle-end panels, which judge more coin at once.
 - **`MERIT_BATCH`, `MERIT_REFS` and the reference set:** set by #160's measured scaling error.
 - **`ISSUE_STAKE`, `CHALLENGE_REWARD_BPS` and `CHALLENGE_WINDOW`.** The simulation used 50 coin, 10 % and before the split.

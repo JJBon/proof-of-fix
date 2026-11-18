@@ -8,6 +8,7 @@ How each check's judges are chosen in v3, and when their verdict is final:
 - the proof a counted verdict must carry;
 - challenge windows by panel size, and the hold on a lone judge's verdict;
 - audits, two of them for a lone judge's verdict;
+- disputes backed by a failing test, and a rejected fix's one appeal, decided by the seated families;
 - the constitution tier's fixed size, the network it waits for, and the deposit a rejected ADR forfeits.
 
 It replaces v2's fixed "3 of 7" and "all 7" for v3 only.
@@ -57,11 +58,22 @@ A validator SHALL be eligible for a bounty only if its bond is at least the bond
 - **THEN** it is drawn with that k, without the solver doing anything
 
 ### Requirement: k is fixed at the draw and silent judges are replaced
-Once drawn, a submission's k SHALL NOT change. A drawn judge that doesn't seal within the seal window, or doesn't reveal within the reveal window, SHALL be replaced by the next eligible validator in the same shuffle. The replacement SHALL get a fresh window. When the shuffle is exhausted, the submission SHALL wait for the next eligible validator. A judge's silence SHALL NOT lower k or the majority needed.
+Once drawn, a submission's k SHALL NOT change. A drawn judge that doesn't seal within the seal window, or doesn't reveal within the reveal window, SHALL be replaced by the next eligible validator in the same shuffle, except as the next requirement says. The replacement SHALL get a fresh window. When the shuffle is exhausted, the submission SHALL wait for the next eligible validator. A judge's silence SHALL NOT lower k or the majority needed.
 
 #### Scenario: A judge goes silent to change the outcome
 - **WHEN** one of 3 drawn judges, seeing the others' seals, stays silent hoping for a smaller panel
 - **THEN** the next validator in the shuffle replaces it, k stays 3, and 2 passing verdicts are still needed
+
+#### Scenario: A missed reveal with no majority yet
+- **WHEN** one of 3 drawn judges seals but doesn't reveal in time, and the other two revealed different verdicts
+- **THEN** it loses the published flat amount, the next validator in the shuffle replaces it with a fresh window, and 2 passing verdicts are still needed
+
+### Requirement: A reveal missed after the majority revealed isn't replaced
+When a counted judge sealed but didn't reveal in time, and the verdicts revealed with their receipts already form a majority of (k + 1) / 2 on one side (at the constitution tier, its threshold to pass, or enough fails that it can't be reached), the judge SHALL be slashed as a sealed vote not revealed and SHALL NOT be replaced, and the verdict SHALL count with the revealed majority (owner, 2026-11-13). A revealed majority whose proof level can't judge the bounty SHALL NOT count this way.
+
+#### Scenario: A missed reveal after the majority revealed
+- **WHEN** one of 3 drawn judges seals but doesn't reveal in time, and the other two have revealed the same verdict with their receipts
+- **THEN** it loses the published flat amount and counts a miss, nobody replaces it, and the verdict counts with the two revealed votes, so no replacement seals after the reveals are public
 
 ### Requirement: The draw's seed is fixed after the submission and recomputable
 A panel SHALL be drawn by a shuffle of the eligible validators driven by a seed. The seed SHALL be derived from:
@@ -149,7 +161,7 @@ A validator SHALL NOT be drawn at k = 1 while it has the published maximum numbe
 - **THEN** the submission waits until one of those verdicts is final, and its waiting shadows are drawn meanwhile
 
 ### Requirement: A challenge is judged by a larger, fresh panel
-Within a verdict's window, anyone MAY challenge it with the published stake and evidence. A fresh panel, drawn without the original judges or any party, SHALL judge it: CHALLENGE_K[k] validators, or fewer if still an odd number larger than k (K_MAX for a panel of K_MAX). Otherwise the challenge SHALL wait, with the window frozen. An upheld challenge SHALL reverse the verdict and pay the challenger; a failed one SHALL pay the stake to the accused.
+Within a verdict's window, anyone MAY challenge it with the published stake and evidence. A fresh panel, drawn without the original judges or any party, SHALL judge it: CHALLENGE_K[k] validators, or fewer if still an odd number larger than k (K_MAX for a panel of K_MAX). Otherwise the challenge SHALL wait, with the window frozen, unless few families can judge. An upheld challenge SHALL reverse the verdict and pay the challenger; a failed one SHALL pay the stake to the accused.
 
 #### Scenario: A lone validator passes a bad fix
 - **WHEN** a k = 1 panel passes a fix, and within k = 1's window a challenger re-runs the check, gets a fail, and challenges with the stake
@@ -158,6 +170,83 @@ Within a verdict's window, anyone MAY challenge it with the published stake and 
 #### Scenario: A challenge with too few validators
 - **WHEN** a challenge against a panel of 3 is filed while only 3 validators outside it are eligible
 - **THEN** the challenge waits for a panel of 5; the verdict stays not final, and the window doesn't expire while it waits
+
+### Requirement: A failing test reverses a pass
+Within a passing verdict's window, anyone MAY dispute it with a test and the published stake. The official checker image SHALL run the test against the fixed code; the dispute SHALL stand only if the test fails twice and changes nothing but test files. A challenge panel SHALL then decide one question: whether the test states what the issue asks for. An upheld dispute SHALL reverse the verdict before payment.
+
+#### Scenario: A contender's test
+- **WHEN** a panel passes a fix, and a validator of an unseated family posts a test that fails on the fixed code and that the challenge panel finds states the issue's requirement
+- **THEN** the fix isn't paid, the disputer gets its stake, the solver's deposit and the reward, and the judges that passed it lose score only
+
+#### Scenario: A test that passes
+- **WHEN** the posted test passes on the fixed code
+- **THEN** the dispute falls with no panel, and the stake goes to the solver
+
+#### Scenario: A test for something the issue didn't ask
+- **WHEN** the test fails on the fixed code but the challenge panel finds it states a different requirement
+- **THEN** the verdict stands, its window resumes, and the stake goes to the solver
+
+### Requirement: What a test dispute pays and costs
+An upheld dispute backed by a test SHALL return the disputer's stake and pay it the solver's deposit and the published share of the bounty. A rejected one SHALL pay the stake to the solver. The judges that passed the fix SHALL NOT be slashed: they lose score only.
+
+#### Scenario: A disputer without evidence
+- **WHEN** a party disputes ten passes with tests that pass on the fixed code
+- **THEN** it loses ten stakes to the solvers, and no verdict changes
+
+### Requirement: The seated families decide an appeal
+The solver of a rejected fix MAY appeal once, within the published period. The appeal SHALL be judged by a fresh draw from the seated families, of the original panel's size or larger; no contender SHALL sit on it, and the original judges MAY be drawn again. If the panel passes the fix, the fix SHALL enter a passing verdict's window, open to disputes; if not, the rejection SHALL be final.
+
+#### Scenario: A good fix wrongly rejected
+- **WHEN** a panel of the one seated family rejects a fix, its solver appeals with a test, and a fresh draw of that family passes it
+- **THEN** the fix's window runs as for any pass, and if no dispute is upheld it is paid and its deposit returned
+
+#### Scenario: A contender on the appeal
+- **WHEN** an appeal panel is drawn while four families are contenders
+- **THEN** none of their validators is drawn for it
+
+#### Scenario: A second appeal
+- **WHEN** an appeal fails and the solver appeals again
+- **THEN** the appeal is refused
+
+### Requirement: An appeal needs a test and a stake (proposed)
+An appeal SHALL carry new evidence: a test, and the published stake. The official checker image SHALL run the test; the appeal SHALL be judged only if the test fails on the base code, passes on the fixed code, both twice, and changes nothing but test files. The appeal panel SHALL see the test and its results. A rejection SHALL stand unless the panel passes the fix.
+
+#### Scenario: An appeal with no evidence
+- **WHEN** a solver appeals a rejection and posts no test, or a test that passes on the base code
+- **THEN** the appeal is refused with no panel, and the stake is returned
+
+#### Scenario: A test that proves nothing
+- **WHEN** a solver of a bad fix appeals with a test it wrote that passes with its fix, and the panel still finds the fix wrong
+- **THEN** the rejection is final and the stake is lost
+
+### Requirement: What an appeal stakes (proposed)
+The appeal stake SHALL be separate from the solver's deposit: the larger of the published amount and the published share of the bounty. It SHALL be returned to whoever posted it when the appeal passes the fix or finds no panel. When the appeal fails it SHALL go to the sponsors' pool, never to a judge, the funder or the reporter. The appellant SHALL pay the appeal panel's checks.
+
+#### Scenario: A failed appeal on a $200 bounty
+- **WHEN** the stake is the larger of $5 and 10 % of the bounty, and the appeal of a fix to a $200 bounty fails
+- **THEN** the $20 stake goes to the sponsors' pool, and the fix's deposit goes to the issue's bounty
+
+### Requirement: A contender may sponsor an appeal (proposed)
+A validator of an unseated family MAY appeal in the solver's place, posting the test and the stake and paying the appeal panel's checks. A fix SHALL still have one appeal. When a sponsored appeal passes and the fix is paid, the sponsor SHALL get its stake back and the published share of the bounty, taken from the bounty. A sponsor SHALL NOT sit on the panel.
+
+#### Scenario: A stricter panel than it should be
+- **WHEN** the seated family rejects a good fix, its solver doesn't appeal, and a contender whose model passed it sponsors the appeal, which passes
+- **THEN** the solver is paid the bounty less the sponsor's share, the sponsor is paid that share, and the judges that rejected the fix lose score
+
+#### Scenario: A sponsor of everything
+- **WHEN** a contender sponsors ten rejections of bad fixes with tests that pass, and the panel passes none
+- **THEN** it loses ten stakes to the sponsors' pool and pays ten panels' checks
+
+### Requirement: A challenge among few families gets a second draw (proposed)
+While fewer than the published number of families (3) can judge a fix, a challenge or appeal that can't draw the larger fresh panel SHALL be judged by a second draw of the original panel's size from those families, the original judges not excluded. It SHALL NOT wait for a family that isn't seated. The operator, host and TEE-type caps SHALL apply.
+
+#### Scenario: One family holds every seat
+- **WHEN** a panel of 7 of the one seated family passes a fix, a challenge is filed, and that family has only 3 validators outside the panel
+- **THEN** a second draw of 7 from the family's validators judges the challenge, and the verdict becomes final when it is resolved
+
+#### Scenario: Three families seated
+- **WHEN** three families are seated and a challenge can't draw its larger panel
+- **THEN** it waits, as any challenge does
 
 ### Requirement: An upheld receipt challenge
 When a challenge panel's majority finds a judge's receipt false, the receipt challenge SHALL be upheld and the judge slashed for a false verdict. The challenge panel's own majority on the fix SHALL then decide it: the verdict SHALL be reversed if that majority votes against it, and SHALL otherwise stand, as the larger panel judged it. A disputed verdict SHALL NOT be voided and judged again from the start.

@@ -101,7 +101,7 @@ def fits(members: Sequence[Validator], c: Validator, k: int, p: Params) -> bool:
         nh += m.host == c.host
         nf += m.family == c.family
         nt += c.tee != "none" and m.tee == c.tee
-    return nh < cap and nt < tcap and nf < cap
+    return nh < cap and nt < tcap and (nf < cap or not p.FAMILY_CAP)
 
 
 def draw(seed: int, pool: Sequence[Validator], k0: int, p: Params, tag: int = T_PANEL, exact: bool = False,

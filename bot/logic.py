@@ -27,8 +27,7 @@ def wallet(body: str, role: str) -> str | None:
 
 def needs_bounty(issue: dict, comments: list[dict]) -> bool:
     """An open issue the maintainer labelled, with no bounty linked yet."""
-    labelled = any(label.get("name") == LABEL for label in issue.get("labels") or [])
-    return issue.get("state") == "open" and labelled and linked(comments) is None
+    return issue.get("state") == "open" and labelled(issue) and linked(comments) is None
 
 
 def linked(comments: list[dict]) -> tuple[str, int, int] | None:
@@ -73,6 +72,134 @@ def paid_comment(race: str, bounty: int, tx: str, block: int, chain_id: int, exp
             f"{tx_link(tx, explorer)} ({where}). The fix is merged and paid, so this issue is closed. The bot only "
             f"reports what the contract did: anyone can check the transaction.\n\n"
             f"<!-- pof-paid race={race} bounty={bounty} tx={tx} -->")
+
+
+# ---------- the claim (proof-of-fix#210, D2): an issue names its registration ----------
+
+REGISTRATION = re.compile(r"^Registration:\s*(\d+)\s*$", re.M)
+# Why a labelled issue's claim isn't valid (the hint names it): no lines, no such registration, another wallet, another
+# repository, or a lower-numbered issue claims it first.
+NO_LINES, UNKNOWN, WRONG_WALLET, WRONG_REPO, TAKEN = "no-lines", "unknown", "wallet", "repository", "taken"
+
+
+def labelled(issue: dict, label: str = LABEL) -> bool:
+    """The maintainer's label is on the issue (labels as names, or as the host's {"name"} objects)."""
+    return any((x.get("name") if isinstance(x, dict) else x) == label for x in issue.get("labels") or [])
+
+
+def registration(body: str) -> int | None:
+    """The on-chain issue a forge issue's body claims (`Registration: N`), if any."""
+    m = REGISTRATION.search(body or "")
+    return int(m.group(1)) if m and int(m.group(1)) > 0 else None
+
+
+def _repo_word(repo) -> str:
+    if isinstance(repo, (bytes, bytearray)):
+        return "0x" + bytes(repo).hex().rjust(64, "0")
+    text = str(repo or "0").lower()
+    text = text[2:] if text.startswith("0x") else text
+    return "0x" + (text or "0").rjust(64, "0")
+
+
+def claim_problem(issue: dict, onchain: dict | None, repo_id, label: str = LABEL) -> str | None:
+    """Why `issue` doesn't validly claim the registration it names, leaving out the first-claim rule (None: it does).
+    `onchain`: that registration ({"id", "reporter", "repo"}), or None when there's no such registration."""
+    n, wallet_ = registration(issue.get("body", "")), wallet(issue.get("body", ""), "Reporter")
+    if not labelled(issue, label) or n is None or wallet_ is None:
+        return NO_LINES
+    if onchain is None or int(onchain.get("id", n)) != n or int(onchain.get("reporter", "0x0"), 16) == 0:
+        return UNKNOWN
+    if onchain["reporter"].lower() != wallet_.lower():
+        return WRONG_WALLET
+    if _repo_word(onchain.get("repo")) != _repo_word(repo_id):
+        return WRONG_REPO
+    return None
+
+
+def first_valid_claim(issues: list, onchain_issue: dict, repo_id, label: str = LABEL) -> int | None:
+    """The forge issue that validly claims on-chain issue `onchain_issue` ({"id", "reporter", "repo"}): labelled, naming
+    it and its reporter's wallet, on the configured repository (`repo_id`: its registry id, or 0 outside the registry),
+    the lowest-numbered of those, open or closed. Issue numbers only grow, so the first claim is stable. The seats'
+    registration check and the bot's link both use it, so they always name the same forge issue."""
+    valid = [i["number"] for i in issues
+             if registration(i.get("body", "")) == int(onchain_issue["id"])
+             and claim_problem(i, onchain_issue, repo_id, label) is None]
+    return min(valid) if valid else None
+
+
+def hint_reason(issue: dict, issues: list, onchain: dict | None, repo_id, label: str = LABEL) -> str | None:
+    """Why an open labelled issue has no valid claim (None: it has one), as the hint says it."""
+    problem = claim_problem(issue, onchain, repo_id, label)
+    if problem is not None:
+        return problem
+    first = first_valid_claim(issues + [issue], onchain, repo_id, label)
+    return None if first == issue["number"] else TAKEN
+
+
+HINT_MARKER = re.compile(r"<!-- pof-hint race=(0x[0-9a-fA-F]{40}) -->")
+ENDED_MARKER = re.compile(r"<!-- pof-ended race=(0x[0-9a-fA-F]{40}) bounty=(\d+) state=(Unsolved|Refunded) "
+                          r"tx=(0x[0-9a-fA-F]{64}) -->")
+REASONS = {
+    NO_LINES: "This issue doesn't name a registration yet: its body needs both lines below, each on its own line.",
+    UNKNOWN: "The registration this issue names doesn't exist on the race.",
+    WRONG_WALLET: "The `Reporter wallet:` line isn't the wallet that registered the issue it names.",
+    WRONG_REPO: "The registration it names is for another repository.",
+    TAKEN: "An earlier issue on this repository already claims that registration; the first claim wins.",
+}
+
+
+def hint_comment(race: str, reason: str | None = None) -> str:
+    """The one hint on a labelled issue with no valid claim (D5): what a claim needs, and why this one isn't, if known."""
+    why = REASONS.get(reason or "", "")
+    return ((why + "\n\n" if why else "") +
+            "To open a bounty for this issue, its reporter registers it on-chain from their own wallet (that wallet pays "
+            "the registration fee and the stake, and is paid the finder's fee):\n\n"
+            "    pofctl reporter register --repo registry\n\n"
+            "(`--repo registry` for a repository in the head registry; no `--repo` for a "
+            "project outside it), "
+            "and then adds the two lines it prints to this issue's body, each on its own line:\n\n"
+            "    Registration: <the on-chain issue>\n    Reporter wallet: 0x…\n\n"
+            "The judges' registration check then opens the bounty, and the bot links it here. The bot never registers "
+            "for anyone, and this is its only hint on this issue.\n\n"
+            f"<!-- pof-hint race={race} -->")
+
+
+def hinted(comments: list, race: str | None = None) -> bool:
+    """A hint is already on the issue (for this race, if named)."""
+    for c in comments:
+        m = HINT_MARKER.search(c.get("body") or "")
+        if m and (race is None or m.group(1).lower() == race.lower()):
+            return True
+    return False
+
+
+def ended_comment(race: str, bounty: int, state: str, tx: str, block: int, chain_id: int, explorer: str = "") -> str:
+    """The comment the bot closes an unpaid bounty's issue with (D5): its outcome, its transaction and what opens."""
+    if state not in ("Unsolved", "Refunded"):
+        raise ValueError(f"an ended comment is for Unsolved or Refunded, not {state}")
+    if state == "Unsolved":
+        what = ("ended unsolved: no fix was merged before it sunset. The funders' refunds are open (`pofctl funder "
+                "claim`), and the reporter's stake has returned")
+    else:
+        what = "was refunded: its issue was withdrawn. The funders' refunds are open (`pofctl funder claim`)"
+    where = f"chain {chain_id}, block {block}"
+    return (f"Bounty #{bounty} on the Race at `{race}` {what}. It ended in transaction {tx_link(tx, explorer)} "
+            f"({where}), so this issue is closed. The bot only reports what the contract did: anyone can check the "
+            f"transaction.\n\n<!-- pof-ended race={race} bounty={bounty} state={state} tx={tx} -->")
+
+
+def ended(comments: list) -> tuple[str, int, str, str] | None:
+    """The (race, bounty, state, transaction) the bot reported ended in a comment, if any."""
+    for c in comments:
+        m = ENDED_MARKER.search(c.get("body") or "")
+        if m:
+            return m.group(1), int(m.group(2)), m.group(3), m.group(4)
+    return None
+
+
+def claim_lines(onchain_issue: int, reporter: str) -> list:
+    """The two lines a reporter pastes into the forge issue's body (`pofctl reporter register` prints them)."""
+    return [f"Registration: {onchain_issue}", f"Reporter wallet: {reporter}"]
 
 
 def pr_body(issue: int, bounty: int, submission: int, salt: str, solver: str) -> str:

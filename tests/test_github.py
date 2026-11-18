@@ -115,7 +115,8 @@ class TestHosts(unittest.TestCase):
         self.assertEqual(repo.pull(3)["head_sha"], "d" * 40)
         self.assertTrue(repo.merged(3))
         self.assertEqual(repo.issues(label="bounty")[0]["number"], 1)
-        self.assertEqual(client.calls[-1][1], "/repos/maintainer/sample/issues?state=open&type=issues&labels=bounty")
+        self.assertEqual(client.calls[-1][1],
+                         "/repos/maintainer/sample/issues?state=open&type=issues&limit=50&labels=bounty&page=1")
 
     def test_config_picks_the_host_per_repository(self):
         cfg = {"repos": {"acme/demo": {"host": "github", "api": "http://127.0.0.1:1"},

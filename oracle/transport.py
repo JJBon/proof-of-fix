@@ -2,15 +2,19 @@
 
 A node posts its own messages for a submission (`put`) and reads everyone's (`all`), by kind: the seal, the reveal, its
 signature on the result, and its signature on the merge. (Usage reports go to the meter on-chain, not through here.)
+One kind is kept under an on-chain issue instead (proof-of-fix#210): `accept`, a seat's signature on a claimed
+registration's accept; then the number passed is the issue's (the folder keeps it in `issue-<N>/`, the service under
+/v1/<race>/issue/<N>/accept).
 The transports (ORACLE_EXCHANGE_TRANSPORT, a comma-separated list) carry the same messages:
 
 - folder:  a directory the nodes share (ORACLE_EXCHANGE); one machine: the tests, the folder demo;
 - http:    the hosted exchange service (exchange/, ORACLE_EXCHANGE_URL): a CONVENIENCE RELAY for judges on separate
            machines, never a required dependency;
-- onchain: seals, reveals and signatures posted to the contracts (task 5.5, not built yet): the target primary path;
+- onchain: seals, reveals, receipts and usage reports posted to the contracts: v3's default (#139, D18). v2's
+           contracts take none, so there it stays unavailable;
 - p2p:     gossip between the judges (libp2p, Waku…): an interface only, for now.
 
-With several (e.g. "http,onchain" once 5.5 lands, "http,folder" on one machine), a node posts to every one and reads
+With several (e.g. "onchain,http" on v3, "http,folder" on one machine), a node posts to every one and reads
 the union, so any single transport going down, the hosted service included, doesn't stop a check: the nodes still
 relay the result themselves, from what they read and the chain's own data (the domain, the submission, the draw).
 
@@ -32,7 +36,12 @@ from pathlib import Path
 
 from .rpc import auth_headers, split_auth
 
-KINDS = ("seal", "reveal", "result", "merged")
+KINDS = ("seal", "reveal", "result", "merged", "accept", "receipt", "usage")  # the last two are v3's (onchain)
+ISSUE_KINDS = ("accept",)  # under an on-chain issue, not a submission
+
+
+def folder_name(s: int, kind: str) -> str:
+    return f"issue-{int(s)}" if kind in ISSUE_KINDS else str(s)
 RETRY = {408, 425, 429, 500, 502, 503, 504}  # the service is busy, restarting, or it's too early: send again later
 NEEDS_SEAL = 424  # a reveal the service has no seal for (it restarted empty): post the seal again, then the reveal
 
@@ -60,14 +69,14 @@ class FolderExchange(Transport):
         self.root = Path(root) / race.lower()
 
     def put(self, s: int, node: str, kind: str, data: dict) -> None:
-        d = self.root / str(s)
+        d = self.root / folder_name(s, kind)
         d.mkdir(parents=True, exist_ok=True)
         tmp = d / f".{node.lower()}.{kind}.{secrets.token_hex(4)}"
         tmp.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
         os.replace(tmp, d / f"{node.lower()}.{kind}.json")
 
     def all(self, s: int, kind: str) -> dict:
-        d = self.root / str(s)
+        d = self.root / folder_name(s, kind)
         out = {}
         for f in sorted(d.glob(f"*.{kind}.json")) if d.exists() else []:
             try:
@@ -164,6 +173,8 @@ class HttpExchange(Transport):
     def _path(self, s: int, kind: str) -> str:
         if kind not in KINDS:
             raise ValueError(f"unknown message kind {kind!r}")
+        if kind in ISSUE_KINDS:
+            return f"/v1/{self.race}/issue/{int(s)}/{kind}"
         return f"/v1/{self.race}/{int(s)}/{kind}"
 
     def _request(self, method: str, path: str, body: dict | None = None) -> tuple:
@@ -194,22 +205,73 @@ class HttpExchange(Transport):
 
 
 class OnchainExchange(Transport):
-    """`onchain`: the target primary path. TODO(5.5, Verdicts.sol "sealed verdicts: seals within SEAL_WINDOW, reveals
-    within REVEAL_WINDOW"): `put` sends the seal and the reveal as transactions (the contract enforces the windows and
-    opens the seals itself), `all` reads them back from its events; the result's and the merge's signatures can then
-    be gathered from the same events, or the contract can count the revealed outcomes and need no signatures at all.
-    Not built: the contracts don't take seals yet, and this PR leaves them unchanged."""
+    """`onchain`: v3's default (proof-of-fix#139, design D18). The messages are transactions to the contracts, which
+    enforce the windows and open the seals themselves, and `all` reads them back from the panel's seats. For v3 the
+    number passed is the panel's id (a validator may sit on several panels of one submission), and the kinds are:
+
+    - seal:    {"seal", "sig"}                  -> Panels.seal
+    - reveal:  {"vote", "mask", "salt", "sig"}  -> Panels.reveal
+    - receipt: {"receipt", "sig"}               -> Panels.receipt (the receipt's hash, posted on-chain)
+    - usage:   {"usage", "sig"}                 -> RaceV3.report (the seat's metered usage, bound to its receipt)
+
+    Each is signed by the seat's key as a registry statement, so any account may send it: `wallet` pays the gas.
+    A transaction the chain refuses raises (oracle.rpc.Reverted): the node reads the seat again before it goes on.
+
+    v2's contracts take no seals (#122 was never built there: v3 builds its own, D18), so on a v2 chain this transport
+    still isn't available."""
 
     name = "onchain"
+    V3_KINDS = ("seal", "reveal", "receipt", "usage")
 
-    def __init__(self, chain, keys=None, log=print) -> None:
-        self.chain, self.keys, self.log = chain, keys, log
+    def __init__(self, chain, keys=None, log=print, wallet=None) -> None:
+        self.chain, self.keys, self.log, self.wallet = chain, keys, log, wallet
+
+    def _v3(self):
+        if getattr(self.chain, "version", 2) != 3:
+            raise NotImplementedError("onchain transport: v2's contracts take no seals (v3 only, design D18)")
+        if self.wallet is None:
+            from .rpc import Wallet
+
+            self.wallet = Wallet(self.chain.rpc, self.keys.account_secret(), "node")
+        return self.chain
 
     def put(self, s: int, node: str, kind: str, data: dict) -> None:
-        raise NotImplementedError("onchain transport: needs task 5.5 (sealed verdicts in Verdicts/RaceV2)")
+        c = self._v3()
+        sig = bytes.fromhex(data["sig"][2:])
+        if kind == "seal":
+            self.wallet.send(c.panels, "seal(uint256,address,bytes32,bytes)", s, node, data["seal"], sig)
+        elif kind == "reveal":
+            self.wallet.send(c.panels, "reveal(uint256,address,bool,uint8,bytes32,bytes)", s, node,
+                             bool(data["vote"]), int(data["mask"]), data["salt"], sig)
+        elif kind == "receipt":
+            self.wallet.send(c.panels, "receipt(uint256,address,bytes32,bytes)", s, node, data["receipt"], sig)
+        elif kind == "usage":
+            self.wallet.send(c.race, "report(uint256,address,(bytes32,uint64,uint64,uint64,uint64,uint64,uint64),bytes)",
+                             s, node, tuple(data["usage"]), sig)
+        else:
+            raise ValueError(f"the onchain transport carries {', '.join(self.V3_KINDS)}; not {kind!r}")
 
     def all(self, s: int, kind: str) -> dict:
-        raise NotImplementedError("onchain transport: needs task 5.5 (sealed verdicts in Verdicts/RaceV2)")
+        c = self._v3()
+        if kind not in self.V3_KINDS:
+            raise ValueError(f"the onchain transport carries {', '.join(self.V3_KINDS)}; not {kind!r}")
+        out = {}
+        for slot, key in enumerate(c.judges(s)):
+            if not key:
+                continue
+            if kind == "usage":
+                u = c.usage_of(s, slot)
+                if any(u.receipt):
+                    out[key.lower()] = {"usage": ["0x" + u.receipt.hex(), *u.as_tuple()[1:]]}
+                continue
+            seat = c.seat(s, slot)
+            if kind == "seal" and seat["hasSeal"]:
+                out[key.lower()] = {"seal": seat["seal"]}
+            elif kind == "reveal" and seat["revealed"]:
+                out[key.lower()] = {"vote": seat["vote"], "mask": seat["mask"]}
+            elif kind == "receipt" and seat["receipted"]:
+                out[key.lower()] = {"receipt": seat["receipt"]}
+        return out
 
 
 class P2pExchange(Transport):
@@ -266,16 +328,18 @@ class Fanout(Transport):
 TRANSPORTS = ("folder", "http", "onchain", "p2p")
 
 
-def exchange_from_env(env, race: str, log=print, chain=None, keys=None):
-    """The node's transport(s): ORACLE_EXCHANGE_TRANSPORT, comma-separated from TRANSPORTS (default: "http" when
-    ORACLE_EXCHANGE_URL is set, else "folder"); more than one fans out (Fanout).
+def exchange_from_env(env, race: str, log=print, chain=None, keys=None, wallet=None):
+    """The node's transport(s): ORACLE_EXCHANGE_TRANSPORT, comma-separated from TRANSPORTS (default: "onchain" on a
+    v3 chain; on v2 "http" when ORACLE_EXCHANGE_URL is set, else "folder"); more than one fans out (Fanout).
       folder   ORACLE_EXCHANGE, the shared directory (default .oracle-exchange)
       http     ORACLE_EXCHANGE_URL; its key: the URL's user info, else ORACLE_EXCHANGE_TOKEN (in
                ORACLE_EXCHANGE_API_KEY_HEADER, as for the RPC's token), else the RPC's own key when the service is on
                the RPC's host (the devnet's Caddy serves both under the same per-engineer keys); never another host's
-      onchain  not built yet (task 5.5); p2p: an interface only (ORACLE_EXCHANGE_TOPIC)"""
-    names = [n.strip() for n in (env.get("ORACLE_EXCHANGE_TRANSPORT") or
-                                 ("http" if env.get("ORACLE_EXCHANGE_URL") else "folder")).split(",") if n.strip()]
+      onchain  v3 only: the contracts themselves (`wallet` sends, default the node's own key)
+      p2p      an interface only (ORACLE_EXCHANGE_TOPIC)"""
+    default = ("onchain" if getattr(chain, "version", 2) == 3 else
+               "http" if env.get("ORACLE_EXCHANGE_URL") else "folder")
+    names = [n.strip() for n in (env.get("ORACLE_EXCHANGE_TRANSPORT") or default).split(",") if n.strip()]
     bad = [n for n in names if n not in TRANSPORTS]
     if bad or not names:
         raise SystemExit(f"ORACLE_EXCHANGE_TRANSPORT: {', '.join(bad) or 'empty'}; choose from {', '.join(TRANSPORTS)}")
@@ -286,7 +350,7 @@ def exchange_from_env(env, race: str, log=print, chain=None, keys=None):
         elif n == "http":
             built.append(_http_from_env(env, race, log))
         elif n == "onchain":
-            built.append(OnchainExchange(chain, keys, log))
+            built.append(OnchainExchange(chain, keys, log, wallet))
         else:
             built.append(P2pExchange(env.get("ORACLE_EXCHANGE_TOPIC", f"pof/{race.lower()}"), log))
     return built[0] if len(built) == 1 else Fanout(built, log)

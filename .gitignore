@@ -17,7 +17,10 @@ __pycache__/
 # B1's rebuilt set of fixes and its download cache (scripts/judge-set.sh, proof-of-fix#85): only the manifest is kept.
 /data/judges/cache/
 /data/judges/cases.jsonl
+/data/judges/cases-more.jsonl
+/data/judges/cases-pbw.jsonl
 /data/judges/fake/
+/data/judges/fake-v2/
 
 # The private devnet's chain state (scripts/devnet.sh, proof-of-fix#93). Its deployment record is committed.
 /.devnet/
@@ -52,3 +55,18 @@ __pycache__/
 
 # The Radicle spike's node logs and results (scripts/radicle-spike.sh, proof-of-fix#190).
 /.radicle-spike/
+
+# The v3 node's local-chain run: its scratch and its throwaway deployment's record (scripts/node-v3-e2e.sh, #139), and
+# a v3 node's default rounds on disk (python3 -m oracle run).
+/.node-v3-e2e/
+/contracts/deployments/node-v3-e2e/
+.oracle-rounds/
+
+# v3 on a throwaway local devnet: its state, records and the nodes' scratch (scripts/devnet-v3-e2e.sh,
+# scripts/time-to-heal.sh, #140).
+/.devnet-v3-e2e/
+/.v3-e2e/
+/contracts/deployments/v3-e2e/
+/.devnet-heal/
+/.heal/
+/contracts/deployments/heal/

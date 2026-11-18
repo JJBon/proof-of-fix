@@ -101,7 +101,26 @@ Anyone may challenge within the window, with a stake and evidence. A larger, fre
   - the lists the constitution allows (attestation types, image digests) change only by ADR at the constitution tier.
 - **A DAO or other legal wrapper (#126)** may fund the sponsors' pool and sponsor bounties on proof-of-fix's own issues. It may run a validator under the same rules, and **holds no key or vote over the contracts.**
 
-**Out of scope:** writing the contracts; this spec only plans them, after bonds and challenges (#85 5.8) and attestation (#94). Also out of scope:
+**Building the contracts (owner, 2026-11-13):** groups 3–5 build them now. v3 builds its own seals, reveals and receipts on-chain, and its own bonds and slashes, instead of waiting for them in v2 (#122, #85 5.5, 5.6 and 5.8). Attestation is simulated on devnets (design D18).
+
+**Amendment after the judge measurement (2026-11-14, #236; design D20–D23):** on measured judges v3 as designed merges 10–18 bad fixes per 100 paid against the 1.1 assumed, and its score ranks the judges wrongly. The owner agreed the direction on 2026-11-14; the values wait for the simulation (task 10.1) and a new parameters ADR:
+- seats go to the best-scoring families, and the family cap applies only among near-equals;
+- anyone may reverse a pass with a failing test, and is paid for it;
+- a solver posts a deposit, lost on rejection;
+- final outcomes come from those disputes and from a rejected fix's one appeal, and a new family starts as a contender.
+
+It affects solvers (a deposit), validators of weaker models (contenders, not judges), and adds three attackers to the simulation: a solver of bad fixes, a solver that appeals everything, and a disputer without evidence.
+
+**Amendment after task 10.1 (2026-11-15, #236; design D24–D28):** the appeal panel of 2026-11-14, drawn from the families that didn't judge, overturned four in five correct rejections in the simulation. **The owner dropped it on 2026-11-15: the seated families decide an appeal, and wrong rejections need a challenge that doesn't hand the decision to weaker judges.** The replacement below is proposed, not decided, part by part (`reports/open-validators-measured-v4.md` has the simulation):
+- an appeal needs new evidence, a test that fails on the base code and passes with the fix, and a stake of its own (proposed);
+- a contender may sponsor the appeal of a fix its model passed (proposed);
+- issues with known answers score every family, seated or not (proposed);
+- while fewer than three families can judge, a challenge is decided by a second draw from them (proposed);
+- a rejected fix's deposit is held until its appeal period closes (proposed). **The deposit itself is on hold (owner, 2026-11-15):** he is against it, and its share is neither 2,500 nor the 4,000 task 10.1 found until he rules.
+
+It adds two attackers to the simulation: a contender that sponsors every rejection, and a solver that tries an issue again while its deposit is held.
+
+**Out of scope:**
 - token rewards (the token is parked); the validators' token slice is #142, related;
 - a public deployment (after D1; rule 1);
 - verifying TEE quotes or zkTLS proofs on-chain (checked off-chain by the drawn panel, with the hash published, as in #85);
@@ -117,6 +136,7 @@ Anyone may challenge within the window, with a stake and evidence. A larger, fre
 - `judge-panels`: how each check's judges are chosen and when their verdict is final: the odd k from eligible validators and the bounty, the draw and its seed, replacement of silent judges, the proof a counted verdict must carry, challenge windows by panel size, the hold on a lone judge's verdict, audits, and the constitution tier's fixed size.
 
 ### Modified Capabilities
+- `bounty-market`: in v3, a solver's deposit, lost on rejection and added to the issue's bounty (#236), held until the appeal period closes (proposed, 2026-11-15).
 - `incentive-simulation`: adds open-validator scenarios (one party running many nodes, few validators, k = 1, window and bond sizes), market pricing and its attackers (fake shortage, fake demand, inflated costs), zkTLS validators, #141's two re-runs with their rules beside their alternatives, and the acceptance criteria, each with a published threshold, to meet before any contract code.
 
 ## Impact

@@ -105,7 +105,7 @@ class GitHubRepo(RepoHost):
     def _issue(raw: dict) -> dict:
         return {"number": raw["number"], "title": raw.get("title", ""), "body": raw.get("body") or "",
                 "state": raw.get("state", ""), "labels": _labels(raw.get("labels")),
-                "user": (raw.get("user") or {}).get("login", "")}
+                "user": (raw.get("user") or {}).get("login", ""), "created_at": raw.get("created_at") or ""}
 
     def issues(self, state: str = "open", label: str | None = None) -> list:
         query = f"?state={state}&per_page=100" + (f"&labels={label}" if label else "")

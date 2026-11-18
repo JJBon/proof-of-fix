@@ -28,4 +28,19 @@ jobs:
           git clean -qffdx
           git log -1 --oneline
       - name: check
-        run: bash scripts/check.sh
+        env:
+          TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        # On a pull request: fetch more history and the base branch so scripts/check_scope.py can find the merge
+        # base, and skip the Python tests when only documentation changed (proof-of-fix#208). A failed fetch sets no
+        # base, so everything runs. On a push to main: no base, everything runs.
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && [ -n "$BASE_REF" ]; then
+            auth="http.extraHeader=Authorization: Basic $(printf 'x:%s' "$TOKEN" | base64 -w0)"
+            url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+            if git -c "$auth" fetch -q --deepen 200 "$url" "$GITHUB_SHA" \
+              && git -c "$auth" fetch -q --depth 200 "$url" "+refs/heads/$BASE_REF:refs/remotes/base"; then
+              export POF_CHECK_BASE=refs/remotes/base
+            fi
+          fi
+          bash scripts/check.sh

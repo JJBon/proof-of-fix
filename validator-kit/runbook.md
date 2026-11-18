@@ -440,6 +440,188 @@ child process gets a key: git gets an environment of its own with the token in a
 from its output, and fails if one shows up there, in any process's command line (sampled every 2 seconds), in the files
 it writes, in the seats' node logs, or in the issues, comments and pull requests it wrote.
 
+## The seats' host on AWS (#152, platform#219)
+
+For the deployment's owner. platform#219 moves the 6 role seats' nodes (`oracle-0..4`, `joiner-0`) off your PC onto
+one on-demand host in the platform account, and later the bot service (#210) beside them. Like the kit's node, it's
+normally stopped: a watcher Lambda (this kit's `lambda/watcher.py`, with several seats) starts it when there's work,
+and it powers off when every node is idle, at its maximum run time, or at the devnet's 01:00 stop. Platform's module
+(`modules/pof_seats`) runs the code only from images you push, pinned by digest. This repository provides the images
+and the watcher. Platform's module README has the order of applies (its design, D13).
+
+**What runs where, once it's on**
+
+| What | Where | Started by |
+|---|---|---|
+| the chain and the exchange relay | the devnet host | platform's stack |
+| 6 role seats' nodes | the seats' host: a container each, tests in its Docker's sandbox | the watcher, on their draws and won bounties |
+| the bot service (#210, later) | the seats' host, its own container from the nodes' image | the watcher, on the bot's work |
+| the owner's validator, seat 6 | the sandbox account | the kit, on its draws |
+
+### One place per seat key: the laptop's seats stay down
+
+**Never run `scripts/devnet-seats.sh up` while the host serves the same keys**, and never a local `pofctl bot watch`
+loop while the hosted bot runs. Two nodes with the same seat's key would both report, seal and sign: duplicate
+transactions and nonce clashes. Two bots would act on the same issues, and their transactions would race.
+
+- **Before** platform's pull request that sets `node_image_digest`: `scripts/devnet-seats.sh down` (and `status` says
+  `down`) on every machine that ran them.
+- **The host serves the keys** as soon as that digest is applied, even while it's stopped: the watcher can start it
+  any minute, and so can `seats.sh start`.
+- **To run them on the laptop again** (a demo without AWS, a debugging session): set `seats_enabled = false` in the
+  stack and apply, wait until `seats.sh status` says the host is stopped, and only then `devnet-seats.sh up`. Put
+  it back the other way round: `down` first, then `seats_enabled = true`.
+- **The bot:** once `bot_image_digest` is set, stop any local bot loop first, the same way.
+- **The suite:** with the hosted seats, `scripts/integration.sh --target aws` takes `--seats-elsewhere` (the
+  preflight's local check becomes a note). A preflight check that the host serves them (platform's D11, item 6) isn't
+  built: the preflight's "7 seats, all active" plus `seats.sh status` cover it for now.
+
+### The images
+
+Two images, both linux/arm64, from a clean commit, pushed by you with an administrator's profile for the platform
+account. Nothing else pushes them; CI doesn't.
+
+| Image | Dockerfile | Platform's repository and variable |
+|---|---|---|
+| the node (the seats, and #210's bot) | `oracle/Dockerfile` (with `pofctl/`) | `pof-seats-node`, `node_image_digest` |
+| the watcher's Lambda | `validator-kit/lambda/Dockerfile` (AWS's Lambda Python 3.12 base, by digest) | `pof-seats-watcher`, `watcher_image_digest` |
+
+1. **Check the build** (optional, nothing pushed; needs Docker with buildx, and QEMU on a non-arm64 machine, which
+   Docker Desktop has):
+   ```
+   scripts/seats-image.sh --build-only        # both: each built twice (the digest must repeat), then started once
+   ```
+2. **Push**, from a clean checkout of the commit you want (Docker's containerd image store on: Docker Desktop,
+   Settings > General). After platform's first apply, the repositories exist:
+   ```
+   cd <platform>/environments/prod/us-east-1/pof-devnet
+   NODE_REPO=$(tofu output -raw seats_node_repository_url) WATCHER_REPO=$(tofu output -raw seats_watcher_repository_url)
+   cd -
+   AWS_PROFILE=<profile> scripts/seats-image.sh node "$NODE_REPO"
+   AWS_PROFILE=<profile> scripts/seats-image.sh watcher "$WATCHER_REPO"
+   ```
+   Each prints its line, e.g. `node_image_digest = "sha256:..."`. The tag is `arm64-<short sha>`; the repositories'
+   tags are immutable, so a commit already pushed prints its digest again without pushing. If platform's outputs are
+   named differently, use the repository URLs its README gives.
+3. **Set the digests:** stop the laptop's seats (above), then a platform pull request sets `node_image_digest`,
+   `watcher_image_digest` and `seat_addresses` (`scripts/devnet-keys.sh addresses`: oracle-0..4 and joiner-0, never
+   seat 6). Its plan changes the config parameter and creates the watcher, and replaces nothing. Merge, then
+   `tofu-apply`.
+4. **A new release** of the node is a new push and a new pull request for the digest: the host keeps the old one until
+   then.
+
+**Reproducible:** the build context is `git archive` of the commit, never the directory (so no untracked file gets in),
+the base images are pinned by digest, and every timestamp in the layers is the commit's time (`SOURCE_DATE_EPOCH`). So
+anyone with the same commit gets the same digest, and `--build-only` prints the one a push would get. The node image's
+one moving input is Alpine's `git` package, which changes when Alpine publishes a new one; so the script builds
+without Docker's cache, which could hold an older one.
+
+### What the images expect (platform's module)
+
+**A seat's node:** the node image runs as uid **10001** and has `/bin/sh`; its entrypoint is `python3 -m oracle`
+(default command `info`, as for the kit). Two ways to start a seat, the same node either way:
+- **platform's (PR #221):** `--entrypoint /bin/sh` with a wrapper that reads `/run/secrets/{key,rpc-auth,repo-token}`
+  into `ORACLE_PRIVATE_KEY`, `ORACLE_RPC_TOKEN` and `FORGEJO_TOKEN` and `exec`s `python3 -m oracle run --until-idle
+  600`, with `devnet-seats.sh`'s `ORACLE_*` settings in the container's environment. Anything else set there, such as
+  #210's `ORACLE_REGISTRATION_CHECK` and `ORACLE_REGISTER_WEIGHT`, reaches the node as it is;
+- **`python3 -m oracle seat run --until-idle 600`** (`oracle/seat.py`): the same, with the defaults and checks below
+  built in. `python3 -m oracle seat info` is the status check.
+
+`oracle/seat.py` sets up what `devnet-seats.sh` sets up for each seat on the laptop:
+- **secrets**, each read once from the environment or else a file in `SEAT_SECRETS` (default `/run/secrets`), mounted
+  read-only into that seat's container alone: `key` (the seat's signing key, `ORACLE_PRIVATE_KEY`), `rpc-auth`
+  (`pof-seats:<key>`, `ORACLE_RPC_TOKEN`), `repo-token` (the read-only `pof-sandbox` token, `FORGEJO_TOKEN`). They go
+  into the node's own process environment only: not on a command line, in `docker inspect` or in the logs. Files owned
+  by the node's uid, **10001**, mode 0400;
+- **settings** (each may be overridden in the container's environment): `ORACLE_RPC` and `ORACLE_RACE` (required),
+  `ORACLE_EXCHANGE_URL` (default `<ORACLE_RPC>/exchange`), `ORACLE_REPO` (default `example-org/pof-sandbox`),
+  `SEAT_FORGE_URL` (default `https://git.example.com`), `FORGEJO_USER` (default `pof-validator-bot`),
+  `ORACLE_ROUND_TIMEOUT` (default 900: the relay's seal window), `ORACLE_POLL` (default 5), `ORACLE_JUDGE` (fake only:
+  anything else is refused, proof-of-fix#160), `ORACLE_SANDBOX=api`;
+- **`SEAT_WORK`**, the seat's working directory (e.g. `/var/lib/pof-seats/oracle-0`), mounted at the same path inside
+  and out, since the sandbox's bind mount of a checkout is resolved by the host's Docker. The node keeps its checkouts
+  (`src/`), receipts and `repos.json` there;
+- **the sandbox:** the host's Docker socket (`/var/run/docker.sock`) with its group (`--group-add`), as in the kit. The
+  node starts each fix's tests in the pinned sandbox image (`oracle/sandbox.py`'s `TEST_IMAGE`; pre-pulling it saves
+  the first round a pull), with no network, and refuses a daemon that can't enforce the limits;
+- **exit codes:** 0 idle, 2 refused at start (a missing secret or setting, named without its value), 75 the chain
+  stayed away (done for this run; the watcher starts the host again).
+
+**The bot** (#210, PR #211): `python3 -m pofctl bot watch --until-idle 600` from the same image, with its own
+`POF_BOT_*_FILE` secrets and `POF_BOT_*` settings (bot/service.py; "The bot as a service on the AWS devnet"
+below).
+
+**The watcher's Lambda:** handler `watcher.handler` (the image's command), arm64, Python 3.12. Its environment:
+`RPC_URL`, `RPC_API_KEY_PARAM` (`/pof-seats/watcher/rpc-auth`, an SSM SecureString read with decryption, a
+`<handle>:<key>` sent as HTTP Basic with the default `RPC_API_KEY_HEADER=Basic`), `RACE_ADDRESS`, `SEAT_ADDRESSES`
+(the six, comma-separated), `INSTANCE_ID`, `STATE_PARAM` (`/pof-seats/watcher/state`), `ENABLED`, `MAX_STARTS_PER_DAY`,
+`MERGE_POLL_MINUTES`, `PENDING_POLL_MINUTES`, `PENDING_MAX_STARTS`, `MAX_BLOCK_RANGE`; for the bot and the seats'
+registration check (#210): `BOT_WORK=true`, `BOT_ENABLED` (off: the bot's work starts nothing, a registration waiting
+for the seats' check still does), `BOT_REPO_IDS`, `DUE_POLL_MINUTES`. It starts the host for a draw
+of any of the six seats still waiting for its result, a won bounty one of them judged until it merges, and an undecided
+draw again every `PENDING_POLL_MINUTES` (at most `PENDING_MAX_STARTS` times). The bot's work reads only the chain (no
+forge token): see "The bot as a service on the AWS devnet" below. Its result line, one JSON object a minute: `idle`, `started`,
+`fuse`, `disabled` or the instance's state, with the submissions, merges, retries and the bot's kinds that caused it.
+
+## The bot as a service on the AWS devnet (#210)
+
+On the devnet, a `bounty`-labelled issue goes from registered to paid and closed with only the reporter's, the
+funder's and the solver's own steps, the maintainer's merge and the clock's warps. Two things do the rest unattended:
+
+- **the seats' registration check:** the six role seats' nodes, with `ORACLE_REGISTRATION_CHECK=on` (and
+  `ORACLE_REPO_ID` set to the record's `repo`), sign RaceV2's `accept` for a registration that a labelled issue claims,
+  with the fake judge at `ORACLE_REGISTER_WEIGHT` (120), and one of them relays it at quorum. Seat 6's kit leaves it off;
+- **the bot:** `pofctl bot watch --until-idle 600`, its own container on the seats host (platform#219), with its own
+  key. It links the opened bounty to the claiming issue, settles a bounty whose outcome is final, calls `timeOut`,
+  `mergeExpired` and `sunset` once they're due, closes the issue of a bounty that ended, and posts one hint on a labelled
+  issue that doesn't name a valid registration. Its only transactions are `settle`, `timeOut`, `mergeExpired` and
+  `sunset`; it never registers, funds, judges, merges or claims for anyone.
+
+**The bot's keys and token** (the owner, once; never on a command line):
+
+1. `scripts/devnet-keys.sh init` adds the `bot-service` key to OpenBao (`secret/proof-of-fix/devnet/bot-service`);
+   `scripts/devnet.sh fund-address <its address>` gives it devnet gas. It's not the `bot` key people use with pofctl.
+2. A devnet API key for it: `keys.sh add pof-bot` (platform-197), as `pof-bot:<key>`.
+3. A Forgejo user `pof-bounty-bot` in a team on `pof-sandbox` alone, with write on issues only (task 1.7 records the
+   units it needed), and a token scoped `write:issue`, kept in OpenBao by platform's script from a hidden prompt.
+4. platform's script copies the three into `/pof-seats/bot/key`, `/pof-seats/bot/rpc-auth` and
+   `/pof-seats/bot/repo-token`; the host mounts them read-only into the bot's container alone, as the files
+   `POF_BOT_KEY_FILE`, `POF_BOT_RPC_AUTH_FILE` and `POF_BOT_FORGE_TOKEN_FILE` name. The other settings
+   (`POF_BOT_RPC`, `POF_BOT_RACE`, `POF_BOT_FROM_BLOCK`, `POF_BOT_REPO`, `POF_BOT_REPO_ID`, `POF_BOT_FORGE_URL`,
+   `POF_BOT_FORGE_USER`, `POF_BOT_LABEL`, `POF_BOT_POLL_SECONDS`, `POF_BOT_HINT_GRACE`) are plain configuration;
+   bot/service.py lists them. It refuses to start (exit 2) on another chain, with an oracle's or the deployer's key, a
+   missing or empty secret file, or an RPC URL with a credential in it.
+
+**How the reporter claims a registration:** register from the reporter's own wallet, then paste the two lines it
+prints into the labelled issue's body, each on its own line:
+```
+pofctl reporter register --repo registry
+#   Registration: 42
+#   Reporter wallet: 0x…
+```
+The first labelled issue on the repository that names the registration with its reporter's wallet wins it. Without
+valid lines, the bot comments one hint (five minutes after the issue opens), and never a second one.
+
+**What the bot closes:** an open labelled issue linked to a bounty that ended: `Paid` with the payout comment, `Unsolved`
+(sunset) or `Refunded` with a comment naming the outcome and its transaction. To keep a closed issue open, reopen it and
+**remove the `bounty` label**: the bot acts only on labelled issues.
+
+**By hand still works, but isn't needed:** `pofctl bot settle --bounty <n> --repo example-org/pof-sandbox
+--issue <issue>` and `pofctl bot close --repo example-org/pof-sandbox` do the same steps, and the bot sees them
+done (its markers and the contract's state). `pofctl oracle accept` and `pofctl bot link` are the stub quorum's and the
+manual link, for a devnet without the seats' check.
+
+**Its limits:** a pass every 30 s; at most 5 writes a pass and 50 a run (exit 4: the next host run goes on); back off
+on forge or RPC errors, exit 75 after 30 minutes of them; exit 0 after 10 idle minutes, so the host can power off. The
+first runs on the shared devnet work through the backlog of stale deadlines within that fuse.
+
+**Rollback:** `BOT_ENABLED=false` on the watcher and the bot's container removed; `ORACLE_REGISTRATION_CHECK=off` on the
+nodes. The manual commands above still work.
+
+**Its integration run:** `scripts/integration.sh --target aws --hosted-bot --preflight`, then `--hosted-bot --only 10`
+(10a the paid path, 10b a timeout, an expired merge and a sunset, 10c the hint), or `--hosted-bot` for every scenario
+opened through the seats and the bot. It waits for each of the bot's steps up to `--bot-timeout` (600 s).
+
 ## A Forgejo target (#112)
 
 The repository can live on a Forgejo instead of GitHub (`forge = "forgejo"`; GitHub stays the default). The node reads

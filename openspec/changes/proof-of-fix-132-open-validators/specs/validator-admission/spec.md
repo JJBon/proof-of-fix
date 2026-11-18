@@ -38,6 +38,17 @@ A validator's declared model family SHALL NOT change. A validator that wants to 
 - **WHEN** a validator of one family wants to judge with the family that pays more
 - **THEN** it registers a new key with that family and qualifies as a shadow judge before it is drawn for counted panels
 
+### Requirement: Any model family may register, named by its provider's model line
+Registration SHALL accept any model family, with no list kept by the version. The family SHALL be the provider's model line as its receipts name the model (for example `anthropic/claude`, `openai/gpt`, `google/gemini`, `meta/llama`), so one model can't register under several names to slip past the family cap. A counted verdict whose receipt names a model outside its validator's declared family SHALL be a false verdict.
+
+#### Scenario: A model from a new provider
+- **WHEN** a validator registers with a family no other validator uses
+- **THEN** the registration is accepted, and the family is priced and ranked by the market rules, with no proposal or vote
+
+#### Scenario: One model under a second name
+- **WHEN** a validator declares a made-up family name but its receipts show another family's model
+- **THEN** a receipt challenge against its counted verdict is upheld, and it loses its whole bond
+
 ### Requirement: Accepted proof types, zkTLS among them
 The constitution SHALL list the accepted proof types: each accepted TEE type, and zkTLS for validators without a TEE. A zkTLS validator's model calls SHALL be proven by a zkTLS proof from one of the constitution's listed notaries, of which there SHALL be several and none required. Its test results SHALL be re-runnable by anyone from the fixed commit and the official sandbox image.
 
@@ -180,7 +191,7 @@ A validator SHALL be slashed only for a provable fault: the whole bond for equiv
 
 #### Scenario: A sealed vote not revealed
 - **WHEN** a drawn counted judge seals but doesn't reveal in time
-- **THEN** it loses the published flat amount ($5 at launch), counts a miss, and is replaced
+- **THEN** it loses the published flat amount ($5 at launch), counts a miss, and is replaced, unless the revealed verdicts already form the panel's majority (judge-panels)
 
 #### Scenario: An honest mistake
 - **WHEN** a validator's verdict is overturned by a challenge, with a valid receipt and no provable fault
@@ -222,6 +233,17 @@ In any single panel, at most one validator SHALL share a declared operator accou
 #### Scenario: Too few distinct hosts
 - **WHEN** the caps leave fewer eligible validators than the k the network size would allow
 - **THEN** k is computed from the validators the caps leave eligible, not from all active validators
+
+### Requirement: The family cap applies only among several seated families
+The model-family cap SHALL apply only while at least the published number of families (3) are seated (judge-scores, "Seats go to the best-scoring families"). With fewer, a panel MAY be drawn from one family. The operator, host and TEE-type caps SHALL apply either way.
+
+#### Scenario: One family holds every seat
+- **WHEN** one model family is seated and a panel of 3 is drawn
+- **THEN** all three judges may be of that family, on three hosts and under three operators
+
+#### Scenario: Three families seated
+- **WHEN** three families are seated and a panel of 5 is drawn
+- **THEN** no family holds more than two of its seats
 
 ### Requirement: The TEE-type cap starts at k = 3 once five TEE types are accepted
 The TEE-type cap SHALL apply to panels of 3 or more while at least the published number of TEE types (5) are on the constitution's list, and only to panels of 5 or more while fewer are. The start SHALL follow the list as ADRs change it, from the next draw.

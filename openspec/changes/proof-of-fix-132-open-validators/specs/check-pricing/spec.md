@@ -10,7 +10,7 @@ It replaces v2's price updates signed by 5 of 7 seats for v3 only. The check-fee
 ## ADDED Requirements
 
 ### Requirement: Validators post cost tables for every unit
-Any active validator SHALL be able to post, at any time, a signed table with a value for every unit of the price table: its own costs for sandbox seconds, storage and gas, and each model family's public list price for tokens. Only its latest table SHALL count. A table missing a unit, or a candidate's, a suspended or a leaving validator's table, SHALL NOT count.
+Any active validator SHALL be able to post, at any time, a signed table with a value for every unit of the price table: its own costs for sandbox seconds, storage and gas, and each priced model family's public list price for tokens. Only its latest table SHALL count. A table missing a unit, or a candidate's, a suspended or a leaving validator's table, SHALL NOT count. A table MAY also price families not priced yet; those values count only toward a new family's first price.
 
 #### Scenario: A provider cuts its prices
 - **WHEN** a model provider halves its token price and validators post new tables
@@ -21,7 +21,7 @@ Any active validator SHALL be able to post, at any time, a signed table with a v
 - **THEN** the table doesn't count
 
 ### Requirement: Unit prices are the median of the posted tables
-At the end of each pricing period, each unit price SHALL become the median of the counting validators' latest values, the lower middle value for an even count, if at least the published minimum number posted. Each price SHALL move by at most the published step per period, and SHALL never exceed twice its value at deployment.
+At the end of each pricing period, each unit price SHALL become the median of the counting validators' latest values, the lower middle value for an even count, if at least the published minimum number posted. Each price SHALL move by at most the published step per period, and SHALL never exceed twice its first value: its value at deployment, or a new family's first price.
 
 #### Scenario: One validator posts an absurd price
 - **WHEN** one of 15 active validators posts a token price 100 times the others'
@@ -42,6 +42,28 @@ At the end of each pricing period, each unit price SHALL become the median of th
 #### Scenario: Too few tables
 - **WHEN** fewer validators than the published minimum have posted a value for a unit
 - **THEN** that unit's price stays as it is
+
+### Requirement: Any model family can be priced, by the other validators
+The version SHALL keep no list of model families: a family SHALL appear when a validator first registers with it. Its first token price SHALL be the lower median of the values posted for it, once at least the published minimum number of counting tables price it and at least that many come from validators of other families, and at most twice the most expensive priced family's token price at that moment. From the next period, tables SHALL price it to count.
+
+#### Scenario: A new provider's model
+- **WHEN** a validator registers with a model family no one has used before, and the other validators' nodes post its public list price
+- **THEN** the family is priced at the end of that period, its validators start qualifying as shadow judges, and it is ranked like every family, from the neutral start
+
+#### Scenario: A new family's own validators set its price
+- **WHEN** only validators of the new family post a price for it, at 100 times its list price
+- **THEN** the family stays unpriced and its validators aren't drawn, until enough validators of other families price it
+
+#### Scenario: An inflated first price
+- **WHEN** enough tables price a new family, and their median is 10 times the most expensive priced family's token price
+- **THEN** its first price is twice that family's price, and it moves by at most the published step per period after that
+
+### Requirement: An unpriced family isn't drawn
+A family's validators SHALL NOT be drawn, as counted judges or as shadows, until the family has its first price.
+
+#### Scenario: Registered before it's priced
+- **WHEN** a validator of a new family is a candidate and no price is set for its family yet
+- **THEN** it isn't drawn as a shadow, and starts qualifying in the period after its family is priced
 
 ### Requirement: The service fee starts at its ceiling
 A version's service fee SHALL start at its published ceiling at deployment.

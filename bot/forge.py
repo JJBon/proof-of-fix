@@ -6,7 +6,8 @@ or GitHub (the engineers' demo). Which host serves which repository is the bot's
                "acme/demo":         {"host": "github"}}}
 
 Issues and pull requests come back in one shape, whatever the host:
-    issue:  {"number", "title", "body", "state" ("open"/"closed"), "labels": [names], "user"}
+    issue:  {"number", "title", "body", "state" ("open"/"closed"), "labels": [names], "user", "created_at" (ISO 8601,
+             or "" when the host doesn't say)}
     pull:   {"number", "title", "body", "state", "head_sha", "base_sha", "merged"}
     comment:{"id", "body", "user"}
 The local loop (bot/loop.py) still talks to its Forgejo directly; this interface is for code that must serve either."""
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from .forgejo import Forgejo
 
+PAGE, MAX_PAGES = 50, 40  # a list's page, and at most 2,000 items
 
 class RepoHost:
     """A repository on some host: the bot's operations on issues and pull requests."""
@@ -66,11 +68,18 @@ class ForgejoRepo(RepoHost):
     def _issue(self, raw: dict) -> dict:
         return {"number": raw["number"], "title": raw.get("title", ""), "body": raw.get("body") or "",
                 "state": raw.get("state", ""), "labels": _labels(raw.get("labels")),
-                "user": (raw.get("user") or {}).get("login", "")}
+                "user": (raw.get("user") or {}).get("login", ""), "created_at": raw.get("created_at") or ""}
 
     def issues(self, state: str = "open", label: str | None = None) -> list:
-        query = f"?state={state}&type=issues" + (f"&labels={label}" if label else "")
-        return [self._issue(i) for i in self.client.api("GET", f"{self._base}/issues{query}") or []]
+        """Every page of them (50 a page), so an older labelled issue isn't missed (#210's first-claim rule)."""
+        query = f"?state={state}&type=issues&limit={PAGE}" + (f"&labels={label}" if label else "")
+        out, page = [], 1
+        while True:
+            got = self.client.api("GET", f"{self._base}/issues{query}&page={page}") or []
+            out += [self._issue(i) for i in got]
+            if len(got) < PAGE or page >= MAX_PAGES:
+                return out
+            page += 1
 
     def issue(self, number: int) -> dict:
         return self._issue(self.client.api("GET", f"{self._base}/issues/{number}"))

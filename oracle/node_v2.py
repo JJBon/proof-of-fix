@@ -24,7 +24,8 @@ machine: the tests and the folder demo) or the exchange service (exchange/, ORAC
 separate machines; both carry the same messages. Every message is signed by its node's key and checked against the
 drawn judges, so a writer to the directory, or the service, can withhold messages but can't vote.
 
-A node keeps its round in memory, so it survives what it can (#166). A pass rescans the chain from the same block, so
+A node keeps its round in memory, so it survives what it can (#166), and, with a round store (ORACLE_ROUNDS,
+oracle/rounds.py, #216), on its own disk too: a restarted node finishes a round it sealed, with the same salt. A pass rescans the chain from the same block, so
 nothing is skipped, and each step records its result only once done, so a pass that fails repeats nothing that worked.
 The chain not answering (oracle/rpc.py's Unavailable, after its retries) ends the pass, not the run: the node tries
 again until the chain's back, with its salts and seals intact. Only `outage_limit` ends a run for it, and then the
@@ -38,7 +39,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import checkconfig, crypto, evidence, radicle as rad, receipt as receipts, v2
+from . import checkconfig, crypto, evidence, radicle as rad, receipt as receipts, rounds as round_store, v2
 from .judge import case_for, refused
 from .models import ModelError
 from .keys import KeyProvider
@@ -97,6 +98,8 @@ class NodeV2:
         self._last_not_ready = ""
         self._race_domain = self._fees_domain = None
         self.radicle: rad.Radicle | None = None  # ORACLE_MERGE_VIA=radicle: the merge is canonical main's (#201)
+        self.registrations = None  # ORACLE_REGISTRATION_CHECK=on: the seats' registration check (#210, oracle/registration.py)
+        self.rounds: round_store.Store | None = None  # ORACLE_ROUNDS: its rounds on disk, for a restart (#216)
 
     # ---------- the loop ----------
 
@@ -119,16 +122,35 @@ class NodeV2:
                 continue
             if away_since is not None:
                 away_since, last = None, self.clock()  # the idle time starts again from the chain's return
-            if progress:
-                last = self.clock()
+            if progress or (self.registrations is not None and self.registrations.waiting()) or self.in_window():
+                last = self.clock()  # a claimed registration not open yet isn't idleness either (#210), nor a round
+                # waiting out its window for the other judges (#216)
             elif until_idle is not None and self.clock() - last >= until_idle:
                 self.log(f"node {self.address}: idle for {until_idle:.0f}s, stopping")
                 return sum(1 for c in self.checks.values() if c.done)
             time.sleep(poll)
 
+    def in_window(self) -> bool:
+        """A round this node sealed is still inside its window: waiting for the other drawn judges' seals, reveals or
+        signatures, or the merge's signatures (#216). Once the window closes, the next step moves on by itself (a
+        reveal, a signature at quorum), so the wait is bounded by the round timeout; a round that then has nothing to
+        do (no quorum, a merge that hasn't happened) is idleness, as before."""
+        now = self.clock()
+        return any(c.sealed_at and not c.done and c.submission not in self.skipped
+                   and now - max(c.sealed_at, c.revealed_at) < self.round_timeout for c in self.checks.values())
+
     def tick(self, from_block: int) -> bool:
         """One pass. Raises Unavailable, with nothing recorded for the step it stopped at, if the chain doesn't answer."""
         progress = False
+        if self.registrations is not None:
+            try:
+                progress |= self.registrations.tick(from_block)
+            except Reverted as e:
+                self.log(f"registration check: the chain refused a relay ({e.reason}); retrying")
+            except evidence.NotReady as e:
+                if str(e) != self._last_not_ready:
+                    self.log(f"registration check: not yet: {e}; trying again")
+                    self._last_not_ready = str(e)
         for ev in self.chain.committed(from_block):
             s = ev["submission"]
             if s in self.skipped:
@@ -152,6 +174,25 @@ class NodeV2:
     # ---------- one submission ----------
 
     def _advance(self, s: int, bounty: int, c: Check | None) -> bool:
+        progress = self._step(s, bounty, c)
+        c = self.checks.get(s)
+        if progress and c is not None and self.rounds is not None:  # each step's result, before the next leaves
+            if c.done:  # the node (#216): the salt is on disk before the seal is on the exchange
+                self.rounds.remove(s)
+            else:
+                self.rounds.save(c)
+        return progress
+
+    def _resume(self, s: int, judges: list) -> Check | None:
+        """The round this seat saved before a restart (#216), if it's for the same draw."""
+        if self.rounds is None:
+            return None
+        c = self.rounds.load(s, Check)
+        if c is None or [k.lower() for k in c.judges] != [k.lower() for k in judges]:
+            return None
+        return c
+
+    def _step(self, s: int, bounty: int, c: Check | None) -> bool:
         sub = self.chain.submission(s)
         if c is None:
             judges, recused = self.chain.drawn(sub["seed"], sub["bounty"], s)
@@ -166,6 +207,13 @@ class NodeV2:
             if sub["outcome"] != v2.NONE and not self._merge_due(s, sub):
                 self.skipped.add(s)
                 return False
+            resumed = self._resume(s, judges) if sub["outcome"] == v2.NONE else None
+            if resumed is not None:
+                self.checks[s] = resumed
+                step = ("revealed" if resumed.revealed_at else "sealed" if resumed.sealed_at else
+                        "judged" if resumed.outcome else "drawn")
+                self.log(f"submission {s}: resuming this seat's round from disk ({step} before a restart)")
+                return True
             if sub["outcome"] == v2.NONE and any(same(r["judge"], self.address) for r in self.chain.reports(s)):
                 # An earlier run of this seat reported, and its salt went with it: the first seal stands, and this node
                 # couldn't open it. Judging again would only pay for a verdict the round can't take.

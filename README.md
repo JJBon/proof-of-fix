@@ -11,7 +11,7 @@ Anyone funds a bounty on an issue. The first fix that passes wins its price. Val
 | | State |
 |---|---|
 | **v2** | **Running** on a private Ethereum devnet with a test coin: 7 seats, 3 drawn per fix, 2 must agree. No contract has an owner, an admin, an upgrade or a pause. [ADR 0002](docs/adr/0002-architecture-v2.md) |
-| **v3, open validators** | **Designed and simulated, not built:** anyone can register a validator. There are no v3 contracts or node changes yet. [ADR 0004](docs/adr/0004-open-validators.md) |
+| **v3, open validators** | **Contracts built and tested, not deployed:** anyone can register a validator. The node, the validator kit and the devnet run are next (#139, #140). [ADR 0004](docs/adr/0004-open-validators.md), [`reports/contract-v3.md`](reports/contract-v3.md) |
 | **Real money** | **None.** Test coin only, and no token in v2. No real funds until the owner decides to go public (rule 1 in `openspec/config.yaml`). |
 | **Access** | Private, for invited engineers. |
 
@@ -31,20 +31,20 @@ On 2026-11-04 full bounties ran on the AWS devnet, against a private repository 
 
 ### v3: open validators
 
-v2's fixed seats become an open registry (#132):
+v2's fixed seats become an open registry (#132). The contracts are built ([`reports/contract-v3.md`](reports/contract-v3.md)); the diagrams are in [How v3 works](#how-v3-works).
 - **Open registration:** a bond of at least $100 and an attestation, then about two weeks judging as a shadow to qualify.
-- **Panels that grow:** an odd number of judges, from 1 to 7, following the network's size and the bounty. A single judge's verdict is held and audited.
+- **Panels that grow:** an odd number of judges, from 1 to 7, following the network's size and the bounty (the k table). A single judge's verdict is held and audited twice.
 - **Prices with no vote:** validators post list prices and the median moves them, and a queue signal moves the service fee.
 - **Proof levels:** hardware attestation at launch. zkTLS (level C) stays off for now.
-- **Reputation:** each model family's score changes its pay and eligibility, never its vote.
+- **Reputation:** no list of model families. Each family's score ranks it: the score changes its pay and eligibility, never its vote, and a cap keeps one family from holding a panel's majority. The rank and the per-family cap are under review in #236, after the judge measurements ([`reports/judges-v2.md`](reports/judges-v2.md)).
 
 **In simulation only,** v3 meets 13 of 13 acceptance criteria under round 3's criteria ([report v3.1](reports/open-validators-v3.1.md)). That's 9 of 13 under round 2's: no rule or number changed, and four verdicts changed by the owner's decisions on how to judge them. Each attacker in those criteria is "not shown to gain", but some attacks still pay and are named as trust points in ADR 0004, such as bribing a judge's silence above the $5 slash. An honest validator nets **−$1.43 ± 0.22 a month at 30 submissions a week, and +$4.77 ± 0.31 at 100**.
 
 ### What the design still has to settle
 
-These block v3's contracts (#138):
+These were listed as blocking v3's contracts (#138). The contracts were built on 2026-11-13 with ADR 0004's values, and these stay open unless marked:
 - **Honest validators' pay at low traffic** (#141): through a token slice (#142) or fee tuning. Model calls are passed through, so the gap is overheads against the fee.
-- **Pricing by model family and tier,** with a short approved model list in the constitution, and prices still set by the market (#141).
+- **Pricing by model family: decided** (owner, 2026-11-13; design D19). There is no approved list: any family may register, and other families' validators set its first price.
 - **The token in v3's design** (owner, 2026-11-04): v2 stays coin only. Its planned uses, a finder's share and a validators' slice, are still to be simulated, and a real token stays off until the legal review (#126). ADR 0004 still says "no token" and needs updating.
 - **Failure has to cost a model:** more weight for an upheld security challenge, plus simulated model-gaming attackers (#141).
 - **The verdict as the merge** (#171): on a repository with no maintainers, the judges' verdict moves the head on-chain and mirrors follow. Today the node waits for a host to merge. This also covers separating "merged" from "released", and different acceptance for fixes and features.
@@ -53,9 +53,9 @@ These block v3's contracts (#138):
 
 1. **Test what's built:** the integration suite (#152) and the leaderboard (#151).
 2. **Settle the design:** the simulations above, then the spec.
-3. **Build what v3 stands on:** seals and receipts on-chain (5.5, 5.6, #122), bonds and challenges (5.8, #85), attestation (#94).
-4. **Build v3:** contracts (#138), node and kit (#139), then the same bounties on the devnet (#140).
-5. **Measure the judges:** a paid evaluation with seeded backdoors and an attacker who rehearses against the same models (#160). It's last, and needs the owner's budget approval.
+3. **Build what v3 stands on: done inside v3.** v3 has its own seals, reveals and receipts on-chain, and its own bonds, slashes and challenges (design D18). Attestation is a recorded hash, with a simulated proof type on devnets only; real attestation is still #94.
+4. **Build v3:** contracts (#138, built), then the node and kit (#139), then the same bounties on the devnet (#140).
+5. **Measure the judges:** the paid, pre-registered run (#160) is reported in [`reports/judges-v2.md`](reports/judges-v2.md). What it means for the panels is #236.
 6. **Publish:** a research paper and open code, for others to deploy (#158). There's no launch date, and nobody here plans to run a production network. The aim isn't a system that never fails, but one that heals quickly through market forces, and the evaluation measures that.
 
 ## How v2 works
@@ -173,7 +173,7 @@ flowchart LR
   F --> G["pofctl validator activate"]
   G --> H["Drawn, you check,<br/>the contract pays you"]
 ```
-All 7 seats are in use today, so the organiser hands one over by rotating it to your key. The guide: [`docs/participate.md`](docs/participate.md).
+All 7 seats are in use today, so the organiser hands one over by rotating it to your key. The guide: [`docs/participate.md`](docs/participate.md). In v3 there is no seat to hand over: see [the open registry](#the-open-registry-a-validators-states).
 
 ### Where it runs
 ```mermaid
@@ -203,6 +203,108 @@ flowchart TB
   KE --> Forgejo
 ```
 The devnet is about $15 a month (platform#199, #200). Its stack is planned and applied through Forgejo's pipeline (platform-211).
+
+## How v3 works
+
+**Built and tested, not deployed.** The contracts are in `contracts/src/v3/`; the numbers are [ADR 0004](docs/adr/0004-open-validators.md)'s. The node and the kit still speak v2 (#139), and no devnet runs v3 yet (#140). v2 stays deployed and unchanged.
+
+### The contracts (keyless, coin only)
+```mermaid
+flowchart TB
+  Race["RaceV3 · 22,895 B<br/>issues, bounties, pots,<br/>results, payouts"]
+  Annex["RaceV3Annex · 24,133 B<br/>rarely used actions"]
+  Panels["Panels · 12,662 B<br/>+ 3 linked libraries<br/>k, the draw, seals, reveals,<br/>receipts, audits, challenges,<br/>the hold, finality"]
+  Val["Validators · 21,706 B<br/>the open registry: bonds,<br/>states, slashes, the lists"]
+  Fees["FeesV3 · 17,943 B<br/>posted prices, the median,<br/>the service fee, credits"]
+  Scores["PanelScores · 3,797 B<br/>each model family's score"]
+  Pool["PoolV3 · 1,927 B<br/>sponsors' pool"]
+  Heads["Heads<br/>each repository's head"]
+  Race -- "DELEGATECALL" --> Annex
+  Race -- "open a check, file a challenge,<br/>read the verdict and finality" --> Panels
+  Race -- "take deposit,<br/>settle the charge" --> Fees
+  Race -- "pay shadows, audits<br/>beyond the deposit" --> Pool
+  Race -- "move the head<br/>on a claim" --> Heads
+  Panels -- "who can be drawn,<br/>misses, slashes" --> Val
+  Panels -- "final outcomes" --> Scores
+  Fees -- "score factor" --> Scores
+  Fees -- "active validators'<br/>price tables" --> Val
+  Val -- "a slash's share" --> Pool
+```
+Sizes are runtime bytes; the limit is 24,576 (EIP-170). `Panels` runs its rules in three linked libraries (`PanelsVerdict` 20,156 B, `PanelsJudge` 12,061 B, `PanelsDraw` 9,095 B). No contract has an owner, an admin or a setter. Details: [`reports/contract-v3.md`](reports/contract-v3.md).
+
+### The open registry: a validator's states
+```mermaid
+stateDiagram-v2
+  [*] --> Candidate: register, signed by the new key<br/>(bond of $100 or more, attestation,<br/>host, TEE type, model family, operator)
+  Candidate --> Candidate: judges as a shadow<br/>(no vote, usage paid from the pool)
+  Candidate --> Active: 20 scored shadow verdicts,<br/>95 % revealed, 80 % agreement
+  Candidate --> Candidate: fails to qualify,<br/>7 days' cooldown
+  Active --> Active: drawn as a judge, an auditor<br/>or a challenger, and paid
+  Active --> Candidate: more than 5 misses<br/>in its last 50 draws (suspended)
+  Active --> Leaving: leave
+  Candidate --> Leaving: leave
+  Leaving --> Exited: after 504 h, every verdict final<br/>and every challenge closed,<br/>the bond returns
+  Exited --> [*]
+```
+- **No seat and no co-signers:** nobody approves a registration. The deployment names at most one genesis validator, at level A or B.
+- **The bond decides which bounties a validator can judge:** at least 2 × the bounty's tier ($10, $25, $50, $125, $250, $312.50, $625).
+- **A validator is slashed only for a provable fault.** A false verdict upheld by a challenge, or a reveal that doesn't match its seal, costs the whole bond. Silence, or a sealed vote not revealed, costs a counted judge $5. A mere disagreement costs nothing. A leaving validator can still be slashed.
+- **Not drawn, bond kept:** a validator whose TEE type, proof type or image left the constitution's list, or whose firmware is below the minimum, until it re-attests.
+- **A model family is fixed by the registration.** Changing it means registering again.
+
+### The k table: how large a panel is
+k is the number of counted judges: odd, from 1 to 7. It follows how many validators are eligible for the bounty, and the bounty must fit the limit of that k.
+
+| k | Eligible validators needed | Largest bounty, level A | Level B | Challenge window, level A | Level B | A challenge is judged by |
+|---|---|---|---|---|---|---|
+| 1 | 1 | $50 | $25 | 168 h, after the hold | 336 h | 3 |
+| 3 | 3 | $250 | $125 | 24 h | 48 h | 5 |
+| 5 | 5 | $625 | $312.50 | 12 h | 24 h | 7 |
+| 7 | 7 | $625 | $312.50 | 6 h | 12 h | 7 |
+
+Level A is a TEE in a cloud and level B a TEE elsewhere. A panel's level is the weakest level among its majority. Level C (zkTLS) has its own row in ADR 0004 and is off at launch.
+
+```mermaid
+flowchart TB
+  S["A sealed fix is committed"] --> Seed["The seed: the hash of a block<br/>5 blocks later"]
+  Seed --> N["n = active validators bonded<br/>for the bounty's tier"]
+  N --> K["k = the largest odd number up to n,<br/>at most 7, whose limit<br/>covers the bounty"]
+  K -- "none" --> W["The submission waits<br/>3 candidates shadow it"]
+  W -- "the registry grows" --> Seed
+  K --> D["Sample k validators by the seed<br/>skip the parties, 1 per operator<br/>from k = 3: no majority of one host<br/>or one model family<br/>from k = 5: nor of one TEE type"]
+  D -- "the caps leave too few" --> K2["k steps down by 2"]
+  K2 --> D
+  D -- "the panel's level is<br/>too weak for the bounty" --> W
+  D --> P["The panel is seated<br/>k never changes after the draw"]
+  P --> J["Each judge seals, reveals and<br/>posts its receipt's hash on-chain<br/>a silent judge is replaced"]
+  J --> V["The majority is the verdict<br/>then the hold or the window below"]
+```
+- **The draw can be recomputed by anyone.** It reads a snapshot taken when the seed block was set, so a change to the registry after that can only remove a validator from a draw.
+- **Shadows:** each draw also seats 1 candidate as a shadow (2 while fewer than 7 validators are active). That's how newcomers qualify.
+- **Audits:** 10 % of submissions are re-run by one auditor outside the panel. Whether a verdict is audited is decided by a later block, so the judges can't know when they vote.
+- **The constitution tier** is always 7 judges, 5 to pass. It needs 21 eligible validators for an ADR that adds or loosens, and 14 for one that only removes.
+- **The TEE-type cap** starts at k = 5 while fewer than 5 TEE types are accepted (3 at launch), and at k = 3 with 5 or more.
+
+### The k = 1 hold: a lone verdict waits for its challengers
+```mermaid
+stateDiagram-v2
+  [*] --> Sealed: the fix is committed
+  Sealed --> Waiting: no panel can be drawn
+  Waiting --> Sealed: the registry changes
+  Sealed --> Judging: a panel of k is seated
+  Judging --> Window: k = 3, 5 or 7<br/>the verdict is counted
+  Judging --> Held: k = 1 and fewer than 3 validators<br/>could judge a challenge
+  Judging --> Window: k = 1 and 3 challengers<br/>already exist
+  Held --> Window: 3 validators outside the panel are active,<br/>not parties, and bonded for the bounty
+  Window --> Window: a challenge freezes the window<br/>until a larger, fresh panel decides
+  Window --> Final: the window passed, every audit is in<br/>and no challenge is open
+  Final --> [*]: a pass starts the instalments
+```
+- **Nothing of the bounty is paid while a verdict is held or its window runs.** The judges' fees are paid when the verdict is posted; only the bounty waits.
+- **Every k = 1 verdict is audited by two auditors outside its panel,** each drawn as soon as one is eligible. An audit that disagrees opens a challenge.
+- **A validator has at most 10 k = 1 verdicts not yet final.** At 10 it isn't drawn at k = 1.
+- **A pass reversed before finality takes the award back** and reopens the bounty.
+- **The cost, in simulation:** an honest k = 1 fix is paid a median 19.4 days after its verdict, on 2 % of panels (ADR 0004).
 
 ## What's built and what's left in v2
 
@@ -242,13 +344,14 @@ Python 3.9 or later, standard library only. A real bounty on the AWS devnet: the
 ## Research
 
 - **The simulation's history:** [`docs/simulation.md`](docs/simulation.md), with the earlier mechanisms, the upstream target and how to reproduce each run.
-- **v3:** [report v3](reports/open-validators-v3.md), [v3.1](reports/open-validators-v3.1.md) and [ADR 0004](docs/adr/0004-open-validators.md).
+- **v3:** [report v3](reports/open-validators-v3.md), [v3.1](reports/open-validators-v3.1.md), [ADR 0004](docs/adr/0004-open-validators.md) and the contracts' report, [`reports/contract-v3.md`](reports/contract-v3.md).
+- **The judges, measured:** [`reports/judges-v2.md`](reports/judges-v2.md) (#160).
 - **Experiments:** whether verdicts can be re-run deterministically ([`reports/determinism-v1.md`](reports/determinism-v1.md)), and zkTLS ([`reports/zktls-spike-v1.md`](reports/zktls-spike-v1.md)).
 - **The paper's outline:** [`docs/paper/outline.md`](docs/paper/outline.md).
 
 ## Layout
 
-- `contracts/`: Foundry. v2 is in `contracts/src/v2/`, and v1 stays beside it. Built and tested only in the pinned Foundry image, and deployed only to a throwaway anvil or the private devnet. Libraries are vendored in `contracts/lib/`.
+- `contracts/`: Foundry. v2 is in `contracts/src/v2/` and v3 in `contracts/src/v3/`, and v1 stays beside them. Built and tested only in the pinned Foundry image, and deployed only to a throwaway anvil or the private devnet. Libraries are vendored in `contracts/lib/`.
 - `oracle/`: the validator's node ([README](oracle/README.md)).
 - `exchange/`: the relay between drawn judges, optional by design ([README](exchange/README.md), [`docs/exchange.md`](docs/exchange.md)).
 - `validator-kit/`: run a validator in your own AWS account ([README](validator-kit/README.md), [runbook](validator-kit/runbook.md), [costs](validator-kit/COSTS.md)).

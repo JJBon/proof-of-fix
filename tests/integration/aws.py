@@ -10,6 +10,10 @@ its default) and seat 6 is the owner's kit. Run the preflight first; it only rea
     scripts/integration.sh --target aws --only 2        some of them (4, 6, 7 and 8 are local-only: listed as skipped)
     scripts/integration.sh --target aws --withdraw-only every seat's fees withdrawn, seat 6's too with its key (#150)
     scripts/integration.sh --target aws --cleanup       close and delete what an interrupted run left in pof-sandbox
+    scripts/integration.sh --target aws --hosted-bot --only 10
+                                                        #210: the untyped loop against the hosted bot (pofctl bot watch
+                                                        on the seats host) and the seats' registration check: 10a paid,
+                                                        10b a timeout, an expired merge and a sunset, 10c the hint
 
 The environment (the same names as scripts/devnet-seats.sh and scripts/first-bounty.sh):
     DEVNET_RPC_URL                  the devnet (https, no credential in it)
@@ -30,7 +34,16 @@ moves to it, and the head on-chain with it, as with any merged bounty. Scenario 
 settles the bounty (`pofctl bot settle --repo --issue`, #151), with a comment linking the payout transaction; the
 leaderboard (`pofctl leaderboard --bounties`, from the events) is checked over the run's own bounties against the same
 bounties read from the views: on a shared devnet, those are the run's deltas. Each fix writes the same two root files
-(integration_probe.py and its test), so main keeps no file per run."""
+(integration_probe.py and its test), so main keeps no file per run.
+
+With --hosted-bot (#210) every scenario opens its bounty through the seats and the hosted bot: the reporter registers
+and names the registration in the issue (`Registration:` and `Reporter wallet:`), the seats' registration check opens
+it and the bot links it; scenario 1 waits for the bot to settle and close instead of `pofctl bot settle`. No scenario
+runs `pofctl oracle accept`, `bot link`, `bot settle` or `bot close` then (the hosted bot and the suite would write the
+same comment), and each of the bot's steps is waited for up to --bot-timeout (a watcher minute, a boot, a pass). The
+hosted bot acts on the run's other bounties too: a warp can sunset scenario 2's open bounty and close its issue, and the
+books count a timed-out deposit as the evaluation fee plus its return. The preflight checks that bot-service's address
+has gas and isn't an oracle key."""
 
 from __future__ import annotations
 
@@ -64,14 +77,25 @@ from pofctl.cli import run as pofctl_run  # noqa: E402
 from pofctl.race import C, Race, load_record  # noqa: E402
 from pofctl.rpc import Reverted, Rpc, RpcError, auth_headers  # noqa: E402
 from targets import (NOT_COVERED, SECRET_VARS, Refused, RedactingStream, Secrets, aws_settings,  # noqa: E402
-                     board_expected, check_board, check_books, check_chain, check_withdrawal, expect_deltas, plan)
+                     board_expected, check_board, check_books, check_chain, check_withdrawal, expect_deltas, plan,
+                     typed_by_the_bot)
 
 SEAT_ROLES = [f"oracle-{i}" for i in range(5)] + ["joiner-0"]
 PARTIES = ["reporter", "funder", "solver-a", "solver-b"]
 ROLES = ["deployer", "bot"] + PARTIES + SEAT_ROLES  # the role keys this run reads from OpenBao
+BOT_SERVICE = "bot-service"  # the hosted bot's role (#210): with --hosted-bot, read for its address and checks only
 OWNER_SEAT = 6
 MARK = "[integration "  # in every issue title this suite opens
 BRANCH = "integration-"  # every branch it pushes starts so
+# Forgejo starts no workflow for a head commit whose message carries this (#219): pof-sandbox's own check, a full test
+# suite on the single `test` runner, would otherwise run on every pull request a run opens, all of them closed by the
+# end, and queue proof-of-fix's checks behind them. The drawn judges run the fix's tests themselves.
+SKIP_CI = "[skip ci]"
+
+
+def fix_message(want: str, passing: bool) -> str:
+    """The fix commit's message: the probe it sets, and no CI run on pof-sandbox (#219)."""
+    return f"integration probe {want} ({'passing' if passing else 'failing'} fix) {SKIP_CI}"
 MIN_GAS = 10**17  # 0.1 ETH: what first-bounty.sh asks of each sender
 MIN_COINS = 1000 * C
 CODE = ("race", "verdicts", "meter", "pool", "quoter", "heads", "annex")
@@ -156,7 +180,7 @@ class AwsRun:
         src = "insecure-local" if self.s.insecure_local else "openbao"
         self.keys: dict = {}
         missing = []
-        for role in ROLES:
+        for role in ROLES + ([BOT_SERVICE] if self.a.hosted_bot else []):
             try:
                 self.keys[role] = keys.key(role, src)
             except keys.KeyError_ as e:
@@ -169,6 +193,8 @@ class AwsRun:
         # pofctl reads each key by name from this process's environment (keys.py's "env" source): nothing else is
         # started with it. Git gets an environment of its own (Forge.git); no other child process is started.
         for role, k in self.keys.items():
+            if role == BOT_SERVICE:
+                continue  # never used to send: the hosted bot holds its own copy
             os.environ[keys.env_name(role)] = f"0x{k:064x}"
         os.environ.update({"DEVNET_KEYS": "env", "POFCTL_RPC": self.s.rpc_url, "POFCTL_RPC_TOKEN": self.s.auth,
                            "POFCTL_RPC_AUTH": "Basic", "FORGEJO_TOKEN": self.s.token, "FORGEJO_USER": self.s.user,
@@ -184,6 +210,9 @@ class AwsRun:
                             encoding="utf-8")
 
     def ctl(self, *argv, role=None) -> dict:
+        if self.a.hosted_bot and typed_by_the_bot(argv):
+            raise RuntimeError(f"with --hosted-bot the suite never runs pofctl {' '.join(argv[:2])}: the seats and the "
+                               f"hosted bot do it (#210)")
         return pofctl_run(["--record", self.s.record, "--config", str(self.cfg)] + (["--as", role] if role else [])
                           + list(argv))[0]
 
@@ -306,6 +335,14 @@ class AwsRun:
              "kit needs model_id = \"\" (the fake judge) or enabled = false (then a round that draws it waits the seal "
              "window, 15 minutes, and the two others decide)")
 
+        if self.a.hosted_bot:
+            bot = self.addr.get(BOT_SERVICE)
+            if not bot:
+                missing(f"--hosted-bot: no {BOT_SERVICE} key in OpenBao (scripts/devnet-keys.sh init adds it)")
+            elif self.race.is_oracle(bot):
+                missing(f"{BOT_SERVICE}'s address {bot} is an active oracle key: the bot never judges")
+            else:
+                ok(f"{BOT_SERVICE} ({bot}) isn't an oracle key")
         low = []
         for role, a in self.addr.items():
             if int(self.rpc.call("eth_getBalance", [a, "latest"]), 16) < MIN_GAS:
@@ -427,7 +464,7 @@ class AwsRun:
         (d / "test_integration_probe.py").write_text(PROBE_TEST.format(tag=self.tag, want=want), encoding="utf-8")
         g = self.forge.git
         g(d, "add", "-A")
-        g(d, "commit", "-q", "-m", f"integration probe {want} ({'passing' if passing else 'failing'} fix)")
+        g(d, "commit", "-q", "-m", fix_message(want, passing))
         sha, branch = g(d, "rev-parse", "HEAD"), f"{BRANCH}{self.tag}-{label}"
         self.created["branches"].append(branch)
         g(d, "push", "-q", f"{self.s.forge.rstrip('/')}/{self.s.repo}.git", f"HEAD:refs/heads/{branch}")
@@ -453,15 +490,22 @@ class AwsRun:
         self.problems += expect_deltas(f"scenario {scenario}: registering", rep_before,
                                        self.wallets({"reporter": self.addr["reporter"]}),
                                        {"reporter": -(cfg["registrationFee"] + cfg["issueStake"])})
+        lines = (rep.get("lines") or [f"Reporter wallet: {rep['reporter']}"]) if self.a.hosted_bot else \
+            [f"Reporter wallet: {rep['reporter']}"]
         body = (f"Integration run `{self.tag}`, scenario {scenario} (proof-of-fix#152). `integration_probe.probe()` should "
                 f"return `{want!r}`; the acceptance test is `test_integration_probe.py` at the root.\n\n"
-                f"This issue is closed when the run ends.\n\nReporter wallet: {rep['reporter']}\n")
+                f"This issue is closed when the run ends.\n\n" + "\n".join(lines) + "\n")
         issue = self.forge.api("POST", "/issues", {"title": f"{MARK}{self.tag}] scenario {scenario}: probe() should return "
                                                             f"{want!r}", "labels": [self.forge.bounty_label()],
                                                    "body": body})["number"]
         self.created["issues"].append(issue)
-        bounty = self.ctl("oracle", "accept", "--issue", str(rep["issue"]))["bounty"]
-        self.ctl("bot", "link", "--repo", self.s.repo, "--issue", str(issue), "--bounty", str(bounty))
+        if self.a.hosted_bot:
+            bounty = self.opened_by_the_seats(scenario, rep["issue"], issue)
+            if not bounty:
+                raise RuntimeError(f"registration {rep['issue']} wasn't opened and linked in {self.a.bot_timeout:.0f} s")
+        else:
+            bounty = self.ctl("oracle", "accept", "--issue", str(rep["issue"]))["bounty"]
+            self.ctl("bot", "link", "--repo", self.s.repo, "--issue", str(issue), "--bounty", str(bounty))
         before = self.wallets({"funder": self.addr["funder"]})
         self.ctl("funder", "fund", "--bounty", str(bounty), "--amount", str(amount))
         self.problems += expect_deltas(f"scenario {scenario}: funding bounty {bounty}", before,
@@ -470,6 +514,50 @@ class AwsRun:
         say(f"  issue #{issue} on {self.s.repo}, on-chain issue {rep['issue']}: bounty {bounty} registered, accepted, "
             f"linked and funded with {amount}")
         return bounty, issue
+
+    # ---------- #210: the hosted bot's and the seats' steps, waited for ----------
+
+    def bot_wait(self, what: str, done) -> bool:
+        started = time.monotonic()
+        while time.monotonic() - started < self.a.bot_timeout:
+            try:
+                if done():
+                    say(f"  {what}: after {time.monotonic() - started:.0f} s")
+                    return True
+            except (RpcError, urllib.error.URLError, OSError) as e:
+                say(f"  ({type(e).__name__} while waiting: {e})")
+            time.sleep(5)
+        self.problems.append(f"{what}: not after {self.a.bot_timeout:.0f} s (is the seats host up with the bot? "
+                             f"seats.sh status)")
+        return False
+
+    def markers(self, issue: int, kind: str) -> list:
+        from bot import logic
+
+        read = {"link": logic.linked, "paid": logic.paid, "ended": logic.ended,
+                "hint": lambda cs: True if logic.hinted(cs) else None}[kind]
+        return [read([c]) for c in self.forge.api("GET", f"/issues/{issue}/comments") or [] if read([c])]
+
+    def issue_state(self, issue: int) -> str:
+        return self.forge.api("GET", f"/issues/{issue}")["state"]
+
+    def opened_by_the_seats(self, scenario: str, onchain: int, issue: int) -> int:
+        if not self.bot_wait(f"scenario {scenario}: registration {onchain} opened by the seats' check",
+                             lambda: self.race.issue(onchain)["bounty"]):
+            return 0
+        bounty = self.race.issue(onchain)["bounty"]
+        if not self.bot_wait(f"scenario {scenario}: issue #{issue} linked by the hosted bot",
+                             lambda: self.markers(issue, "link")):
+            return 0
+        return bounty
+
+    def warp_to(self, day: int) -> None:
+        now = self.race.day()
+        if day > now:
+            self.ctl("devnet", "warp", "--days", str(day - now))
+
+    def from_bot(self, tx: str) -> bool:
+        return self.rpc.call("eth_getTransactionByHash", [tx])["from"].lower() == self.addr[BOT_SERVICE].lower()
 
     def submit(self, scenario: str, bounty: int, issue: int, solver: str, label: str, passing: bool) -> int:
         sha, branch = self.fix(label, passing)
@@ -595,6 +683,9 @@ class AwsRun:
             return
         if self.a.no_warp:
             say("  --no-warp: stopping at Merged (settling needs the shared clock warped)")
+        elif self.a.hosted_bot:
+            if not self.paid_by_the_bot("1", bounty, issue):
+                return
         else:
             solver = {"solver-a": self.addr["solver-a"]}
             paid_before = self.credits(solver)
@@ -626,6 +717,23 @@ class AwsRun:
             if not self.closed_on_payout(bounty, issue):
                 return
         self.passed.append("1")
+
+    def paid_by_the_bot(self, scenario: str, bounty: int, issue: int) -> bool:
+        """#210: the shared clock warped to the last release; the hosted bot settles and closes the issue."""
+        from bot import logic
+
+        cfg = self.race.config()
+        aw = self.race.award(bounty, self.race.bounty(bounty)["epoch"])
+        self.warp_to(logic.last_release_day(aw["windowEnd"], cfg["releaseEveryDays"], cfg["instalments"]))
+        if not self.bot_wait(f"scenario {scenario}: bounty {bounty} settled by the hosted bot",
+                             lambda: self.race.bounty(bounty)["state"] == "Paid"):
+            return False
+        if not self.from_bot(self.race.payout(bounty)["tx"]):
+            self.problems.append(f"scenario {scenario}: bounty {bounty}'s settle didn't come from {BOT_SERVICE}")
+        if not self.bot_wait(f"scenario {scenario}: issue #{issue} closed by the hosted bot",
+                             lambda: self.issue_state(issue) == "closed"):
+            return False
+        return self.closed_on_payout(bounty, issue)
 
     def closed_on_payout(self, bounty: int, issue: int) -> bool:
         """The bot's settle closed the issue on the forge, with one comment naming the payout transaction (#151)."""
@@ -662,6 +770,77 @@ class AwsRun:
                                         f"{r['award']['earned']}")
         say(f"  award {epoch} closed with nothing earned; bounty {bounty} reopened")
         self.passed.append("5")
+
+    def s10_untyped(self) -> None:
+        """#210 against the hosted bot: 10a paid, 10b the deadlines on one bounty, 10c the hint."""
+        say("\n== 10a. the paid path, untyped (the seats' check and the hosted bot) ==")
+        bounty, issue = self.new_bounty("10", "untyped-paid")
+        s = self.submit("10", bounty, issue, "solver-a", "s10a-right", passing=True)
+        if self.decided("10", s) != "Pass" or not self.merge("10", bounty, s):
+            return self.problems.append(f"scenario 10: 10a's bounty {bounty} didn't reach Merged")
+        if not self.paid_by_the_bot("10", bounty, issue):
+            return
+        if len(self.markers(issue, "link")) != 1:
+            return self.problems.append(f"scenario 10: issue #{issue} has {len(self.markers(issue, 'link'))} links")
+
+        say("\n== 10b. the deadlines on one bounty: a timeout, an expired merge, a sunset ==")
+        bounty, issue = self.new_bounty("10", "untyped-deadlines")
+        cfg = self.race.config()
+        sha, _ = self.fix("s10b-silent", passing=True)  # sealed, and its pull request never opened
+        silent = self.ctl("solver", "submit", "--bounty", str(bounty), "--commit", sha, "--issue", str(issue),
+                          role="solver-a")
+        s1 = silent["submission"]
+        self.subs[s1] = {"solver": self.addr["solver-a"], "deposit": silent["deposit"], "judges": silent["judges"],
+                         "bounty": bounty, "label": "s10b-silent", "pr": None, "sha": sha, "scenario": "10",
+                         "fee": min(cfg["evaluationFee"], silent["deposit"])}
+        s2 = self.submit("10", bounty, issue, "solver-b", "s10b-unmerged", passing=True)
+        if self.decided("10", s2) != "Pass":
+            return self.problems.append(f"scenario 10: 10b's submission {s2} wasn't passed")
+        self.warp_to(self.race.submission(s1)["day"] + cfg["resultDays"])
+        if not self.bot_wait(f"scenario 10: submission {s1} timed out by the hosted bot",
+                             lambda: self.race.submission(s1)["outcome"] == "TimedOut"):
+            return
+        topic = "0x" + keccak256(b"Decided(uint256,uint8)").hex()
+        decided = self.rpc.logs(self.chain.race, self.start_block, [topic, "0x%064x" % s1])[-1]
+        if not self.from_bot(decided["transactionHash"]):
+            self.problems.append(f"scenario 10: submission {s1}'s timeout didn't come from {BOT_SERVICE}")
+        if self.race.bounty(bounty)["state"] != "Won":
+            return self.problems.append(f"scenario 10: bounty {bounty} is {self.race.bounty(bounty)['state']} after "
+                                        f"the timeout, not Won")
+        self.warp_to(self.race.bounty(bounty)["mergeBy"] + 1)
+        if not self.bot_wait(f"scenario 10: bounty {bounty}'s merge expired by the hosted bot",
+                             lambda: self.race.bounty(bounty)["state"] == "Open"):
+            return
+        self.close_pr(s2)
+        self.warp_to(self.race.bounty(bounty)["idleSince"] + cfg["idleDays"])
+        if not self.bot_wait(f"scenario 10: bounty {bounty} sunset by the hosted bot",
+                             lambda: self.race.bounty(bounty)["state"] == "Unsolved"):
+            return
+        topic = "0x" + keccak256(b"StateChanged(uint256,uint8)").hex()
+        ended = self.rpc.logs(self.chain.race, self.start_block, [topic, "0x%064x" % bounty])[-1]
+        if not self.from_bot(ended["transactionHash"]):
+            self.problems.append(f"scenario 10: bounty {bounty}'s sunset didn't come from {BOT_SERVICE}")
+        if not self.bot_wait(f"scenario 10: issue #{issue} closed with its ending",
+                             lambda: self.issue_state(issue) == "closed" and self.markers(issue, "ended")):
+            return
+        said = self.markers(issue, "ended")
+        if [m[1:] for m in said] != [(bounty, "Unsolved", ended["transactionHash"])]:
+            return self.problems.append(f"scenario 10: issue #{issue}'s ending comments: {said}")
+
+        say("\n== 10c. the hint, once ==")
+        n = self.forge.api("POST", "/issues", {"title": f"{MARK}{self.tag}] scenario 10c: no registration named",
+                                               "labels": [self.forge.bounty_label()],
+                                               "body": f"Integration run `{self.tag}` (#210): an issue with no lines."})
+        n = n["number"]
+        self.created["issues"].append(n)
+        if not self.bot_wait(f"scenario 10: issue #{n}'s hint", lambda: self.markers(n, "hint")):
+            return
+        self.forge.api("PATCH", f"/issues/{n}", {"body": f"Integration run `{self.tag}` (#210): edited, still no lines."})
+        time.sleep(min(self.a.bot_timeout, 120))  # more of the hosted bot's passes
+        if len(self.markers(n, "hint")) != 1:
+            return self.problems.append(f"scenario 10: issue #{n} has {len(self.markers(n, 'hint'))} hints")
+        say(f"  issue #{n} got one hint, still one after an edit and more passes")
+        self.passed.append("10")
 
     # ---------- the end: withdrawals and the books ----------
 
@@ -708,7 +887,7 @@ class AwsRun:
             reports = self.race.reports(s)
             if s not in {x for ids in decided.values() for x in ids}:
                 continue
-            if len(reports) != n or n not in (2, 3):
+            if len(reports) != n or n not in ((0,) if sub.get("fee") else (2, 3)):  # a timeout has no checks
                 self.problems.append(f"books: submission {s}: {len(reports)} usage reports, {n} judges charged")
             silent = [self.names.get(j.lower(), j) for j in sub["judges"]
                       if j.lower() not in {r["judge"].lower() for r in reports}]
@@ -832,7 +1011,7 @@ class AwsRun:
             self.withdraw(seats, with_parties=False)
             self.leak_check(streams)
             return self.finish([], [])
-        run, skipped = plan("aws", self.a.only)
+        run, skipped = plan("aws", self.a.only, self.a.hosted_bot)
         say(f"integration run {self.tag} on the AWS devnet (chain {self.race.chain_id()}, race {self.record['race']}), "
             f"{self.s.repo}; scenarios {', '.join(run) or 'none'}; the fake judge")
         for s, why in skipped:
@@ -842,7 +1021,8 @@ class AwsRun:
         try:
             self.mint()
             for key in run:
-                fn = {"1": self.s1_happy, "2": self.s2_failing, "3": self.s3_race, "5": self.s5_challenge}[key]
+                fn = {"1": self.s1_happy, "2": self.s2_failing, "3": self.s3_race, "5": self.s5_challenge,
+                      "10": self.s10_untyped}[key]
                 try:
                     fn()
                 except Exception as e:  # noqa: BLE001 (one scenario's crash shouldn't hide the others)
@@ -854,9 +1034,15 @@ class AwsRun:
             except Exception as e:  # noqa: BLE001
                 self.problems.append(f"leaderboard: crashed: {type(e).__name__}: {e}")
         finally:
+            by_bot = 0
+            if self.a.hosted_bot:  # the hosted bot closes the issues of bounties that ended, the run's other ones too
+                try:
+                    by_bot = sum(self.issue_state(n) == "closed" for n in self.created["issues"])
+                except (urllib.error.URLError, OSError):
+                    pass
             failed = self.clean(self.created)
-            say(f"\ncleaned up: {len(self.created['issues'])} issue(s) closed, {len(self.created['pulls'])} pull "
-                f"request(s) closed, {len(self.created['branches'])} branch(es) deleted")
+            say(f"\ncleaned up: {len(self.created['issues'])} issue(s) closed ({by_bot} already by the hosted bot), "
+                f"{len(self.created['pulls'])} pull request(s) closed, {len(self.created['branches'])} branch(es) deleted")
             if failed:
                 self.problems.append(f"cleanup: {', '.join(failed)} (--cleanup tries again)")
             if self.bounties:
@@ -893,6 +1079,10 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--seats-work", default=os.environ.get("DEVNET_SEATS_WORK") or ".devnet-seats",
                     help="scripts/devnet-seats.sh's working directory (its pid file and node logs)")
     ap.add_argument("--anytime", action="store_true", help="run outside 09:00-23:00 Bogota")
+    ap.add_argument("--hosted-bot", action="store_true", help="#210: the seats' registration check and the hosted bot "
+                    "(pofctl bot watch on the seats host) open, link, settle and close; scenario 10 runs")
+    ap.add_argument("--bot-timeout", type=float, default=600, help="seconds each of the hosted bot's steps may take "
+                    "(default 600: a watcher minute, a boot, a pass)")
     ap.add_argument("--with-first-run", action="store_true", help=argparse.SUPPRESS)  # the local target's
     return ap
 

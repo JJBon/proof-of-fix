@@ -21,7 +21,16 @@ Scenarios (#152's list), each on its own bounty:
    scripts/first-run-e2e.sh's (run it with --with-first-run);
 8. with --radicle (#201, tests/integration/radicle.py): Radicle merges on a local isolated Radicle network, the seats'
    nodes as the delegates: the happy path, an outsider's push, fewer delegates than the threshold, and a mismatch
-   between Heads and canonical main.
+   between Heads and canonical main;
+10. the untyped loop (#210), run last: `pofctl bot watch` as its own process with the bot-service key and --min-bounty,
+   and the seats' nodes with their registration check on. The suite runs no `pofctl oracle accept`, `bot link`,
+   `bot settle` or `bot close` in it, and every transaction from bot-service's address is settle, timeOut,
+   mergeExpired or sunset. (a) the paid path: a labelled issue naming its registration is opened by the seats, linked
+   by the bot (killed once right after its link, and restarted: nothing repeated), solved, merged, settled, commented
+   once and closed; (b) the deadlines on one bounty: a sealed fix with no pull request times out, a passing fix wins and
+   is never merged and expires, the bounty sunsets, and the bot settles it and closes its issue with one ending
+   comment, each on its due day and not the day before; (c) a labelled issue with no lines gets one hint, still one
+   after more passes, an edit and a restart.
 
 After the scenarios (#151): the paid bounty's issue was closed by the bot when it settled it (`pofctl bot settle
 --repo --issue`), with a comment linking the payout transaction, and a watcher's pass (`pofctl bot close`) closes every
@@ -70,10 +79,13 @@ from pofctl import keys  # noqa: E402
 from pofctl.cli import run  # noqa: E402
 from pofctl.race import Race  # noqa: E402
 
+from panel import PanelV2  # noqa: E402  (tests/integration/panel.py: who is drawn and what decides, in one place)
+
 REPO = "demo/median"
 C = 10**6
 IDLE = 25  # seconds a node waits without progress before it exits
-SCENARIOS = ("1", "2", "3", "4", "5", "6", "7")
+SCENARIOS = ("1", "2", "3", "4", "5", "6", "7", "10")
+TYPED_BY_THE_BOT = {("oracle", "accept"), ("bot", "link"), ("bot", "settle"), ("bot", "close")}  # never in scenario 10
 
 
 class Suite:
@@ -83,6 +95,7 @@ class Suite:
         self.record = json.loads(Path(args.record).read_text(encoding="utf-8"))
         self.rpc = Rpc(args.rpc)
         self.chain = v2.Chain(self.rpc, self.record["race"])
+        self.panel = PanelV2(self.chain)  # the draw and the quorum are read here only (#140, task 5.0)
         self.base = ["--rpc", args.rpc, "--record", args.record]
         self.problems: list = []
         self.passed: list = []
@@ -99,10 +112,13 @@ class Suite:
         self.late: dict = {}  # solver's address -> fixes sealed after the win (TooLate)
         self.withdrawn: dict = {}  # seat's address -> fees withdrawn
         self.paid_bounty = None  # scenario 1's
+        self.calls: list = []  # every pofctl command the suite ran (scenario 10 checks none was the bot's or the quorum's)
+        self.bot = None  # scenario 10's `pofctl bot watch` process
 
     # ---------- helpers ----------
 
     def ctl(self, *argv, as_role=None, show=True):
+        self.calls.append(list(argv))
         data, lines = run(self.base + (["--as", as_role] if as_role else []) + list(argv))
         if show:
             print(f"$ pofctl {' '.join((['--as', as_role] if as_role else []) + list(argv))}")
@@ -174,15 +190,16 @@ class Suite:
         if not r.get("submission"):
             return 0, None, r
         pr = self.gh.add_pull(REPO, f"Fix the median ({fix})", r["prBody"], sha, user=solver, base_sha=self.base_sha)
+        judges = self.panel.drawn(r["submission"])
         print(f"  {solver} sealed {fix} ({sha[:12]}): submission {r['submission']}, deposit {r['deposit'] / C:,.6f}, "
-              f"drawn {self.drawn_names(r['judges'])}; pull request #{pr}")
+              f"drawn {self.drawn_names(judges)}; pull request #{pr}")
         self.submissions[r["submission"]] = {"solver": address(keys.derive(keys.MNEMONIC, keys.ROLES.index(solver))),
-                                             "deposit": r["deposit"], "judges": r["judges"], "bounty": bounty}
+                                             "deposit": r["deposit"], "judges": judges, "bounty": bounty}
         return r["submission"], pr, r
 
     # ---------- the nodes ----------
 
-    def node_env(self, transport: str = "folder") -> dict:
+    def node_env(self, transport: str = "folder", check: bool = False) -> dict:
         env = {
             "ORACLE_RACE": self.record["race"], "ORACLE_KEYS": "env", "ORACLE_REPO": REPO,
             "ORACLE_REPOS": str(self.cfg), "GITHUB_TOKEN": self.gh.token, "ORACLE_SRC_ROOT": str(self.work / "src"),
@@ -190,6 +207,8 @@ class Suite:
             "ORACLE_EXCHANGE": str(self.work / "exchange"), "ORACLE_ROUND_TIMEOUT": "60", "ORACLE_POLL": "1",
             "ORACLE_MERGE_WEIGHT": "100", "PYTHONDONTWRITEBYTECODE": "1", "ORACLE_RPC": self.args.rpc,
         }
+        if check:  # #210: the seats' registration check, with the fake judge (oracle/registration.py)
+            env.update({"ORACLE_REGISTRATION_CHECK": "on", "ORACLE_REGISTER_WEIGHT": "120", "ORACLE_RELAY_GRACE": "5"})
         if transport == "http-down":  # a port nothing listens on: the relay is down; the folder is the fallback
             with socket.socket() as sock:
                 sock.bind(("127.0.0.1", 0))
@@ -208,10 +227,11 @@ class Suite:
         return name, log, p
 
     def run_nodes(self, label: str, scenario: str, skip=(), transport: str = "folder", restart: str = "",
-                  restart_after: str = "usage reported", idle: int = IDLE) -> None:
+                  restart_after: str = "usage reported", idle: int = IDLE, check: bool = False) -> None:
         """The seats' nodes, as separate processes, until each is idle. `skip`: seats whose node doesn't run.
-        `restart`: a seat whose node is killed once its log shows `restart_after`, then started again."""
-        env = self.node_env(transport)
+        `restart`: a seat whose node is killed once its log shows `restart_after`, then started again. `check`: their
+        registration check on (#210)."""
+        env = self.node_env(transport, check)
         procs = [self.start(n, env, idle) for n in self.seat_keys if n not in skip]
         if restart:
             log_path = self.work / f"node-{restart}.log"
@@ -340,7 +360,7 @@ class Suite:
         print("\n== 4. a silent validator ==", flush=True)
         bounty, issue = self.new_bounty("silent validator")
         sub, pr, r = self.submit(bounty, issue, "solver-a", "good_stats.py")
-        silent = next(self.names[j.lower()] for j in r["judges"] if self.names.get(j.lower()) != "engineer")
+        silent = next(self.names[j.lower()] for j in self.panel.drawn(sub) if self.names.get(j.lower()) != "engineer")
         print(f"  {silent}'s node doesn't run")
         # the others wait the round timeout (60 s) for the silent judge's seal before deciding without it: the nodes
         # must outlast it rather than stop as idle
@@ -348,10 +368,11 @@ class Suite:
         if self.state(bounty) != "Won":
             return self.fail("4", f"bounty {bounty} is {self.state(bounty)} with {silent} silent, not Won")
         reporters = {self.names.get(x["judge"].lower()) for x in self.chain.reports(sub)}
-        if silent in reporters or len(reporters) != 2:
+        left = self.panel.reports(sub, silent=1)  # v2 doesn't replace a silent seat: one report fewer
+        if silent in reporters or len(reporters) != left or left < self.panel.decides(sub):
             return self.fail("4", f"submission {sub}'s usage reports came from {sorted(reporters)}")
-        self.submissions[sub]["expect_reports"] = 2
-        print(f"  the other two decided; {silent} reported no usage and is charged for nothing "
+        self.submissions[sub]["expect_reports"] = left
+        print(f"  the other {left} decided; {silent} reported no usage and is charged for nothing "
               f"(reports: {', '.join(sorted(reporters))})")
         self.merge_and_settle("4", bounty, pr, settle=False)
         self.passed.append("4")
@@ -392,7 +413,7 @@ class Suite:
         print("\n== 7b. a drawn node restarted mid-check ==", flush=True)
         bounty, issue = self.new_bounty("node restart")
         sub, pr, r = self.submit(bounty, issue, "solver-b", "good_stats.py")
-        victim = self.names[r["judges"][0].lower()]
+        victim = self.names[self.panel.drawn(sub)[0].lower()]
         self.run_nodes(f"bounty {bounty}'s check, {victim} restarted", "7", restart=victim)
         if self.state(bounty) != "Won":
             return self.fail("7", f"7b: bounty {bounty} is {self.state(bounty)} after a restart, not Won")
@@ -416,6 +437,263 @@ class Suite:
         import radicle  # tests/integration/radicle.py (#201)
 
         radicle.run(self)
+
+    # ---------- 10: the untyped loop (#210) ----------
+
+    def bot_start(self) -> None:
+        token = self.work / "bot-forge-token"
+        token.write_text(self.gh.token + "\n", encoding="utf-8")
+        token.chmod(0o600)
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("POFCTL_KEY_", "GITHUB_TOKEN", "ORACLE_"))}
+        env.update({"DEVNET_KEYS": "insecure-local", "POF_BOT_RPC": self.args.rpc, "POF_BOT_RECORD": self.args.record,
+                    "POF_BOT_REPO": REPO, "POF_BOT_FORGE_HOST": "github", "POF_BOT_FORGE_URL": self.gh.url,
+                    "POF_BOT_FORGE_TOKEN_FILE": str(token), "POF_BOT_POLL_SECONDS": "1", "POF_BOT_HINT_GRACE": "2",
+                    "PYTHONDONTWRITEBYTECODE": "1"})
+        log = open(self.work / "bot.log", "a", encoding="utf-8")
+        self.bot = (log, subprocess.Popen([sys.executable, "-m", "pofctl", "bot", "watch", "--min-bounty",
+                                           str(self.min_bounty)], cwd=ROOT, env=env, stdout=log,
+                                          stderr=subprocess.STDOUT))
+
+    def bot_stop(self, note: str = "") -> None:
+        if self.bot is None:
+            return
+        log, p = self.bot
+        if p.poll() is not None:
+            self.fail("10", f"the bot exited {p.returncode} on its own (see {self.work}/bot.log)")
+        p.kill()
+        p.wait(timeout=30)
+        log.write(f"\n--- {note or 'stopped by the suite'} ---\n")
+        log.close()
+        self.bot = None
+
+    def wait_until(self, what: str, done, timeout: float = 90) -> bool:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if done():
+                return True
+            time.sleep(0.5)
+        self.fail("10", f"{what}: not after {timeout:.0f} s (see {self.work}/bot.log)")
+        return False
+
+    def comments(self, issue: int) -> list:
+        return list(self.gh.repos[REPO]["comments"].get(issue, []))
+
+    def markers(self, issue: int, kind: str) -> list:
+        from bot import logic
+
+        read = {"link": logic.linked, "paid": logic.paid, "ended": logic.ended,
+                "hint": lambda cs: True if logic.hinted(cs) else None}[kind]
+        return [read([c]) for c in self.comments(issue) if read([c])]
+
+    def claimed_issue(self, label: str) -> tuple:
+        """The reporter registers and opens a labelled issue naming it (the two lines pofctl prints): no more."""
+        rep = self.ctl("reporter", "register", show=False)
+        issue = self.gh.add_issue(REPO, f"median() is wrong for an even count ({label})",
+                                  "`median([4, 1, 3, 2])` returns 3; it should be 2.5.\n\n" + "\n".join(rep["lines"])
+                                  + "\n", labels=["bounty"])
+        print(f"  the reporter registered on-chain issue {rep['issue']} and opened issue #{issue} naming it")
+        return rep["issue"], issue
+
+    def opened_by_the_seats(self, onchain: int, issue: int) -> int:
+        self.run_nodes(f"registration {onchain}'s check", "10", check=True)
+        bounty = self.chain.issue(onchain)["bounty"]
+        if not bounty:
+            self.fail("10", f"registration {onchain} wasn't opened by the seats' check")
+            return 0
+        if not self.wait_until(f"issue #{issue} linked to bounty {bounty}", lambda: self.markers(issue, "link")):
+            return 0
+        if [m[1:] for m in self.markers(issue, "link")] != [(bounty, onchain)]:
+            self.fail("10", f"issue #{issue}'s links: {self.markers(issue, 'link')}")
+        print(f"  the seats' check opened bounty {bounty}; the bot linked it to issue #{issue}")
+        return bounty
+
+    def warp_to(self, day: int) -> None:
+        now = self.ctl("status", show=False)["day"]
+        if day > now:
+            self.ctl("devnet", "warp", "--days", str(day - now), show=False)
+
+    def tx_from_bot(self, tx: str) -> bool:
+        return self.rpc.call("eth_getTransactionByHash", [tx])["from"].lower() == self.bot_address.lower()
+
+    def last_log(self, event: bytes, *topics) -> dict | None:
+        found = self.rpc.logs(self.chain.race, self.s10_block, ["0x" + v2.keccak256(event).hex(), *topics])
+        return found[-1] if found else None
+
+    def s10_untyped(self) -> None:
+        print("\n== 10. the untyped loop: the seats' registration check and the bot as a service (#210) ==", flush=True)
+        topic = "0x" + v2.keccak256(b"BountyOpened(uint256,uint256)").hex()
+        self.min_bounty = len(self.rpc.logs(self.chain.race, 0, [topic])) + 1
+        self.bot_address = address(keys.derive(keys.MNEMONIC, keys.ROLES.index("bot-service")))
+        self.s10_block = self.rpc.block()
+        mark = len(self.calls)
+        self.bot_start()
+        print(f"  pofctl bot watch started (bot-service {self.bot_address}, --min-bounty {self.min_bounty})")
+        try:
+            for part in (self.s10a_paid, self.s10b_deadlines, self.s10c_hint):
+                try:
+                    part()
+                except Exception as e:  # noqa: BLE001 (one part's crash shouldn't hide the others)
+                    self.fail("10", f"{part.__name__}: crashed: {type(e).__name__}: {e}")
+        finally:
+            self.bot_stop()
+        typed = [c for c in self.calls[mark:] if tuple(c[:2]) in TYPED_BY_THE_BOT]
+        if typed:
+            self.fail("10", f"the suite ran the bot's or the stub quorum's commands: {typed}")
+        allowed = {abi.selector(sig).hex() for sig in ("settle(uint256,address)", "timeOut(uint256)",
+                                                       "mergeExpired(uint256)", "sunset(uint256)")}
+        sent = []
+        for n in range(self.s10_block, self.rpc.block() + 1):
+            for tx in self.rpc.call("eth_getBlockByNumber", [hex(n), True])["transactions"]:
+                if tx["from"].lower() == self.bot_address.lower():
+                    sent.append(tx["input"][2:10])
+        if not sent or set(sent) - allowed:
+            self.fail("10", f"bot-service's transactions: {sent} (only settle, timeOut, mergeExpired, sunset)")
+        else:
+            print(f"  bot-service sent {len(sent)} transaction(s), each settle, timeOut, mergeExpired or sunset")
+        log = (self.work / "bot.log").read_text(encoding="utf-8")
+        if self.gh.token in log:
+            self.fail("10", "the forge token is in the bot's output")
+        if not any(p.startswith("scenario 10") for p in self.problems):
+            self.passed.append("10")
+
+    def s10a_paid(self) -> None:
+        from bot import logic
+
+        print("\n== 10a. the paid path, untyped ==", flush=True)
+        onchain, issue = self.claimed_issue("untyped, paid")
+        bounty = self.opened_by_the_seats(onchain, issue)
+        if not bounty:
+            return
+        self.bot_stop("killed by the suite right after its link")
+        self.bot_start()
+        print("  (the bot killed right after its link, and restarted)")
+        self.ctl("funder", "fund", "--bounty", str(bounty), "--amount", "100", show=False)
+        self.issues[bounty] = issue
+        sub, pr, _ = self.submit(bounty, issue, "solver-a", "good_stats.py")
+        self.run_nodes(f"bounty {bounty}'s check", "10")
+        if self.state(bounty) != "Won":
+            return self.fail("10", f"10a: bounty {bounty} is {self.state(bounty)}, not Won")
+        self.gh.merge(REPO, pr)
+        self.run_nodes(f"bounty {bounty}'s merge", "10")
+        if self.state(bounty) != "Merged":
+            return self.fail("10", f"10a: bounty {bounty} is {self.state(bounty)} after its merge, not Merged")
+        cfg = self.ctl("status", show=False)
+        race = Race(self.rpc, self.record)
+        c = race.config()
+        aw = race.award(bounty, self.chain.bounty(bounty)["epoch"])
+        due = logic.last_release_day(aw["windowEnd"], c["releaseEveryDays"], c["instalments"])
+        self.warp_to(due - 1)
+        time.sleep(4)
+        if self.state(bounty) != "Merged":
+            return self.fail("10", f"10a: bounty {bounty} is {self.state(bounty)} a day before its last instalment")
+        self.warp_to(due)
+        if not self.wait_until(f"bounty {bounty} settled by the bot", lambda: self.state(bounty) == "Paid"):
+            return
+        self.paid_bounty = self.paid_bounty or bounty
+        if not self.wait_until(f"issue #{issue} closed", lambda: self.gh.repos[REPO]["items"][issue]["state"] == "closed"):
+            return
+        time.sleep(3)  # more passes: nothing more is written
+        pay = race.payout(bounty)
+        if not self.tx_from_bot(pay["tx"]):
+            self.fail("10", f"10a: bounty {bounty}'s settle didn't come from bot-service")
+        links, paid = self.markers(issue, "link"), self.markers(issue, "paid")
+        if len(links) != 1 or [p[1:] for p in paid] != [(bounty, pay["tx"])] or len(self.comments(issue)) != 2:
+            return self.fail("10", f"10a: issue #{issue}'s comments: {len(links)} link(s), payouts {paid}, "
+                                   f"{len(self.comments(issue))} in all (expected one link and one payout)")
+        print(f"  day {cfg['day']} -> {due}: the bot settled bounty {bounty} on its last release (not the day before), "
+              f"commented the payout once and closed issue #{issue}; one link, nothing repeated after its restart")
+
+    def s10b_deadlines(self) -> None:
+        print("\n== 10b. the deadlines on one bounty: a timeout, an expired merge, a sunset ==", flush=True)
+        onchain, issue = self.claimed_issue("untyped, deadlines")
+        bounty = self.opened_by_the_seats(onchain, issue)
+        if not bounty:
+            return
+        self.ctl("funder", "fund", "--bounty", str(bounty), "--amount", "100", show=False)
+        race = Race(self.rpc, self.record)
+        c = race.config()
+        silent = self.ctl("solver", "submit", "--bounty", str(bounty), "--commit",
+                          self.commit_fix("good_stats.py", "solver-a"), "--issue", str(issue), as_role="solver-a",
+                          show=False)
+        s1 = silent["submission"]
+        solver_a = address(keys.derive(keys.MNEMONIC, keys.ROLES.index("solver-a")))
+        self.submissions[s1] = {"solver": solver_a, "deposit": silent["deposit"], "judges": self.panel.drawn(s1),
+                                "bounty": bounty, "timed_out": True, "expect_reports": 0}
+        print(f"  solver-a sealed submission {s1} and never opens its pull request")
+        s2, pr, _ = self.submit(bounty, issue, "solver-b", "good_stats.py")
+        self.run_nodes(f"bounty {bounty}'s checks", "10")
+        if v2.OUTCOMES[self.chain.submission(s2)["outcome"]] != "Pass" or self.state(bounty) != "Open":
+            return self.fail("10", f"10b: submission {s2} is {v2.OUTCOMES[self.chain.submission(s2)['outcome']]}, "
+                                   f"bounty {bounty} {self.state(bounty)} (expected Pass, and Open behind {s1})")
+        due = self.chain.submission(s1)["day"] + c["resultDays"]
+        self.warp_to(due - 1)
+        time.sleep(4)
+        if v2.OUTCOMES[self.chain.submission(s1)["outcome"]] != "None":
+            return self.fail("10", f"10b: submission {s1} decided a day before its resultDays")
+        self.warp_to(due)
+        if not self.wait_until(f"submission {s1} timed out",
+                               lambda: v2.OUTCOMES[self.chain.submission(s1)["outcome"]] == "TimedOut"):
+            return
+        decided = self.last_log(b"Decided(uint256,uint8)", "0x%064x" % s1)
+        block = int(decided["blockNumber"], 16)
+        back = self.owed_at(block, solver_a) - self.owed_at(block - 1, solver_a)
+        if not self.tx_from_bot(decided["transactionHash"]) or back != silent["deposit"] - c["evaluationFee"]:
+            return self.fail("10", f"10b: the timeout came from bot-service: {self.tx_from_bot(decided['transactionHash'])}"
+                                   f"; solver-a got back {back}, expected {silent['deposit'] - c['evaluationFee']}")
+        print(f"  day {due}: the bot timed out submission {s1}; solver-a got back its deposit less the evaluation fee")
+        if self.state(bounty) != "Won":
+            return self.fail("10", f"10b: bounty {bounty} is {self.state(bounty)} after the timeout, not Won by {s2}")
+        merge_by = self.chain.bounty(bounty)["mergeBy"]
+        self.warp_to(merge_by)
+        time.sleep(4)
+        if self.state(bounty) != "Won":
+            return self.fail("10", f"10b: bounty {bounty} expired on its mergeBy day, not after it")
+        self.warp_to(merge_by + 1)
+        if not self.wait_until(f"bounty {bounty}'s merge expired", lambda: self.state(bounty) == "Open"):
+            return
+        reopened = self.last_log(b"StateChanged(uint256,uint8)", "0x%064x" % bounty)
+        if not self.tx_from_bot(reopened["transactionHash"]):
+            return self.fail("10", "10b: mergeExpired didn't come from bot-service")
+        print(f"  day {merge_by + 1}: the bot expired the unmerged win; bounty {bounty} is Open again")
+        sunset = self.chain.bounty(bounty)["idleSince"] + c["idleDays"]
+        self.warp_to(sunset - 1)
+        time.sleep(4)
+        if self.state(bounty) != "Open":
+            return self.fail("10", f"10b: bounty {bounty} is {self.state(bounty)} a day before its sunset")
+        self.warp_to(sunset)
+        if not self.wait_until(f"bounty {bounty} sunset", lambda: self.state(bounty) == "Unsolved"):
+            return
+        ended = self.last_log(b"StateChanged(uint256,uint8)", "0x%064x" % bounty)
+        if not self.tx_from_bot(ended["transactionHash"]):
+            return self.fail("10", "10b: sunset didn't come from bot-service")
+        settled = lambda: self.rpc.view(self.chain.race, "settled(uint256,address)", ["bool"], bounty,  # noqa: E731
+                                        self.chain.coin())[0]
+        if not self.wait_until(f"bounty {bounty} settled", settled):
+            return
+        if not self.wait_until(f"issue #{issue} closed", lambda: self.gh.repos[REPO]["items"][issue]["state"] == "closed"):
+            return
+        time.sleep(3)
+        said = self.markers(issue, "ended")
+        if [m[1:] for m in said] != [(bounty, "Unsolved", ended["transactionHash"])]:
+            return self.fail("10", f"10b: issue #{issue}'s ending comments: {said}")
+        print(f"  day {sunset}: the bot sunset bounty {bounty} (Unsolved), settled it and closed issue #{issue} with "
+              f"one ending comment naming the sunset's transaction")
+
+    def s10c_hint(self) -> None:
+        print("\n== 10c. the hint, once ==", flush=True)
+        issue = self.gh.add_issue(REPO, "median() is slow (untyped, no lines)", "It takes a while on a big list.\n",
+                                  labels=["bounty"])
+        if not self.wait_until(f"issue #{issue}'s hint", lambda: self.markers(issue, "hint")):
+            return
+        time.sleep(3)
+        self.gh.repos[REPO]["items"][issue]["body"] += "\nStill slow. Registration: soon\n"  # an edit, still invalid
+        self.bot_stop("restarted by the suite after an edit")
+        self.bot_start()
+        time.sleep(6)
+        hints = self.markers(issue, "hint")
+        if len(hints) != 1 or len(self.comments(issue)) != 1:
+            return self.fail("10", f"10c: issue #{issue} has {len(hints)} hints, {len(self.comments(issue))} comments")
+        print(f"  issue #{issue} got one hint; still one after more passes, an edit and a restart")
 
     # ---------- #151: the issue closed on payout, and the leaderboard ----------
 
@@ -505,6 +783,9 @@ class Suite:
 
     # ---------- the end: withdrawals and the books ----------
 
+    def evaluation_fee(self) -> int:
+        return Race(self.rpc, self.record).config()["evaluationFee"]
+
     def withdraw_and_check(self) -> None:
         print("\n== the validators withdraw their fees (scenario 1's end) ==", flush=True)
         withdrawn = {}
@@ -536,12 +817,14 @@ class Suite:
                 mine = [s for s in subs if s in self.submissions and self.submissions[s]["solver"] == solver]
                 deposit = sum(self.submissions[s]["deposit"] for s in mine)
                 got = sum(charged.get(s, (0, 0))[1] for s in mine)
+                got += sum(min(self.evaluation_fee(), self.submissions[s]["deposit"]) for s in mine
+                           if self.submissions[s].get("timed_out"))  # #210: a timeout pays the evaluation fee
                 back = self.owed_at(block, solver) - self.owed_at(block - 1, solver)
                 if deposit != got + back:
                     self.fail("books", f"block {block}: deposits {deposit} != charged {got} + refunded {back}")
                 for s in mine:
                     n, _ = charged.get(s, (0, 0))
-                    want = self.submissions[s].get("expect_reports", 3)
+                    want = self.submissions[s].get("expect_reports", self.panel.reports(s))
                     if len(self.chain.reports(s)) != want or n != want:
                         self.fail("books", f"submission {s}: {len(self.chain.reports(s))} reports, {n} judges charged, "
                                            f"expected {want}")
@@ -573,7 +856,8 @@ class Suite:
             self.setup_repo(gh)
             self.s6_join()  # first: the other scenarios draw from 7 seats, and one of them should draw the engineer
             for key, fn in (("1", self.s1_happy), ("2", self.s2_failing), ("3", self.s3_race), ("4", self.s4_silent),
-                            ("5", self.s5_challenge), ("7", self.s7_faults), ("8", self.s8_radicle)):
+                            ("5", self.s5_challenge), ("7", self.s7_faults), ("8", self.s8_radicle),
+                            ("10", self.s10_untyped)):
                 if key in only:
                     try:
                         fn()
@@ -613,7 +897,8 @@ def main() -> int:
     ap.add_argument("--rpc", required=True)
     ap.add_argument("--record", required=True)
     ap.add_argument("--work", required=True)
-    ap.add_argument("--only", help="comma-separated scenarios (1-8, 8 with --radicle); 6 always runs first, since the others use 7 seats")
+    ap.add_argument("--only", help="comma-separated scenarios (1-8 and 10, 8 with --radicle); 6 always runs first, since "
+                                   "the others use 7 seats; 10 always runs last")
     ap.add_argument("--with-first-run", action="store_true", help="7c: scripts/integration.sh runs "
                     "scripts/first-run-e2e.sh after this suite")
     ap.add_argument("--radicle", action="store_true", help="scenario 8, Radicle merges (#201): scripts/integration.sh "

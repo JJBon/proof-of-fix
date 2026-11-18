@@ -14,11 +14,18 @@
 - **The claim** is limited and honest: a mechanism and the evidence for it. No product and no token sale.
 
 ## 2. Background and related work (about 1 page)
-- **Bounty platforms,** human-reviewed and centralised.
-- **Decentralised oracles,** optimistic verification and the "watcher's dilemma".
-- **AI judges for code:** model accuracy and how models can be gamed.
-- **Attested compute** (TEEs) and **verifiable model calls** (zkTLS).
-- **Sources:** the desk study (#44), with references to add.
+- **Close prior systems, named first.** AI verdicts on pull requests that release a bounty already exist as prototypes, mostly on GenLayer (AutoBounty, GH Bounty, GhBounty and MergeProof, named as one group; owner, 2026-11-13), plus Verdikta's AI-jury bounties and SealedBounty's attested single judge. Gittensor pays for merged PRs at scale, with the maintainer's merge as the verdict. Kleros is piloting a court for AI-agent jurors. None publishes evidence on attacks: the contribution is that evidence, and the design it led to.
+- **Bounty platforms,** human-reviewed and centralised (Bountysource, IssueHunt, Algora), and the evidence on paying developers (donations, GitHub Sponsors, crowding-out).
+- **Decentralised arbitration and oracles:**
+  - **Kleros:** staked jurors, sealed votes, appeals to larger panels, and Schelling rewards that pay agreement rather than correctness.
+  - **UMA's optimistic oracle** and the **verifier's dilemma** (Luu et al., 2015; the outline's "watcher's dilemma"). Truebit's forced errors and random attention tests in rollups are the prior answers, and the comparison for the random audits.
+  - **GenLayer's LLM consensus** as the general-purpose alternative.
+- **Funding by judged value:** quadratic funding, retro funding and **Deep Funding**.
+  - Deep Funding answers a judgment question (a dependency's share of credit) with a human jury as the root of trust. The core mechanism answers a checkable question with no human jury.
+  - Its closest overlap is #186's merit panel. Its jury data shows that calibration data is the bottleneck.
+- **AI judges for code:** model accuracy, juries of diverse models (PoLL), self-preference, tests that pass wrong fixes (the SWE-bench studies), and prompt injection against judges and AI reviewers.
+- **Attested compute** (TEEs, and the 2025-26 interposer attacks behind the trust points) and **verifiable model calls** (zkTLS: DECO, TLSNotary, Reclaim). zkML (zkLLM) is why proofs of inference aren't used.
+- **Sources:** [`related-work.md`](related-work.md), the checked and positioned register (#158), and the market survey (`reports/oracle-market-v1.md`).
 
 ## 3. The mechanism (about 4 pages)
 Source: `openspec/changes/proof-of-fix-132-open-validators/design.md` and ADR 0004.
@@ -41,6 +48,7 @@ Source: `openspec/changes/proof-of-fix-132-open-validators/design.md` and ADR 00
    - The mechanism works without it.
 
 ## 4. Method: the simulation (about 2 pages)
+- **The protocol** ([`docs/research/protocol.md`](../research/protocol.md)): every result is labelled confirmatory or exploratory, and only confirmatory results go in section 5. The hypotheses are H1–H11 in [`docs/research/hypotheses.md`](../research/hypotheses.md).
 - **The agent-based simulator** (`pof/sim/`): seeds, honest twins, ± 2 SE, and the acceptance criteria (D17), including "not shown to gain".
 - **The attackers modelled:**
   - sybil, lone colluder, seed grinder, silent judge, withholder, coalition;
@@ -67,6 +75,8 @@ Source: reports `open-validators-v1`, `-v2`, `-v3`, `-v3.1`, plus `tokens-v1…v
 - **zkTLS** (`reports/zktls-spike-v1.md`, #135): 13 model calls were proven. It's not ready: no independent signing notary, and a 4 KB request cap.
 
 ## 7. Trust points and open problems (about 2 pages, written honestly)
+
+Draft of the open problems: [`open-problems.md`](open-problems.md) (2026-11-15).
 1. **One TEE type** can hold the majority of 3-judge panels while only three types exist.
 2. **The accomplice gap** in lone verdicts.
 3. **A silence bribe above $5.**
@@ -74,6 +84,7 @@ Source: reports `open-validators-v1`, `-v2`, `-v3`, `-v3.1`, plus `tokens-v1…v
 5. **Answer shopping** once level C is on.
 6. **Honest validators net about −$1.43 a month early on** (#141). Candidate fixes: a token slice (#142) or fee tuning.
 7. **What simulation can't show:** real model accuracy, real costs, real people.
+8. **Calibrating merit in dollars** (#186): too few reference fixes make the merit panel's dollar scores noisy, as Deep Funding's jury data shows for its own calibration (§2). #160 measures the scaling error; the reference set's size is set from it.
 
 ## 8. Reference implementation and deployment checklist (about 1 page)
 - **Contracts** (v2 built; v3 specified, ADR 0004), the validator node and kit, and the simulator. All open source under a permissive licence (MIT or Apache-2.0); forks welcome.

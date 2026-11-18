@@ -1,16 +1,20 @@
 """The Solidity ABI, as much of it as pofctl and the v2 node need: function selectors, encoding of calls (uints,
-addresses, bytes32, bool, bytes, dynamic arrays and tuples, nested), and decoding of what the contracts return.
+addresses, bytes32, bool, bytes, dynamic and fixed-size arrays and tuples, nested), and decoding of what the contracts return.
 Standard library plus the node's vendored keccak (oracle/crypto.py). pofctl uses it as pofctl.abi."""
 
 from __future__ import annotations
+
+import functools
 
 from .crypto import keccak256
 
 WORD = 32
 
 
+@functools.lru_cache(maxsize=1024)
 def selector(signature: str) -> bytes:
-    """The first 4 bytes of keccak256("name(type,...)")."""
+    """The first 4 bytes of keccak256("name(type,...)"). Cached: the vendored Keccak is pure Python, and a node asks for
+    the same few dozen selectors on every pass."""
     return keccak256(signature.encode())[:4]
 
 
@@ -34,9 +38,20 @@ def _components(t: str) -> list:
     return split_types(t[1:-1])
 
 
+def _fixed(t: str):
+    """('uint256', 4) for 'uint256[4]' (a fixed-size array: v3's price tables); None for anything else."""
+    if t.endswith("]") and not t.endswith("[]"):
+        inner, _, n = t[:-1].rpartition("[")
+        if n.isdigit():
+            return inner, int(n)
+    return None
+
+
 def is_dynamic(t: str) -> bool:
     if t in ("bytes", "string") or t.endswith("[]"):
         return True
+    if _fixed(t):
+        return is_dynamic(_fixed(t)[0])
     if t.startswith("("):
         return any(is_dynamic(c) for c in _components(t))
     return False
@@ -75,6 +90,11 @@ def encode_one(t: str, value) -> bytes:
     if t.endswith("[]"):
         inner = t[:-2]
         return _uint(len(value)) + encode([inner] * len(value), list(value))
+    if _fixed(t):
+        inner, n = _fixed(t)
+        if len(value) != n:
+            raise ValueError(f"{t} needs {n} values")
+        return encode([inner] * n, list(value))
     if t.startswith("("):
         return encode(_components(t), list(value))
     if t in ("bytes", "string"):
@@ -122,6 +142,8 @@ def _decode_one(t: str, data: bytes, at: int):
     if is_dynamic(t):
         start = int.from_bytes(_word(data, at), "big")
         return _decode_tail(t, data, start)
+    if _fixed(t):
+        return decode([_fixed(t)[0]] * _fixed(t)[1], data[at:])
     if t.startswith("("):
         return decode(_components(t), data[at:])
     raw = _word(data, at)
@@ -144,6 +166,8 @@ def _decode_tail(t: str, data: bytes, start: int):
         n = int.from_bytes(_word(data, start), "big")
         raw = data[start + WORD:start + WORD + n]
         return raw.decode() if t == "string" else "0x" + raw.hex()
+    if _fixed(t):
+        return decode([_fixed(t)[0]] * _fixed(t)[1], data[start:])
     if t.startswith("("):
         return decode(_components(t), data[start:])
     raise ValueError(f"unsupported type {t}")
@@ -152,6 +176,8 @@ def _decode_tail(t: str, data: bytes, start: int):
 def _static_size(t: str) -> int:
     if is_dynamic(t):
         return WORD
+    if _fixed(t):
+        return _fixed(t)[1] * _static_size(_fixed(t)[0])
     if t.startswith("("):
         return sum(_static_size(c) for c in _components(t))
     return WORD

@@ -67,7 +67,9 @@ PROSPECT_VID = 500_000  # prospective operators: a fixed id each, so an attacker
 FAMILY_TABLE = {"anthropic": "anthropic", "openai": "openai", "google": "google", "open-weight": "llama",
                 # the score tables' families (pof.sim.openval.scores), priced as the providers they stand for when
                 # task 1.8 runs them on the market fee (pof.sim.openval.full)
-                "top": "anthropic", "mid": "openai", "low": "google", "weak": "llama"}
+                "top": "anthropic", "mid": "openai", "low": "google", "weak": "llama",
+                # #236: proof-of-fix#160's open-weight seats the price table doesn't list, at Llama's rates (assumed)
+                "nvidia": "llama", "google-gemma": "llama", "openai-oss": "llama"}
 TOKEN_FIELDS = ("input", "cached", "output")
 SHARED_UNITS = ("vcpu_second", "gb_second", "storage_mb", "gas")
 
@@ -346,17 +348,17 @@ class Market:
         ids = [v.vid for v in counting]
         if p.POST_ALL_FAMILIES:  # #141: a table missing a unit doesn't count
             ids = [i for i in ids if len(self.tables.get(i, ())) == len(self.genesis)]
-        for unit in self.prices:
-            vals = [self.tables[i][unit] for i in ids if unit in self.tables.get(i, ())]
-            self.prices[unit] = step_price(self.prices[unit], self.genesis[unit], vals, p)
+        self.step_prices(ids)
         active = {v.vid for v in counting}
+        if p.IDLE_COUNTS == "seated":  # #236: contenders are never drawn for counted panels, so they aren't idle
+            active = {v.vid for v in counting if net.family_ok(v.family)}
         self._drawn_hist.append(self._drawn)
         while len(self._drawn_hist) > max(1, p.IDLE_WINDOW_DAYS):
             self._drawn_hist.popleft()
         seen = set().union(*self._drawn_hist) if len(self._drawn_hist) > 1 else self._drawn
         drawn = len(active & seen)
         sub_n, wait_n = self._acc["submitted"], self._acc[WAIT_KEYS[p.WAIT_SIGNAL]]
-        self.fee_now = step_fee(self.fee_now, sub_n, wait_n, len(active), drawn, p)
+        self.fee_now = self.step_fee(sub_n, wait_n, active, active & seen)
         self.quotes_t.append(net.t)
         self.quotes.append((self.fee_now, dict(self.prices)))
         self.series.append({"t": net.t, "fee": self.fee_now, "active": len(active),
@@ -368,6 +370,16 @@ class Market:
         self.stats["rises"] += self.fee_now > self.quotes[-2][0] + 1e-12
         self.stats["falls"] += self.fee_now < self.quotes[-2][0] - 1e-12
         self._acc, self._drawn, self._ticks = Counter(), set(), 0
+
+    def step_prices(self, ids: Sequence[int]) -> None:
+        """Each unit toward the median of the counting tables `ids` (`step_price`)."""
+        for unit in self.prices:
+            vals = [self.tables[i][unit] for i in ids if unit in self.tables.get(i, ())]
+            self.prices[unit] = step_price(self.prices[unit], self.genesis[unit], vals, self.p)
+
+    def step_fee(self, submitted: int, waited: int, active: Set[int], drawn: Set[int]) -> float:
+        """The next service fee (`step_fee`), from the period's counts and its active and drawn validators."""
+        return step_fee(self.fee_now, submitted, waited, len(active), len(drawn), self.p)
 
     # ----- entry and exit -----
 

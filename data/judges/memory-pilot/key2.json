@@ -1,0 +1,3446 @@
+{
+ "0f9d6e38de": {
+  "case": "astropy__astropy-13033:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "5300dc570f": {
+  "case": "astropy__astropy-13033:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "b3556012f7": {
+  "case": "astropy__astropy-13977:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "bf55806a0b": {
+  "case": "astropy__astropy-13977:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "700bacffe7": {
+  "case": "astropy__astropy-14182:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "3d2a63fdd4": {
+  "case": "astropy__astropy-14182:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "d862573814": {
+  "case": "astropy__astropy-14369:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "79bc74e4ba": {
+  "case": "astropy__astropy-14369:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "a316074260": {
+  "case": "astropy__astropy-14369:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "f2c30e8e96": {
+  "case": "astropy__astropy-14369:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "9c63b059c6": {
+  "case": "astropy__astropy-14508:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "61763574c3": {
+  "case": "astropy__astropy-14508:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "0c49cb03fc": {
+  "case": "astropy__astropy-14598:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "730e32d77e": {
+  "case": "astropy__astropy-14598:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "91a628176a": {
+  "case": "astropy__astropy-14598:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "442342d507": {
+  "case": "astropy__astropy-14598:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "297b6a0eae": {
+  "case": "django__django-10999:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "54544e8b64": {
+  "case": "django__django-10999:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "4c6f722fb6": {
+  "case": "django__django-11292:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "15ed15be6e": {
+  "case": "django__django-11292:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "4d2458a722": {
+  "case": "django__django-11292:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "b02aec0a13": {
+  "case": "django__django-11292:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "7f046ed197": {
+  "case": "django__django-11292:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "86795674bb": {
+  "case": "django__django-11292:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "6f5ee9fdb0": {
+  "case": "django__django-11400:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "2948a49b58": {
+  "case": "django__django-11400:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "19455c6300": {
+  "case": "django__django-11433:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "525e2fd87d": {
+  "case": "django__django-11433:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "75dfce4da1": {
+  "case": "django__django-11433:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "cb12fbd35b": {
+  "case": "django__django-11433:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "78bfe94221": {
+  "case": "django__django-11749:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "39544199f6": {
+  "case": "django__django-11749:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "800f0d3a8f": {
+  "case": "django__django-11820:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "572694e060": {
+  "case": "django__django-11820:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "631c8e3921": {
+  "case": "django__django-11880:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "7430a186d4": {
+  "case": "django__django-11880:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "1dca62efc1": {
+  "case": "django__django-12209:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "abc7194bae": {
+  "case": "django__django-12209:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "5420beb555": {
+  "case": "django__django-12273:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "9bd7b52711": {
+  "case": "django__django-12273:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "5fe47798a7": {
+  "case": "django__django-12304:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "96641f6177": {
+  "case": "django__django-12304:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "e8a6e50ae4": {
+  "case": "django__django-12663:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "9d4d784bda": {
+  "case": "django__django-12663:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "747825d7e6": {
+  "case": "django__django-12663:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "879761bd54": {
+  "case": "django__django-12663:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "6fc2aeab84": {
+  "case": "django__django-12663:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "9e53773858": {
+  "case": "django__django-12663:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "5f24091b4d": {
+  "case": "django__django-12858:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "8da92ebc3a": {
+  "case": "django__django-12858:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "6a8f2df0d1": {
+  "case": "django__django-12858:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "pbw"
+  ]
+ },
+ "112af290f1": {
+  "case": "django__django-12858:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "pbw"
+  ]
+ },
+ "8cf6fde569": {
+  "case": "django__django-13158:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "c110722ec7": {
+  "case": "django__django-13158:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "b09af532c2": {
+  "case": "django__django-13195:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "4b9b416d24": {
+  "case": "django__django-13195:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "f585b763bc": {
+  "case": "django__django-13195:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "2f1e62582b": {
+  "case": "django__django-13195:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "b53dda15c8": {
+  "case": "django__django-13279:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "7f60a8905a": {
+  "case": "django__django-13279:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "1fe5fcf58c": {
+  "case": "django__django-13933:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "f9f7d628d5": {
+  "case": "django__django-13933:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "d34c712977": {
+  "case": "django__django-13933:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "aa16071ff7": {
+  "case": "django__django-13933:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests"
+  ]
+ },
+ "c0431e9566": {
+  "case": "django__django-14034:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "94c2f8c003": {
+  "case": "django__django-14034:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "4447b05e44": {
+  "case": "django__django-14140:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "58619410c0": {
+  "case": "django__django-14140:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "c142294741": {
+  "case": "django__django-14539:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "47c051cb85": {
+  "case": "django__django-14539:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "821900f093": {
+  "case": "django__django-14725:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "tests"
+  ]
+ },
+ "7de9d8ef7e": {
+  "case": "django__django-14725:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "tests"
+  ]
+ },
+ "d0716512b8": {
+  "case": "django__django-15022:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "60ae3189ca": {
+  "case": "django__django-15022:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "94a7e448bd": {
+  "case": "django__django-15037:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8ef303c3c3": {
+  "case": "django__django-15037:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "aa1d01530c": {
+  "case": "django__django-15382:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "bdb833bf62": {
+  "case": "django__django-15382:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "46bd104007": {
+  "case": "django__django-15695:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "249f91a256": {
+  "case": "django__django-15695:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "d2a0e0ff1a": {
+  "case": "django__django-16560:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8833c934a9": {
+  "case": "django__django-16560:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "22a1d5c3a2": {
+  "case": "django__django-16661:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "pbw"
+  ]
+ },
+ "0e40a9f8dc": {
+  "case": "django__django-16661:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "pbw"
+  ]
+ },
+ "7176d9f6c1": {
+  "case": "django__django-16877:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "2003c53851": {
+  "case": "django__django-16877:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "ea4a6fa6ed": {
+  "case": "django__django-16950:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "pbw"
+  ]
+ },
+ "f4d602ceed": {
+  "case": "django__django-16950:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "pbw"
+  ]
+ },
+ "3409afb390": {
+  "case": "django__django-17084:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "5acfb3c2c0": {
+  "case": "django__django-17084:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "f851326c2d": {
+  "case": "matplotlib__matplotlib-21568:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "fcfcc1b492": {
+  "case": "matplotlib__matplotlib-21568:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "d555471cd2": {
+  "case": "matplotlib__matplotlib-23299:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "89b75facb5": {
+  "case": "matplotlib__matplotlib-23299:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "4085c14a8e": {
+  "case": "matplotlib__matplotlib-24870:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "19132ade34": {
+  "case": "matplotlib__matplotlib-24870:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "49cbae08be": {
+  "case": "matplotlib__matplotlib-26208:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "9557442c2e": {
+  "case": "matplotlib__matplotlib-26208:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "d7e8caf9fb": {
+  "case": "matplotlib__matplotlib-26466:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "3bae33bf2f": {
+  "case": "matplotlib__matplotlib-26466:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "09ed0508b4": {
+  "case": "mwaskom__seaborn-3187:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "708d9f832d": {
+  "case": "mwaskom__seaborn-3187:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "1c956737a9": {
+  "case": "psf__requests-1724:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "c22085aa24": {
+  "case": "psf__requests-1724:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "ae76b5112f": {
+  "case": "psf__requests-1766:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "17a74248c3": {
+  "case": "psf__requests-1766:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "acb99a532c": {
+  "case": "psf__requests-2317:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "f61dac4ed2": {
+  "case": "psf__requests-2317:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "3404e5e96f": {
+  "case": "psf__requests-2317:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8d5de06ac7": {
+  "case": "psf__requests-2317:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "01a4b2e013": {
+  "case": "pydata__xarray-3993:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw"
+  ]
+ },
+ "ace1f61bb4": {
+  "case": "pydata__xarray-3993:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw"
+  ]
+ },
+ "48b1113f5a": {
+  "case": "pydata__xarray-4629:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "5a219f0db1": {
+  "case": "pydata__xarray-4629:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "3dc573761c": {
+  "case": "pydata__xarray-4687:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "427159c9ca": {
+  "case": "pydata__xarray-4687:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "858af01e3e": {
+  "case": "pydata__xarray-7229:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "c99539b3d1": {
+  "case": "pydata__xarray-7229:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "38dde00d15": {
+  "case": "pylint-dev__pylint-4661:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "dd0f78ea69": {
+  "case": "pylint-dev__pylint-4661:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "c456a31acb": {
+  "case": "pytest-dev__pytest-10356:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "0ae5dc072b": {
+  "case": "pytest-dev__pytest-10356:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "813676d8ae": {
+  "case": "pytest-dev__pytest-5787:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "bc506859ee": {
+  "case": "pytest-dev__pytest-5787:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "115bb774e0": {
+  "case": "pytest-dev__pytest-7324:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "10a19e158b": {
+  "case": "pytest-dev__pytest-7324:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8d1c54e99e": {
+  "case": "pytest-dev__pytest-7521:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "da51c6e2ca": {
+  "case": "pytest-dev__pytest-7521:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "0a5afb9541": {
+  "case": "scikit-learn__scikit-learn-25102:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "d5b1e948b8": {
+  "case": "scikit-learn__scikit-learn-25102:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "239ce19d95": {
+  "case": "sphinx-doc__sphinx-10435:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "a276f0d799": {
+  "case": "sphinx-doc__sphinx-10435:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "56ebb09282": {
+  "case": "sphinx-doc__sphinx-10435:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "23710f647e": {
+  "case": "sphinx-doc__sphinx-10435:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8efa3a7fdc": {
+  "case": "sphinx-doc__sphinx-10673:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": null,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "067c11164d": {
+  "case": "sphinx-doc__sphinx-10673:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": null,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "c6e431e31d": {
+  "case": "sphinx-doc__sphinx-7748:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "73ed380595": {
+  "case": "sphinx-doc__sphinx-7748:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "b9f23cb96c": {
+  "case": "sphinx-doc__sphinx-7748:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "3ce34569fc": {
+  "case": "sphinx-doc__sphinx-7748:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "2e799ba6ec": {
+  "case": "sphinx-doc__sphinx-7985:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "2d7ee522b4": {
+  "case": "sphinx-doc__sphinx-7985:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "e9a0ff3be1": {
+  "case": "sphinx-doc__sphinx-8056:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "dec5b834cf": {
+  "case": "sphinx-doc__sphinx-8056:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "7e3f5f9069": {
+  "case": "sphinx-doc__sphinx-8265:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "23ace2d697": {
+  "case": "sphinx-doc__sphinx-8265:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "092d009876": {
+  "case": "sphinx-doc__sphinx-8265:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "5a5250619b": {
+  "case": "sphinx-doc__sphinx-8265:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "b745873738": {
+  "case": "sphinx-doc__sphinx-8593:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "ad2c6a0d4f": {
+  "case": "sphinx-doc__sphinx-8593:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "f4f5f4d1dc": {
+  "case": "sphinx-doc__sphinx-8593:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "fafa44034d": {
+  "case": "sphinx-doc__sphinx-8593:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests"
+  ]
+ },
+ "c3f9afa3a3": {
+  "case": "sphinx-doc__sphinx-9461:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "f11e0306a1": {
+  "case": "sphinx-doc__sphinx-9461:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "551d0657c4": {
+  "case": "sphinx-doc__sphinx-9602:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "20f82f8e04": {
+  "case": "sphinx-doc__sphinx-9602:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "6be8ff5290": {
+  "case": "sphinx-doc__sphinx-9602:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "423833d4eb": {
+  "case": "sphinx-doc__sphinx-9602:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "f17ee69e34": {
+  "case": "sphinx-doc__sphinx-9658:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "94a3d95e13": {
+  "case": "sphinx-doc__sphinx-9658:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "tests"
+  ]
+ },
+ "78d617c7f6": {
+  "case": "sympy__sympy-12096:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "432a415e94": {
+  "case": "sympy__sympy-12096:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "995ca41e43": {
+  "case": "sympy__sympy-12096:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "1b0d31102f": {
+  "case": "sympy__sympy-12096:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "23777bb00d": {
+  "case": "sympy__sympy-13031:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "bef0e066a8": {
+  "case": "sympy__sympy-13031:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "6377d8c646": {
+  "case": "sympy__sympy-13091:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "e859d67397": {
+  "case": "sympy__sympy-13091:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "eba0bb972f": {
+  "case": "sympy__sympy-13372:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "02df19bc1a": {
+  "case": "sympy__sympy-13372:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "4ef5914027": {
+  "case": "sympy__sympy-13615:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "71edc1e86d": {
+  "case": "sympy__sympy-13615:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "82c614186e": {
+  "case": "sympy__sympy-13615:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "19a5e1ae54": {
+  "case": "sympy__sympy-13615:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "81b5a2e720": {
+  "case": "sympy__sympy-13798:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "712c0f21d2": {
+  "case": "sympy__sympy-13798:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "cb49330cd4": {
+  "case": "sympy__sympy-13877:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "da99c2dc4e": {
+  "case": "sympy__sympy-13877:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "903f711ce5": {
+  "case": "sympy__sympy-13877:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "fda5dba822": {
+  "case": "sympy__sympy-13877:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "32390af971": {
+  "case": "sympy__sympy-15017:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "68c1567d20": {
+  "case": "sympy__sympy-15017:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "7e3d4823e8": {
+  "case": "sympy__sympy-15017:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "ee59cf9efc": {
+  "case": "sympy__sympy-15017:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "77156f10bc": {
+  "case": "sympy__sympy-15017:pbw:OpenHands",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "a21ba9ca9a": {
+  "case": "sympy__sympy-15017:pbw:OpenHands",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "ca6917050c": {
+  "case": "sympy__sympy-15976:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "70538fc482": {
+  "case": "sympy__sympy-15976:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "54e4332733": {
+  "case": "sympy__sympy-17318:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "201bb7b86f": {
+  "case": "sympy__sympy-17318:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "v1",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "tests",
+   "tests"
+  ]
+ },
+ "a6364450d2": {
+  "case": "sympy__sympy-17318:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": null,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "89a4d067e1": {
+  "case": "sympy__sympy-17318:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": null,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "96508a104a": {
+  "case": "sympy__sympy-18199:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "6115da5f47": {
+  "case": "sympy__sympy-18199:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "de66491e1d": {
+  "case": "sympy__sympy-19346:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "f27b93efec": {
+  "case": "sympy__sympy-19346:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "pbw"
+  ]
+ },
+ "6131c3c096": {
+  "case": "sympy__sympy-19495:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "e83b9dabae": {
+  "case": "sympy__sympy-19495:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "pbw",
+   "tests"
+  ]
+ },
+ "309b34c146": {
+  "case": "sympy__sympy-19783:bad",
+  "arm": "base",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "pbw"
+  ]
+ },
+ "8e28dcdc84": {
+  "case": "sympy__sympy-19783:bad",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "more",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "tests",
+   "tests",
+   "pbw"
+  ]
+ },
+ "7d9976b6b4": {
+  "case": "sympy__sympy-20801:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "d476719e35": {
+  "case": "sympy__sympy-20801:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "91599da6af": {
+  "case": "sympy__sympy-20801:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "44f5408d01": {
+  "case": "sympy__sympy-20801:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw"
+  ]
+ },
+ "93d218bf57": {
+  "case": "sympy__sympy-20916:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "3556d2cacb": {
+  "case": "sympy__sympy-20916:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "b9124a2e91": {
+  "case": "sympy__sympy-21379:good",
+  "arm": "base",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "8e1dc0c236": {
+  "case": "sympy__sympy-21379:good",
+  "arm": "memory",
+  "label": "good",
+  "pool": "v1",
+  "group": "good",
+  "stored_opus": 1,
+  "kinds": [
+   "same_issue"
+  ],
+  "evidence": [
+   "tests"
+  ]
+ },
+ "ada870ee84": {
+  "case": "sympy__sympy-22456:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "6330282145": {
+  "case": "sympy__sympy-22456:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "5c1ece6e3d": {
+  "case": "sympy__sympy-22456:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "76a0a0a567": {
+  "case": "sympy__sympy-22456:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "75c2b025b0": {
+  "case": "sympy__sympy-22714:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "d8b25ef855": {
+  "case": "sympy__sympy-22714:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "false_pass",
+  "stored_opus": 1,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "74e15ec75f": {
+  "case": "sympy__sympy-24443:pbw:CodeStory",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "4a4ebe7b09": {
+  "case": "sympy__sympy-24443:pbw:CodeStory",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_file",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "de68cbe231": {
+  "case": "sympy__sympy-24443:pbw:LearnByInteract",
+  "arm": "base",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ },
+ "d5e5b73585": {
+  "case": "sympy__sympy-24443:pbw:LearnByInteract",
+  "arm": "memory",
+  "label": "bad",
+  "pool": "pbw",
+  "group": "true_reject",
+  "stored_opus": 0,
+  "kinds": [
+   "same_issue",
+   "same_file",
+   "same_file"
+  ],
+  "evidence": [
+   "pbw",
+   "pbw",
+   "pbw"
+  ]
+ }
+}

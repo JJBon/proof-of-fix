@@ -1,5 +1,7 @@
 # Tasks
 
+Order (owner, 2026-11-13): group 3 is built on v3, after #132's group 3 (`RaceV3` and `Panels`), and before #132's groups 4–5 and the paid judge check (#160). See #132's tasks, "The road to a test chain".
+
 ## 1. Simulation: the criteria in the market simulation
 
 - [ ] 1.1 Wire `pof/sim/cyclepool.py`, `pof/sim/repotokens.py` and `pof/sim/fundertoken.py`'s rules (the per-cycle split, the per-fix cap with the cut redistributed, pay up to merit, (b), (c) and the capped fee) into the incentive-simulation acceptance run, off by default. `fundertoken.py`'s own defaults stay, so v1's and v2's reports still reproduce. Verify: a test that the default runs' reports are byte-identical with it off.

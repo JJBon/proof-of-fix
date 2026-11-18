@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -79,7 +80,8 @@ class FakeGitHub:
         n = r["next"]
         r["next"] += 1
         r["items"][n] = {"number": n, "title": title, "body": body, "state": state, "user": {"login": user},
-                         "labels": [{"name": x} for x in labels]}
+                         "labels": [{"name": x} for x in labels],
+                         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
         return n
 
     def add_pull(self, full_name, title, body, head_sha, user="solver", base_sha="0" * 40):
@@ -133,6 +135,8 @@ class FakeGitHub:
                 item["state"] = body["state"]
             if body.get("state_reason"):
                 item["state_reason"] = body["state_reason"]
+            if "body" in body:  # an edit of the issue's text
+                item["body"] = body["body"]
             return 200, {k: v for k, v in item.items() if k != "pull_request"} if kind == "pulls" else item, None
         if kind == "pulls":
             if "pull_request" not in item:

@@ -1,0 +1,13 @@
+verdicts 109 of 109
+false_pass                           n= 28 passes: base  25 curated  18 judge-notes  16 | base->judge-notes: to fail 9, to pass 0, p=0.004 | curated->judge-notes: to fail 4, to pass 2, p=0.688 | prob 0.73/0.56/0.54
+  false_pass: same-issue note        n= 14 passes: base  12 curated   8 judge-notes   5 | base->judge-notes: to fail 7, to pass 0, p=0.016 | curated->judge-notes: to fail 3, to pass 0, p=0.250 | prob 0.71/0.49/0.42
+  false_pass: same-file only         n= 14 passes: base  13 curated  10 judge-notes  11 | base->judge-notes: to fail 2, to pass 0, p=0.500 | curated->judge-notes: to fail 1, to pass 2, p=1.000 | prob 0.74/0.62/0.66
+  false_pass: pool pbw               n= 24 passes: base  22 curated  15 judge-notes  14 | base->judge-notes: to fail 8, to pass 0, p=0.008 | curated->judge-notes: to fail 3, to pass 2, p=1.000 | prob 0.74/0.55/0.55
+true_reject                          n= 31 passes: base   4 curated   2 judge-notes   3 | base->judge-notes: to fail 1, to pass 0, p=1.000 | curated->judge-notes: to fail 2, to pass 3, p=1.000 | prob 0.17/0.14/0.15
+  true_reject: same-issue note       n=  7 passes: base   1 curated   2 judge-notes   1 | base->judge-notes: to fail 0, to pass 0, p=1.000 | curated->judge-notes: to fail 2, to pass 1, p=1.000 | prob 0.19/0.29/0.18
+  true_reject: same-file only        n= 24 passes: base   3 curated   0 judge-notes   2 | base->judge-notes: to fail 1, to pass 0, p=1.000 | curated->judge-notes: to fail 0, to pass 2, p=0.500 | prob 0.17/0.10/0.14
+  true_reject: pool pbw              n= 17 passes: base   3 curated   2 judge-notes   3 | base->judge-notes: to fail 0, to pass 0, p=1.000 | curated->judge-notes: to fail 2, to pass 3, p=1.000 | prob 0.21/0.18/0.21
+good                                 n= 50 passes: base  48 curated  49 judge-notes  47 | base->judge-notes: to fail 1, to pass 0, p=1.000 | curated->judge-notes: to fail 2, to pass 0, p=0.500 | prob 0.86/0.87/0.85
+  good: same-issue note              n= 50 passes: base  48 curated  49 judge-notes  47 | base->judge-notes: to fail 1, to pass 0, p=1.000 | curated->judge-notes: to fail 2, to pass 0, p=0.500 | prob 0.86/0.87/0.85
+all bad fixes                        n= 59 passes: base  29 curated  20 judge-notes  19 | base->judge-notes: to fail 10, to pass 0, p=0.002 | curated->judge-notes: to fail 6, to pass 5, p=1.000 | prob 0.44/0.34/0.34
+false passes caught by curated only: 2 by judge-notes only: 4 by both: 8

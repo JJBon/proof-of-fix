@@ -11,6 +11,10 @@ The kinds and their messages are the node's (oracle/node_v2.py):
              keccak256(receipt ‖ word(outcome) ‖ salt ‖ word(node)) == seal
     result   {"verdict", "sig"}                              sig over RaceV2's Result digest (an empty fee list)
     merged   {"verdict", "weight", "sig"}                    sig over RaceV2's Merged digest
+and, under an on-chain issue rather than a submission (proof-of-fix#210, the seats' registration check):
+    accept   {"weight", "nonce", "sig"}                      sig over RaceV2's Accept(issue, weight, nonce) digest
+    POST /v1/<race>/issue/<issue>/accept, GET the same path. Taken only while the issue is Posted with no bounty, from
+    an active oracle key (Verdicts.isOracle), one message per key and issue.
 Usage reports aren't here: the judges send them to the meter on-chain (Fees.report), which checks them itself.
 
 Nothing to trust: the service holds no key and relays nothing. It takes a message only when its signature recovers to
@@ -46,9 +50,15 @@ from pathlib import Path
 
 from oracle import crypto, v2
 
-KINDS = ("seal", "reveal", "result", "merged")
+KINDS = ("seal", "reveal", "result", "merged", "accept")
+ISSUE_KINDS = ("accept",)  # kept under an on-chain issue, not a submission
 FIELDS = {"seal": {"seal", "sig"}, "reveal": {"outcome", "receipt", "salt", "sig"}, "result": {"verdict", "sig"},
-          "merged": {"verdict", "weight", "sig"}}
+          "merged": {"verdict", "weight", "sig"}, "accept": {"weight", "nonce", "sig"}}
+
+
+def key_of(s: int, kind: str):
+    """Where a message is kept: its submission, or "issue-<N>" for an issue's kinds (the folder transport's name)."""
+    return f"issue-{int(s)}" if kind in ISSUE_KINDS else int(s)
 MAX_BODY = 64 * 1024
 RETENTION = 7 * 24 * 3600.0  # seconds a submission's messages are kept after its last one
 
@@ -104,7 +114,7 @@ class Board:
             raise Refused(404, "unknown kind")
         with self.lock:
             self.expire(self.clock())
-            return dict(self.msgs.get(s, {}).get(kind, {}))
+            return dict(self.msgs.get(key_of(s, kind), {}).get(kind, {}))
 
     def expire(self, now: float) -> None:
         """Forget the submissions whose last message is older than the retention (under the lock)."""
@@ -122,9 +132,13 @@ class Board:
         msg = {k: v for k, v in body.items() if k != "node"}
         if set(msg) != FIELDS[kind]:
             raise Refused(400, f"a {kind} has exactly {', '.join(sorted(FIELDS[kind]))}")
-        judges = self.judges(s)
-        if node not in judges:
-            raise Refused(403, "not drawn for this submission (or recused)")
+        if kind in ISSUE_KINDS:
+            judges = self.oracle(s, node)
+            s = key_of(s, kind)
+        else:
+            judges = self.judges(s)
+            if node not in judges:
+                raise Refused(403, "not drawn for this submission (or recused)")
         check = getattr(self, "_" + kind)
         with self.lock:
             now = self.clock()
@@ -153,6 +167,21 @@ class Board:
             out = {j.lower() for j in recused}
             self._judges[s] = [j.lower() for j in judges if j.lower() not in out]
         return self._judges[s]
+
+    def oracle(self, issue: int, node: str) -> list:
+        """An issue's accept: the issue is Posted with no bounty, and the node is an active oracle key. Returns [node]."""
+        try:
+            i = self.chain.issue(issue)
+            active = self.chain.is_oracle(node)
+        except Exception as e:  # noqa: BLE001 (the chain is down or slow, or no such issue: the node sends it again)
+            raise Refused(503, f"the chain can't be read ({e.__class__.__name__})") from None
+        if int(str(i["reporter"]), 16) == 0:
+            raise Refused(404, "no such issue")
+        if i["state"] not in (v2.POSTED, "Posted") or int(i["bounty"]) != 0:
+            raise Refused(409, "the issue isn't waiting for its registration check (its bounty is open, or it closed)")
+        if not active:
+            raise Refused(403, "not an active oracle key")
+        return [node]
 
     def domain(self) -> bytes:
         if self._domain is None:
@@ -207,6 +236,15 @@ class Board:
         if _signer(v2.merged_digest(self.domain(), v, msg["weight"]), msg["sig"]) != node:
             raise Refused(403, "the merge isn't signed by the node")
 
+    def _accept(self, s, node, msg, judges, now) -> None:
+        if not isinstance(msg["weight"], int) or isinstance(msg["weight"], bool) or msg["weight"] < 0:
+            raise Refused(400, "weight: a non-negative integer")
+        nonce = _hex(msg["nonce"], 32)
+        issue = int(str(s).split("-", 1)[1])
+        if _signer(v2.accept_digest(self.domain(), issue, msg["weight"], nonce), msg["sig"]) != node:
+            raise Refused(403, "the accept isn't signed by the node over this issue's digest")
+        self._final(s, "accept", node, msg)
+
     def _verdict(self, s, msg) -> v2.Verdict:
         try:
             v = v2.Verdict.from_json(msg["verdict"])
@@ -234,9 +272,10 @@ class Board:
         for line in self.state.read_text(encoding="utf-8").splitlines():
             try:
                 row = json.loads(line)
-                s, kind, t = int(row["s"]), row["kind"], float(row["t"])
+                kind, t = row["kind"], float(row["t"])
                 if kind not in KINDS:
                     continue
+                s = row["s"] if kind in ISSUE_KINDS else int(row["s"])
                 self.msgs.setdefault(s, {}).setdefault(kind, {})[str(row["node"]).lower()] = row["msg"]
                 self.last[s] = max(self.last.get(s, t), t)
                 if kind == "seal":
@@ -245,7 +284,7 @@ class Board:
             except (ValueError, KeyError, TypeError, AttributeError):
                 continue
         self.expire(self.clock())
-        live = [r for r in rows if int(r["s"]) in self.last]
+        live = [r for r in rows if (r["s"] if r["kind"] in ISSUE_KINDS else int(r["s"])) in self.last]
         if len(live) < len(rows):  # compact: keep the live submissions' rows only
             tmp = self.state.with_name(self.state.name + ".tmp")
             tmp.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in live), encoding="utf-8")
@@ -291,8 +330,14 @@ class Handler(BaseHTTPRequestHandler):
         return [p for p in self.path.split("?", 1)[0].split("/") if p]
 
     def _route(self, parts: list) -> tuple:
-        if len(parts) != 4 or parts[0] != "v1":
-            raise Refused(404, "expected /v1/<race>/<submission>/<kind>")
+        if len(parts) == 5 and parts[0] == "v1" and parts[2] == "issue" and parts[4] in ISSUE_KINDS:
+            if parts[1].lower() != self.board.race:
+                raise Refused(404, "this exchange serves another race")
+            if not parts[3].isdigit():
+                raise Refused(404, "issue: a number")
+            return int(parts[3]), parts[4]
+        if len(parts) != 4 or parts[0] != "v1" or parts[3] in ISSUE_KINDS:
+            raise Refused(404, "expected /v1/<race>/<submission>/<kind> or /v1/<race>/issue/<issue>/accept")
         if parts[1].lower() != self.board.race:
             raise Refused(404, "this exchange serves another race")
         if not parts[2].isdigit():

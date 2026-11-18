@@ -197,3 +197,83 @@ class TestDevnet(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestClaims(unittest.TestCase):
+    """#210, D2: an issue claims its registration; the first valid claim wins (the bot's link and the seats' check)."""
+
+    REPORTER = "0x" + "12" * 20
+    ONCHAIN = {"id": 7, "reporter": "0x" + "12" * 20, "repo": "0x" + "00" * 32}
+
+    def issue(self, n, body, labels=("bounty",), state="open"):
+        return {"number": n, "body": body, "labels": list(labels), "state": state}
+
+    def body(self, reg=7, wallet=None):
+        return f"Bug.\n\nRegistration: {reg}\nReporter wallet: {wallet or self.REPORTER}\n"
+
+    def test_a_valid_claim(self):
+        issues = [self.issue(12, self.body())]
+        self.assertEqual(logic.first_valid_claim(issues, self.ONCHAIN, "0x0"), 12)
+        self.assertIsNone(logic.hint_reason(issues[0], issues, self.ONCHAIN, "0x0"))
+        upper = [self.issue(12, self.body(wallet=self.REPORTER.upper().replace("0X", "0x")))]
+        self.assertEqual(logic.first_valid_claim(upper, self.ONCHAIN, "0x0"), 12)  # case-insensitive
+
+    def test_the_wrong_wallet(self):
+        issues = [self.issue(12, self.body(wallet="0x" + "34" * 20))]
+        self.assertIsNone(logic.first_valid_claim(issues, self.ONCHAIN, "0x0"))
+        self.assertEqual(logic.hint_reason(issues[0], issues, self.ONCHAIN, "0x0"), logic.WRONG_WALLET)
+
+    def test_the_wrong_repository(self):
+        issues = [self.issue(12, self.body())]
+        registry = "0x" + "21" * 32
+        self.assertIsNone(logic.first_valid_claim(issues, self.ONCHAIN, registry))
+        self.assertEqual(logic.hint_reason(issues[0], issues, self.ONCHAIN, registry), logic.WRONG_REPO)
+        onchain = {**self.ONCHAIN, "repo": registry}
+        self.assertEqual(logic.first_valid_claim(issues, onchain, registry), 12)
+        self.assertEqual(logic.first_valid_claim(issues, {**self.ONCHAIN, "repo": bytes(32)}, "0x0"), 12)
+
+    def test_an_unlabelled_issue(self):
+        issues = [self.issue(12, self.body(), labels=())]
+        self.assertIsNone(logic.first_valid_claim(issues, self.ONCHAIN, "0x0"))
+
+    def test_two_claimants_the_lower_number_wins(self):
+        issues = [self.issue(15, self.body()), self.issue(12, self.body(), state="closed")]
+        self.assertEqual(logic.first_valid_claim(issues, self.ONCHAIN, "0x0"), 12)
+        self.assertEqual(logic.hint_reason(issues[0], issues, self.ONCHAIN, "0x0"), logic.TAKEN)
+
+    def test_no_lines_or_no_such_registration(self):
+        issues = [self.issue(12, "Just a bug.")]
+        self.assertEqual(logic.hint_reason(issues[0], issues, None, "0x0"), logic.NO_LINES)
+        issues = [self.issue(12, self.body(reg=99))]
+        self.assertEqual(logic.hint_reason(issues[0], issues, None, "0x0"), logic.UNKNOWN)
+
+    def test_an_edited_body_after_the_link_changes_nothing(self):
+        linked = [{"body": logic.bounty_comment(RACE, 4, 7)}]
+        issue = self.issue(12, self.body(reg=8))  # edited after the link
+        self.assertEqual(logic.linked(linked), (RACE, 4, 7))  # the link comment is the record
+        self.assertFalse(logic.needs_bounty(issue, linked))
+
+
+class TestNewMarkers(unittest.TestCase):
+    TX = "0x" + "9f" * 32
+
+    def test_ended_round_trips(self):
+        for state in ("Unsolved", "Refunded"):
+            body = logic.ended_comment(RACE, 5, state, self.TX, 1234, 7193)
+            self.assertEqual(logic.ended([{"body": body}]), (RACE, 5, state, self.TX))
+            self.assertIn("pofctl funder claim", body)
+        self.assertIn("stake has returned", logic.ended_comment(RACE, 5, "Unsolved", self.TX, 1, 7193))
+        self.assertNotIn("stake", logic.ended_comment(RACE, 5, "Refunded", self.TX, 1, 7193))
+        with self.assertRaises(ValueError):
+            logic.ended_comment(RACE, 5, "Paid", self.TX, 1, 7193)
+        self.assertIsNone(logic.ended([{"body": logic.paid_comment(RACE, 5, self.TX, 1, 7193)}]))
+
+    def test_hint_round_trips_with_its_reason(self):
+        for reason in [None, *logic.REASONS]:
+            body = logic.hint_comment(RACE, reason)
+            self.assertTrue(logic.hinted([{"body": body}]))
+            self.assertTrue(logic.hinted([{"body": body}], RACE))
+            self.assertFalse(logic.hinted([{"body": body}], "0x" + "ee" * 20))
+            for line in ("Registration:", "Reporter wallet:", "pofctl reporter register", "never registers"):
+                self.assertIn(line, body)
+        self.assertFalse(logic.hinted([{"body": logic.bounty_comment(RACE, 1, 1)}]))

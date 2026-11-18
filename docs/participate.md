@@ -64,4 +64,4 @@ The full loop has run for real on this devnet, including the owner's validator w
 - there are no seat bonds, so cheating isn't punished yet (task 5.8);
 - no real money is involved: you earn the test coin, while your AWS and model costs are real.
 
-v3 will replace the 7 seats with open registration: a bond and an attestation instead of a seat. It's designed and simulated, not built.
+v3 will replace the 7 seats with open registration: a bond and an attestation instead of a seat. Its contracts are built and tested ([`reports/contract-v3.md`](../reports/contract-v3.md)), but the node and the kit don't register yet (#139) and no devnet runs v3, so today you still join a seat as above.

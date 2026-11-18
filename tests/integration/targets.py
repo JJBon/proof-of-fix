@@ -25,8 +25,12 @@ from pathlib import Path
 
 DEVNET_CHAIN_ID = 7193  # scripts/devnet.sh's CHAIN_ID: the private devnet, no public chain's
 TARGETS = ("local", "aws")
-SCENARIOS = ("1", "2", "3", "4", "5", "6", "7", "8")
-AWS_ORDER = ("2", "3", "1", "5")  # no merge first, then the merges: each fix is a commit on main as it is then
+SCENARIOS = ("1", "2", "3", "4", "5", "6", "7", "8", "10")
+AWS_ORDER = ("2", "3", "1", "5", "10")  # no merge first, then the merges: each fix is a commit on main as it is then
+HOSTED_ONLY = {"10": "the untyped loop (#210) runs against the hosted bot on the seats host: --hosted-bot"}
+# The commands the bot and the seats' check do unattended (#210): never typed by the suite in scenario 10, nor anywhere
+# with --hosted-bot (the hosted bot and the suite would write the same comment).
+TYPED_BY_THE_BOT = (("oracle", "accept"), ("bot", "link"), ("bot", "settle"), ("bot", "close"))
 LOCAL_ONLY = {
     "4": "a silent validator needs one drawn node not to run; on the AWS devnet the nodes are scripts/devnet-seats.sh's and "
          "the owner's kit, live and shared, and the suite never stops one",
@@ -72,17 +76,25 @@ def split_target(argv: list) -> tuple:
     return target, rest
 
 
-def plan(target: str, only: str | None = None) -> tuple:
-    """(the scenarios to run, in order; [(scenario, why it's skipped)]). `only`: "2,3", as --only takes it."""
+def plan(target: str, only: str | None = None, hosted_bot: bool = False) -> tuple:
+    """(the scenarios to run, in order; [(scenario, why it's skipped)]). `only`: "2,3", as --only takes it.
+    `hosted_bot` (aws): the hosted bot does the bot's and the seats' steps, and scenario 10 runs."""
     wanted = [s.strip() for s in only.split(",") if s.strip()] if only else list(SCENARIOS)
     unknown = [s for s in wanted if s not in SCENARIOS]
     if unknown:
-        raise Refused(f"no scenario {', '.join(unknown)} (1-8)")
+        raise Refused(f"no scenario {', '.join(unknown)} (1-8, 10)")
     if target == "local":
         return [s for s in SCENARIOS if s in wanted], []
-    run = [s for s in AWS_ORDER if s in wanted]
-    skipped = [(s, LOCAL_ONLY[s]) for s in SCENARIOS if s in wanted and s in LOCAL_ONLY]
+    run = [s for s in AWS_ORDER if s in wanted and (hosted_bot or s not in HOSTED_ONLY)]
+    skipped = [(s, LOCAL_ONLY.get(s) or HOSTED_ONLY[s]) for s in SCENARIOS if s in wanted and
+               (s in LOCAL_ONLY or (s in HOSTED_ONLY and not hosted_bot))]
     return run, skipped
+
+
+def typed_by_the_bot(argv) -> bool:
+    """A pofctl command that's the bot's or the stub quorum's opening (#210): `oracle accept`, `bot link|settle|close`."""
+    words = [a for a in argv if not str(a).startswith("-")]
+    return tuple(words[:2]) in TYPED_BY_THE_BOT
 
 
 # ---------- the AWS profile's settings ----------
@@ -218,8 +230,9 @@ def check_withdrawal(name: str, owed_before: int, wallet_before: int, owed_after
 def check_books(subs: dict, decided: dict, charged: dict, owed_delta, seats: list) -> list:
     """Each result's books, from deltas at the block that decided it (as scripts/demo-e2e.sh's, on a shared chain).
 
-    subs: this run's submissions, id -> {"solver": address, "deposit": int}; decided: block -> [submission ids decided
-    in it, anyone's]; charged: submission -> (judges counted, total charged); owed_delta(block, address): the credit's
+    subs: this run's submissions, id -> {"solver": address, "deposit": int, and "fee": the evaluation fee for one that
+    timed out (#210: its deposit pays that fee, the rest returns)}; decided: block -> [submission ids decided in it,
+    anyone's]; charged: submission -> (judges counted, total charged); owed_delta(block, address): the credit's
     change in that block; seats: the seats' addresses. Per block: each of this run's solvers' deposits = what the meter
     charged them + what returned to the solver; and the seats were credited exactly what the meter charged in it."""
     problems = []
@@ -228,7 +241,7 @@ def check_books(subs: dict, decided: dict, charged: dict, owed_delta, seats: lis
         for solver in sorted({subs[s]["solver"] for s in ours}):
             mine = [s for s in ours if subs[s]["solver"] == solver]
             deposit = sum(subs[s]["deposit"] for s in mine)
-            got = sum(charged.get(s, (0, 0))[1] for s in mine)
+            got = sum(charged.get(s, (0, 0))[1] + subs[s].get("fee", 0) for s in mine)
             back = owed_delta(block, solver)
             if deposit != got + back:
                 problems.append(f"block {block}: submission(s) {mine}: deposits {deposit} != charged {got} + "

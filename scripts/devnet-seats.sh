@@ -8,6 +8,10 @@
 #   scripts/devnet-seats.sh down     stop a running `up`, from another shell
 #   scripts/devnet-seats.sh clean    delete the nodes' working directory (checkouts, receipts, logs)
 #
+# NOT while the AWS seats' host serves the same keys (platform#219: once its node_image_digest is set): two nodes with
+# one seat's key would both report, seal and sign. Set seats_enabled = false there and wait until the host is stopped
+# first. validator-kit/runbook.md, "The seats' host on AWS".
+#
 # Needs: Docker (each fix's tests run in the pinned sandbox image, no network: rule 4), python3, an OpenBao session for
 # the role keys (bao login -no-print -method=oidc role=admin; read once, at the start), and in the environment:
 #   DEVNET_RPC_URL         the devnet (https, no credential in it)
@@ -211,5 +215,5 @@ case "${1:-}" in
   status) status ;;
   down) down ;;
   clean) clean ;;
-  *) sed -n '2,47p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,49p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

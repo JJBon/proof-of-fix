@@ -1,6 +1,6 @@
 # ADR 0002: The v2 architecture: keyless coin-only contracts, a drawn quorum of seats, metered check fees, and validators that run on demand
 
-- **Status:** in effect for the private devnet (recorded at genesis by the owner, like ADR 0001; no constitution tier exists yet to pass it)
+- **Status:** in effect for the private devnet (recorded at genesis by the owner, like ADR 0001; no constitution tier exists yet to pass it). Not superseded: v2 stays deployed as described here. Its successor, v3, is built beside it and not deployed (see "Successors").
 - **Date:** 2026-11-02
 - **Author:** the owner (proof-of-fix#114). Interest disclosed: the owner may run one validator seat, recused on any bounty they're party to; no founder's share and no token (parked).
 - **Constitution articles changed:** none. This records how the DRAFT constitution's articles are built.
@@ -31,7 +31,8 @@ Option 2. The architecture, and each part's status: **built** (on `main`), **#11
 - **No owner, admin, upgrade or pause.** Rules change only by a new version and a migration (D15). Changing seats or prices follows the rules above.
 - **Coin only:** the token (`Token`, POF) is built but **parked** (owner, 2026-10-30). v2 makes no token calls, and validators are paid in the fee coin, never in POF.
 - **Sizes** (runtime, EIP-170 limit 24,576): `RaceV2` 23,628, `RaceV2Annex` 17,598, `Fees` 11,754, `Verdicts` 7,321, `QuoterV2` 3,157, `Pool` 1,398, `Heads` 1,091. `RaceV2`'s initcode is 47,886 of 49,152 (EIP-3860), so new logic goes into other contracts ([`reports/contract-v2.md`](../../reports/contract-v2.md)).
-- **To build (#85 tasks):** sealed verdicts on-chain (5.5), receipts on-chain (5.6), bonds, slashing and challenges (5.8), data availability (5.9), the constitution's hash and ADR challenges (5.10), the pool's spending (5.11), the deployment record's library hashes (5.12), the migration from v1 (5.13), the replay with fees (5.14).
+- **Built in v3, not in v2** (design D18 of #132; see "Successors"): sealed verdicts on-chain (5.5), receipts on-chain (5.6), and bonds, slashing and challenges (5.8). v2 stays without them.
+- **To build (#85 tasks):** data availability (5.9), the constitution's hash and ADR challenges (5.10), the pool's spending (5.11), the deployment record's library hashes (5.12), the migration from v1 (5.13), the replay with fees (5.14).
 
 ### 2. The chain: a private devnet with mainnet rules
 - **Built:** `https://devnet.example.com` (platform#199, #200), chain **7193**, Osaka, EIP-170 enforced, a block every 2 s.
@@ -76,6 +77,28 @@ Option 2. The architecture, and each part's status: **built** (on `main`), **#11
 - **Nobody can change a rule unilaterally,** the owner included. A mistake means a new version and a migration, so changes are slower.
 - **Until attestation and receipts are built,** a counted verdict is trusted on its seat's key alone. Several model families, canaries and the draw are the safeguards, and they're enough only for the devnet.
 - **The architecture changes through ADRs:** a PR that changes it updates this ADR or supersedes it.
+
+## Successors
+This ADR describes v2, which stays deployed and unchanged (D15). Two later ADRs build on it.
+
+- **[ADR 0003](0003-decentralization.md)** sets the target: nothing one party runs is required. It is proposed, and the devnet still runs as described here.
+- **[ADR 0004](0004-open-validators.md)** fixes the parameters of **v3, open validators** (#132). v3's contracts are built and tested in `contracts/src/v3/` ([`reports/contract-v3.md`](../../reports/contract-v3.md)). They are not deployed: the node and the kit still speak v2 (#139), and the devnet run is #140.
+
+What v3 replaces in this ADR:
+
+| Here (v2) | In v3 | Section |
+|---|---|---|
+| `Verdicts`: 7 seats, joined by co-signature | `Validators`, **the open registry.** Anyone registers a key with a bond of at least $100 and an attestation, qualifies with 20 scored shadow verdicts (95 % revealed, 80 % agreement), and leaves after an unbonding delay of 504 h. Nobody approves or co-signs. At most one genesis validator, at level A or B. | 1, 3 |
+| The draw of 3 of 7, 2 to pass | `Panels`, **the k table.** k is odd, from 1 to 7, the largest the eligible validators allow, and the bounty must fit that k's limit: at level A $50 at k = 1, $250 at k = 3, $625 at k = 5 and 7; level B half of that. A bounty above the limit waits. Caps per panel: 1 per operator, and from k = 3 no majority of one host or one model family. | 1 |
+| The challenge window | A window per (k, level): at level A 168 h at k = 1, 24 h at k = 3, 12 h at k = 5, 6 h at k = 7; level B twice that. A challenge is judged by a fresh, larger panel (1→3, 3→5, 5→7, 7→7), and the window is frozen until it decides. | 1 |
+| No counterpart: v2 never draws one judge | **The k = 1 hold.** A lone judge's verdict isn't final, and its bounty isn't paid, until 3 validators could judge its challenge. Only then does its window run. Two auditors outside the panel re-run every k = 1 verdict, and a validator has at most 10 k = 1 verdicts pending. | 1 |
+| Seals and reveals through the relay; receipts and bonds to build (5.5, 5.6, 5.8) | On-chain in `Panels` and `Validators` (D18): seals, reveals, receipt hashes, bonds and slashes for provable faults only. Attestation is a recorded hash that the drawn panel checks off-chain, with a `simulated` proof type on devnet chain ids only. | 1, 3 |
+| `Fees`: a price table changed by 5 of 7 seats | `FeesV3`: active validators post tables, the lower median moves each price by at most 25 % a day, and a queue signal moves the service fee between $0.01 and $0.25. No vote. | 1, 5 |
+| A model family per seat, listed at deployment | No list of families (D19). `PanelScores` keeps a score per family, which ranks it: the score scales the service fee, and a family below 70 % isn't drawn until it recovers. The rank and the per-family cap are under review in #236, after the judge measurements ([`reports/judges-v2.md`](../../reports/judges-v2.md)). | 3 |
+| `RaceV2`, `RaceV2Annex`, `Pool` | `RaceV3`, `RaceV3Annex`, `PoolV3`: the same race, judged by `Panels` and charged by `FeesV3`, with instalments counted from the verdict's finality. `Heads` is reused. | 1, 5 |
+| The constitution tier: 5 of 7 seats | 7 drawn, 5 to pass, from at least 21 eligible validators for an ADR that adds or loosens and 14 for one that only removes. `RaceV3` doesn't open ADRs or escalated fixes yet. | 1 |
+
+What stays the same: no owner, admin, upgrade or pause; the fee coin only; v2 and its bounties, which finish in v2. The diagrams of both versions are in the [README](../../README.md).
 
 ## Challenge window
 None: this is recorded at genesis, before any constitution tier exists. From genesis on, ADRs follow Article 9.
