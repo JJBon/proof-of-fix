@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
 /// What FeesV3 reads from the validator registry (#132 task 3.1, `Validators`). Declared here, not imported, so the

@@ -5,6 +5,9 @@
 #
 #   gate.sh <fix-sha1>
 #
+# Under v3 (#251, scripts/radicle-spike.sh --v3) the same gate runs on each seated validator's node; a node with no
+# `main` yet (a new seat) publishes its first one at the head.
+#
 # Environment: RPC (anvil's URL), HEADS (the Heads contract), REPO_ID (bytes32: keccak256 of the RID), RID, and
 # REPO_DIR (this node's working copy, default ~/repo). Exit codes: 0 pushed, 2 bad input, 3 the fix isn't
 # Heads.head(repo), 4 not a fast-forward, 5 the commit isn't on this node, 6 the push failed.
@@ -28,11 +31,14 @@ want="0x${fix}000000000000000000000000"
 
 # 2. The commit is on this node (from the patch or branch it was proposed on), and it fast-forwards this delegate's
 #    own signed `main` (its namespace in storage, not the canonical ref and not the working copy).
-rad sync --fetch --rid "$RID" >/dev/null 2>&1 || true
+rad sync --fetch "$RID" >/dev/null 2>&1 || true
 git --git-dir "$storage" cat-file -e "$fix^{commit}" 2>/dev/null || refuse "commit $fix not on this node" 5
 me=$(rad self --did); me=${me#did:key:}
-mine=$(git --git-dir "$storage" rev-parse "refs/namespaces/$me/refs/heads/main")
-git --git-dir "$storage" merge-base --is-ancestor "$mine" "$fix" || refuse "$fix doesn't fast-forward main ($mine)" 4
+mine=$(git --git-dir "$storage" rev-parse --verify -q "refs/namespaces/$me/refs/heads/main" || true)
+# No main yet: a new seat publishes its first main at the head (#251, before it can be added as a delegate).
+if [[ -n "$mine" ]]; then
+  git --git-dir "$storage" merge-base --is-ancestor "$mine" "$fix" || refuse "$fix doesn't fast-forward main ($mine)" 4
+fi
 
 # 3. Push this delegate's main (git-remote-rad signs the refs with the node key and announces them).
 cd "$repo_dir"

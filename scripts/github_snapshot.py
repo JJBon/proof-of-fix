@@ -7,7 +7,8 @@ history goes across, only one new commit each time.
 
 The private terms stay out of this repository: they're in a file on the owner's machine (--terms, default
 ~/.config/proof-of-fix/snapshot-terms, `old => new` per line in order, `deny: literal` to fail the scan if it's left), and
-the script refuses to run without them. It also refuses a target that isn't private: going public is the owner's own step.
+the script refuses to run without them. It also refuses a target that isn't private, unless --allow-public names the step
+the owner took (proof-of-fix went public on 2026-11-18, #251).
 
     scripts/github_snapshot.py proof-of-fix                                  # a dry run: what would change
     scripts/github_snapshot.py proof-of-fix --check --push                   # with the tests, then push
@@ -34,7 +35,7 @@ GH_CREDENTIALS = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth 
 PRESETS = {
     "proof-of-fix": {
         "paths": [],
-        "note": "> Private snapshot for sharing. Development happens on a private Forgejo, which keeps the full history; issue "
+        "note": "> A scrubbed snapshot. Development happens on a private Forgejo, which keeps the full history; issue "
                 "numbers (`#123`) refer to its tracker, and example.com and example-org stand in for internal addresses.",
         "check": ["scripts/check.sh"],
     },
@@ -148,13 +149,15 @@ def lay_out(tree: Path, source: Path, ref: str, preset: dict) -> None:
         readme.write_text(f"{head}\n\n{note}\n{rest}", encoding="utf-8")
 
 
-def github_target(name: str) -> tuple:
-    """(URL, git's credential options, the commit's name and email) for the signed-in account's private repository."""
+def github_target(name: str, allow_public: bool = False) -> tuple:
+    """(URL, git's credential options, the commit's name and email) for the signed-in account's repository: private,
+    or public only with allow_public (the owner made it public; this script never changes a repository's visibility)."""
     user = json.loads(run(["gh", "api", "user"]))
     login = user["login"]
     view = json.loads(run(["gh", "repo", "view", f"{login}/{name}", "--json", "visibility"]))
-    if view["visibility"] != "PRIVATE":
-        raise SystemExit(f"github-snapshot: {login}/{name} isn't private: refusing. Going public is the owner's own step.")
+    if view["visibility"] != "PRIVATE" and not allow_public:
+        raise SystemExit(f"github-snapshot: {login}/{name} isn't private: refusing. Going public is the owner's own step; "
+                         "--allow-public pushes to a repository the owner has already made public.")
     return (f"https://github.com/{login}/{name}.git", GH_CREDENTIALS, login,
             f"{user['id']}+{login}@users.noreply.github.com")
 
@@ -169,6 +172,8 @@ def main(argv=None) -> int:
     ap.add_argument("--push", action="store_true", help="commit and push when the scan is clean")
     ap.add_argument("--trailer", action="append", default=[], help="a line to end the commit message with")
     ap.add_argument("--remote-url", help="push here instead of GitHub (for tests): no gh, no privacy check")
+    ap.add_argument("--allow-public", action="store_true",
+                    help="accept a target the owner has already made public (it never changes visibility)")
     a = ap.parse_args(argv)
 
     preset = PRESETS[a.preset]
@@ -178,7 +183,7 @@ def main(argv=None) -> int:
     if a.remote_url:
         url, creds, name, email = a.remote_url, [], "snapshot-test", "snapshot-test@example.invalid"
     else:
-        url, creds, name, email = github_target(a.preset)
+        url, creds, name, email = github_target(a.preset, a.allow_public)
 
     with tempfile.TemporaryDirectory(prefix="pof-snapshot-") as tmp:
         tree = Path(tmp) / "tree"

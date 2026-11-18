@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
 /// v3's validator registry as Panels, FeesV3 and RaceV3 see it (proof-of-fix#138, task 3.1 of #132; design D1, D2, D5,

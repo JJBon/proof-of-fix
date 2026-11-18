@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
 /// What RaceV2 asks of its check-fee meter (proof-of-fix#85, task 5.7, design S15). A version deployed without one

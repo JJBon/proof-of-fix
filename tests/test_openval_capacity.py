@@ -261,5 +261,59 @@ class TestPerIdentityRate(unittest.TestCase):
         self.assertTrue(all(net.cls[s.sid] == 1 and s.drawn_t is None for s in refused))
 
 
+# ---------- post hoc (#251 task 3.15): junk pays the judges' fee from faucet USDC ----------
+
+def fee_p(cap=5, order="reputation", **kw):
+    return K._p(cap, order, JUDGE_FEE=K.FEE, **kw)
+
+
+class TestFaucet(unittest.TestCase):
+    def test_off_by_default_and_the_earlier_rows_are_unchanged(self):
+        self.assertIsNone(K.Spammer(False, short(), per_hour=1.0).usdc_day)
+        for row in K.grid_rows() + K.repo_rows() + K.fee_rows() + K.lane_rows() + K.rate_rows():
+            self.assertFalse(row[7].startswith("usdc:"))
+        self.assertEqual(K.FAUCET_ADDRESS_DAY, 240.0)
+
+    def test_it_needs_the_judges_fee(self):
+        with self.assertRaises(ValueError):
+            run(K._p(5, "reputation"), short(), rate=1.0, usdc_day=240.0)
+
+    def test_an_income_that_never_binds_changes_nothing(self):
+        w = short(weeks=5)
+        a = K.metrics(run(fee_p(), w, rate=10.0)[0])
+        b = K.metrics(run(fee_p(), w, rate=10.0, usdc_day=1e9)[0])
+        for k in ("over24", "withdrawn", "new_withdrawn", "checks_day", "junk_n", "queue_max"):
+            self.assertEqual(a[k], b[k], k)
+
+    def test_the_junk_rate_is_the_income_over_the_fee(self):
+        w = short(weeks=4)
+        days = w.horizon_h / 24
+        for usdc in (20.0, 240.0, 480.0):
+            net, a = run(fee_p(), w, rate=10.0, usdc_day=usdc)
+            junk = [s for s in issues(net) if s.sid in net.junk]
+            self.assertAlmostEqual(len(junk) / days, usdc / K.FEE, delta=0.06 * usdc / K.FEE + 0.5)
+            self.assertGreater(a.count["unfunded"], 0)
+            self.assertLessEqual(a.usdc_paid, a.usdc_in + 1e-6)  # never spends more than the faucet paid in
+            self.assertGreaterEqual(a.wallet, -1e-9)
+            self.assertAlmostEqual(a.usdc_paid, K.FEE * len(junk), places=4)
+
+    def test_below_the_income_the_intended_rate_is_kept(self):
+        w = short(weeks=3)
+        a = run(fee_p(), w, rate=1.0)[1]
+        b = run(fee_p(), w, rate=1.0, usdc_day=K.FAUCET_ADDRESS_DAY)[1]  # 1 an hour needs 121 USDC a day
+        self.assertLessEqual(a.count["submitted"] - b.count["submitted"], 2)  # only the first hours' slots wait
+
+    def test_the_faucet_rows(self):
+        rows = K.faucet_rows()
+        self.assertEqual(len(rows), 96)
+        self.assertEqual(len({K.key_of(r) for r in rows}), 96)
+        for r in rows:
+            _, seat, n, cap, rate, order, rcap, form, w, p = r
+            self.assertEqual((cap, rcap, w.repos, p.JUDGE_FEE, p.REPO_CHECKS_PER_HOUR), (5, None, 1, K.FEE, None))
+            self.assertIn(n, (7, 15))
+            self.assertTrue(form.startswith("usdc:"))
+        self.assertEqual(K.FAUCET_SEEDS, tuple(range(41, 81)))
+
+
 if __name__ == "__main__":
     unittest.main()

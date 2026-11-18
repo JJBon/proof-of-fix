@@ -1,0 +1,1142 @@
+{
+ "script": "scripts/radicle-spike.sh --v3",
+ "runs": [
+  {
+   "run": 1,
+   "ranAt": "2026-11-18T19:47:01Z",
+   "wallSeconds": 346,
+   "radicle": "rad 1.10.3 (7e1cb406bb935c3de008d2171e8961f57b4336ea)",
+   "rpcCalls": 59723,
+   "results": {
+    "S": "PASS",
+    "a1": "PASS",
+    "b1": "PASS",
+    "a2": "PASS",
+    "b2": "PASS",
+    "b3": "PASS",
+    "a3": "PASS",
+    "b4": "PASS",
+    "a4": "PASS",
+    "b5": "PASS",
+    "a5": "PASS",
+    "b6": "PASS",
+    "a6": "PASS",
+    "b7": "PASS",
+    "a7": "PASS",
+    "b8": "PASS",
+    "a8": "PASS",
+    "b9": "PASS",
+    "a9": "PASS",
+    "b10": "PASS",
+    "L": "PASS",
+    "I": "PASS"
+   },
+   "qualification": {
+    "checks": 24,
+    "wallSeconds": 59,
+    "chainSeconds": 115217
+   },
+   "qualificationV4": {
+    "checks": 24,
+    "wallSeconds": 54
+   },
+   "seatChanges": [
+    {
+     "scenario": "a1",
+     "title": "Hand over to the seats on-chain",
+     "delegatesBefore": 1,
+     "thresholdBefore": 1,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 1,
+     "verdictsAsked": 1,
+     "acceptedIn": 0.33
+    },
+    {
+     "scenario": "a4",
+     "title": "Seat added: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 5,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.56
+    },
+    {
+     "scenario": "a5",
+     "title": "Seat removed: v2 left",
+     "delegatesBefore": 5,
+     "thresholdBefore": 3,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.52
+    },
+    {
+     "scenario": "a6",
+     "title": "Below the floor: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 3,
+     "thresholdAfter": 2,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.51
+    },
+    {
+     "scenario": "a6",
+     "title": "Back above the floor: v4",
+     "delegatesBefore": 3,
+     "thresholdBefore": 2,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 2,
+     "verdictsAsked": 2,
+     "acceptedIn": 0.97
+    }
+   ],
+   "convergence": [
+    {
+     "what": "identity revision 8f4ebe2",
+     "scenario": "a1",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.43,
+     "perNode": {
+      "genesis": 0.4,
+      "v1": 0.43,
+      "v3": 0.43,
+      "owner": 0.43,
+      "v2": 0.43,
+      "solver": 0.43,
+      "v4": 0.43
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A after gated push 3 of 4",
+     "scenario": "a2",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.49,
+     "perNode": {
+      "v2": 0.48,
+      "owner": 0.48,
+      "genesis": 0.48,
+      "v1": 0.48,
+      "solver": 0.48,
+      "v3": 0.49,
+      "v4": 0.49
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of B after 1 push",
+     "scenario": "b3",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.46,
+     "perNode": {
+      "genesis": 0.44,
+      "v1": 0.45,
+      "solver": 0.45,
+      "v2": 0.46,
+      "v3": 0.46,
+      "owner": 0.46,
+      "v4": 0.46
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 65e8513",
+     "scenario": "a4",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "owner": 0.35,
+      "v3": 0.36,
+      "genesis": 0.36,
+      "v1": 0.36,
+      "solver": 0.37,
+      "v4": 0.37,
+      "v2": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 7b085b4",
+     "scenario": "a5",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "owner": 0.35,
+      "genesis": 0.36,
+      "v4": 0.36,
+      "v2": 0.37,
+      "v1": 0.37,
+      "solver": 0.37,
+      "v3": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision fe7de35",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "owner": 0.35,
+      "solver": 0.36,
+      "genesis": 0.36,
+      "v2": 0.37,
+      "v1": 0.37,
+      "v4": 0.37,
+      "v3": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 7d2da7e",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "owner": 0.34,
+      "v2": 0.36,
+      "solver": 0.37,
+      "v3": 0.37,
+      "v1": 0.37,
+      "genesis": 0.37,
+      "v4": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A once v1 is back",
+     "scenario": "a7",
+     "nodes": 6,
+     "passive": 6,
+     "maxSeconds": 2.09,
+     "perNode": {
+      "owner": 2.06,
+      "genesis": 2.06,
+      "v2": 2.07,
+      "solver": 2.07,
+      "v3": 2.07,
+      "v1": 2.09
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "v4 back after being offline",
+     "scenario": "a7",
+     "nodes": 1,
+     "passive": 0,
+     "maxSeconds": null,
+     "perNode": {
+      "v4": null
+     }
+    }
+   ],
+   "bounties": [
+    {
+     "repo": "a",
+     "bounty": 1,
+     "submission": 26,
+     "fix": "e8e18f0e719b56662aa7c13f7b833bca4451b5f1",
+     "base": "bb817375662e73842e2f54b4fb366b6af32f3994",
+     "patch": "6ec5d819f68b22fc54d9c16f631c5a6cd22a28bf",
+     "drawn": [
+      "v2",
+      "v3",
+      "genesis"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    },
+    {
+     "repo": "b",
+     "bounty": 2,
+     "submission": 28,
+     "fix": "babd11bfdccec9cb51c70817ae246a2d8b999ca9",
+     "base": "bb817375662e73842e2f54b4fb366b6af32f3994",
+     "patch": "d0dedcd8d46f29b3d7aef77b807f9aaaddb2687c",
+     "drawn": [
+      "v2",
+      "v1",
+      "genesis"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    },
+    {
+     "repo": "a",
+     "bounty": 3,
+     "submission": 56,
+     "fix": "afa6c7dfbf7bfa1012d1543e0ce266fe02d90ecd",
+     "base": "e8e18f0e719b56662aa7c13f7b833bca4451b5f1",
+     "patch": "ba83fa30c769e47b6f0faa30680621456431d2fb",
+     "drawn": [
+      "v1",
+      "v3",
+      "genesis"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    }
+   ],
+   "belowFloor": {
+    "checks": 2,
+    "bond": 95000000,
+    "activeCount": 4,
+    "seats": 3
+   },
+   "offlineRecoverySeconds": 2.09,
+   "largestDelegateSet": {
+    "accepted": 255,
+    "refused": 256,
+    "error": "\u2717 Error: invalid delegates: number of delegates cannot exceed 255",
+    "updateMs255": "13"
+   },
+   "authorOfRejectedRevisionProposesAgain": "allowed",
+   "freshClone": {
+    "freshCloneA": "$ git rev-parse HEAD\ne8e18f0e719b56662aa7c13f7b833bca4451b5f1\n$ git log --oneline -1\ne8e18f0 fix add() on A (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  6ec5d81  fix add() on A  solver  z6MkveD\u20266UTYmXJ  - - - -  e8e18f0  +1  -1  13 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBStale": "$ git rev-parse HEAD\nbb817375662e73842e2f54b4fb366b6af32f3994\n$ git log --oneline -1\nbb81737 genesis: add() is wrong (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  d0dedcd  fix add() on B  solver  z6MkveD\u20266UTYmXJ  -        babd11b  +1  -1  9 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBUpdated": "$ git rev-parse HEAD\nbabd11bfdccec9cb51c70817ae246a2d8b999ca9\n$ git log --oneline -1\nbabd11b fix add() on B (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  d0dedcd  fix add() on B  solver  z6MkveD\u20266UTYmXJ  -        babd11b  +1  -1  12 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBRogue": "$ git rev-parse HEAD\ndc6bcf0b75ab7324ef445d128a0d85fdbd9ca140\n$ git log --oneline -1\ndc6bcf0 a rogue change, never judged (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title               Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  45aa021  An unjudged change  solver  z6MkveD\u20266UTYmXJ  -        7de2262  +1  -0  2 minutes ago         \u2502\n\u2502 \u2713  d0dedcd  fix add() on B      solver  z6MkveD\u20266UTYmXJ  -        babd11b  +1  -1  2 minutes ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+   },
+   "fetches": 23,
+   "testRuns": [
+    [
+     "v2",
+     "a",
+     "e8e18f0e719b56662aa7c13f7b833bca4451b5f1",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "e8e18f0e719b56662aa7c13f7b833bca4451b5f1",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "e8e18f0e719b56662aa7c13f7b833bca4451b5f1",
+     0
+    ],
+    [
+     "v1",
+     "b",
+     "babd11bfdccec9cb51c70817ae246a2d8b999ca9",
+     0
+    ],
+    [
+     "v2",
+     "b",
+     "babd11bfdccec9cb51c70817ae246a2d8b999ca9",
+     0
+    ],
+    [
+     "genesis",
+     "b",
+     "babd11bfdccec9cb51c70817ae246a2d8b999ca9",
+     0
+    ],
+    [
+     "v3",
+     "b",
+     "babd11bfdccec9cb51c70817ae246a2d8b999ca9",
+     0
+    ],
+    [
+     "v1",
+     "a",
+     "afa6c7dfbf7bfa1012d1543e0ce266fe02d90ecd",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "afa6c7dfbf7bfa1012d1543e0ce266fe02d90ecd",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "afa6c7dfbf7bfa1012d1543e0ce266fe02d90ecd",
+     0
+    ]
+   ]
+  },
+  {
+   "run": 2,
+   "ranAt": "2026-11-18T19:52:55Z",
+   "wallSeconds": 315,
+   "radicle": "rad 1.10.3 (7e1cb406bb935c3de008d2171e8961f57b4336ea)",
+   "rpcCalls": 48129,
+   "results": {
+    "S": "PASS",
+    "a1": "PASS",
+    "b1": "PASS",
+    "a2": "PASS",
+    "b2": "PASS",
+    "b3": "PASS",
+    "a3": "PASS",
+    "b4": "PASS",
+    "a4": "PASS",
+    "b5": "PASS",
+    "a5": "PASS",
+    "b6": "PASS",
+    "a6": "PASS",
+    "b7": "PASS",
+    "a7": "PASS",
+    "b8": "PASS",
+    "a8": "PASS",
+    "b9": "PASS",
+    "a9": "PASS",
+    "b10": "PASS",
+    "L": "PASS",
+    "I": "PASS"
+   },
+   "qualification": {
+    "checks": 24,
+    "wallSeconds": 27,
+    "chainSeconds": 21610
+   },
+   "qualificationV4": {
+    "checks": 24,
+    "wallSeconds": 41
+   },
+   "seatChanges": [
+    {
+     "scenario": "a1",
+     "title": "Hand over to the seats on-chain",
+     "delegatesBefore": 1,
+     "thresholdBefore": 1,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 1,
+     "verdictsAsked": 1,
+     "acceptedIn": 0.32
+    },
+    {
+     "scenario": "a4",
+     "title": "Seat added: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 5,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.55
+    },
+    {
+     "scenario": "a5",
+     "title": "Seat removed: v2 left",
+     "delegatesBefore": 5,
+     "thresholdBefore": 3,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.51
+    },
+    {
+     "scenario": "a6",
+     "title": "Below the floor: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 3,
+     "thresholdAfter": 2,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.51
+    },
+    {
+     "scenario": "a6",
+     "title": "Back above the floor: v4",
+     "delegatesBefore": 3,
+     "thresholdBefore": 2,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 2,
+     "verdictsAsked": 2,
+     "acceptedIn": 0.97
+    }
+   ],
+   "convergence": [
+    {
+     "what": "identity revision ff37b8d",
+     "scenario": "a1",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.43,
+     "perNode": {
+      "v2": 0.42,
+      "owner": 0.42,
+      "genesis": 0.42,
+      "v3": 0.42,
+      "solver": 0.43,
+      "v4": 0.43,
+      "v1": 0.43
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A after gated push 3 of 4",
+     "scenario": "a2",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.49,
+     "perNode": {
+      "owner": 0.47,
+      "genesis": 0.47,
+      "v1": 0.48,
+      "v2": 0.48,
+      "v3": 0.49,
+      "solver": 0.49,
+      "v4": 0.49
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of B after 1 push",
+     "scenario": "b3",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.46,
+     "perNode": {
+      "owner": 0.44,
+      "v2": 0.45,
+      "genesis": 0.45,
+      "v1": 0.46,
+      "solver": 0.46,
+      "v3": 0.46,
+      "v4": 0.46
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 01b3660",
+     "scenario": "a4",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "genesis": 0.35,
+      "v4": 0.36,
+      "v2": 0.36,
+      "v1": 0.37,
+      "owner": 0.37,
+      "v3": 0.37,
+      "solver": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision a3cf56a",
+     "scenario": "a5",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.37,
+     "perNode": {
+      "v1": 0.35,
+      "genesis": 0.35,
+      "owner": 0.36,
+      "v4": 0.36,
+      "v2": 0.37,
+      "solver": 0.37,
+      "v3": 0.37
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 2d00bcc",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.38,
+     "perNode": {
+      "v1": 0.35,
+      "genesis": 0.36,
+      "owner": 0.37,
+      "v4": 0.37,
+      "v3": 0.37,
+      "solver": 0.37,
+      "v2": 0.38
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision ad8bf5f",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.36,
+     "perNode": {
+      "owner": 0.34,
+      "v1": 0.35,
+      "genesis": 0.35,
+      "v2": 0.35,
+      "v3": 0.36,
+      "v4": 0.36,
+      "solver": 0.36
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A once v1 is back",
+     "scenario": "a7",
+     "nodes": 6,
+     "passive": 6,
+     "maxSeconds": 2.04,
+     "perNode": {
+      "v1": 2.03,
+      "genesis": 2.04,
+      "owner": 2.04,
+      "solver": 2.04,
+      "v2": 2.04,
+      "v3": 2.04
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "v4 back after being offline",
+     "scenario": "a7",
+     "nodes": 1,
+     "passive": 0,
+     "maxSeconds": null,
+     "perNode": {
+      "v4": null
+     }
+    }
+   ],
+   "bounties": [
+    {
+     "repo": "a",
+     "bounty": 1,
+     "submission": 26,
+     "fix": "6a9d5b62657080cdd4cbf5a1cc3414e805b70aca",
+     "base": "21fb3b6e73366856d5391067ef64a2c093cf9ca5",
+     "patch": "fa36161867492577cca75645542d6fc435c48cd2",
+     "drawn": [
+      "v3",
+      "v2",
+      "genesis"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86399
+    },
+    {
+     "repo": "b",
+     "bounty": 2,
+     "submission": 28,
+     "fix": "1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4",
+     "base": "21fb3b6e73366856d5391067ef64a2c093cf9ca5",
+     "patch": "b442a46412d926d409ed8f5b772a4dbe90da072b",
+     "drawn": [
+      "v3",
+      "v1",
+      "genesis"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    },
+    {
+     "repo": "a",
+     "bounty": 3,
+     "submission": 56,
+     "fix": "56c6524a3d81b6c9634c229048936902c34757b5",
+     "base": "6a9d5b62657080cdd4cbf5a1cc3414e805b70aca",
+     "patch": "bd56aa0cae0760d2f70e10258ef6df73d7a37055",
+     "drawn": [
+      "v1",
+      "genesis",
+      "v3"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    }
+   ],
+   "belowFloor": {
+    "checks": 2,
+    "bond": 95000000,
+    "activeCount": 4,
+    "seats": 3
+   },
+   "offlineRecoverySeconds": 2.04,
+   "largestDelegateSet": {
+    "accepted": 255,
+    "refused": 256,
+    "error": "\u2717 Error: invalid delegates: number of delegates cannot exceed 255",
+    "updateMs255": "13"
+   },
+   "authorOfRejectedRevisionProposesAgain": "allowed",
+   "freshClone": {
+    "freshCloneA": "$ git rev-parse HEAD\n6a9d5b62657080cdd4cbf5a1cc3414e805b70aca\n$ git log --oneline -1\n6a9d5b6 fix add() on A (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  fa36161  fix add() on A  solver  z6Mks8i\u2026PwPKX6A  - - - -  6a9d5b6  +1  -1  20 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBStale": "$ git rev-parse HEAD\n21fb3b6e73366856d5391067ef64a2c093cf9ca5\n$ git log --oneline -1\n21fb3b6 genesis: add() is wrong (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  b442a46  fix add() on B  solver  z6Mks8i\u2026PwPKX6A  -        1ab09c9  +1  -1  7 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBUpdated": "$ git rev-parse HEAD\n1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4\n$ git log --oneline -1\n1ab09c9 fix add() on B (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  b442a46  fix add() on B  solver  z6Mks8i\u2026PwPKX6A  -        1ab09c9  +1  -1  10 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBRogue": "$ git rev-parse HEAD\nf76e2e813a880a05205eee1cb086830ebea3c48b\n$ git log --oneline -1\nf76e2e8 a rogue change, never judged (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title               Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  ad53dbf  An unjudged change  solver  z6Mks8i\u2026PwPKX6A  -        b4b526b  +1  -0  2 minutes ago         \u2502\n\u2502 \u2713  b442a46  fix add() on B      solver  z6Mks8i\u2026PwPKX6A  -        1ab09c9  +1  -1  2 minutes ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+   },
+   "fetches": 23,
+   "testRuns": [
+    [
+     "v2",
+     "a",
+     "6a9d5b62657080cdd4cbf5a1cc3414e805b70aca",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "6a9d5b62657080cdd4cbf5a1cc3414e805b70aca",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "6a9d5b62657080cdd4cbf5a1cc3414e805b70aca",
+     0
+    ],
+    [
+     "v1",
+     "b",
+     "1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4",
+     0
+    ],
+    [
+     "v3",
+     "b",
+     "1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4",
+     0
+    ],
+    [
+     "genesis",
+     "b",
+     "1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4",
+     0
+    ],
+    [
+     "v2",
+     "b",
+     "1ab09c9c2f613b8c392d4b004cf2ab9aafc005b4",
+     0
+    ],
+    [
+     "v1",
+     "a",
+     "56c6524a3d81b6c9634c229048936902c34757b5",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "56c6524a3d81b6c9634c229048936902c34757b5",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "56c6524a3d81b6c9634c229048936902c34757b5",
+     0
+    ]
+   ]
+  },
+  {
+   "run": 3,
+   "ranAt": "2026-11-18T19:58:18Z",
+   "wallSeconds": 315,
+   "radicle": "rad 1.10.3 (7e1cb406bb935c3de008d2171e8961f57b4336ea)",
+   "rpcCalls": 48548,
+   "results": {
+    "S": "PASS",
+    "a1": "PASS",
+    "b1": "PASS",
+    "a2": "PASS",
+    "b2": "PASS",
+    "b3": "PASS",
+    "a3": "PASS",
+    "b4": "PASS",
+    "a4": "PASS",
+    "b5": "PASS",
+    "a5": "PASS",
+    "b6": "PASS",
+    "a6": "PASS",
+    "b7": "PASS",
+    "a7": "PASS",
+    "b8": "PASS",
+    "a8": "PASS",
+    "b9": "PASS",
+    "a9": "PASS",
+    "b10": "PASS",
+    "L": "PASS",
+    "I": "PASS"
+   },
+   "qualification": {
+    "checks": 24,
+    "wallSeconds": 27,
+    "chainSeconds": 21609
+   },
+   "qualificationV4": {
+    "checks": 24,
+    "wallSeconds": 41
+   },
+   "seatChanges": [
+    {
+     "scenario": "a1",
+     "title": "Hand over to the seats on-chain",
+     "delegatesBefore": 1,
+     "thresholdBefore": 1,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 1,
+     "verdictsAsked": 1,
+     "acceptedIn": 0.34
+    },
+    {
+     "scenario": "a4",
+     "title": "Seat added: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 5,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.51
+    },
+    {
+     "scenario": "a5",
+     "title": "Seat removed: v2 left",
+     "delegatesBefore": 5,
+     "thresholdBefore": 3,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.52
+    },
+    {
+     "scenario": "a6",
+     "title": "Below the floor: v4",
+     "delegatesBefore": 4,
+     "thresholdBefore": 3,
+     "delegatesAfter": 3,
+     "thresholdAfter": 2,
+     "revisions": 1,
+     "signatures": 3,
+     "verdictsAsked": 3,
+     "acceptedIn": 1.52
+    },
+    {
+     "scenario": "a6",
+     "title": "Back above the floor: v4",
+     "delegatesBefore": 3,
+     "thresholdBefore": 2,
+     "delegatesAfter": 4,
+     "thresholdAfter": 3,
+     "revisions": 1,
+     "signatures": 2,
+     "verdictsAsked": 2,
+     "acceptedIn": 0.97
+    }
+   ],
+   "convergence": [
+    {
+     "what": "identity revision f1d8b23",
+     "scenario": "a1",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.45,
+     "perNode": {
+      "owner": 0.4,
+      "genesis": 0.42,
+      "v3": 0.43,
+      "solver": 0.43,
+      "v2": 0.43,
+      "v4": 0.43,
+      "v1": 0.45
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A after gated push 3 of 4",
+     "scenario": "a2",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.5,
+     "perNode": {
+      "owner": 0.48,
+      "v3": 0.49,
+      "v4": 0.49,
+      "solver": 0.5,
+      "v2": 0.5,
+      "v1": 0.5,
+      "genesis": 0.5
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of B after 1 push",
+     "scenario": "b3",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.48,
+     "perNode": {
+      "genesis": 0.44,
+      "owner": 0.44,
+      "v2": 0.45,
+      "v3": 0.46,
+      "solver": 0.46,
+      "v4": 0.46,
+      "v1": 0.48
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision e9d71a6",
+     "scenario": "a4",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.36,
+     "perNode": {
+      "v2": 0.35,
+      "owner": 0.35,
+      "genesis": 0.36,
+      "v3": 0.36,
+      "v1": 0.36,
+      "solver": 0.36,
+      "v4": 0.36
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 2b63e04",
+     "scenario": "a5",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.42,
+     "perNode": {
+      "genesis": 0.4,
+      "v2": 0.4,
+      "v3": 0.41,
+      "owner": 0.41,
+      "v1": 0.42,
+      "v4": 0.42,
+      "solver": 0.42
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision 919ac0a",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.36,
+     "perNode": {
+      "genesis": 0.34,
+      "owner": 0.35,
+      "solver": 0.35,
+      "v3": 0.36,
+      "v4": 0.36,
+      "v1": 0.36,
+      "v2": 0.36
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "identity revision f1d8bdd",
+     "scenario": "a6",
+     "nodes": 7,
+     "passive": 7,
+     "maxSeconds": 0.36,
+     "perNode": {
+      "v2": 0.34,
+      "owner": 0.34,
+      "v1": 0.35,
+      "v3": 0.36,
+      "genesis": 0.36,
+      "v4": 0.36,
+      "solver": 0.36
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "canonical main of A once v1 is back",
+     "scenario": "a7",
+     "nodes": 6,
+     "passive": 6,
+     "maxSeconds": 2.03,
+     "perNode": {
+      "owner": 2.02,
+      "v1": 2.02,
+      "genesis": 2.03,
+      "solver": 2.03,
+      "v2": 2.03,
+      "v3": 2.03
+     },
+     "forcedSyncOk": {}
+    },
+    {
+     "what": "v4 back after being offline",
+     "scenario": "a7",
+     "nodes": 1,
+     "passive": 0,
+     "maxSeconds": null,
+     "perNode": {
+      "v4": null
+     }
+    }
+   ],
+   "bounties": [
+    {
+     "repo": "a",
+     "bounty": 1,
+     "submission": 26,
+     "fix": "f9a8e1641486441f8e9721fcd9ac89e78f21b9c2",
+     "base": "ad2f661fe9aa42958f391a5bc0db8126e1125a68",
+     "patch": "a94dd93cf9836e3e585c4d8899f81b60a133561b",
+     "drawn": [
+      "genesis",
+      "v1",
+      "v3"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    },
+    {
+     "repo": "b",
+     "bounty": 2,
+     "submission": 28,
+     "fix": "1a0ce4ac5f8f053870dc777c402b838262927e00",
+     "base": "ad2f661fe9aa42958f391a5bc0db8126e1125a68",
+     "patch": "568097a56961bc2955983129e17222046380ab10",
+     "drawn": [
+      "v3",
+      "genesis",
+      "v2"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    },
+    {
+     "repo": "a",
+     "bounty": 3,
+     "submission": 56,
+     "fix": "97a6c63c173b7186c1cbf49ebad4b533d7104e89",
+     "base": "f9a8e1641486441f8e9721fcd9ac89e78f21b9c2",
+     "patch": "fe7d635299b1e4bba88a544bdf48c3c544d7ab82",
+     "drawn": [
+      "v1",
+      "genesis",
+      "v3"
+     ],
+     "k": 3,
+     "claimToFinalChainSeconds": 86400
+    }
+   ],
+   "belowFloor": {
+    "checks": 2,
+    "bond": 90000000,
+    "activeCount": 4,
+    "seats": 3
+   },
+   "offlineRecoverySeconds": 2.03,
+   "largestDelegateSet": {
+    "accepted": 255,
+    "refused": 256,
+    "error": "\u2717 Error: invalid delegates: number of delegates cannot exceed 255",
+    "updateMs255": "16"
+   },
+   "authorOfRejectedRevisionProposesAgain": "allowed",
+   "freshClone": {
+    "freshCloneA": "$ git rev-parse HEAD\nf9a8e1641486441f8e9721fcd9ac89e78f21b9c2\n$ git log --oneline -1\nf9a8e16 fix add() on A (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  a94dd93  fix add() on A  solver  z6Mko2v\u2026mqieibv  - - - -  f9a8e16  +1  -1  20 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBStale": "$ git rev-parse HEAD\nad2f661fe9aa42958f391a5bc0db8126e1125a68\n$ git log --oneline -1\nad2f661 genesis: add() is wrong (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  568097a  fix add() on B  solver  z6Mko2v\u2026mqieibv  -        1a0ce4a  +1  -1  8 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBUpdated": "$ git rev-parse HEAD\n1a0ce4ac5f8f053870dc777c402b838262927e00\n$ git log --oneline -1\n1a0ce4a fix add() on B (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title           Author                   Reviews  Head     +   -   Updated         Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u2713  568097a  fix add() on B  solver  z6Mko2v\u2026mqieibv  -        1a0ce4a  +1  -1  11 seconds ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+    "freshCloneBRogue": "$ git rev-parse HEAD\n5a7cf9d5a6111dea7f09fe2b3d50b846ba5cb762\n$ git log --oneline -1\n5a7cf9d a rogue change, never judged (proof-of-fix#251)\n$ rad patch list --all\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 \u25cf  ID       Title               Author                   Reviews  Head     +   -   Updated        Labels \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25cf  29055cd  An unjudged change  solver  z6Mko2v\u2026mqieibv  -        9e3a5a4  +1  -0  2 minutes ago         \u2502\n\u2502 \u2713  568097a  fix add() on B      solver  z6Mko2v\u2026mqieibv  -        1a0ce4a  +1  -1  2 minutes ago         \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f"
+   },
+   "fetches": 23,
+   "testRuns": [
+    [
+     "v1",
+     "a",
+     "f9a8e1641486441f8e9721fcd9ac89e78f21b9c2",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "f9a8e1641486441f8e9721fcd9ac89e78f21b9c2",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "f9a8e1641486441f8e9721fcd9ac89e78f21b9c2",
+     0
+    ],
+    [
+     "v2",
+     "b",
+     "1a0ce4ac5f8f053870dc777c402b838262927e00",
+     0
+    ],
+    [
+     "v3",
+     "b",
+     "1a0ce4ac5f8f053870dc777c402b838262927e00",
+     0
+    ],
+    [
+     "genesis",
+     "b",
+     "1a0ce4ac5f8f053870dc777c402b838262927e00",
+     0
+    ],
+    [
+     "v1",
+     "b",
+     "1a0ce4ac5f8f053870dc777c402b838262927e00",
+     0
+    ],
+    [
+     "v1",
+     "a",
+     "97a6c63c173b7186c1cbf49ebad4b533d7104e89",
+     0
+    ],
+    [
+     "v3",
+     "a",
+     "97a6c63c173b7186c1cbf49ebad4b533d7104e89",
+     0
+    ],
+    [
+     "genesis",
+     "a",
+     "97a6c63c173b7186c1cbf49ebad4b533d7104e89",
+     0
+    ]
+   ]
+  }
+ ]
+}

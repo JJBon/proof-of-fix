@@ -3,7 +3,9 @@
 # only after its head moves on-chain in Heads, and can nobody else move the canonical `main`?
 #
 #   scripts/radicle-spike.sh          build the node image, run every scenario, print pass/fail, clean up
-#   scripts/radicle-spike.sh clean    remove any containers and network a stopped run left behind
+#   scripts/radicle-spike.sh clean    remove any containers and network a stopped run left behind (v1's and v3's)
+#   scripts/radicle-spike.sh --v3     the spike under v3 (proof-of-fix#251): candidates (a) and (b) with the v3
+#                                     contracts on anvil and v3 node objects (spikes/radicle/v3_spike.py)
 #
 # Everything runs in Docker on a network created with --internal (no route out): an anvil with Heads deployed, three
 # judge nodes (the delegates), one outsider node, and a fresh "viewer" node per clone check. The only download is the
@@ -33,9 +35,16 @@ clean() {
   docker network rm "$NET" >/dev/null 2>&1 || true
 }
 
-if [[ "${1:-}" == clean ]]; then clean; echo "cleaned"; exit 0; fi
-[[ $# -eq 0 ]] || { sed -n '5,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+if [[ "${1:-}" == clean ]]; then clean; python3 spikes/radicle/v3_spike.py clean >/dev/null; echo "cleaned"; exit 0; fi
+[[ $# -eq 0 || "$1" == --v3 ]] || { sed -n '5,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [[ -f "$SOLC" ]] || { echo "solc missing; run: scripts/contracts.sh setup" >&2; exit 1; }
+if [[ "${1:-}" == --v3 ]]; then
+  # Under v3 (#251): the same image and isolation rules; the run, its scenarios and its clean-up are in Python, as
+  # the v3 node objects it drives are. Results and node logs: .radicle-spike/v3/.
+  echo "building $IMAGE (pinned Radicle release, sha256-checked) ..."
+  docker build -q -t "$IMAGE" spikes/radicle >/dev/null
+  POF_SOLC="$SOLC" exec python3 spikes/radicle/v3_spike.py run "${@:2}" </dev/null
+fi
 
 # --- helpers -------------------------------------------------------------------------------------------------------
 declare -A DID RESULT

@@ -49,8 +49,8 @@ Whatever merge model the spike chooses, a canonical `main` on Radicle that diffe
 - **WHEN** enough delegates push a commit the chain never judged and it becomes the canonical `main`
 - **THEN** `pofctl verify-head` reports the mismatch, and validators keep judging against the head on-chain
 
-### Requirement: Delegates follow the seats, if the spike chooses delegates
-If the spike chooses the seated validators as delegates (candidate a), each seated validator's node SHALL sign only an identity revision whose delegates equal the seats on-chain, and a `verify-delegates` check SHALL compare the identity document's delegates with the seats and fail on a difference.
+### Requirement: Delegates follow the seats
+The seated validators SHALL be the repository's delegates (candidate a, decided 2026-11-18). Each seated validator's node SHALL sign only an identity revision whose delegates equal the seats on-chain, and a `verify-delegates` check SHALL compare the identity document's delegates with the seats and fail on a difference.
 
 #### Scenario: A validator is seated
 - **WHEN** a validator becomes seated on-chain and its node has published `main` at the head
@@ -59,3 +59,17 @@ If the spike chooses the seated validators as delegates (candidate a), each seat
 #### Scenario: A revision that doesn't match the chain
 - **WHEN** a delegate proposes a revision adding a key that isn't seated on-chain
 - **THEN** every honest seated node refuses it, and `verify-delegates` fails if it is ever accepted
+
+### Requirement: A seat maps to one Radicle node key on-chain
+Each validator SHALL record its Radicle node ID on-chain when it registers, and `verify-delegates` SHALL read the seats' node IDs from the chain. A seat without a node ID SHALL NOT be counted as a delegate.
+
+#### Scenario: A seated validator without a node ID
+- **WHEN** a validator is seated but registered no Radicle node ID
+- **THEN** no honest node signs an identity revision adding a key for it, and `verify-delegates` reports the seat as unmapped
+
+### Requirement: One pending identity revision at a time
+A seated node SHALL NOT propose a new identity revision while an earlier one is pending, and SHALL review pending revisions in order.
+
+#### Scenario: Two seat changes close together
+- **WHEN** two seat changes happen before the first revision is accepted
+- **THEN** the second revision is proposed only after the first is accepted or rejected, and the delegates end equal to the seats on-chain

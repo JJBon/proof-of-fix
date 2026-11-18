@@ -155,7 +155,7 @@ class EndToEnd(unittest.TestCase):
         readme = self.show("README.md")
         self.assertIn("At example.com.", readme)
         self.assertNotIn(PRIVATE, readme)
-        self.assertIn("Private snapshot", readme)
+        self.assertIn("A scrubbed snapshot", readme)
         files = git("ls-tree", "--name-only", "refs/heads/snapshot", cwd=self.target).split()
         self.assertEqual(sorted(files), ["README.md", "code.py"])  # old.txt is gone
         self.assertIn("Trailer: one", git("log", "-1", "--format=%B", "refs/heads/snapshot", cwd=self.target))
@@ -185,6 +185,38 @@ class EndToEnd(unittest.TestCase):
         git("commit", "-q", "-m", "x", cwd=self.source)
         rc, _ = self.run_it("--push")
         self.assertEqual((rc, self.head()), (1, self.before))
+
+
+class Visibility(unittest.TestCase):
+    """The target's visibility: private always; public only with --allow-public, and never changed by the script."""
+
+    def fake_run(self, visibility):
+        def run(args):
+            if args[:3] == ["gh", "api", "user"]:
+                return '{"login": "someone", "id": 7}'
+            if args[:3] == ["gh", "repo", "view"]:
+                return '{"visibility": "%s"}' % visibility
+            raise AssertionError(f"unexpected command: {args}")
+        return run
+
+    def target(self, visibility, allow_public):
+        original = snap.run
+        snap.run = self.fake_run(visibility)
+        try:
+            return snap.github_target("proof-of-fix", allow_public)
+        finally:
+            snap.run = original
+
+    def test_private_is_accepted(self):
+        self.assertEqual(self.target("PRIVATE", False)[0], "https://github.com/someone/proof-of-fix.git")
+
+    def test_public_is_refused_by_default(self):
+        with self.assertRaises(SystemExit) as caught:
+            self.target("PUBLIC", False)
+        self.assertIn("isn't private", str(caught.exception))
+
+    def test_public_is_accepted_with_allow_public(self):
+        self.assertEqual(self.target("PUBLIC", True)[0], "https://github.com/someone/proof-of-fix.git")
 
 
 if __name__ == "__main__":

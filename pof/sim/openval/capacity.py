@@ -22,6 +22,11 @@ Each rule is a named switch of `Params`, off by default and read only by `CapNet
 - `LANE_PER_ID_DAY` (POST HOC): an identity in the second class may submit at most that many fixes in any trailing 24
   hours; beyond it the submission is refused before anything is checked (fresh identities defeat it on a testnet).
 
+The faucet (#251 task 3.15, POST HOC to report v6; report faucet-spam-v1): with `JUDGE_FEE` on and the spammer's
+`usdc_day` set, every junk fix pays the judges' fee from a wallet that only Circle's faucet fills, at `usdc_day` USDC a
+day (ASSUMED, swept: one address's limit up to many addresses, or one account). A slot the wallet can't pay for is
+skipped, so the junk's rate is min(the intended rate, usdc_day / JUDGE_FEE). None (the default): no limit, as before.
+
 World (`World.repos`, `honest_rep0`, `new_solvers`; ASSUMED): honest submissions spread evenly over `repos`
 repositories; honest solvers start with `honest_rep0` of reputation, except the first `new_solvers`, who start at 0.
 
@@ -30,6 +35,7 @@ nothing (a testnet) or the judges' fee (`JUDGE_FEE`, as on a real-money chain). 
 (ASSUMED: it buys checks, not payouts; report v5's free identities cover bad fixes meant to pass).
 
     python3 -m pof.sim.openval.capacity [--seeds 40] [--jobs 15] [--out DIR] [--render DIR]
+    python3 -m pof.sim.openval.capacity --only faucet --seed0 41 --seeds 40 --jobs 15 --out DIR  (report faucet-spam-v1)
 
 No model call: verdicts are replayed from data/judges/verdicts-v2.matrix.json (#160).
 """
@@ -55,6 +61,13 @@ from .params import DAY, HOUR, WEEK, WORLD, Params, World
 
 T_REPO = 0x4E9051  # randomness tag: an honest submission's repository
 T_SPAM = 0x5BA111  # ...the spammer's own draws
+# Circle's public faucet (faucet.circle.com, read 2026-11-18): 20 USDC a request, one request per address and
+# blockchain every 2 hours, no account, reCAPTCHA. The Developer Console faucet (account-gated; its page now
+# redirects to the public faucet, so the value is Circle's earlier docs' as indexed): 20 USDC a testnet a day
+FAUCET_DRIP = 20.0
+FAUCET_EVERY_H = 2.0
+FAUCET_ADDRESS_DAY = FAUCET_DRIP * 24 / FAUCET_EVERY_H  # 240 USDC a day: one address requesting every 2 hours
+FAUCET_ACCOUNT_DAY = 20.0  # one Developer Console account, one request a day on one testnet
 R_CAP = "capacity: too few validators free this hour"
 R_REPO = "repository: its checks this hour are at the cap"
 R_QUEUE = "queue: behind earlier submissions"
@@ -376,18 +389,35 @@ class Spammer(N.NDActor):
     reputation, which D29's cap then bounds; or, `idents` > 0, in turn from a pool of that many identities without
     reputation: identities that cost something, post hoc), to repository 0 (`spread` False) or every repository in
     turn; each to a random one of the week's listed issues it may claim (none: it skips). It never withdraws a waiting
-    submission. With `per_hour` 0, or as its own twin, it submits nothing."""
+    submission. With `per_hour` 0, or as its own twin, it submits nothing.
+
+    `usdc_day` (the faucet, post hoc): each junk fix pays `JUDGE_FEE` from a wallet the faucet fills at `usdc_day` USDC
+    a day, continuously from 0 at the start (no stockpile); a slot whose wallet holds less than the fee is skipped
+    (`count["unfunded"]`). The wallet is the spammer's alone: fresh identities still cost nothing, since USDC moves
+    freely between addresses."""
     TAG = 21
     name = party = "spammer"
 
     def __init__(self, honest: bool = False, w: World = WORLD, per_hour: float = 0.0, spread: bool = False,
-                 reputable: bool = False, idents: int = 0):
+                 reputable: bool = False, idents: int = 0, usdc_day: Optional[float] = None):
         super().__init__(honest, w, per_week=per_hour * WEEK / HOUR)
         self.spread, self.reputable, self.idents = spread, reputable, idents
+        self.usdc_day = usdc_day
+        self.wallet, self.wallet_t, self.usdc_in, self.usdc_paid = 0.0, 0.0, 0.0, 0.0
 
     def start(self, net: CapNet) -> None:  # type: ignore[override]
+        if self.usdc_day is not None and not (net.p.JUDGE_FEE > 0 and self.usdc_day >= 0):
+            raise ValueError("the faucet's income (usdc_day) needs JUDGE_FEE: junk pays the judges' fee from it")
         if self.reputable:
             net.rep[(self.party, "rep")] = REP0
+
+    def _funded(self, net: CapNet) -> bool:
+        """The faucet: the wallet's income since the last slot comes in; True when it holds the judges' fee."""
+        if self.usdc_day is None:
+            return True
+        got = self.usdc_day * (net.t - self.wallet_t) / DAY
+        self.wallet, self.wallet_t, self.usdc_in = self.wallet + got, net.t, self.usdc_in + got
+        return self.wallet >= net.p.JUDGE_FEE - 1e-9
 
     def slot(self, net: CapNet, i: int) -> None:  # type: ignore[override]
         if self.honest:
@@ -398,6 +428,12 @@ class Spammer(N.NDActor):
         if b is None:  # no listed issue it may claim
             self.count["skipped"] += 1
             return
+        if not self._funded(net):  # the faucet hasn't paid in the judges' fee yet
+            self.count["unfunded"] += 1
+            return
+        if self.usdc_day is not None:
+            self.wallet -= net.p.JUDGE_FEE
+            self.usdc_paid += net.p.JUDGE_FEE
         repo = i % max(1, net.w.repos) if self.spread else 0
         s = net.submit(net.t, b, False, self.name, self.party, ident=ident, key=60_000_000 + i, repo=repo)
         net.junk.add(s.sid)
@@ -458,6 +494,13 @@ def metrics(net: CapNet) -> Dict[str, float]:
     junk = [s for s in net.subs.values() if s.sid in net.junk]
     judged = [s for s in net.subs.values() if s.tier == ISSUE and s.drawn_t is not None]
     fee_in = net.p.JUDGE_FEE * len(judged)
+    # post hoc (the faucet's rows): the junk a day and the faucet requests it took, every validator's checks together
+    # (the launch's validators are all the owner's) and their model spend a month (30 days)
+    spam = [a for a in net.actors if isinstance(a, Spammer)]
+    out.update(junk_day=len(junk) / days, faucet_req_day=len(junk) * net.p.JUDGE_FEE / FAUCET_DRIP / days,
+               unfunded_day=sum(a.count["unfunded"] for a in spam) / days,
+               net_checks_day=sum(per_day), owner_month_low=sum(per_day) * 30 * COST_LOW,
+               owner_month_high=sum(per_day) * 30 * COST_HIGH)
     out.update(checks_day=mean(per_day), checks_day_max=max(per_day), hour_max=float(max(net.hour_max.values() or [0])),
                spend_low=mean(per_day) * COST_LOW, spend_high=mean(per_day) * COST_HIGH,
                spend_high_max=max(per_day) * COST_HIGH,
@@ -594,13 +637,54 @@ def rate_rows() -> List[Row]:
 
 
 LANE_TABLES: Dict[str, Callable[[], List[Row]]] = {"lane": lane_rows, "rate": rate_rows}
-ALL_TABLES: Dict[str, Callable[[], List[Row]]] = {**TABLES, **LANE_TABLES}
+
+
+# ---------- POST HOC: the faucet (#251 task 3.15, #132 task 13.7; report faucet-spam-v1, whose section 3.1 fixed these
+# rows and the criterion before their 40-seed runs on seeds 41-80) ----------
+
+FAUCET_SEEDS = tuple(range(41, 81))  # fresh seeds, as #132 task 13.7 asks: every earlier round used 1-40
+FAUCET_VALIDATORS = (7, 15)
+# The spammer's faucet income, USDC a day, by the junk it intends an hour. None: no limit (v6's fee rows). At the
+# judges' fee of $5.03, 1 junk fix an hour needs 121 USDC a day and 10 an hour 1,207: one address's limit (240) binds
+# only the high rate, and the rate-1 rows beyond 240 would repeat the 240 row
+FAUCET_INCOMES: Dict[float, Tuple[Optional[float], ...]] = {
+    0.0: (None,),
+    1.0: (FAUCET_ACCOUNT_DAY, FAUCET_ADDRESS_DAY),
+    10.0: (FAUCET_ACCOUNT_DAY, FAUCET_ADDRESS_DAY, 2 * FAUCET_ADDRESS_DAY, 5 * FAUCET_ADDRESS_DAY, None),
+}
+FAUCET_ORDERS: Tuple[Tuple[str, float], ...] = (("reputation", 0.0), ("reputation", 0.25), ("fifo", 0.0))
+
+
+def faucet_form(usdc_day: Optional[float]) -> str:
+    return "usdc:none" if usdc_day is None else f"usdc:{usdc_day:g}"
+
+
+def faucet_rows() -> List[Row]:
+    """The testnet's launch (one repository, no repository cap, L16), 7 and 15 validators at 5 an hour, both seats;
+    reputation first with no lane and with a lane of 25 % (#132 task 13.7), and arrival order; every submission pays
+    the judges' fee ($5.03), the spammer's from its faucet income, from fresh identities."""
+    rows: List[Row] = []
+    for seat, _ in SEATS:
+        for n in FAUCET_VALIDATORS:
+            w = replace(world(seat, n), repos=1)
+            for order, share in FAUCET_ORDERS:
+                for rate, incomes in FAUCET_INCOMES.items():
+                    for usdc in incomes:
+                        rows.append(("faucet", seat, n, 5, rate, order, None, faucet_form(usdc), w,
+                                     _p(5, order, JUDGE_FEE=FEE, NEWCOMER_LANE=share)))
+    return rows
+
+
+FAUCET_TABLES: Dict[str, Callable[[], List[Row]]] = {"faucet": faucet_rows}
+ALL_TABLES: Dict[str, Callable[[], List[Row]]] = {**TABLES, **LANE_TABLES, **FAUCET_TABLES}
 
 
 def run_one(row: Row, seed: int) -> CapNet:
     _, seat, n, cap, rate, order, rcap, form, w, p = row
     idents = int(form[4:]) if form.startswith("pool") else 0
-    a = Spammer(False, w, per_hour=rate, spread=form == "spread", reputable=form == "reputable", idents=idents)
+    usdc = None if not form.startswith("usdc:") or form == "usdc:none" else float(form[5:])
+    a = Spammer(False, w, per_hour=rate, spread=form == "spread", reputable=form == "reputable", idents=idents,
+                usdc_day=usdc)
     return CapNet(seed, p, w, [a]).run()  # type: ignore[return-value]
 
 
@@ -611,7 +695,8 @@ def _job(job) -> Dict[str, float]:
 
 def key_of(row: Row) -> str:
     table, seat, n, cap, rate, order, rcap, form, w, p = row
-    extra = (p.NEWCOMER_LANE, w.repos, p.LANE_PER_ID_DAY) if table in LANE_TABLES else ()
+    extra = ((p.NEWCOMER_LANE, w.repos, p.LANE_PER_ID_DAY) if table in LANE_TABLES
+             else (p.NEWCOMER_LANE, w.repos) if table in FAUCET_TABLES else ())
     return "|".join(map(str, (table, seat, n, cap, rate, order, rcap, form) + extra))
 
 
@@ -713,6 +798,37 @@ def render_lane(folder: str) -> str:
     return "\n".join(out)
 
 
+def render_faucet(folder: str) -> str:
+    """The post hoc table `faucet` (report faucet-spam-v1)."""
+    import json
+    path = Path(folder, "faucet.json")
+    if not path.exists():
+        return ""
+    data = json.loads(path.read_text())
+    out = [f"### Table `faucet` (mean ± 2 SE over {len(next(iter(data))[1]['n'])} seeds)\n",
+           "| Seat | Validators | Order | Spam intended /h | Faucet USDC /day | Junk /h | Faucet requests /day "
+           "| All > 24 h (%) | All withdrawn (%) | Newcomers > 24 h / withdrawn (%) | Newcomers wait median / p90 (h) "
+           "| Established > 24 h (%) | Checks / validator / day | Owner's spend $/month (all validators) "
+           "| Cleared (% of seeds) | Holds: all / newcomers |",
+           "|" + "---|" * 16]
+    yn = lambda b: "yes" if b else "**no**"  # noqa: E731
+    for key, m in data:
+        _, seat, n, cap, rate, order, rcap, form, share, repos = key.split("|")
+        seat = dict(SEATS).get(seat, seat)
+        order = "FIFO" if order == "fifo" else "reputation" + (f", lane {100 * float(share):.0f} %"
+                                                               if float(share) else "")
+        usdc = "–" if float(rate) == 0 else "no limit" if form == "usdc:none" else f"{float(form[5:]):,.0f}"
+        new = (f"{ms(m['new_over24'])} / {ms(m['new_withdrawn'])}" if order != "FIFO" else "–")
+        newwait = f"{_h(m['new_wait_med'])} / {_h(m['new_wait_p90'])}" if order != "FIFO" else "–"
+        out.append(f"| {seat} | {n} | {order} | {float(rate):g} | {usdc} | {ms(m['junk_day'], 2, 1 / 24)} | "
+                   f"{ms(m['faucet_req_day'], 1)} | {ms(m['over24'])} | {ms(m['withdrawn'])} | {new} | {newwait} | "
+                   f"{ms(m['est_over24']) if order != 'FIFO' else '–'} | {ms(m['checks_day'], 0)} | "
+                   f"{mean(m['owner_month_low']):,.0f}–{mean(m['owner_month_high']):,.0f} | {ms(m['cleared'], 0)} | "
+                   f"{yn(holds(m))} / {yn(holds(m, 'new_')) if order != 'FIFO' else '–'} |")
+    out.append("")
+    return "\n".join(out)
+
+
 def main(argv=None) -> int:
     import json
     import time
@@ -720,15 +836,17 @@ def main(argv=None) -> int:
     ap.add_argument("--seeds", type=int, default=40)
     ap.add_argument("--jobs", type=int, default=1)
     ap.add_argument("--only", default="", help="comma-separated: " + ", ".join(ALL_TABLES) + " (default: "
-                    + ", ".join(TABLES) + "; the post hoc lane and rate only when named)")
+                    + ", ".join(TABLES) + "; the post hoc lane, rate and faucet only when named)")
+    ap.add_argument("--seed0", type=int, default=1, help="the first seed (the faucet's rows: 41, FAUCET_SEEDS)")
     ap.add_argument("--out", default="", help="write each table's raw results to OUT/<table>.json")
     ap.add_argument("--render", default="", help="print the report's tables from the raw results in this folder")
     a = ap.parse_args(argv)
     if a.render:
         print(render(a.render))
         print(render_lane(a.render))
+        print(render_faucet(a.render))
         return 0
-    seeds = list(range(1, a.seeds + 1))
+    seeds = list(range(a.seed0, a.seed0 + a.seeds))
     for name in [x for x in a.only.split(",") if x] or list(TABLES):
         t0 = time.time()
         data = run_rows(name, seeds, a.jobs)

@@ -1,10 +1,19 @@
 # proof-of-fix
 
-> Private snapshot for sharing. Development happens on a private Forgejo, which keeps the full history; issue numbers (`#123`) refer to its tracker, and example.com and example-org stand in for internal addresses.
+> A scrubbed snapshot. Development happens on a private Forgejo, which keeps the full history; issue numbers (`#123`) refer to its tracker, and example.com and example-org stand in for internal addresses.
 
 **Bounties for open-source fixes, judged by independent AI validators, paid by keyless smart contracts.**
 
 Anyone funds a bounty on an issue. The first fix that passes wins its price. Validators drawn at random check each fix, each running its own AI model on its own infrastructure, and **the contract pays every validator for the checks it counts.** Nobody, the owner included, can change the rules except by a new version.
+
+## Intended use
+
+proof-of-fix is **research**: a mechanism, its simulations and a reference implementation, published to get feedback and collaborators. The design's known flaws are written up openly, starting with [`docs/paper/open-problems.md`](docs/paper/open-problems.md).
+
+- **The only deployment its authors run** is a test deployment on **Ethereum Sepolia**, a public test chain whose coins have no value. Its contracts serve **one repository, proof-of-fix itself**, and refuse to deploy on any other chain (design: [`openspec/changes/proof-of-fix-251-testnet-launch/`](openspec/changes/proof-of-fix-251-testnet-launch/)).
+- **Those limits bind that deployment, not the code.** The code is open; anyone may fork it and deploy it elsewhere. Such deployments are their operators' own, with their own responsibilities, and nothing here endorses them.
+- **No token sale, no promise of earnings.** Test bounties and fees are test USDC. Nothing in this repository is financial advice or an offer of anything of value.
+- **Not audited.** The contracts haven't had an external security audit. Don't put real money in them.
 
 ## Where it stands
 
@@ -367,3 +376,14 @@ Python 3.9 or later, standard library only. A real bounty on the AWS devnet: the
 ## Working here
 
 Same pipeline as our other repositories: a Forgejo ticket first, a branch and commits keyed to it, an OpenSpec change for anything that changes the mechanism, and a pull request that passes `pof / check`.
+
+## Licence
+
+Licensed under either of
+
+- the Apache License, Version 2.0 ([`LICENSE-APACHE`](LICENSE-APACHE)), or
+- the MIT licence ([`LICENSE-MIT`](LICENSE-MIT)),
+
+at your option. Unless you explicitly state otherwise, any contribution you intentionally submit for inclusion in this work, as defined in the Apache-2.0 licence, shall be dual-licensed as above, without any additional terms or conditions.
+
+Third-party code under `contracts/lib/` keeps its own licences ([`contracts/lib/README.md`](contracts/lib/README.md)).

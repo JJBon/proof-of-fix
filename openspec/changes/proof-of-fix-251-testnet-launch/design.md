@@ -18,7 +18,7 @@
 | R+F's protection | Report v5's result rests on active honest solvers finding failing tests, i.e. D21's dispute, which isn't in the contracts (#132 task 10.4) | — |
 | Enclave validators with a model | The v3 node refuses registration checks with a model judge, and stays silent on them (paying the silence slash); it finds fixes only through a forge's pull requests | `oracle/node_v3.py` `_registration`, `_find_pull` |
 | Funding from pofctl | `pofctl` speaks v2 only, and its keys are devnet keys it refuses to use on a public chain | `pofctl/` |
-| Open code | No licence file; every contract says `SPDX-License-Identifier: UNLICENSED` (29 files) | #158's licence gate |
+| Open code | (fixed 2026-11-18) Was: no licence file and `UNLICENSED` headers. Now "MIT OR Apache-2.0" with `LICENSE-MIT` and `LICENSE-APACHE` | #158's licence gate |
 | Publishing from the snapshot | `scripts/github_snapshot.py` targets GitHub only and refuses any target that isn't private | its `PRESETS` and target check |
 
 ## Goals / Non-Goals
@@ -141,6 +141,12 @@ The question: who signs Radicle's canonical `main` when the judges change with e
   3. (c): a desk study only, unless #94's enclave key provider exists by then;
   4. for each, a validator fetching a patch's commit and judging it (L12).
 - **The spike decides.** Its report names the choice and the reasons; the owner accepts it; then the adapter (task 4.1) is built for that choice.
+- **Decided (owner, 2026-11-18): (a), with (b)'s checks** as what tools rely on (`reports/radicle-spike-v2.md`, #261: 22 scenarios, 3 runs in a row). Conditions from the spike:
+  1. **Each validator's Radicle node ID goes on-chain at registration**, so a seat maps to exactly one node key, and `verify-delegates` reads it from the chain. Today v3 has no such link; the spike carried signed bindings in the identity document instead.
+  2. **`BelowFloor` (L5) is built**, so seats are the drawable validators.
+  3. **The gate and the revision review run in the node's adapter (task 4.1)**, with **one pending identity revision at a time**: Radicle 1.10.3 blocks a delegate's second proposal while an earlier one is pending.
+  4. **`rad sync` takes the RID as a positional argument** in Radicle 1.10.3. The `--rid` form fails, and every caller hid the error. It is fixed in #190's `gate.sh` and still to fix in `oracle/radicle.py`, the v1 spike script and `tests/integration/radicle.py` (task 4.1).
+- **Measured:** each seat change is one identity revision; every node converges in 0.36–0.50 s; Radicle accepts up to 255 delegates; with 2 of 4 delegates offline, `main` lags and `verify-head` flags it until one returns. A rogue majority can move `main` and the delegates, and the checks catch it.
 
 ### L12. Bounties on Radicle
 - **The issue:** an on-chain issue carries a Radicle issue id (the issue's collaborative-object id, 20 bytes) in its registration. The registration check reads the Radicle issue the way v2's bot reads a labelled forge issue: its text claims the registration (`bot/logic`'s claim format).
@@ -168,6 +174,9 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 - **Spam on the testnet is not solved, and the launch says so.** Junk from free identities floods honest fixes once it exceeds the network's capacity (about 10 junk fixes an hour against 7 validators). Neither reputation-first ordering nor a newcomer lane fixes it for newcomers: the lane fails at every share tested. What would fix it is an identity that costs something (D32, #132 task 13.7). That is in tension with L17's freely mintable test coin, which makes identities and bonds free. Until 13.7 is decided, the launch relies on capacity for validators' wallets, D29's claim cap, and watching the queue; heavy spam is a known risk in the README and the paper.
 
 ### L17. The fee coin on Sepolia (decided by the owner on 2026-11-18: option 2, Circle's Sepolia USDC; changed from option 1 the same day)
+- **Amounts on Sepolia (owner, 2026-11-18, from `reports/faucet-spam-v1.md`, #260):**
+  - **Judges' fee: $40 in test USDC per submission** (two faucet requests), the top of the report's $20–40 range, because the owner's model budget for the launch validators is $30–50 a month. An honest newcomer's first fix costs two faucet requests.
+  - **Validator bond: $250**, set at deploy, so a single judge's bounty limit is $125. $1,250 bonds aren't fundable from the faucet: 7 need about 438 requests and 15 about 938. The owner asks Circle on its Discord for more test USDC; a later deployment can raise the bond.
 - **Decided: Circle's Sepolia USDC.** Bonds, pledges and the judges' fee (D30) are paid in it, so every submission costs USDC that only a rate-limited faucet hands out. This is the identity cost report v6's post hoc run found necessary against spam (D32): a mintable coin made identities and junk free.
 - **Why not option 1 any more:** a keyless coin anyone can mint makes bonds and fees free, so spam from fresh identities is unbounded (report v6, "Post hoc: the newcomer lane").
 - **The faucet's limits must be checked before relying on them** (task 3.15). Sources disagree: a secondary guide (Oct 2026) says Circle's public faucet gives 20 USDC every 2 hours per address and per chain, with no account; Circle's Developer Console faucet, a separate tool behind a developer account, lists 10–20 USDC a day. **A limit per address is weak:** addresses are free, so it costs a spammer only the faucet's own anti-abuse checks and time. An account-gated faucet costs more per identity. Task 3.15 measures which.
@@ -194,6 +203,7 @@ The question: who signs Radicle's canonical `main` when the judges change with e
   1. **Time-out:** a round whose replacements are exhausted ends at its reveal deadline plus `STUCK_GRACE`. The silent seats are slashed as today.
   2. **Back to waiting:** the submission returns to the waiting state, keeping its place, and is drawn again with a fresh seed when the eligible set grows or after `RETRY_DELAY`, whichever comes first.
   3. **Then refund:** after `MAX_REDRAWS` failed rounds, or at the bounty's deadline, the bounty is refunded to its funders. The solver's claim is released with no reputation loss and no slash, because the solver did nothing wrong.
+- **Audits too (found by the Radicle spike, #261):** when an audit falls due and no eligible validator outside the panel is left, the verdict never becomes final, and the keeper's `drawAudits` keeps retrying. The same rule applies: after `STUCK_GRACE` the audit is released, the verdict waits for an audit to be drawable, and the bounty is refunded after `MAX_REDRAWS` or at its deadline.
 - **Invariant:** every submission is, at every moment, in exactly one of these states: drawn with a live deadline, waiting with a scheduled redraw, final (paid or rejected), or refunded. No other state is reachable.
 - **Values** (proposed, to confirm by #256's scenario d and the simulation): `STUCK_GRACE` 24 h, `RETRY_DELAY` 24 h, `MAX_REDRAWS` 3.
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
 import {IFeesV3Validators, IFeesV3Scores} from "../../../src/v3/IFeesV3.sol";
