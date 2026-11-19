@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {IFeesV3, IFeesV3Validators, IFeesV3Scores} from "./IFeesV3.sol";
+import {LaunchChain} from "./LaunchChain.sol";
 
 /// Check fees for v3 (#132 task 3.3; design D9, D14, D19; specs/check-pricing, specs/judge-scores): v2's taxi fare with
 /// tolls (src/v2/Fees.sol), with prices set by market rules instead of a vote, and model families open.
@@ -46,8 +47,12 @@ import {IFeesV3, IFeesV3Validators, IFeesV3Scores} from "./IFeesV3.sol";
 /// **Quotes are stable.** Each closed period is an epoch; every unit keeps the history of its changes, so an attempt
 /// opened in epoch e is charged epoch e's prices, whatever later periods do.
 ///
+/// **One repository (#251, design L1).** The deployment serves one repository, and FeesV3 keeps its one CI profile
+/// (`repo`, `profileOf`); another repository's profile is refused. There is no default profile.
+///
 /// Keyless: no owner, no admin, no setter. The parameters are constants of the version; the genesis prices, the caps
-/// and the CI profiles are fixed at deployment. Prices move only by `roll`'s rules.
+/// and the CI profile are fixed at deployment. Prices move only by `roll`'s rules. The constructor reverts off Sepolia
+/// and the local test chains (LaunchChain).
 contract FeesV3 is IFeesV3 {
     uint256 public constant BPS = 10_000;
     uint256 internal constant M = 1e6; // unit prices are per million units
@@ -86,9 +91,8 @@ contract FeesV3 is IFeesV3 {
         bytes32[] families; // priced from the start (the genesis validator's at least); more arrive by D19
         uint256[3][] tokens; // per family: input, cached, output; each > 0
         Caps caps;
-        bytes32[] repos;
-        Profile[] profiles;
-        Profile defaultProfile; // a repository without its own
+        bytes32 repo; // the deployment's one repository, keccak256 of its Radicle RID (RaceV3.repo)
+        Profile profile; // its CI profile
         bool ciSingleRun;
     }
 
@@ -120,6 +124,7 @@ contract FeesV3 is IFeesV3 {
     IFeesV3Scores public immutable scores;
     address public immutable coin;
     bool public immutable ciSingleRun;
+    bytes32 public immutable repo;
     uint256 public immutable start; // period p is [start + p × PRICE_PERIOD, start + (p + 1) × PRICE_PERIOD)
 
     address public race;
@@ -154,8 +159,7 @@ contract FeesV3 is IFeesV3 {
     mapping(uint256 id => uint256) internal _epochOf; // epoch + 1
     mapping(uint256 id => uint256) internal _flags; // 1: waited, 2: stalled
     mapping(uint256 id => bool) public settled;
-    mapping(bytes32 repo => Profile) internal _profiles;
-    Profile internal _defaultProfile;
+    Profile internal _profile;
 
     event Bound(address indexed race);
     event Posted(address indexed validator, uint256 version, bytes32 table);
@@ -179,12 +183,14 @@ contract FeesV3 is IFeesV3 {
     error AlreadySettled();
     error Unpriced(bytes32 family);
     error RollInProgress();
+    error UnknownRepo(bytes32 repo);
 
     constructor(IFeesV3Validators validators_, IFeesV3Scores scores_, Genesis memory g) {
+        LaunchChain.check();
         uint256 f = g.families.length;
         if (address(validators_).code.length == 0 || address(scores_).code.length == 0) revert BadParams();
         if (g.coin == address(0) || f == 0 || g.tokens.length != f) revert BadParams();
-        if (g.repos.length != g.profiles.length || g.defaultProfile.timeoutSeconds == 0) revert BadParams();
+        if (g.repo == bytes32(0) || g.profile.timeoutSeconds == 0) revert BadParams();
         for (uint256 j; j < SHARED; ++j) {
             _genesisUnit(_unit(0, j), g.shared[j]);
         }
@@ -197,18 +203,15 @@ contract FeesV3 is IFeesV3 {
             _pricedAt[fam] = 1;
             _priced.push(fam);
         }
-        for (uint256 r; r < g.repos.length; ++r) {
-            if (g.profiles[r].timeoutSeconds == 0) revert BadParams();
-            _profiles[g.repos[r]] = g.profiles[r];
-        }
         validators = validators_;
         scores = scores_;
         coin = g.coin;
         ciSingleRun = g.ciSingleRun;
+        repo = g.repo;
+        _profile = g.profile;
         start = block.timestamp;
         _caps = g.caps;
         _fees[0] = FEE_CEILING; // FEE_START (#141)
-        _defaultProfile = g.defaultProfile;
     }
 
     // ---------- the race ----------
@@ -248,7 +251,7 @@ contract FeesV3 is IFeesV3 {
         }
     }
 
-    function settle(uint256 id, bytes32 repo, Report[] calldata counted, address relayer, uint256 gasUsed)
+    function settle(uint256 id, bytes32 repo_, Report[] calldata counted, address relayer, uint256 gasUsed)
         external
         returns (address[] memory to, uint256[] memory micro)
     {
@@ -262,7 +265,7 @@ contract FeesV3 is IFeesV3 {
         micro = new uint256[](n + 1);
         uint256 total;
         if (n != 0) {
-            Profile memory p = profileOf(repo);
+            Profile memory p = profileOf(repo_);
             Usage memory mid = _median(counted, p);
             uint256 shared = _storageCost(sh, mid);
             uint256 run = _sandboxCost(sh, mid);
@@ -528,24 +531,25 @@ contract FeesV3 is IFeesV3 {
         return _caps;
     }
 
-    function profileOf(bytes32 repo) public view returns (Profile memory p) {
-        p = _profiles[repo];
-        if (p.timeoutSeconds == 0) p = _defaultProfile;
+    /// The deployment's repository's CI profile; any other repository is refused.
+    function profileOf(bytes32 r) public view returns (Profile memory) {
+        if (r != repo) revert UnknownRepo(r);
+        return _profile;
     }
 
-    function maxDeposit(bytes32 repo, uint256 judges) external view returns (uint256) {
-        return _deposit(rolled, repo, judges);
+    function maxDeposit(bytes32 repo_, uint256 judges) external view returns (uint256) {
+        return _deposit(rolled, repo_, judges);
     }
 
-    function depositFor(uint256 id, bytes32 repo, uint256 judges) external view returns (uint256) {
+    function depositFor(uint256 id, bytes32 repo_, uint256 judges) external view returns (uint256) {
         uint256 e = _epochOf[id];
-        return _deposit(e == 0 ? rolled : e - 1, repo, judges);
+        return _deposit(e == 0 ? rolled : e - 1, repo_, judges);
     }
 
-    function shadowCost(uint256 id, bytes32 repo, bytes32 family, Usage calldata u) external view returns (uint256) {
+    function shadowCost(uint256 id, bytes32 repo_, bytes32 family, Usage calldata u) external view returns (uint256) {
         uint256 e = _epoch(id);
         uint256[4] memory sh = _sharedAt(e);
-        Usage memory c = _capped(u, profileOf(repo));
+        Usage memory c = _capped(u, profileOf(repo_));
         return _tokensCost(_tokensAt(family, e), c) + _sandboxCost(sh, c) + _storageCost(sh, c);
     }
 
@@ -553,7 +557,7 @@ contract FeesV3 is IFeesV3 {
     /// audit agrees"): the median of that panel's reports at the attempt's prices, as `settle` computes it, plus the
     /// service fee unscaled (the score factor is for counted seats, D14). No relayer's gas. A view: the race pays it
     /// once per panel, from what it holds.
-    function checkCost(uint256 id, bytes32 repo, Report[] calldata judges)
+    function checkCost(uint256 id, bytes32 repo_, Report[] calldata judges)
         external
         view
         returns (uint256[] memory micro)
@@ -563,7 +567,7 @@ contract FeesV3 is IFeesV3 {
         micro = new uint256[](n);
         if (n == 0) return micro;
         uint256[4] memory sh = _sharedAt(e);
-        Profile memory p = profileOf(repo);
+        Profile memory p = profileOf(repo_);
         Usage memory mid = _median(judges, p);
         uint256 base = _storageCost(sh, mid) + _fees[e];
         uint256 run = _sandboxCost(sh, mid);
@@ -889,10 +893,10 @@ contract FeesV3 is IFeesV3 {
     /// uncached and cached prices), at the dearest family priced in that epoch, each with its storage and the service
     /// fee at SCORE_FACTOR_MAX; the CI runs at the profile's limits (one with CI_SINGLE_RUN); the gas allowance at the
     /// gas price cap. Rounded up.
-    function _deposit(uint256 e, bytes32 repo, uint256 judges) internal view returns (uint256) {
+    function _deposit(uint256 e, bytes32 repo_, uint256 judges) internal view returns (uint256) {
         uint256[4] memory sh = _sharedAt(e);
         Caps memory c = _caps;
-        Profile memory p = profileOf(repo);
+        Profile memory p = profileOf(repo_);
         uint256 ai;
         for (uint256 i; i < _priced.length; ++i) {
             bytes32 f = _priced[i];

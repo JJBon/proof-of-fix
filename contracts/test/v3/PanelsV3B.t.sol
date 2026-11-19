@@ -96,12 +96,14 @@ contract PanelsV3BTest is PanelsSetup {
         }
     }
 
-    /// drawAudits from the current audit block, retrying once from a re-targeted block and snapshot.
+    /// drawAudits from the current audit block, retrying once from a re-targeted block and snapshot; not while the
+    /// audits wait for the registry to change (a repeat call is refused then, #251 task 3.10).
     function _drawAudits(uint256 id) internal {
         for (uint256 t; t < 2; ++t) {
             Submission memory s = pn.submission(id);
             if (s.auditDecided && s.auditsDrawn == s.auditsDue) return;
-            _rollPast(s.auditBlock);
+            if (s.auditWaits && reg.epoch() + 1 == s.auditEpoch) return;
+            if (!s.auditWaits) _rollPast(s.auditBlock);
             pn.drawAudits(id);
         }
     }
@@ -422,7 +424,7 @@ contract PanelsV3BTest is PanelsSetup {
         uint256 pa = _draw(a);
         assertEq(pn.panel(pa).k, 7);
         _judge(pa, _votes(7, 6));
-        assertEq(pn.submission(a).finalAt, vm.getBlockTimestamp() + 48 hours); // REMOVAL_WINDOW
+        assertEq(pn.submission(a).finalAt, vm.getBlockTimestamp() + pn.REMOVAL_WINDOW()); // 48 h in production
     }
 
     /// Scenario "An ADR that removes and adds": it isn't a removal, so it needs 21 and expires from 15.
@@ -482,7 +484,7 @@ contract PanelsV3BTest is PanelsSetup {
         uint256 a = _id();
         _openAdr(a, Tier.Adr);
         _judge(_draw(a), _votes(7, 7));
-        assertEq(pn.submission(a).finalAt, vm.getBlockTimestamp() + 14 days);
+        assertEq(pn.submission(a).finalAt, vm.getBlockTimestamp() + pn.ADR_WINDOW()); // 14 days in production
         _finalize(a);
         assertEq(usd.balanceOf(author), 15e6);
     }
@@ -499,7 +501,7 @@ contract PanelsV3BTest is PanelsSetup {
         _judge(_draw(a), _votes(7, 6));
         Submission memory s = pn.submission(a);
         assertEq(s.level, 3);
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 14 days);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.ADR_WINDOW());
     }
 
     // ---------- shadows (validator-admission, judge-panels) ----------

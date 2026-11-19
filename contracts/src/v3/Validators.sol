@@ -8,6 +8,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IValidators} from "./IValidators.sol";
+import {Windows, WindowsLib} from "./Windows.sol";
+import {LaunchChain} from "./LaunchChain.sol";
 
 /// The sponsors' pool's funding call (v2's `Pool.fund`): the registry's share of every slash goes there.
 interface IPoolFund {
@@ -33,6 +35,8 @@ interface IPoolFund {
 /// - zkTLS is in the code but can't be on the genesis list: level C is off at launch (D10). An adding ADR lists it with
 ///   its notaries; while it's listed at least one notary must be.
 /// - `simulated` is refused unless block.chainid is 31337 or 7193 (D18), at deployment and by ADR.
+/// - A TEE-only deployment (`teeOnly`, #251 design L10: Sepolia's) refuses zkTLS by ADR too, so level C can never be
+///   listed there: the genesis never lists it, and `applyAdr` reverts an ADR that adds it.
 /// - No ADR removes the last accepted TEE type or image digest (owner, 2026-11-03), nor PROOF_TEE (every TEE type).
 /// - A validator is in standing while its proof type, TEE type and image are listed and its attested firmware is at
 ///   least its type's minimum. One out of standing isn't drawn (counted or shadow) and keeps its bond and state. After
@@ -44,6 +48,12 @@ interface IPoolFund {
 /// States: Candidate → Active (automatic, by qualification) → Leaving → Exited; an Active validator below the
 /// reveal-rate floor goes back to Candidate (suspended) and re-qualifies the same way (validator-admission, "A
 /// validator stops being drawn when it can't serve").
+/// - BelowFloor (#251, design L5; validator-admission, "A validator below the bond floor is visibly inactive"): an
+///   Active validator whose bond falls below BOND_FLOOR (a slash) becomes BelowFloor in the same transaction, with
+///   `WentBelowFloor`; it leaves `activeCount` and is never drawn. A top-up to the floor brings it back to Active
+///   (`BackAboveFloor`) without qualifying again; it may also leave, under the same unbonding conditions. Its misses
+///   still count toward the reveal-rate floor. So `activeCount` is always the number of Active validators, and every
+///   Active validator is bonded at least BOND_FLOOR.
 /// - Qualification (D5): QUALIFY_VERDICTS scored shadow verdicts, a reveal rate of at least QUALIFY_REVEAL_BPS over the
 ///   attempt's shadow draws and an agreement of at least QUALIFY_AGREE_BPS. No vote; a failed attempt starts again
 ///   after QUALIFY_COOLDOWN. Panels decides what a shadow verdict is scored against (task 3.2).
@@ -67,13 +77,15 @@ interface IPoolFund {
 ///
 /// Unbonding: `leave` stops the draws at once; `withdraw` pays the operator account what's left, only UNBONDING_DELAY
 /// after leaving and once every counted verdict the validator gave is final and every challenge naming it is closed.
-/// It stays slashable until then.
+/// It stays slashable until then. UNBONDING_DELAY is derived from the deployment's windows (#251, design L4): the
+/// longest challenge window plus UNBONDING_MARGIN (504 h with the production windows).
 ///
 /// Genesis (D10, #141): at most GENESIS_MAX validators at deployment, at level A or B, bonded, attested and signed like
 /// any other, active from the start, and disclosed (`genesis` in its record, the `Registered` event).
 ///
 /// The hooks (counters, scores, finality, faults) are callable only by the consumer bound once (`bind`, v2's pattern):
-/// Panels, from its constructor. Keyless: no owner, no admin, no setter; every parameter is a constant.
+/// Panels, from its constructor. Keyless: no owner, no admin, no setter; every parameter is a constant or fixed at
+/// construction (the windows, `teeOnly`). The constructor reverts off Sepolia and the local test chains (LaunchChain).
 contract Validators is IValidators, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
@@ -89,8 +101,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     /// ACTIVE_REVEAL_MIN, 90 % over the last 50 counted draws: more than 5 misses among them suspends.
     uint256 public constant ACTIVE_REVEAL_WINDOW = 50;
     uint256 public constant ACTIVE_MISSES_MAX = 5;
-    /// The longest CHALLENGE_WINDOW of any (k, level), 336 h, plus 7 days.
-    uint256 public constant UNBONDING_DELAY = 504 hours;
+    /// Added to the longest challenge window for UNBONDING_DELAY (#132).
+    uint256 public constant UNBONDING_MARGIN = WindowsLib.UNBONDING_MARGIN;
     uint256 public constant GENESIS_MAX = 1;
     uint256 public constant FALSE_VERDICT_SLASH_BPS = 10_000;
     uint256 public constant EQUIVOCATION_SLASH_BPS = 10_000;
@@ -117,7 +129,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     bytes32 public constant REATTESTATION_TYPEHASH =
         keccak256("Reattestation(address key,bytes32 attestation,bytes32 image,uint32 firmware,uint32 nonce)");
     bytes32 public constant RECEIPT_TYPEHASH = keccak256(
-        "Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof)"
+        "Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof,address panels,uint256 pid,uint256 slot,address key)"
     );
     bytes32 public constant ADR_TAG = keccak256("proof-of-fix v3 adr");
     uint64 internal constant WINDOW_MASK = uint64((1 << 50) - 1);
@@ -142,6 +154,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         Registration[] validators; // at most GENESIS_MAX
         bytes[] signatures; // each by its validator's key
         uint256[] bonds; // pulled from the deployer, each at least BOND_FLOOR
+        Windows windows; // the deployment's windows, exactly Panels' (#251, L4): UNBONDING_DELAY derives from them
+        bool teeOnly; // refuse zkTLS by ADR as well as at genesis (#251, L10)
     }
 
     /// Where a validator sits in the draw's structures: its bucket (1 + the highest tier its bond covers, 0 when not
@@ -173,6 +187,12 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     address public immutable coin;
     address public immutable pool;
     bytes32 internal immutable _domain;
+    /// The longest challenge window of the deployment's windows plus UNBONDING_MARGIN (504 h with production values).
+    uint256 public immutable UNBONDING_DELAY;
+    /// keccak256(abi.encode(windows)): Panels' constructor checks its windows are these.
+    bytes32 public immutable windowsHash;
+    /// No zkTLS (level C) at genesis or by ADR (#251, L10).
+    bool public immutable teeOnly;
     /// The consumer whose hooks drive the counters, scores, finality and faults: Panels, bound once.
     address public panels;
     uint256 public epoch;
@@ -225,6 +245,10 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     event AdrPassed(uint256 indexed id, bool removal, bytes32 commitment);
     event AdrApplied(uint256 indexed id);
     event Listed(Op indexed op, bytes32 indexed id, uint32 firmware);
+    /// L5: an Active validator's bond fell below BOND_FLOOR (it is BelowFloor now, not counted, not drawn)...
+    event WentBelowFloor(address indexed key, uint256 bond);
+    /// ... and a top-up brought it back to Active.
+    event BackAboveFloor(address indexed key, uint256 bond);
 
     error BadParams();
     error AlreadyBound();
@@ -258,8 +282,14 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     error LastOne();
     error NoNotary();
     error BadChange();
+    error TeeOnly();
 
     constructor(Genesis memory g) {
+        LaunchChain.check();
+        WindowsLib.check(g.windows);
+        UNBONDING_DELAY = WindowsLib.unbondingDelay(g.windows);
+        windowsHash = keccak256(abi.encode(g.windows));
+        teeOnly = g.teeOnly;
         if (g.coin.code.length == 0 || g.pool.code.length == 0) revert BadParams();
         try IERC20Metadata(g.coin).decimals() returns (uint8 d) {
             if (d != 6) revert BadParams();
@@ -330,11 +360,12 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         _add(r, level, bond, false);
     }
 
-    /// Anyone adds to a candidate's or an active validator's bond (to get back to the floor after a slash, or to a
-    /// higher tier).
+    /// Anyone adds to a candidate's, an active or a below-floor validator's bond (to get back to the floor after a
+    /// slash, which makes a BelowFloor validator Active again without qualifying, or to a higher tier).
     function topUp(address key, uint256 amount) external nonReentrant {
         Validator storage v = _v[key];
-        if (v.state != State.Candidate && v.state != State.Active) revert WrongState();
+        State s = v.state;
+        if (s != State.Candidate && s != State.Active && s != State.BelowFloor) revert WrongState();
         uint256 received = _pull(msg.sender, amount);
         v.bond += uint128(received);
         totalBonds += received;
@@ -352,8 +383,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
             _removeCandidate(key);
         } else if (s == State.Active) {
             --activeCount;
-        } else {
-            revert WrongState();
+        } else if (s != State.BelowFloor) {
+            revert WrongState(); // a BelowFloor validator isn't counted: it just leaves
         }
         v.state = State.Leaving;
         v.leftAt = uint64(block.timestamp);
@@ -426,7 +457,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     /// removed image returns without qualifying again. It leaves the draws whose snapshot is older (as a top-up does).
     function reattest(address key, bytes32 attestation, bytes32 image, uint32 firmware, bytes calldata sig) external {
         Validator storage v = _v[key];
-        if (v.state != State.Candidate && v.state != State.Active) revert WrongState();
+        State s = v.state;
+        if (s != State.Candidate && s != State.Active && s != State.BelowFloor) revert WrongState();
         if (!_images[image].on) revert ImageNotAllowed();
         bytes32 tee = v.teeType;
         if (tee == bytes32(0)) {
@@ -449,11 +481,18 @@ contract Validators is IValidators, ReentrancyGuardTransient {
 
     /// Anyone moves validators the lists left out of standing (a raised minimum, a removed image or `simulated`) out of
     /// the tier counters, or back in once they're in standing again. The draw already skips them; this keeps k exact.
+    /// `epoch` moves only if a validator did (#251 task 3.10): a call that changes nothing can't re-open the draws,
+    /// audits and challenges that wait for the registry to change.
     function recheck(address[] calldata keys) external {
+        bool changed;
         for (uint256 i; i < keys.length; ++i) {
-            if (_v[keys[i]].state != State.None) _rebucket(keys[i]);
+            address key = keys[i];
+            if (_v[key].state == State.None) continue;
+            uint8 was = _place[key].bucket;
+            _rebucket(key);
+            if (_place[key].bucket != was) changed = true;
         }
-        ++epoch;
+        if (changed) ++epoch;
     }
 
     /// Anyone applies a passed ADR's operations (`changes`, with the ADR's text hash `text`), once: they must be what
@@ -500,8 +539,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
             _v[key].state = State.Active;
             ++activeCount;
             delete _p[key];
-            _rebucket(key);
             emit Activated(key);
+            _rebucket(key); // below the floor already (a suspended validator slashed meanwhile): BelowFloor at once
         } else {
             uint64 until = uint64(block.timestamp + QUALIFY_COOLDOWN);
             delete _p[key];
@@ -517,7 +556,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
             if (hasSeal) _slash(key, SEALED_NO_REVEAL_SLASH, address(0), Reason.SealedNoReveal);
             else _slash(key, SILENCE_SLASH, address(0), Reason.Silence);
         }
-        if (v.state != State.Active) return;
+        State s = v.state; // a miss's slash may just have taken it below the floor: its misses still count
+        if (s != State.Active && s != State.BelowFloor) return;
         Progress storage p = _p[key];
         uint64 bits = p.missBits;
         uint8 misses = p.misses;
@@ -531,7 +571,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         p.misses = misses;
         if (misses > ACTIVE_MISSES_MAX) {
             v.state = State.Candidate;
-            --activeCount;
+            if (s == State.Active) --activeCount;
             if (v.suspensions < type(uint8).max) ++v.suspensions;
             delete _p[key];
             _rebucket(key);
@@ -893,6 +933,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     /// rechecked (a raised minimum, a removed image or `simulated`); the draw skips it meanwhile.
     function _rebucket(address key) internal {
         Validator storage v = _v[key];
+        _floor(key, v);
         Place storage pl = _place[key];
         (bool standing,) = _standing(v);
         uint8 want = v.state == State.Active && v.bond >= BOND_FLOOR && standing ? _bucketFor(v.bond) : 0;
@@ -935,6 +976,22 @@ contract Validators is IValidators, ReentrancyGuardTransient {
             if (want > _rostered[key]) _rostered[key] = want;
         }
         pl.bucket = want;
+    }
+
+    /// L5: an Active validator whose bond is below BOND_FLOOR becomes BelowFloor (out of `activeCount`), and a
+    /// BelowFloor one bonded at the floor again becomes Active, each with its event, in the transaction that moved the
+    /// bond. Every bond change and every state change reaches here (`_rebucket`).
+    function _floor(address key, Validator storage v) internal {
+        State s = v.state;
+        if (s == State.Active && v.bond < BOND_FLOOR) {
+            v.state = State.BelowFloor;
+            --activeCount;
+            emit WentBelowFloor(key, v.bond);
+        } else if (s == State.BelowFloor && v.bond >= BOND_FLOOR) {
+            v.state = State.Active;
+            ++activeCount;
+            emit BackAboveFloor(key, v.bond);
+        }
     }
 
     /// In standing: its proof type, image and TEE type listed and its firmware at the type's minimum; and the latest
@@ -1029,8 +1086,9 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         } else if (op == Op.RemoveNotary) {
             if (_delist(_notaries[id])) --notaryCount;
         } else if (op == Op.AddProofType) {
-            // only a verifier path in this code; `simulated` only on a devnet (D18)
+            // only a verifier path in this code; `simulated` only on a devnet (D18); no zkTLS when TEE-only (L10)
             if (id != PROOF_TEE && id != PROOF_ZKTLS && (id != PROOF_SIMULATED || !_devnet())) revert NoVerifier();
+            if (id == PROOF_ZKTLS && teeOnly) revert TeeOnly();
             if (_list(_proofs[id]) && id == PROOF_ZKTLS) _group(id, true);
         } else {
             if (id == PROOF_TEE) revert LastOne(); // every TEE type at once

@@ -5,14 +5,16 @@ import {Test} from "forge-std/Test.sol";
 import {FeesV3} from "../../src/v3/FeesV3.sol";
 import {IFeesV3, IFeesV3Validators} from "../../src/v3/IFeesV3.sol";
 import {Panels} from "../../src/v3/Panels.sol";
-import {Status, Kind} from "../../src/v3/PanelsBase.sol";
+import {Status, Kind, Submission} from "../../src/v3/PanelsBase.sol";
 import {PoolV3} from "../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
 import {MockCoin} from "../mocks/MockCoin.sol";
+import {Heads} from "../../src/v2/Heads.sol";
 import {MockScores} from "./helpers/FeesV3Mocks.sol";
 import {ReplayRegistry, ReplayPanels} from "./helpers/ReplayStubs.sol";
+import {TEST_REPO, TEST_GENESIS_HEAD} from "./helpers/SuiteWindows.sol";
 
 /// Random races on RaceV3 (task 3.5; v2's RaceV2Invariant in v3's terms): every step a reporter, funder, solver,
 /// challenger, judge or keeper could take, in any order, with days passing and periods rolling. Panels' verdicts are
@@ -31,6 +33,7 @@ contract RaceV3Handler is Test {
     address[] public actors;
     address[] public keys;
     mapping(address => uint256) internal secretOf;
+    mapping(uint256 id => bytes32) internal baseOf; // each submission's committed base
     uint256 public issues;
     uint256 public subs; // the race's check ids run from 1 to this
     uint256 public stuck;
@@ -38,6 +41,7 @@ contract RaceV3Handler is Test {
     // how deep the runs go
     uint256 public results;
     uint256 public claims;
+    uint256 public merges;
     uint256 public clawbacks;
     uint256 public paidSettles;
     uint256 public refunds;
@@ -111,6 +115,11 @@ contract RaceV3Handler is Test {
         return 0;
     }
 
+    function _head() internal view returns (bytes32) {
+        (,,,, Heads h,,) = rc.contracts();
+        return h.head(TEST_REPO).commit;
+    }
+
     function _fix(uint256 id) internal pure returns (bytes32) {
         return keccak256(abi.encode("fix", id));
     }
@@ -119,7 +128,7 @@ contract RaceV3Handler is Test {
 
     function register(uint256 seed, bool pass) external {
         vm.prank(_actor(seed));
-        uint256 i = rc.register(bytes32(0), false);
+        uint256 i = rc.register(TEST_REPO, false);
         ++issues;
         uint256 check = rc.issue(i).check;
         subs = check;
@@ -148,9 +157,13 @@ contract RaceV3Handler is Test {
         if (st != RaceV3Base.State.Open && st != RaceV3Base.State.Won && st != RaceV3Base.State.Merged) return;
         address who = _actor(seed >> 8);
         uint256 next = subs + 1;
+        bytes32 base = _head(); // the head at the commitment: its claim moves the head only from it (#251, L1)
         vm.prank(who);
-        uint256 id = rc.commit(b, keccak256(abi.encode(_fix(next), bytes32(0), bytes32("salt"), who)));
-        if (id != 0) subs = id;
+        uint256 id = rc.commit(b, keccak256(abi.encode(_fix(next), base, bytes32("salt"), who)));
+        if (id != 0) {
+            subs = id;
+            baseOf[id] = base;
+        }
     }
 
     /// Panels counts a verdict: k judges (1 to 7) report and the result is posted.
@@ -202,8 +215,29 @@ contract RaceV3Handler is Test {
             rc.sync(id);
             return;
         }
-        rc.claim(b, _fix(id), bytes32(0), "salt");
+        rc.claim(b, _fix(id), baseOf[id], "salt"); // the head doesn't move here (#251, L9)
         ++claims;
+    }
+
+    /// A claimed fix whose verdict is final moves the head (#251, L9), unless its base is stale: then it reverts whole
+    /// and the winner keeps its place until mergeDays after its finality (`mergeExpired`).
+    function merge(uint256 seed) external {
+        uint256 b = _bountyIn(seed, RaceV3Base.State.Merged);
+        if (b == 0) return;
+        RaceV3Base.Award memory a = rc.award(b, rc.bounty(b).epoch);
+        if (a.merged || a.closed || pn.submission(a.sub).status != Status.Final) return;
+        if (!pn.submission(a.sub).pass) {
+            rc.sync(a.sub);
+            return;
+        }
+        if (baseOf[a.sub] != _head()) {
+            try rc.merge(b) {
+                _stuck("a stale merge went through");
+            } catch {}
+            return;
+        }
+        rc.merge(b);
+        ++merges;
     }
 
     function withdraw(uint256 seed) external {
@@ -220,6 +254,15 @@ contract RaceV3Handler is Test {
         if (b == 0) return;
         RaceV3Base.Bounty memory bt = rc.bounty(b);
         if (bt.state == RaceV3Base.State.Won && rc.day() > bt.mergeBy) rc.mergeExpired(b);
+        if (bt.state != RaceV3Base.State.Merged) return;
+        RaceV3Base.Award memory a = rc.award(b, bt.epoch);
+        Submission memory p = pn.submission(a.sub);
+        if (a.merged || p.status != Status.Final || rc.day() <= (p.finalAt - _start()) / 1 days + 14) return;
+        rc.mergeExpired(b); // claimed, final, not merged in time (a stale base): reopened, nothing earned
+    }
+
+    function _start() internal view returns (uint256 st) {
+        (,,,,,, st) = rc.contracts();
     }
 
     function sunset(uint256 seed) external {
@@ -347,7 +390,8 @@ contract RaceV3InvariantTest is Test {
         g.tokens[0] = [uint256(4_000_000), 200_000, 20_000_000];
         g.tokens[1] = [uint256(2_000_000), 100_000, 10_000_000];
         g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 50_000, 1 gwei);
-        g.defaultProfile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
+        g.repo = TEST_REPO;
+        g.profile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
         FeesV3 fees = new FeesV3(IFeesV3Validators(address(reg)), new MockScores(), g);
         ReplayPanels pn = new ReplayPanels(address(fees), address(usd), address(pool), address(reg));
         RaceV3Base.Config memory c;
@@ -369,7 +413,7 @@ contract RaceV3InvariantTest is Test {
         c.instalments = 4;
         Panels p = Panels(address(pn));
         RaceV3Annex ax = new RaceV3Annex(c, 625, 1e9, p, pool, block.timestamp);
-        rc = new RaceV3(c, 625, 1e9, p, pool, block.timestamp, new bytes32[](0), new bytes32[](0), "c", ax);
+        rc = new RaceV3(c, 625, 1e9, p, pool, block.timestamp, TEST_REPO, TEST_GENESIS_HEAD, "c", ax);
         usd.mint(address(this), 1e12);
         usd.approve(address(pool), type(uint256).max);
         pool.fund(address(usd), 1e12);
@@ -451,18 +495,21 @@ contract RaceV3InvariantTest is Test {
         handler.pledge(0, 100e6);
         handler.pledge(1, 100e6);
         handler.attempt(0);
+        // a seed s starts the handler's search at check s % subs + 1. One repository (#251, L1): bounty 2's fix is
+        // committed on the head bounty 1's claim moved, or its claim would be stale
         handler.commit(0); // bounty 1
-        handler.commit(1); // bounty 2
-        // a seed s starts the handler's search at check s % subs + 1
-        handler.judge(handler.subs() - 2, true); // bounty 1's submission
-        handler.judge(handler.subs() - 1, true); // bounty 2's
+        handler.judge(handler.subs() - 1, true); // bounty 1's submission
         handler.claim(0);
+        handler.commit(1); // bounty 2, on the same base: the head moves only at a merge (#251, L9)
+        handler.judge(handler.subs() - 1, true); // bounty 2's
         handler.claim(1);
         assertEq(handler.claims(), 2);
         handler.reverse(handler.subs() - 1); // bounty 2's pass reversed before finality: clawed back
         assertEq(handler.clawbacks(), 1);
         handler.finalize(handler.subs() - 2);
         handler.audit(handler.subs() - 2);
+        handler.merge(0); // bounty 1's final fix moves the head
+        assertEq(handler.merges(), 1);
         for (uint256 d; d < 6; ++d) {
             handler.passDays(7);
         }
@@ -479,5 +526,33 @@ contract RaceV3InvariantTest is Test {
         invariant_potsCoverAwards();
         invariant_settledPotsDrain();
         invariant_winnersPassed();
+        invariant_headNeverNamesAReversedFix();
+    }
+
+    /// #251 L9 (specs/canonical-head): the head never names a submission whose verdict is reversed. Whatever moved it
+    /// last is a merged award's fix, final in Panels and a pass, never closed by a clawback.
+    function invariant_headNeverNamesAReversedFix() public view {
+        (,,,, Heads h,,) = rc.contracts();
+        Heads.Head memory hd = h.head(TEST_REPO);
+        if (hd.submission == 0) {
+            assertEq(hd.commit, TEST_GENESIS_HEAD);
+            return;
+        }
+        Submission memory p = ReplayPanels(address(handler.pn())).submission(hd.submission);
+        assertEq(uint256(p.status), uint256(Status.Final), "the head's verdict is final");
+        assertTrue(p.pass, "the head's verdict is a pass");
+        RaceV3Base.Bounty memory bt = rc.bounty(hd.bounty);
+        bool found; // its merged award (an earlier award of the same check may have been clawed back, then won again)
+        for (uint256 e = 1; e <= bt.epoch; ++e) {
+            RaceV3Base.Award memory a = rc.award(hd.bounty, e);
+            if (a.sub == hd.submission && a.merged) {
+                assertFalse(found, "merged once");
+                found = true;
+                assertFalse(a.closed, "not clawed back");
+                assertEq(a.fix, hd.commit, "its fix");
+            }
+        }
+        assertTrue(found, "a merged award of its bounty");
+        assertEq(uint256(rc.submission(hd.submission).outcome), uint256(RaceV3Base.Outcome.Pass), "the race's pass");
     }
 }

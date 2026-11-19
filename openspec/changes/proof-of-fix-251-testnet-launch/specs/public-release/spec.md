@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Sets the gates every public step of proof-of-fix passes: the scrub, the owner's explicit go at the moment of the step, the published record of what was done, and the wording and legal checks the owner is asked to adopt.
+Sets the gates every public step of proof-of-fix passes: the scrub, the owner's explicit go at the moment of the step, the published record of what was done, and the wording checks the owner is asked to adopt.
 
 ## ADDED Requirements
 
@@ -44,10 +44,3 @@ If the owner adopts it, the README and the paper SHALL be checked before publish
 #### Scenario: A sentence about earnings
 - **WHEN** the check finds a sentence that says solvers or validators earn money on the testnet
 - **THEN** it is reworded to say the coins have no value, or the owner records why it stays
-
-### Requirement: A lawyer's review as a gate (accepted by the owner, 2026-11-18)
-If the owner adopts it, publishing on Radicle and deploying on Sepolia SHALL each wait for a lawyer's review of the repository and the deployment, and its outcome SHALL be recorded on the ticket, without the advice itself.
-
-#### Scenario: The review isn't done
-- **WHEN** the owner has adopted the review and it hasn't been recorded
-- **THEN** the step's go can't be given, and the tasks show the gate as open

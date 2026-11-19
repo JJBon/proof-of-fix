@@ -51,12 +51,13 @@ setup() {
 }
 
 # Runs a shell command in the image, offline: --network none leaves only the container's own loopback. FOUNDRY_*
-# variables pass through (e.g. FOUNDRY_INVARIANT_RUNS=256 for a deeper invariant run).
+# variables pass through (e.g. FOUNDRY_INVARIANT_RUNS=256 for a deeper invariant run), and POF_TEST_WINDOWS (the v3
+# suite's windows: production by default, `POF_TEST_WINDOWS=minutes scripts/contracts.sh test` for every hour a minute).
 in_container() {
   solc_ok || { echo "solc missing or altered; run: scripts/contracts.sh setup" >&2; exit 1; }
   verify
   local env=()
-  while IFS= read -r name; do env+=(-e "$name"); done < <(compgen -e | grep '^FOUNDRY_' || true)
+  while IFS= read -r name; do env+=(-e "$name"); done < <(compgen -e | grep -E '^(FOUNDRY_|POF_TEST_WINDOWS$)' || true)
   docker run --rm --network none --user "$(id -u):$(id -g)" "${env[@]}" \
     -v "$PWD/contracts:/work" -v "$PWD/$SOLC:/opt/solc/solc:ro" -w /work \
     --entrypoint sh "$IMAGE" -c "$1" sh "${@:2}"

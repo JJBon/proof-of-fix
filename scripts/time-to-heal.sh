@@ -7,11 +7,14 @@
 #   - a bad fix passed 2 to 1 by a panel of 3 with two lying judges, won and claimed, challenged at once, reversed by a
 #     fresh panel of 5 once five more validators are bonded for its bounty; the award is clawed back with nothing earned.
 # Each prints the time from the wrong pass to its reversal, split into: until the challenge, the challenge's wait for
-# a panel to exist, and the panel's own seal and reveal windows.
+# a panel to exist, and the panel's own seal and reveal windows. Under #251's L9 (contract batch 2) the head moves only
+# at a fix's finality (`merge`): the run also prints the wait L9 adds, from a good fix's claim to the merge a keeper
+# makes at its finality, and checks the reversed fix never reached the head.
 #
 # What it doesn't measure: detection (the watcher here challenges at once; its judge is the fake one), the
 # test-backed dispute, the solver's deposit and the appeal of D21-D23 (task 10.4: not built), and short test windows
-# (Panels' windows are constants, so these are the real windows' times on a clock the run moves).
+# (the devnet deploys the production windows by default, so these are the real windows' times on a clock the run
+# moves; DEVNET_V3_WINDOWS=minutes deploys every hour as a minute, #251 L4, which task 3.12 measures).
 #
 #   scripts/time-to-heal.sh [--report <file>] [--verbose]      about 7 minutes; needs Docker
 set -euo pipefail

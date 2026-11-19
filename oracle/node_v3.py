@@ -16,7 +16,10 @@ What it does:
    the `onchain` transport, and its usage report to RaceV3. Seals always go out before reveals in a pass.
 3. Its cost table, once a pricing period: its own shared-unit costs and every family's public list price (D9, D19).
 4. The keeper's calls anyone may make (ORACLE_KEEPER, on by default): draws, replacements, audits, challenge draws,
-   shadow settlement, finality, the result, the panels' pay, FeesV3's signals and roll.
+   shadow settlement, finality, the result, the panels' pay, FeesV3's signals and roll; since #251's contract batch 2
+   also the merge of a claimed fix once its verdict is final (L9: the head moves then, not at the claim), the release
+   of a stuck panel or of audits nobody can take (L19), the redraw of a waiting submission at its scheduled time, and
+   the refund of a check Panels released for good or parked at its deadline (RaceV3.release).
 5. `challenge`: re-runs a counted verdict's check and, if it disagrees or finds a false receipt, files a challenge
    with its evidence.
 
@@ -37,7 +40,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from . import evidence, receipt as receipts, v2, v3
-from .crypto import keccak256
+from .crypto import checksum, keccak256, word
 from .judge import FakeJudge, case_for, refused
 from .models import ModelError
 from .node_v2 import CHECKER_IMAGE, NodeV2, same
@@ -98,11 +101,17 @@ def build_table(chain, costs: dict | None, list_prices: dict, log=None) -> tuple
     return shared, families, tokens
 
 
-def receipt_faults(doc: dict, seat: dict, validator: dict, panel: dict, tests_passed: bool | None) -> list:
+def receipt_faults(doc: dict, seat: dict, validator: dict, panel: dict, tests_passed: bool | None,
+                   where: tuple | None = None) -> list:
     """Why a judge's receipt is false, as far as its document shows ([]: nothing found). `doc` is the stored receipt
     whose on-chain form hashes to the seat's posted receipt; `tests_passed`: this node's own run of the fix's tests
-    (None: not run)."""
+    (None: not run); `where`: (the Panels' address, the panel, the slot) the receipt was posted on, which its seat
+    fields must name with the seated key (#251 task 3.10: one seat's receipt can't be posted for another)."""
     on, why = v3.Receipt.from_json(doc["onchain"]), []
+    if where is not None:
+        panels, pid, slot = where
+        if on.seat() != (checksum(panels), pid, slot, checksum(seat["key"])):
+            why.append("it names another seat than the one it was posted on")
     if on.proof_type != v3.b32(validator["proofType"]):
         why.append("its proof type isn't the validator's registered one")
     if on.image != v3.b32(validator["image"]):
@@ -211,6 +220,7 @@ class NodeV3(NodeV2):
         self._said: set = set()
         self._tries: dict = {}
         self._kept: set = set()
+        self._live: dict | None = None
 
     # ---------- setup ----------
 
@@ -348,7 +358,7 @@ class NodeV3(NodeV2):
             self._finish(r, "its seal window closed before this node sealed")
             return True
         if not r.judged:
-            j = self._judge(r.submission, p, late=now > p["sealBy"] - self.seal_margin)
+            j = self._judge(r.submission, p, late=now > p["sealBy"] - self.seal_margin, seat=(r.pid, slot))
             r.vote, r.receipt, r.usage, r.judged = j.vote, j.receipt, j.usage, True
             if r.kind == v3.CHALLENGE:
                 r.mask = self._mask(p["ex"], j.tests_passed)
@@ -402,10 +412,11 @@ class NodeV3(NodeV2):
 
     # ---------- the check ----------
 
-    def _judge(self, s: int, p: dict, late: bool = False) -> Judgement:
+    def _judge(self, s: int, p: dict, late: bool = False, seat: tuple | None = None) -> Judgement:
         """Judges submission `s` for a panel drawn with `p`'s seed. Everything read from the chain and the host comes
         first, as in v2. `late`: the seal deadline is close, so a check that still can't be run is sealed as not
-        passed rather than left silent. Raises NotReady otherwise."""
+        passed rather than left silent. Raises NotReady otherwise. `seat`: (pid, slot) of the seat the receipt is for,
+        which it names (None for a challenger's own re-run, posted nowhere)."""
         sub = self.chain.submission(s)
         issue_id = self.chain.issue_of(sub)
         onchain = self.chain.issue(issue_id)
@@ -414,7 +425,7 @@ class NodeV3(NodeV2):
             answer, tests, fix_tree, seconds = self._registration(issue_id, onchain, late)
         else:
             answer, tests, fix_tree, seconds = self._fix(s, sub, issue_id, onchain, late)
-        return self._receipt(s, sub, p, answer, tests, fix_tree, seconds, profile)
+        return self._receipt(s, sub, p, answer, tests, fix_tree, seconds, profile, seat)
 
     def _fix(self, s: int, sub: dict, issue_id: int, onchain: dict, late: bool) -> tuple:
         pull = self._find_pull(s, sub)
@@ -475,7 +486,7 @@ class NodeV3(NodeV2):
             raise ModelError("registration checks with a model judge aren't supported yet")
         issues = evidence.host_call(self.host.issues, "all", logic.LABEL)
         claim = logic.first_valid_claim(issues, {"id": issue_id, "reporter": onchain["reporter"],
-                                                 "repo": onchain["repo"]}, self.repo_id, logic.LABEL)
+                                                 "repo": onchain["repo"]}, self._repo_id(), logic.LABEL)
         if claim is None and not late:
             raise evidence.NotReady(f"registration {issue_id} isn't claimed by a labelled issue yet")
         why = (f"issue #{claim} validly claims registration {issue_id}" if claim is not None else
@@ -488,14 +499,22 @@ class NodeV3(NodeV2):
         solves = (claim is not None) != self.judge.lie
         return Answer(solves, model, "fake", f"registration check: issue {issue_id}", text), _no_run(), "", 0.0
 
+    def _repo_id(self) -> bytes:
+        """The repository a registration must name: the configured one, else the deployment's own (v3 serves exactly
+        one, RaceV3.repo, #251 L1)."""
+        return self.repo_id if self.repo_id != v3.ZERO else self.chain.repo()
+
     def _receipt(self, s: int, sub: dict, p: dict, answer, tests: TestRun, fix_tree: str, seconds: float,
-                 profile: dict) -> Judgement:
+                 profile: dict, seat: tuple | None = None) -> Judgement:
         val = self.me()
         proof_type = v3.b32(val["proofType"])
+        where = (v3.ZERO,) * 4
+        if seat is not None:  # the seat it's for (#251 task 3.10): Panels, panel, slot, this validator's key
+            where = (v3.address_word(self.chain.panels), word(seat[0]), word(seat[1]), v3.address_word(self.address))
         bare = v3.Receipt(proof_type, v3.ZERO, keccak256(answer.model.encode()), v3.ZERO, v3.b32(val["image"]),
                           v3.b32(p["seed"]), hashlib.sha256(answer.prompt.encode()).digest(),
                           hashlib.sha256(answer.response.encode()).digest(), bytes.fromhex(tests.results_sha256),
-                          v3.ZERO)
+                          v3.ZERO, *where)
         if proof_type == v3.PROOF_ZKTLS:
             proof = self.prover.take()
             if proof is None:
@@ -510,7 +529,7 @@ class NodeV3(NodeV2):
                 raise SetupError(_quote_hint(proof_type, q.kind))
             notary, proof_bytes, kind = v3.ZERO, bytes.fromhex(q.quote), q.kind
             shown = {"kind": q.kind, "quote": q.quote, "report_data": q.report_data}
-        onchain = v3.Receipt(*bare.words()[:1], notary, *bare.words()[2:9], keccak256(proof_bytes))
+        onchain = v3.Receipt(*bare.words()[:1], notary, *bare.words()[2:9], keccak256(proof_bytes), *bare.words()[10:])
         inner = receipts.build(node=self.address, checker_image=CHECKER_IMAGE, model=answer.model,
                                backend=answer.backend, prompt=answer.prompt, response=answer.response,
                                fix_tree=fix_tree, tests=tests.record(), submission=s, bounty=sub["bounty"],
@@ -538,7 +557,8 @@ class NodeV3(NodeV2):
             if doc is None:
                 self.log(f"panel {original}: seat {slot}'s receipt isn't published here; not judged")
                 continue
-            why = receipt_faults(doc, seat, self.chain.validator(key), p, tests_passed)
+            why = receipt_faults(doc, seat, self.chain.validator(key), p, tests_passed,
+                                 (self.chain.panels, original, slot))
             if why:
                 mask |= 1 << slot
                 self.log(f"panel {original}: seat {slot}'s receipt is false: {'; '.join(why)}")
@@ -593,29 +613,45 @@ class NodeV3(NodeV2):
                 progress |= self._call(c.panels, "draw(uint256)", s) and self._call(c.race, "signal(uint256)", s)
             elif st == v3.WAITING:
                 self._call(c.race, "signal(uint256)", s, once=True)  # FeesV3 counts the wait once
-                progress |= self._call(c.panels, "draw(uint256)", s)
+                # redrawn once the registry changes or at its scheduled time (L19's RETRY_DELAY, L16's capacity hour)
+                if c.epoch() + 1 != v.get("waitEpoch", 0) or now >= v.get("retryAt", 0):
+                    progress |= self._call(c.panels, "draw(uint256)", s)
             elif st in (v3.HELD, v3.WINDOW):
                 if st == v3.HELD:
                     progress |= self._call(c.panels, "startWindow(uint256)", s)
-                if block > v["auditBlock"] and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"]):
-                    # With no auditor eligible the call only re-targets (a fresh audit block and snapshot), and the
-                    # contract never refuses it. So: a few tries per state of the registry (one re-targets after a
-                    # change, the next draws from the new snapshot), then again once the registry has changed.
+                waits = v.get("auditWaits") and c.epoch() + 1 == v.get("auditEpoch")
+                if (block > v["auditBlock"] and not waits
+                        and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"])):
+                    # With no auditor eligible the audits wait for the registry to change (`auditWaits`), and the
+                    # contract refuses every call until it does (#251 task 3.10); then one call re-targets and the
+                    # next draws from the new snapshot. A few tries per state of the registry, as before.
                     tried = ("audits", s, v["auditsDrawn"], v["auditDecided"], c.epoch())
                     if self._tries.get(tried, 0) < AUDIT_TRIES:
                         self._tries[tried] = self._tries.get(tried, 0) + 1
                         progress |= self._call(c.panels, "drawAudits(uint256)", s)
+                stuck = v.get("auditStuckAt", 0)
+                if (st == v3.WINDOW and stuck and not v["challengeOpen"] and v["auditsDrawn"] < v["auditsDue"]
+                        and now > stuck + self._liveness()["stuckGrace"]):
+                    # audits nobody could take for STUCK_GRACE: the round is released (L19), the audit drawn afresh
+                    progress |= self._call(c.panels, "releaseAudits(uint256)", s)
                 if v["challengeOpen"] and v["challengePid"] == 0 and block > v["challengeBlock"]:
                     progress |= self._call(c.panels, "drawChallenge(uint256)", s)
                 if (st == v3.WINDOW and now >= v["finalAt"] and not v["challengeOpen"] and v["auditDecided"]
                         and v["auditsDone"] >= v["auditsDue"]):
                     progress |= self._call(c.panels, "finalize(uint256)", s)
-            if st in (v3.HELD, v3.WINDOW, v3.FINAL):
+            if st in (v3.HELD, v3.WINDOW, v3.FINAL) or (st == v3.RELEASED and v["pid"]):
                 sub = c.submission(s)
                 if not sub["paid"]:
                     progress |= self._call(c.race, "result(uint256)", s)
                 elif st == v3.FINAL and not sub["done"]:
                     progress |= self._call(c.race, "finish(uint256)", s)
+            if st == v3.FINAL:
+                progress |= self._merge(s)
+            if st == v3.RELEASED or (v.get("redraws") and st in (v3.SEALED, v3.WAITING)):
+                # never judged: refunded once Panels released it for good, or at the race's deadline once a round was
+                # released (L19). Before the deadline the race refuses (no progress).
+                if not c.submission(s)["done"]:
+                    progress |= self._call(c.race, "release(uint256)", s)
         for pid in range(1, c.panel_count() + 1):
             if ("panel", pid) not in self._kept:
                 progress |= self._keep_panel(pid, now)
@@ -657,10 +693,36 @@ class NodeV3(NodeV2):
         if p["closed"]:
             return False
         if p["seats"] < p["k"]:
-            return self._call(c.panels, "refill(uint256)", pid) and self._call(c.race, "signal(uint256)", p["id"])
+            if self._call(c.panels, "refill(uint256)", pid):
+                return self._call(c.race, "signal(uint256)", p["id"]) or True
+            if now > p["revealBy"] + self._liveness()["stuckGrace"] and p["kind"] in (v3.COUNTED, v3.AUDIT):
+                # replacements exhausted: the round ends, its silent seats slashed, the submission waits (L19)
+                return self._call(c.panels, "release(uint256)", pid)
+            return False
         if (now > p["sealBy"] and p["nSealed"] < p["seats"]) or (now > p["revealBy"] and p["done"] < p["k"]):
             return self._call(c.panels, "advance(uint256)", pid) and self._call(c.race, "signal(uint256)", p["id"])
         return False
+
+    def _merge(self, s: int) -> bool:
+        """#251 L9: a claimed fix whose verdict is final moves the head (`merge`, anyone, once). A stale base reverts
+        (the winner keeps its place until the merge deadline); the keeper leaves it after GIVE_UP refusals."""
+        c = self.chain
+        sub = c.submission(s)
+        b = sub["bounty"]
+        if not b:
+            return False
+        bt = c.bounty(b)
+        if bt["state"] != v3.CLAIMED or bt["winner"] != s or not bt["epoch"]:
+            return False
+        if c.award(b, bt["epoch"])["merged"]:
+            return False
+        return self._call(c.race, "merge(uint256)", b, once=True)
+
+    def _liveness(self) -> dict:
+        """Panels' L19 values (read once): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS."""
+        if self._live is None:
+            self._live = self.chain.liveness()
+        return self._live
 
     # ---------- a challenge ----------
 

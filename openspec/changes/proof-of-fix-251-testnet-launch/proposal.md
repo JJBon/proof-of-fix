@@ -31,7 +31,7 @@ So proof-of-fix publishes its own code on Radicle, under the owner's real name, 
 
 **Public steps behind gates** (new: `public-release`):
 - Publishing on Radicle and deploying on Sepolia each need the owner's explicit go at that moment, recorded in the tasks.
-- **Proposed, awaiting the owner:** a README "intended use" section (research; a single-repository testnet; other deployments are their operators' responsibility), a wording check of the README and the paper, and a lawyer's review as a gate before publishing and before deploying.
+- **Accepted by the owner (2026-11-18), lawyer's review later dropped:** a README "intended use" section (research; a single-repository testnet; other deployments are their operators' responsibility), a wording check of the README and the paper, and a lawyer's review as a gate before publishing and before deploying.
 
 ## Capabilities
 
@@ -39,7 +39,7 @@ So proof-of-fix publishes its own code on Radicle, under the owner's real name, 
 - `deployment-binding`: what binds one deployment of the contracts: the single repository, the chain, the windows and the accepted proof types, all fixed at construction.
 - `canonical-head`: how a repository's head on-chain moves in v3 and how anyone checks a copy of the code against it.
 - `radicle-hosting`: proof-of-fix's code on Radicle: publishing, seeding, issues and patches as the bounty's references, and who may move the canonical `main`.
-- `public-release`: the gates before any public step: the scrub, the owner's go, and the proposed wording and legal checks.
+- `public-release`: the gates before any public step: the scrub, the owner's go, and the wording check (the owner dropped the legal review on 2026-11-18).
 
 ### Modified Capabilities
 - `validator-admission` (created by #132, not yet archived): a validator below the bond floor is visibly inactive.

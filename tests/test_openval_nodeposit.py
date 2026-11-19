@@ -231,5 +231,114 @@ class TestRows(unittest.TestCase):
         self.assertEqual(a["diffs"], b["diffs"])
 
 
+class TestPledgeGate(unittest.TestCase):
+    """#251 task 3.2 (launch design L6; reports/active-solvers-v1.md): the minimum of active solvers before pledges."""
+    BASE = replace(P0, REP_CAP=True, REP_ON_REVERSAL="minus", JUDGE_FEE=N.JUDGE_FEE)
+
+    def gate(self, **kw):
+        return replace(self.BASE, ACTIVE_GATE=True, **kw)
+
+    def test_the_gate_is_off_by_default_and_a_plain_net_refuses_it(self):
+        for p in (PARAMS, D236, D236R2, P0, Z.BASE):
+            self.assertEqual((p.ACTIVE_GATE, p.ACTIVE_SOLVERS_MIN, p.ACTIVE_WINDOW_WEEKS, p.ACTIVE_COUNTS),
+                             (False, 3, 13.0, "repository"))
+        w = short()
+        with self.assertRaises(ValueError):
+            Net(1, replace(P0, ACTIVE_GATE=True), w, [Z.OnMarket(w=w)])
+
+    def test_with_the_gate_off_its_values_change_nothing_and_v5s_rows_reproduce(self):
+        w = short(n=1, find=0.25)
+        for kind in ("T", "L"):
+            a = N.against_twin(N.make(kind, w), [5], self.BASE)
+            b = N.against_twin(N.make(kind, w), [5], replace(self.BASE, ACTIVE_SOLVERS_MIN=10, ACTIVE_WINDOW_WEEKS=6.0,
+                                                               ACTIVE_COUNTS="anyone"))
+            self.assertEqual(a["diffs"], b["diffs"], kind)
+            self.assertNotIn("gate_open_week", b)
+        from pof.sim.openval import activesolvers as S
+        self.assertTrue(all(r[7] == self.BASE for r in S.ref_rows()))  # the reference rows: v5's R(minus)+F, no gate
+
+    def test_one_honest_solver_never_opens_the_gate_and_no_claim_starts(self):
+        w = short(n=1, find=0.25)
+        net = N.NDNet(3, self.gate(), w, [N.BadFix(False, w)]).run()
+        world = [s for s in net.subs.values() if s.tier == ISSUE and s.party is None]
+        self.assertGreater(len(world), 100)
+        self.assertTrue(all(s.bounty == 0.0 and s.sid in net.unfunded for s in world))
+        self.assertEqual(mine(net, "bad-fix solver"), [])
+        self.assertEqual(net.open_spans(), [])
+        self.assertEqual(set(net.last_active), {("honest", "h0")})
+
+    def test_three_honest_solvers_open_it_and_no_pledge_lands_below_the_minimum(self):
+        w = short(n=3, find=0.25)
+        net = N.NDNet(3, self.gate(), w, [N.BadFix(True, w)]).run()
+        spans = net.open_spans()
+        self.assertTrue(spans)
+        self.assertLess(spans[0][0], 2 * WEEK)
+        for s in net.subs.values():
+            if s.tier == ISSUE and s.party is None:
+                inside = any(a <= s.t <= b for a, b in spans)
+                self.assertEqual(s.sid in net.unfunded, not inside)
+                self.assertEqual(s.bounty == 0.0, s.sid in net.unfunded)
+        self.assertEqual({p for p, _ in net.last_active}, {"honest"})
+        self.assertEqual(len(net.last_active), 3)
+
+    def test_an_identity_counts_within_the_window_only(self):
+        w = short(n=1, weeks=30)
+        net = N.NDNet(3, self.gate(ACTIVE_WINDOW_WEEKS=6.0), w, [Z.OnMarket(w=w)])
+        for i, t in enumerate((0.0, 1.0, 2.0)):
+            net.t = t * WEEK
+            net._activate(("x", f"id{i}"))
+        self.assertEqual(net.active_count(5 * WEEK), 3)
+        self.assertEqual(net.active_count(6.5 * WEEK), 2)
+        net.t = 3 * WEEK
+        net._activate(("x", "id0"))  # renewed: its window starts again
+        self.assertEqual(net.active_count(7.5 * WEEK), 2)
+        self.assertEqual(net.active_count(8.5 * WEEK), 1)
+        self.assertEqual(net.open_spans(), [(2 * WEEK, 7 * WEEK)])
+
+    def test_unfunded_fixes_and_upheld_tests_count_and_whose_tests_count_is_the_switch(self):
+        w = short(n=1, find=0.25, weeks=20)
+        a = N.NDNet(3, self.gate(), w, [Z.OnMarket(w=w)]).run()
+        b = N.NDNet(3, self.gate(ACTIVE_COUNTS="anyone"), w, [Z.OnMarket(w=w)]).run()
+        self.assertEqual({p for p, _ in a.last_active}, {"honest"})  # its fixes, all unfunded, made it active
+        contenders = [k for k in b.last_active if k[0] == "contender"]
+        self.assertGreaterEqual(len(contenders), 2)  # the world's contenders' tests open the gate on their own
+        self.assertTrue(b.open_spans())
+        self.assertTrue(all(k[1] in w.evidence_by for k in contenders))
+
+    def test_a_claim_made_before_the_gate_shut_goes_on(self):
+        w = short(n=1, find=0.25)
+        net = N.NDNet(3, self.gate(), w, [Z.OnMarket(w=w)])
+        s = net.submit(1.0, 40.0, True, "x", "x", ident="old")  # funded before: the gate refuses new pledges only
+        net.run()
+        self.assertTrue(net.locked())
+        self.assertEqual(s.bounty, 40.0)
+        self.assertEqual(s.state, "final")
+
+    def test_the_sybil_opens_the_gate_with_unfunded_fixes_that_earn_no_reputation(self):
+        from pof.sim.openval import activesolvers as S
+        w = short(n=1, find=0.25)
+        y = S.Sybil(N.BadFix(False, w))
+        net = N.NDNet(3, self.gate(), w, [y]).run()
+        keep = [s for s in mine(net, "bad-fix solver") if net.meta[s.sid]["ident"].startswith("y")]
+        self.assertGreaterEqual(len(keep), 3)
+        self.assertTrue(all(s.bounty == 0.0 and s.good for s in keep))
+        self.assertTrue(all(net.rep[("bad-fix solver", f"y{j}")] == 0.0 for j in range(3)))
+        self.assertGreater(sum(b - a for a, b in net.open_spans()), 0.8 * w.horizon_h)
+        self.assertGreater(len(mine(net, "bad-fix solver")), len(keep))  # the attacker got in
+        self.assertGreaterEqual(net.parties["bad-fix solver"].costs, len(keep) * (N.JUDGE_FEE + w.attempt_fee))
+        twin = N.NDNet(3, self.gate(), w, [S.Sybil(N.BadFix(True, w))]).run()
+        self.assertEqual(mine(twin, "bad-fix solver"), [])
+        self.assertEqual(twin.open_spans(), [])
+
+    def test_the_rows_are_the_preregistered_ones(self):
+        from pof.sim.openval import activesolvers as S
+        self.assertEqual(len(S.gate_rows()), 216)
+        self.assertEqual({r[7].ACTIVE_WINDOW_WEEKS for r in S.gate_rows()}, {6.0, 13.0, 26.0})
+        self.assertEqual({(r[7].ACTIVE_GATE, r[7].REP_CAP, r[7].REP_ON_REVERSAL, r[7].JUDGE_FEE, r[7].SOLVER_DEPOSIT_BPS)
+                          for r in S.gate_rows() + S.sybil_rows()}, {(True, True, "minus", N.JUDGE_FEE, 0)})
+        self.assertEqual({r[3] for r in S.sybil_rows()}, {1, 3, 10})
+        self.assertEqual(S.SEED0, 41)
+
+
 if __name__ == "__main__":
     unittest.main()

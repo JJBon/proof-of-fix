@@ -69,7 +69,9 @@ contract ValidatorsHandler is ValidatorsSetup {
     function topUp(uint256 seed, uint256 amount) external {
         address key = _pick(seed);
         IValidators.State st = reg.validator(key).state;
-        if (st != IValidators.State.Candidate && st != IValidators.State.Active) return;
+        if (st != IValidators.State.Candidate && st != IValidators.State.Active && st != IValidators.State.BelowFloor) {
+            return;
+        }
         amount = bound(amount, 1, 700e6);
         usd.mint(address(this), amount);
         usd.approve(address(reg), amount);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
+import {Windows} from "../../src/v3/Windows.sol";
+import {suiteWindows} from "./helpers/SuiteWindows.sol";
 import {console} from "forge-std/Test.sol";
 import {Validators} from "../../src/v3/Validators.sol";
 import {IValidators} from "../../src/v3/IValidators.sol";
@@ -109,7 +111,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         cs[1] = _ch(IValidators.Op.AddTeeType, IBM_SE, 0);
         (uint256 id, bytes32 text) = _judgedAdr(cs, Tier.Adr, 6);
         Submission memory s = pn.submission(id);
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 14 days);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.ADR_WINDOW()); // 14 days in production
         vm.expectRevert(Validators.NotPassed.selector);
         reg.applyAdr(id, text, cs);
         vm.warp(s.finalAt - 1);
@@ -146,7 +148,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         assertGt(nitro.length, 0);
         uint256 eligible = reg.eligibleCount(1);
         (uint256 id, bytes32 text) = _judgedAdr(_one(IValidators.Op.RemoveTeeType, NITRO, 0), Tier.Removal, 6);
-        assertEq(pn.submission(id).finalAt, vm.getBlockTimestamp() + 48 hours);
+        assertEq(pn.submission(id).finalAt, vm.getBlockTimestamp() + pn.REMOVAL_WINDOW()); // 48 h in production
         _finalize(id);
         reg.applyAdr(id, text, _one(IValidators.Op.RemoveTeeType, NITRO, 0));
         assertEq(reg.eligibleCount(1), eligible - nitro.length);
@@ -257,6 +259,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         }
         bool sawC;
         for (uint256 r; r < 4; ++r) {
+            _nextCapWindow(); // every validator has room again (L16's capacity)
             uint256 id = _id();
             uint256 pid = _openHidden(id, 100e6);
             assertGt(pid, 0);
@@ -269,6 +272,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         }
         assertTrue(sawC);
         // a challenge of a hidden-test verdict, and its audits, draw level A or B only
+        _nextCapWindow();
         uint256 hid = _id();
         uint256 hp = _openHidden(hid, 100e6);
         _judge(hp, _votes(pn.panel(hp).k, pn.panel(hp).k));
@@ -334,25 +338,26 @@ contract PanelsLevelsV3Test is PanelsSetup {
 
     // ---------- Limits and windows per (k, level) ----------
 
-    /// ADR 0004's table: the largest bounty and the challenge window for every panel size and proof level.
+    /// ADR 0004's table: the largest bounty and the challenge window for every panel size and proof level. The
+    /// windows are the deployment's (#251, L4): production's here unless the suite runs in minutes; the production
+    /// values themselves are pinned in LaunchV3.t.sol.
     function test_theLimitsAndWindowsPerKAndLevel() public view {
         uint256[4] memory ks = [uint256(1), 3, 5, 7];
         uint256[4] memory limA = [uint256(50e6), 250e6, 625e6, 625e6];
         uint256[4] memory limC = [uint256(10e6), 50e6, 125e6, 250e6];
-        uint256[4] memory winA = [uint256(168 hours), 24 hours, 12 hours, 6 hours];
-        uint256[4] memory winC = [uint256(336 hours), 72 hours, 48 hours, 24 hours];
+        Windows memory w = suiteWindows();
         for (uint256 i; i < 4; ++i) {
             assertEq(pn.limitOf(ks[i], 1), limA[i]);
             assertEq(pn.limitOf(ks[i], 2), limA[i] / 2);
             assertEq(pn.limitOf(ks[i], 3), limC[i]);
-            assertEq(pn.windowOf(ks[i], 1), winA[i]);
-            assertEq(pn.windowOf(ks[i], 2), 2 * winA[i]);
-            assertEq(pn.windowOf(ks[i], 3), winC[i]);
+            assertEq(pn.windowOf(ks[i], 1), w.challenge[0][i]);
+            assertEq(pn.windowOf(ks[i], 2), w.challenge[1][i]);
+            assertEq(pn.windowOf(ks[i], 3), w.challenge[2][i]);
             // weaker levels never get more, nor wait less (C's limits at most B's, C's windows at least B's)
             assertLe(pn.limitOf(ks[i], 3), pn.limitOf(ks[i], 2));
             assertGe(pn.windowOf(ks[i], 3), pn.windowOf(ks[i], 2));
         }
-        assertGe(pn.windowOf(1, 1), 7 days); // k = 1 waits at least 7 days (D4)
+        assertGe(pn.windowOf(1, 1), pn.K1_WINDOW_MIN()); // k = 1 waits at least K1_WINDOW_MIN (D4: 7 days)
     }
 
     /// A level B panel of 5 judges up to level B's limit for k = 5 ($312.50), with level B's window (24 h); above that
@@ -368,7 +373,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         _judge(pid, _votes(5, 5));
         Submission memory s = pn.submission(id);
         assertEq(s.level, 2);
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 24 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(5, 2)); // 24 h in production
         uint256 id2 = _id();
         assertEq(_openAndDraw(id2, 400e6), 0);
         assertEq(uint256(pn.submission(id2).status), uint256(Status.Waiting));
@@ -418,7 +423,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         assertTrue(s.pass);
         assertEq(s.k, 7);
         assertEq(uint256(s.status), uint256(Status.Window));
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 6 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(7, 1)); // 6 h in production
         // a challenge passes over the empty seats; the slashed judges can't sit on it
         race.challenge(id, challenger, keccak256("evidence"));
         _rollPast(pn.submission(id).challengeBlock);

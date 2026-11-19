@@ -35,6 +35,7 @@ proof-of-fix#251, tasks 2.1–2.6 of `openspec/changes/proof-of-fix-251-testnet-
   - A separate v2 `Heads` holds A's and B's heads, with its mover an account that stands in for `merge(bounty)`.
   - The stand-in moves a head only when the winning verdict is `Final` and claimed. In each run it refused at claim, when the verdict was still in its `Window`. It moved the head 86,400 s of chain time later (86,399 s once): the k = 3 level A window, 24 h. That is the wait L9 adds before the head moves.
   - The contract doesn't enforce this rule; the stand-in does.
+  - **Since #251's contract batch 2 (task 3.5), A's head is the real one.** RaceV3 serves A (L1) and moves its own `Heads` only by `merge(bounty)` at finality (L9); the spike now uses it for A (`heads_for`), and keeps the stand-in for B only (B isn't the race's repository). One run of `scripts/radicle-spike.sh --v3` on 2026-11-18 passed every scenario (S, a1–a9, b1–b10, L, I; 317 s): `RaceV3.merge` refused at the claim (`NotYet`) and moved A's head at finality, 24.0 h of chain time later (k = 3, level A). The runs 1–3 figures below are from before that change.
 - **Fixes are Radicle patches (L12, task 2.5).**
   - The solver seals its commitment on RaceV3, then opens a patch whose description carries the claim (bounty, submission, salt, solver: the bot's pull-request format).
   - Each validator's node lists the patches on its **own** Radicle node, refuses a revision whose base isn't `Heads.head`, and copies the commit's tree from its own node's storage.

@@ -16,6 +16,12 @@ Each mechanism is a named switch of `Params`, off by default and read only by `N
   panels' per-check charges. `judge_cost` measures it: every check the network pays for, at the market's break-even
   fee plus the model's usage, over the submissions.
 
+#251 task 3.2 adds a fourth switch, **the pledge gate** (`ACTIVE_GATE`, launch design L6; its rows and the sybil of
+three are in `activesolvers`): an identity is active while it has, within `ACTIVE_WINDOW_WEEKS`, a fix whose passing
+verdict became final or an upheld failing-test dispute; while fewer than `ACTIVE_SOLVERS_MIN` are, an issue listed is
+left unfunded and actors start no new claim. The world's fixes are written by the `World.rival_solvers` honest
+solvers (one of them, by a draw bound to the fix), so the chain's count can see them.
+
 The base is report v4's primary case: task 10.1's network with no solver's deposit and no appeal (`evidence.P0`),
 the world's contenders disputing (1 in 2, assumed), and `n` active honest solvers that each search every pass for a
 failing test (`World.rival_solvers`, found 1 time in 4 on a bad fix: ASSUMED). One family is registered and seated:
@@ -59,11 +65,13 @@ from . import pricing as PR
 from . import report as R
 from . import sizing as Z
 from .evidence import P0
-from .net import ISSUE, Net, Sub
+from .net import ISSUE, T_RIVAL, Net, Sub
 from .params import BPS, WEEK, WORLD, Params, World
 
 T_IMPACT = 0x1A9AC7  # randomness tag: an issue's impact signal (its noise)
 T_ND = 0x0DE905  # ...an actor's own draws (its times, the issues it sees, whether an honest fix is good)
+T_AUTHOR = 0xA07403  # ...which of the repository's honest solvers wrote a world fix (the pledge gate, #251)
+T_CONTENDER = 0xC0D7E5  # ...which contender seat posted an upheld test (ACTIVE_COUNTS "anyone")
 INF = float("inf")
 LOOK = 30  # the issues an actor sees when it picks one: a week's listings (`World.subs_week`)
 TRIGGER = 625.0  # the long con cashes in once it may claim the largest bounty (`World.bounty_max`); fixed in advance
@@ -119,6 +127,11 @@ class NDNet(Net):
         self.world_final = self.world_paid = 0
         self.neglected: List[Sub] = []
         self.effort_paid: Dict[str, float] = defaultdict(float)
+        # #251 task 3.2, the pledge gate: each identity's last event that makes it active (and every such event)
+        self.last_active: Dict[Tuple[str, str], float] = {}
+        self.active_log: List[Tuple[float, Tuple[str, str]]] = []
+        self.unfunded: Dict[int, float] = {}  # a world issue listed while the gate was shut: the pledge refused
+        self.dispute_by: Dict[int, Tuple[str, str]] = {}  # whose test is pending against a pass
         super().__init__(seed, p, w, actors, **kw)
         if p.POT != "off":
             for i in range(self.n_windows()):
@@ -158,6 +171,69 @@ class NDNet(Net):
         self.funding += bounty
         self.cohort_fund += bounty
 
+    # ----- the pledge gate (#251 task 3.2, launch design L6) -----
+
+    def author(self, sub: Sub) -> Tuple[str, str]:
+        """The honest solver of the repository who wrote a world fix: one of `World.rival_solvers` (at least one)."""
+        return ("honest", f"h{int(D.u(self.seed, T_AUTHOR, sub.sid) * max(1, self.w.rival_solvers))}")
+
+    def active_count(self, t: Optional[float] = None) -> int:
+        t = self.t if t is None else t
+        win = self.p.ACTIVE_WINDOW_WEEKS * WEEK + 1e-9
+        return sum(1 for x in self.last_active.values() if t - x <= win)
+
+    def locked(self) -> bool:
+        """Pledges are refused now: the gate is on and fewer than ACTIVE_SOLVERS_MIN identities are active."""
+        return self.p.ACTIVE_GATE and self.active_count() < self.p.ACTIVE_SOLVERS_MIN
+
+    def _activate(self, idt: Optional[Tuple[str, str]]) -> None:
+        if idt is not None:
+            self.last_active[idt] = self.t
+            self.active_log.append((self.t, idt))
+
+    def open_spans(self) -> List[Tuple[float, float]]:
+        """The spans of the year in which pledges were taken (at least ACTIVE_SOLVERS_MIN identities active), from every
+        event that made an identity active."""
+        win, hz = self.p.ACTIVE_WINDOW_WEEKS * WEEK, self.w.horizon_h
+        edges: List[Tuple[float, int]] = []
+        last: Dict[Tuple[str, str], Tuple[float, float]] = {}
+        for t, idt in sorted(self.active_log):
+            a, b = last.get(idt, (None, None))  # type: ignore[assignment]
+            if a is not None and t <= b:
+                last[idt] = (a, max(b, t + win))
+                continue
+            if a is not None:
+                edges += [(a, 1), (b, -1)]
+            last[idt] = (t, t + win)
+        for a, b in last.values():
+            edges += [(a, 1), (b, -1)]
+        spans, n, start = [], 0, 0.0
+        for t, d in sorted(edges, key=lambda e: (e[0], -e[1])):
+            before, n = n, n + d
+            if before < self.p.ACTIVE_SOLVERS_MIN <= n:
+                start = t
+            elif n < self.p.ACTIVE_SOLVERS_MIN <= before:
+                if min(t, hz) > start:
+                    spans.append((start, min(t, hz)))
+        if n >= self.p.ACTIVE_SOLVERS_MIN and hz > start:
+            spans.append((start, hz))
+        return [(a, b) for a, b in spans if a < hz]
+
+    def _disputes(self, sub: Sub, window: float) -> None:
+        if not self.p.ACTIVE_GATE:
+            super()._disputes(sub, window)
+            return
+        rt, n0 = self.stats["rival_tests"], self._n
+        super()._disputes(sub, window)
+        if self.stats["rival_tests"] > rt:  # the first of the honest solvers whose draw found the test
+            i = next(i for i in range(self.w.rival_solvers) if D.u(self.seed, T_RIVAL, sub.sid, i) < self.w.rival_find)
+            self.dispute_by[sub.sid] = ("honest", f"h{i}")
+        elif self._n > n0 and self.p.ACTIVE_COUNTS == "anyone":  # a contender's test: one of the seats that failed it
+            case = M.case_of(self, sub)
+            flags = [x for x in self.w.evidence_by if not case[x]]
+            if flags:
+                self.dispute_by[sub.sid] = ("contender", flags[int(D.u(self.seed, T_CONTENDER, sub.sid) * len(flags))])
+
     # ----- the impact weight (#247 not built: a noisy signal of the issue's true impact, its bounty) -----
 
     def weight(self, sub: Sub) -> float:
@@ -192,6 +268,10 @@ class NDNet(Net):
     def _arrive(self, sub: Sub) -> None:
         if sub.tier == ISSUE:
             p = self.p
+            if sub.party is None and p.ACTIVE_GATE and self.locked():  # the pledge is refused: its fix is unpaid
+                self.unfunded[sub.sid] = sub.bounty
+                self.stats["pledges_refused"] += 1
+                sub.bounty = 0.0
             if sub.party is None:
                 self.pot_fund[self.window(sub.t)] += sub.bounty
                 self.funding += sub.bounty
@@ -241,6 +321,11 @@ class NDNet(Net):
             self.world_final += 1
             self.world_paid += bool(outcome)
             self.cohort_fund += sub.bounty
+        if self.p.ACTIVE_GATE:
+            if outcome:
+                self._activate(self.author(sub) if sub.party is None else idt)
+            elif sub.by_evidence:
+                self._activate((sub.disputer, "tests") if sub.disputer else self.dispute_by.get(sub.sid))
         pot = self.p.POT != "off"
         if outcome:
             if idt is not None:
@@ -315,7 +400,14 @@ class NDActor(Z.OnMarket):
         super().setup(net)
         self.start(net)
         for i, t in enumerate(self.times(net, self.TAG, self.per_week)):
-            net._at(t, self.slot, net, i)
+            net._at(t, self._slot, net, i)
+
+    def _slot(self, net: NDNet, i: int) -> None:
+        """A slot, unless the pledge gate is shut (#251): no issue may be funded, so no new claim starts."""
+        if net.p.ACTIVE_GATE and net.locked():
+            self.count["locked_slots"] += 1
+            return
+        self.slot(net, i)
 
     def start(self, net: NDNet) -> None:
         pass
@@ -479,7 +571,13 @@ class RepSale(NDActor):
     def start(self, net: NDNet) -> None:
         net.rep[(self.party, "bought")] = self.rep0
         for i, t in enumerate(self.times(net, self.TAG + 100, self.per_week)):
-            net._at(t, self.buyer, net, i)
+            net._at(t, self._buyer, net, i)
+
+    def _buyer(self, net: NDNet, i: int) -> None:
+        if net.p.ACTIVE_GATE and net.locked():
+            self.count["locked_slots"] += 1
+            return
+        self.buyer(net, i)
 
     def slot(self, net: NDNet, i: int) -> None:  # the seller
         xs = self.seen(net, self.TAG, i)
@@ -613,11 +711,32 @@ def party_metrics(net: NDNet, a: NDActor) -> Dict[str, float]:
                               if s.tier == ISSUE and s.by_evidence and s.disputer is None),
              **_health(net, a.party))
     m.update({k: float(v) for k, v in a.count.items()})
+    if net.p.ACTIVE_GATE:
+        m.update(gate_metrics(net))
     if isinstance(a, Newcomer):
         m["week_median"] = a.first.get(net.w.bounty_median, float("nan"))
         m["week_p90"] = a.first.get(net.w.bounty_p90, float("nan"))
         m["reached_median"] = 100.0 * (net.w.bounty_median in a.first)
     return m
+
+
+def gate_metrics(net: NDNet) -> Dict[str, float]:
+    """The pledge gate's year (#251): when pledges were first taken, the share of the year they were, how often the
+    gate shut again, the pledges refused (and their funding), and the honest fixes left unpaid by it."""
+    spans = net.open_spans()
+    hz = net.w.horizon_h
+    world = [s for s in net.subs.values() if s.tier == ISSUE and s.party is None]
+    listed = sum(net.unfunded.get(s.sid, s.bounty) for s in world)
+    lost = [s for s in world if s.sid in net.unfunded and s.final and s.good]
+    first = spans[0][0] if spans else float("nan")
+    return dict(gate_open_week=first / WEEK, gate_never=100.0 * (not spans),
+                gate_open_share=100.0 * sum(b - a for a, b in spans) / hz,
+                gate_shut_again=float(sum(1 for _, b in spans if b < hz - 1e-6)),
+                pledges_refused=float(len(net.unfunded)),
+                pledges_refused_after=float(sum(1 for sid in net.unfunded if spans and net.subs[sid].t > first)),
+                funding_refused=100.0 * sum(net.unfunded.values()) / max(1.0, listed),
+                honest_unpaid=float(len(lost)), honest_unpaid_value=sum(net.unfunded[s.sid] for s in lost),
+                active_end=float(net.active_count(hz)), identities_active=float(len(net.last_active)))
 
 
 def run(actor: NDActor, seed: int, p: Params) -> NDNet:

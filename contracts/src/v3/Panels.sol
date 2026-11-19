@@ -8,6 +8,8 @@ import {PanelsDraw} from "./PanelsDraw.sol";
 import {PanelsJudge} from "./PanelsJudge.sol";
 import {PanelsVerdict} from "./PanelsVerdict.sol";
 import {PanelsBase, Store, Env, Submission, Panel, Seat, Status, Tier, Kind} from "./PanelsBase.sol";
+import {Windows, WindowsLib} from "./Windows.sol";
+import {LaunchChain} from "./LaunchChain.sol";
 
 /// v3's panels (proof-of-fix#138, task 3.2 of #132; design D2–D7, D10, D13, D14, D16, D18, D19; ADR 0004;
 /// specs/judge-panels, specs/judge-scores): who judges a submission, how many, and when their verdict is final. It
@@ -79,8 +81,34 @@ import {PanelsBase, Store, Env, Submission, Panel, Seat, Status, Tier, Kind} fro
 /// linked libraries on that state: PanelsJudge (seals, reveals, receipts, replacement), PanelsVerdict (draws,
 /// counting, audits, challenges, shadows, finality) and PanelsDraw (the sampling).
 ///
+/// **The windows (#251, design L4).** SEAL_WINDOW, REVEAL_WINDOW, CHALLENGE_WINDOW[k, level], ADR_WINDOW,
+/// REMOVAL_WINDOW and K1_WINDOW_MIN are the deployment's, passed to the constructor as one `Windows` struct, checked
+/// for order (WindowsLib.check), stored as immutables and readable (`windows`, `windowOf`). They must be exactly the
+/// registry's (`Validators.windowsHash`), whose unbonding delay derives from them. The production values
+/// (WindowsLib.production, ADR 0004) give what the constants gave.
+///
+/// **Stuck rounds are released, never stuck (#251, design L19; specs/panel-liveness).** A counted or audit panel with
+/// a seat its replacements couldn't fill ends STUCK_GRACE after its reveal deadline (`release`): its silent seats are
+/// slashed as any silence, the others close unslashed, and a counted round sends the submission back to waiting with
+/// a redraw scheduled; an audit that no validator could take for STUCK_GRACE is released the same way
+/// (`releaseAudits`). A waiting submission is drawn again with a fresh seed once the registry changes or at its
+/// `retryAt` (RETRY_DELAY later). The MAX_REDRAWS-th released round (or the race's deadline for a parked one,
+/// `abandon`) makes it `Released`: never judged, and the race refunds its bounty with no slash for the solver. So
+/// every submission is always drawn with a live deadline, waiting with a scheduled redraw, counted, final, or refunded.
+///
+/// **Capacity (#251, design L16; #253's spending controls).** A validator takes at most its capacity of seats (any
+/// kind) in a trailing `capWindow` (an hour in production): CHECKS_DEFAULT (MAX_CHECKS_PER_HOUR, 5) until it sets its
+/// own with `setCapacity`, at most CHECKS_CEILING; 0 pauses it. A full or paused validator is skipped by every draw,
+/// never slashed. A paused one is as if absent (a panel steps down without it); a full one is busy for at most
+/// `capWindow`, so a panel that busy validators leave short waits for them rather than shrinking: a counted draw
+/// waits and is retried after `capWindow`, and an audit or a challenge is retried from the same seed. A change takes
+/// effect CAP_DELAY blocks after it's made (more than a seed block's 256-block life plus SEED_DELAY), and no change is made
+/// while one is pending: a validator that learns from a seed block that it's about to be drawn can't pause in time to
+/// dodge that draw. Pausing applies to later draws only; a seat already given is judged or slashed as usual.
+/// REPO_CHECKS_PER_HOUR, a per-repository cap, is 0 (off) while a deployment serves one repository (L16, D31).
+///
 /// Keyless: no owner, no admin, no setter. The registry and the scores are bound once from the constructor; the race
-/// binds itself once (`bind`).
+/// binds itself once (`bind`). A validator's capacity is its own setting, not an admin power. The constructor reverts off Sepolia and the local test chains (LaunchChain).
 ///
 /// TODO(3.5): the race checks `Validators.isRemoval` before opening a `Removal` ADR and `openHidden` for hidden tests and
 /// private repositories; it forwards FeesV3's `waited`, `stalled` and `drawn`
@@ -92,8 +120,6 @@ contract Panels {
     uint256 public constant K_MAX = 7;
     uint256 public constant DRAW_TRIES = 8;
     uint256 public constant SEED_DELAY = 5;
-    uint256 public constant SEAL_WINDOW = 2 hours;
-    uint256 public constant REVEAL_WINDOW = 1 hours;
     uint256 public constant K1_PENDING_MAX = 10;
     uint256 public constant TEE_CAP_K3_TYPES = 5;
     /// The largest bounty any panel may judge: k = 5 and 7 at level A (v2's BOUNTY_MAX).
@@ -107,11 +133,16 @@ contract Panels {
     uint256 public constant CONSTITUTION_MIN_ELIGIBLE = 21;
     uint256 public constant REMOVAL_MIN_ELIGIBLE = 14;
     uint256 public constant ADR_DEPOSIT = 15e6;
-    uint256 public constant ADR_WINDOW = 14 days;
-    uint256 public constant REMOVAL_WINDOW = 48 hours;
     bytes32 public constant SEAL_TAG = keccak256("proof-of-fix v3 seal");
     bytes32 public constant REVEAL_TAG = keccak256("proof-of-fix v3 reveal");
     bytes32 public constant RECEIPT_TAG = keccak256("proof-of-fix v3 receipt");
+    /// MAX_CHECKS_PER_HOUR until a validator sets its own (L16), and the protocol's ceiling on it.
+    uint256 public constant CHECKS_DEFAULT = 5;
+    uint256 public constant CHECKS_CEILING = 16;
+    /// Blocks from a capacity change to its effect: a seed block's hash lives 256 blocks, after SEED_DELAY.
+    uint256 public constant CAP_DELAY = 262;
+    /// The per-repository cap (D31): 0, off, while the deployment serves one repository (L16).
+    uint256 public constant REPO_CHECKS_PER_HOUR = 0;
 
     IPanelsRegistry public immutable validators;
     IPanelsFees public immutable fees;
@@ -119,6 +150,19 @@ contract Panels {
     address public immutable coin;
     address public immutable pool;
     bytes32 internal immutable _domain;
+    uint256 public immutable SEAL_WINDOW;
+    uint256 public immutable REVEAL_WINDOW;
+    uint256 public immutable ADR_WINDOW;
+    uint256 public immutable REMOVAL_WINDOW;
+    /// k = 1's challenge window is at least this at every level (D4: 7 days in production).
+    uint256 public immutable K1_WINDOW_MIN;
+    uint256 internal immutable _chalAB; // CHALLENGE_WINDOW at levels A and B (WindowsLib.pack)
+    uint256 internal immutable _chalC; // and at level C
+    uint256 public immutable STUCK_GRACE;
+    uint256 public immutable RETRY_DELAY;
+    uint256 public immutable MAX_REDRAWS;
+    /// The trailing window MAX_CHECKS_PER_HOUR counts over (an hour in production).
+    uint256 public immutable CAP_WINDOW;
     Store internal _st;
 
     // The libraries' events, declared here too so Panels' ABI carries them.
@@ -148,6 +192,9 @@ contract Panels {
     event ChallengeWaits(uint256 indexed id);
     event ChallengeResolved(uint256 indexed id, uint256 indexed pid, bool upheld, bool pass, bool falseReceipt);
     event Final(uint256 indexed id, bool pass);
+    event Released(uint256 indexed id, uint256 indexed pid, uint256 redraws);
+    event Refunded(uint256 indexed id);
+    event CapacitySet(address indexed key, uint256 checks, uint256 fromBlock);
 
     // Panels' errors and its libraries' (same selectors).
     error BadParams();
@@ -169,14 +216,25 @@ contract Panels {
     error EmptyHash();
     error NothingDue();
     error NotReady();
+    error NotYours();
 
     /// `teeTypes_`: the accepted TEE types at deployment, exactly the registry's list (a deployment check). The TEE-type
     /// cap starts at k = 3 while at least TEE_CAP_K3_TYPES types are accepted, else at k = 5 (D6), following the
-    /// registry's list as ADRs change it.
-    constructor(IPanelsRegistry validators_, IPanelsFees fees_, IPanelScores scores_, bytes32[] memory teeTypes_) {
+    /// registry's list as ADRs change it. `windows_`: the deployment's windows, checked for order and exactly the
+    /// registry's (#251, L4).
+    constructor(
+        IPanelsRegistry validators_,
+        IPanelsFees fees_,
+        IPanelScores scores_,
+        bytes32[] memory teeTypes_,
+        Windows memory windows_
+    ) {
+        LaunchChain.check();
+        WindowsLib.check(windows_);
         if (
             address(validators_).code.length == 0 || address(fees_).code.length == 0
                 || address(scores_).code.length == 0 || teeTypes_.length != validators_.teeTypeCount()
+                || validators_.windowsHash() != keccak256(abi.encode(windows_))
         ) revert BadParams();
         for (uint256 i; i < teeTypes_.length; ++i) {
             if (!validators_.acceptedTeeType(teeTypes_[i])) revert BadParams();
@@ -190,6 +248,16 @@ contract Panels {
         coin = validators_.coin();
         pool = validators_.pool();
         _domain = validators_.domainSeparator();
+        SEAL_WINDOW = windows_.seal;
+        REVEAL_WINDOW = windows_.reveal;
+        ADR_WINDOW = windows_.adr;
+        REMOVAL_WINDOW = windows_.removal;
+        K1_WINDOW_MIN = windows_.k1Min;
+        (_chalAB, _chalC) = WindowsLib.pack(windows_);
+        STUCK_GRACE = windows_.stuckGrace;
+        RETRY_DELAY = windows_.retryDelay;
+        MAX_REDRAWS = windows_.maxRedraws;
+        CAP_WINDOW = windows_.capWindow;
         validators_.bind();
         scores_.bind();
     }
@@ -310,6 +378,48 @@ contract Panels {
         PanelsVerdict.settleShadows(_st, _env(), spid);
     }
 
+    /// A counted or audit panel whose replacements couldn't fill a seat, STUCK_GRACE after its reveal deadline: the
+    /// round ends, its silent seats slashed; the submission waits for a redraw, or its audit is due again (L19).
+    function release(uint256 pid) external {
+        PanelsJudge.release(_st, _env(), pid);
+    }
+
+    /// A verdict's audit no validator could take for STUCK_GRACE: the round is released and the audit drawn again
+    /// from a fresh audit block (L19).
+    function releaseAudits(uint256 id) external {
+        PanelsJudge.releaseAudits(_st, _env(), id);
+    }
+
+    /// The race's deadline for a submission parked after a released round: it's refunded (`Released`, L19).
+    function abandon(uint256 id) external {
+        _onlyRace();
+        PanelsJudge.abandon(_st, _env(), id);
+    }
+
+    /// A validator's capacity, set by its key or its operator: `checks` seats a `CAP_WINDOW` at most (0 pauses it, at
+    /// most CHECKS_CEILING), from CAP_DELAY blocks on; refused while an earlier change is still pending (L16, #253).
+    function setCapacity(address key, uint256 checks) external {
+        if (msg.sender != key && msg.sender != validators.validator(key).operator) revert NotYours();
+        if (checks > CHECKS_CEILING) revert BadParams();
+        PanelsDraw.Load storage l = _st.load[key];
+        if (block.number < l.from) revert Busy();
+        uint256 from = block.number + CAP_DELAY;
+        l.prev = l.cap;
+        l.cap = uint8(checks + 1);
+        l.from = uint64(from);
+        emit CapacitySet(key, checks, from);
+    }
+
+    /// A validator's capacity: in force now, the next (equal unless a change is pending) from block `from`, and
+    /// whether it has room for a seat now.
+    function capacity(address key) external view returns (uint256 checks, uint256 next, uint256 from, bool room) {
+        PanelsDraw.Load storage l = _st.load[key];
+        checks = PanelsDraw.capOf(l);
+        next = l.cap == 0 ? CHECKS_DEFAULT : l.cap - 1;
+        from = l.from;
+        room = PanelsDraw.hasRoom(l, CAP_WINDOW);
+    }
+
     /// A held k = 1 verdict's window starts once CHALLENGE_K[1] validators could judge its challenge (D4).
     function startWindow(uint256 id) external {
         PanelsVerdict.startWindow(_st, _env(), id);
@@ -402,8 +512,29 @@ contract Panels {
         return PanelsDraw.limitOf(k, level);
     }
 
-    function windowOf(uint256 k, uint8 level) external pure returns (uint256) {
-        return PanelsBase.windowOf(k, level);
+    /// CHALLENGE_WINDOW[k, level], the deployment's.
+    function windowOf(uint256 k, uint8 level) external view returns (uint256) {
+        return WindowsLib.windowOf(_chalAB, _chalC, k, level);
+    }
+
+    /// The deployment's windows, as the constructor took them.
+    function windows() external view returns (Windows memory w) {
+        w.seal = SEAL_WINDOW;
+        w.reveal = REVEAL_WINDOW;
+        w.adr = ADR_WINDOW;
+        w.removal = REMOVAL_WINDOW;
+        w.k1Min = K1_WINDOW_MIN;
+        w.stuckGrace = STUCK_GRACE;
+        w.retryDelay = RETRY_DELAY;
+        w.maxRedraws = MAX_REDRAWS;
+        w.capWindow = CAP_WINDOW;
+        uint8[3] memory levels = [1, 2, 3];
+        uint256[4] memory ks = [uint256(1), 3, 5, 7];
+        for (uint256 l; l < 3; ++l) {
+            for (uint256 i; i < 4; ++i) {
+                w.challenge[l][i] = WindowsLib.windowOf(_chalAB, _chalC, ks[i], levels[l]);
+            }
+        }
     }
 
     function challengeK(uint256 k) external pure returns (uint256) {
@@ -417,7 +548,24 @@ contract Panels {
     // ---------- internals ----------
 
     function _env() internal view returns (Env memory) {
-        return Env(validators, fees, scores, coin, pool, _domain);
+        return Env(
+            validators,
+            fees,
+            scores,
+            coin,
+            pool,
+            _domain,
+            SEAL_WINDOW,
+            REVEAL_WINDOW,
+            ADR_WINDOW,
+            REMOVAL_WINDOW,
+            _chalAB,
+            _chalC,
+            STUCK_GRACE,
+            RETRY_DELAY,
+            MAX_REDRAWS,
+            CAP_WINDOW
+        );
     }
 
     function _onlyRace() internal view {

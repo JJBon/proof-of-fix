@@ -13,6 +13,7 @@ import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
 import {Heads} from "../../src/v2/Heads.sol";
 import {RaceV3Setup} from "./helpers/RaceV3Setup.sol";
+import {TEST_REPO, TEST_GENESIS_HEAD} from "./helpers/SuiteWindows.sol";
 
 /// proof-of-fix#138, task 3.5 of #132: RaceV3, v2's race judged by Panels and charged by FeesV3. v2's race suite
 /// (RaceV2.t.sol) ported: every v2 rule that v3 keeps is tested here under its v2 name where it has one; the oracle
@@ -34,7 +35,7 @@ contract RaceV3Test is RaceV3Setup {
         uint256 i = _register();
         RaceV3Base.Issue memory is_ = rc.issue(i);
         assertEq(_owed(infra), 2 * C);
-        uint256 deposit = fees.maxDeposit(bytes32(0), 7);
+        uint256 deposit = fees.maxDeposit(TEST_REPO, 7);
         assertEq(rc.totalDeposits(address(usd)), 5 * C + deposit);
         assertEq(is_.reporter, reporter);
         assertEq(rc.submission(is_.check).deposit, deposit);
@@ -245,8 +246,9 @@ contract RaceV3Test is RaceV3Setup {
         uint256 s1 = _commit(solver1, b, FIX);
         _judgeCheck(s1, true);
         _fund(solver2, 10 * C);
+        bytes32 c = _commitment(FIX2, solver2);
         vm.prank(solver2);
-        assertEq(rc.commit(b, _commitment(FIX2, solver2)), 0);
+        assertEq(rc.commit(b, c), 0);
         assertEq(_owed(infra), 2 * C + 2 * C);
     }
 
@@ -254,16 +256,22 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b = _openBounty();
         uint256 s1 = _commit(solver1, b, FIX);
         _judgeCheck(s1, true);
+        bytes32 base = _head();
         vm.expectRevert(RaceV3Base.Refused.selector);
-        rc.claim(b, FIX2, 0, "salt");
+        rc.claim(b, FIX2, base, "salt");
         vm.expectRevert(RaceV3Base.Refused.selector);
-        rc.claim(b, FIX, 0, "pepper");
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, base, "pepper");
+        rc.claim(b, FIX, base, "salt");
         assertEq(uint256(rc.bounty(b).state), uint256(RaceV3Base.State.Merged));
-        assertTrue(rc.paid(FIX));
+        assertFalse(rc.paid(FIX)); // paid (merged) only at its finality (#251, L9)
         RaceV3Base.Award memory a = rc.award(b, 1);
         assertEq(a.winner, solver1);
         assertEq(a.sub, s1);
+        assertFalse(a.merged);
+        assertEq(rc.submission(s1).base, base);
+        _finalAndMerge(b, s1);
+        assertTrue(rc.paid(FIX));
+        assertTrue(rc.award(b, 1).merged);
     }
 
     function test_notMergedReopens() public {
@@ -283,13 +291,16 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b = _openBounty();
         uint256 s1 = _commit(solver1, b, FIX);
         _judgeCheck(s1, true);
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, _head(), "salt");
         uint256 price = rc.priceOf(b, 1);
         assertEq(rc.earned(b, 1), 0); // not final yet
         _toDay(rc.day() + 20);
         assertEq(rc.earned(b, 1), 0); // the window's audits and finality haven't happened
         uint256 owed0 = _owed(solver1);
         _final(s1);
+        _toDay(rc.day() + 6);
+        assertEq(rc.earned(b, 1), 0); // final, but not merged yet: nothing is paid (#251, L9)
+        rc.merge(b);
         (,,,,,, uint256 st) = rc.contracts();
         uint256 f = (pn.submission(s1).finalAt - st) / 1 days; // the instalments count from the window's end
         _toDay(f + 6);
@@ -310,13 +321,14 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b1 = _openBounty();
         uint256 s1 = _commit(solver1, b1, FIX);
         _judgeCheck(s1, true);
-        rc.claim(b1, FIX, 0, "salt");
+        rc.claim(b1, FIX, _head(), "salt");
+        _finalAndMerge(b1, s1);
         uint256 b2 = _openBounty();
         uint256 s2 = _commit(solver2, b2, FIX);
         _judgeCheck(s2, true);
         assertEq(uint256(rc.bounty(b2).state), uint256(RaceV3Base.State.Won));
         uint256 infraBefore = _owed(infra);
-        rc.claim(b2, FIX, 0, "salt");
+        rc.claim(b2, FIX, _head(), "salt");
         assertEq(uint256(rc.submission(s2).outcome), uint256(RaceV3Base.Outcome.Duplicate));
         assertEq(uint256(rc.bounty(b2).state), uint256(RaceV3Base.State.Open));
         assertEq(_owed(infra), infraBefore + 2 * C);
@@ -381,14 +393,14 @@ contract RaceV3Test is RaceV3Setup {
         _judge(pid, _votes(1, 1));
         _reportAll(pid);
         rc.result(id);
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, _head(), "salt");
         _toDay(rc.day() + 60);
         assertEq(rc.earned(b, 1), 0);
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
         _network(3, FAMILIES, 3); // three more, not parties
         pn.startWindow(id);
-        _final(id);
+        _finalAndMerge(b, id);
         _toDay(rc.day() + 28);
         assertEq(rc.earned(b, 1), 4);
         assertTrue(rc.settle(b));
@@ -406,9 +418,9 @@ contract RaceV3Test is RaceV3Setup {
         _pledge(bob, b, 400 * C); // after the commitment: the price rises above what the panel was sized for
         assertGt(rc.lockedPrice(b), judged);
         _judgeCheck(id, true);
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, _head(), "salt");
         assertEq(rc.priceOf(b, 1), judged);
-        _final(id);
+        _finalAndMerge(b, id);
         _toDay(rc.day() + 35);
         rc.settle(b);
         assertEq(rc.instalmentsPaid(b, 1), judged);
@@ -427,7 +439,7 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b = _openBounty();
         uint256 id = _commit(solver1, b, FIX);
         _judgeCheck(id, true);
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, _head(), "salt");
         _network(5, FAMILIES, 3);
         uint256 cpid = _challenge(id, false);
         uint256 deposit = rc.submission(id).deposit;
@@ -449,7 +461,7 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b = _openBounty();
         uint256 id = _commit(solver1, b, FIX);
         uint256 pid = _judgeCheck(id, true);
-        rc.claim(b, FIX, 0, "salt");
+        rc.claim(b, FIX, _head(), "salt");
         _network(5, FAMILIES, 3);
         address[] memory js = pn.judges(pid);
         uint256[] memory before0 = new uint256[](3);
@@ -513,7 +525,7 @@ contract RaceV3Test is RaceV3Setup {
         vm.prank(bob);
         rc.challenge(id, keccak256("evidence"));
         _bobsCover = before - usd.balanceOf(bob) - 10 * C;
-        assertEq(_bobsCover, fees.depositFor(id, bytes32(0), 7));
+        assertEq(_bobsCover, fees.depositFor(id, TEST_REPO, 7));
         _rollPast(pn.submission(id).challengeBlock);
         pn.drawChallenge(id);
         cpid = pn.submission(id).challengePid;
@@ -585,7 +597,7 @@ contract RaceV3Test is RaceV3Setup {
         _receipt(spid, sh[0]);
         _reportSeat(spid, sh[0]);
         address op = reg.validator(sh[0]).operator;
-        uint256 cost = fees.shadowCost(id, bytes32(0), reg.validator(sh[0]).family, _usage(spid, sh[0]));
+        uint256 cost = fees.shadowCost(id, TEST_REPO, reg.validator(sh[0]).family, _usage(spid, sh[0]));
         uint256 g = gasleft();
         rc.payShadow(spid, 0);
         console.log("payShadow:", g - gasleft());
@@ -617,6 +629,7 @@ contract RaceV3Test is RaceV3Setup {
         rc.withdraw(id);
         assertEq(uint256(rc.submission(id).outcome), uint256(RaceV3Base.Outcome.Withdrawn));
         uint256 b2 = _openBounty();
+        vm.warp(vm.getBlockTimestamp() + 1 days); // a new pricing period, whatever the windows: nobody drawn in it yet
         uint256 id2 = _commit(solver2, b2, FIX2);
         _draw(id2);
         p = fees.currentPeriod();
@@ -732,13 +745,9 @@ contract RaceV3Test is RaceV3Setup {
 
     // ---------- the head registry ----------
 
-    function test_claimMovesTheHeadOnlyFromIt() public {
-        bytes32 repo = keccak256("repo");
-        bytes32[] memory repos = new bytes32[](1);
-        bytes32[] memory commits = new bytes32[](1);
-        repos[0] = repo;
-        commits[0] = keccak256("genesis head");
-        _deployRaceWith(3, repos, commits);
+    /// The commitment opens to (fix, base); the claim doesn't move the head, the merge at finality does, from that base.
+    function test_mergeMovesTheHeadOnlyFromIt() public {
+        bytes32 repo = TEST_REPO;
         _fund(reporter, 100 * C);
         vm.prank(reporter);
         vm.expectRevert(RaceV3Base.Refused.selector);
@@ -749,7 +758,7 @@ contract RaceV3Test is RaceV3Setup {
         uint256 b = rc.openBounty(i);
         _pledge(alice, b, 100 * C);
         _fund(solver1, 100 * C);
-        bytes32 base = keccak256("genesis head");
+        bytes32 base = TEST_GENESIS_HEAD;
         vm.prank(solver1);
         uint256 id = rc.commit(b, keccak256(abi.encode(FIX, base, bytes32("salt"), solver1)));
         _judgeCheck(id, true);
@@ -757,8 +766,11 @@ contract RaceV3Test is RaceV3Setup {
         vm.expectRevert(); // a base that isn't the commitment's
         rc.claim(b, FIX, keccak256("other"), "salt");
         rc.claim(b, FIX, base, "salt");
+        assertEq(h.head(repo).commit, base); // not at the claim (#251, L9)
+        _finalAndMerge(b, id);
         assertEq(h.head(repo).commit, FIX);
         assertEq(h.head(repo).submission, id);
+        assertEq(h.head(repo).bounty, b);
     }
 
     /// An issue registered with hidden tests or a private repository: its registration check and every submission to
@@ -766,7 +778,7 @@ contract RaceV3Test is RaceV3Setup {
     function test_aHiddenIssuesChecksAreTeeOnly() public {
         _fund(reporter, 100 * C);
         vm.prank(reporter);
-        uint256 i = rc.register(bytes32(0), true);
+        uint256 i = rc.register(TEST_REPO, true);
         assertTrue(rc.issue(i).hidden);
         assertTrue(pn.submission(rc.issue(i).check).teeOnly);
         _check(rc.issue(i).check, true);
@@ -786,7 +798,7 @@ contract RaceV3Test is RaceV3Setup {
         _fund(reporter, 100 * C);
         uint256 g = gasleft();
         vm.prank(reporter);
-        uint256 i = rc.register(bytes32(0), false);
+        uint256 i = rc.register(TEST_REPO, false);
         console.log("register (with its check's deposit and Panels.open):", g - gasleft());
         _check(rc.issue(i).check, true);
         g = gasleft();
@@ -802,9 +814,10 @@ contract RaceV3Test is RaceV3Setup {
         g = gasleft();
         rc.attempt(b);
         console.log("attempt:", g - gasleft());
+        bytes32 c = _commitment(FIX, solver1);
         vm.prank(solver1);
         g = gasleft();
-        uint256 id = rc.commit(b, _commitment(FIX, solver1));
+        uint256 id = rc.commit(b, c);
         console.log("commit (deposit, FeesV3.open, Panels.open):", g - gasleft());
         uint256 pid = _draw(id);
         g = gasleft();
@@ -825,8 +838,8 @@ contract RaceV3Test is RaceV3Setup {
         rc.result(id);
         console.log("result (k = 3: FeesV3.settle, 3 judges and the relayer paid, the queue):", g - gasleft());
         g = gasleft();
-        rc.claim(b, FIX, 0, "salt");
-        console.log("claim (the merge):", g - gasleft());
+        rc.claim(b, FIX, _head(), "salt");
+        console.log("claim (opens the commitment; the head waits for finality):", g - gasleft());
         uint256 before = pn.panelCount();
         _runAudits(id, true);
         for (uint256 q = before + 1; q <= pn.panelCount(); ++q) {
@@ -838,6 +851,9 @@ contract RaceV3Test is RaceV3Setup {
         }
         vm.warp(pn.submission(id).finalAt);
         pn.finalize(id);
+        g = gasleft();
+        rc.merge(b);
+        console.log("merge (the head moves at finality, #251 L9):", g - gasleft());
         _toDay(rc.day() + 7);
         g = gasleft();
         rc.claimInstalments(b, 1);
@@ -878,9 +894,10 @@ contract RaceV3Test is RaceV3Setup {
     /// No owner, admin, setter or pause: every state-changing function is a race action anyone may call.
     function test_noPrivilegedCall() public view {
         string memory json = vm.readFile("out/RaceV3.sol/RaceV3.json");
-        string[26] memory writers = [
+        string[28] memory writers = [
             "register", "withdrawIssue", "openBounty", "pledge", "sunset", "attempt", "stop", "commit", "report",
-            "result", "claim", "claimInstalments", "settle", "appeal", "withdraw", "timeOut", "mergeExpired",
+            "result", "claim", "merge", "release", "claimInstalments", "settle", "appeal", "withdraw", "timeOut",
+            "mergeExpired",
             "challenge", "settleChallenge", "sync", "payPanel", "payShadow", "signal", "finish",
             // Baskets: refunds, credits and swaps
             "claimRefund", "check"
@@ -906,7 +923,7 @@ contract RaceV3Test is RaceV3Setup {
             assertTrue(ok, string.concat("unexpected state-changing function: ", name));
             ++n;
         }
-        assertEq(n, 30); // two named withdraw: the race's and Baskets' credit withdrawal
+        assertEq(n, 32); // two named withdraw: the race's and Baskets' credit withdrawal
     }
 
     /// The annex's actions run only in a race's storage, through its DELEGATECALL; and a race refuses an annex built
@@ -916,27 +933,39 @@ contract RaceV3Test is RaceV3Setup {
         vm.expectRevert(RaceV3Base.Refused.selector);
         ax.sync(1);
         vm.expectRevert(RaceV3Base.Refused.selector);
-        ax.register(bytes32(0), false);
+        ax.register(TEST_REPO, false);
         RaceV3Annex other = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp + 0);
         (,,,,,, uint256 st) = rc.contracts();
         if (st != block.timestamp) {
             vm.expectRevert(RaceV3Base.BadParams.selector);
-            new RaceV3(_config(), 625, 100_000, pn, pool3, st, new bytes32[](0), new bytes32[](0), "c", other);
+            this.deployRace(_config(), 625, st, other);
         }
         RaceV3Annex wrongCap = new RaceV3Annex(_config(), 600, 100_000, pn, pool3, st);
         vm.expectRevert(RaceV3Base.BadParams.selector);
-        new RaceV3(_config(), 625, 100_000, pn, pool3, st, new bytes32[](0), new bytes32[](0), "c", wrongCap);
+        this.deployRace(_config(), 625, st, wrongCap);
+    }
+
+    // RaceV3 and its annex are cheatcode deployments in this suite (too large to inline): an expected revert wraps an
+    // external call, or the rest of the test silently doesn't run (#251).
+
+    function deployRace(RaceV3Base.Config memory c, uint256 cap, uint256 st, RaceV3Annex ax) external returns (RaceV3) {
+        return new RaceV3(c, cap, 100_000, pn, pool3, st, TEST_REPO, TEST_GENESIS_HEAD, "c", ax);
+    }
+
+    function deployAnnex(RaceV3Base.Config memory c, uint256 cap, uint256 st) external returns (RaceV3Annex) {
+        return new RaceV3Annex(c, cap, 100_000, pn, pool3, st);
     }
 
     /// Panels judges bounties up to BOUNTY_MAX ($625): a race whose pots could hold more is refused.
     function test_paramsChecked() public {
         (,,,,,, uint256 st) = rc.contracts();
         vm.expectRevert(RaceV3Base.BadParams.selector);
-        new RaceV3Annex(_config(), 626, 100_000, pn, pool3, st);
+        this.deployAnnex(_config(), 626, st);
         RaceV3Base.Config memory c = _config();
         c.instalments = 0;
         vm.expectRevert(RaceV3Base.BadParams.selector);
-        new RaceV3Annex(c, 625, 100_000, pn, pool3, st);
+        this.deployAnnex(c, 625, st);
+        this.deployAnnex(_config(), 625, st); // and the right parameters build one
     }
 
     /// EIP-170 for every runtime, and EIP-3860 for RaceV3's initcode (it deploys Heads; its annex is deployed first).

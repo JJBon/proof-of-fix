@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
+import {LaunchChain} from "../../src/v3/LaunchChain.sol";
 import {Validators} from "../../src/v3/Validators.sol";
 import {IValidators} from "../../src/v3/IValidators.sol";
 import {
@@ -468,7 +469,7 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
         uint256 e0 = reg.epoch();
         address[] memory none = new address[](0);
         reg.recheck(none);
-        assertEq(reg.epoch(), e0 + 1);
+        assertEq(reg.epoch(), e0); // a re-check that moves nobody isn't a change (#251 task 3.10)
         assertEq(reg.teeTypeCount(), 3);
         assertTrue(reg.allowedImage(IMAGE));
         assertFalse(reg.acceptedProofType(reg.PROOF_ZKTLS()));
@@ -567,12 +568,14 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
         assertFalse(reg.acceptedProofType(reg.PROOF_SIMULATED()));
     }
 
-    /// A deployment on any chain id but 31337 and 7193 refuses `simulated` (D18; the same rule as the genesis check).
+    /// A deployment on any chain id but 31337 and 7193 refuses `simulated` (D18; the same rule as the genesis check):
+    /// on Sepolia by the list's check, anywhere else already by the chain check (#251, L2).
     function testFuzz_aDeploymentOffADevnetRefusesSimulated(uint64 chain) public {
         vm.assume(chain != 31_337 && chain != 7_193 && chain != 0);
         vm.chainId(chain);
         Validators.Genesis memory g = _genesis(true, new IValidators.Registration[](0), 0);
-        vm.expectRevert(Validators.BadParams.selector);
+        if (chain == 11_155_111) vm.expectRevert(Validators.BadParams.selector);
+        else vm.expectRevert(abi.encodeWithSelector(LaunchChain.WrongChain.selector, uint256(chain)));
         _create(g);
     }
 
@@ -599,7 +602,7 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
 
     /// The receipt's hash covers its proof type, notary, model and weights, image, seed, prompt, answer, tests and
     /// proof (D11, owner 2026-11-03): changing any one changes the hash.
-    function test_receiptsNameTheirProof() public view {
+    function test_receiptsNameTheirProof() public {
         IValidators.Receipt memory r = IValidators.Receipt(
             reg.PROOF_TEE(),
             bytes32(0),
@@ -610,7 +613,11 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
             keccak256("prompt"),
             keccak256("answer"),
             keccak256("tests"),
-            keccak256("quote")
+            keccak256("quote"),
+            address(0xBEEF),
+            7,
+            2,
+            makeAddr("seated")
         );
         bytes32 h = reg.receiptHash(r);
         assertEq(
@@ -618,7 +625,7 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
             keccak256(
                 abi.encode(
                     keccak256(
-                        "Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof)"
+                        "Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof,address panels,uint256 pid,uint256 slot,address key)"
                     ),
                     r
                 )
@@ -629,6 +636,35 @@ contract ValidatorsLevelsV3Test is ValidatorsSetup {
         r.proofType = reg.PROOF_TEE();
         r.weights = keccak256("weights");
         assertTrue(reg.receiptHash(r) != h);
+    }
+
+    /// #251 task 3.10 (open problems 7.5): the receipt names the seat it was given on, the Panels, the panel, the slot
+    /// and the validator's key, so one seat's receipt hashes differently from any other seat's: it can't be posted for
+    /// another seat, or by another validator, without the challenge panel finding its seat fields false.
+    function test_theReceiptNamesTheValidatorsSeat() public {
+        IValidators.Receipt memory r;
+        r.proofType = reg.PROOF_TEE();
+        r.model = keccak256("anthropic/claude-x");
+        r.image = IMAGE;
+        r.seed = keccak256("seed");
+        r.panels = address(0xBEEF);
+        r.pid = 7;
+        r.slot = 2;
+        r.key = makeAddr("seated");
+        bytes32 h = reg.receiptHash(r);
+        r.key = makeAddr("another validator");
+        assertTrue(reg.receiptHash(r) != h, "another validator");
+        r.key = makeAddr("seated");
+        r.slot = 1;
+        assertTrue(reg.receiptHash(r) != h, "another slot");
+        r.slot = 2;
+        r.pid = 8;
+        assertTrue(reg.receiptHash(r) != h, "another panel");
+        r.pid = 7;
+        r.panels = address(0xCAFE);
+        assertTrue(reg.receiptHash(r) != h, "another Panels");
+        r.panels = address(0xBEEF);
+        assertEq(reg.receiptHash(r), h);
     }
 
     // ---------- counters ----------

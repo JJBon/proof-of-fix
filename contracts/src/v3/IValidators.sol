@@ -10,7 +10,9 @@ pragma solidity 0.8.37;
 /// - Candidate: registered and bonded, or suspended by the reveal-rate floor; drawn only as a shadow judge;
 /// - Active: qualified; drawn for counted panels while its bond is at least BOND_FLOOR (`isDrawable`);
 /// - Leaving: announced its exit; never drawn again, still slashable, withdrawable after the unbonding conditions;
-/// - Exited: its bond withdrawn.
+/// - Exited: its bond withdrawn;
+/// - BelowFloor (#251, design L5): qualified, but its bond fell below BOND_FLOOR (a slash). Not counted in
+///   `activeCount`, never drawn; a top-up to the floor makes it Active again without qualifying, and it may leave.
 ///
 /// Hooks (the `onlyPanels` functions): callable only by the address bound once with `bind()` (v2's pattern: the
 /// consumer calls it from its own constructor). They never revert for a state the caller can't foresee: a hook that
@@ -22,7 +24,8 @@ interface IValidators {
         Candidate,
         Active,
         Leaving,
-        Exited
+        Exited,
+        BelowFloor
     }
 
     /// The faults Panels (or RaceV3, through Panels) proves and reports (D16). Equivocation is proven to the registry
@@ -95,8 +98,10 @@ interface IValidators {
     }
 
     /// What a receipt names (D11, owner 2026-11-03): its proof, the model and its weights (0 where not public), the
-    /// inference image, the seed, the prompt and the answer, the tests' results, and the proof's bytes. A counted
-    /// verdict posts `receiptHash` of it on-chain; a proof type switched on later reuses this format.
+    /// inference image, the seed, the prompt and the answer, the tests' results, and the proof's bytes; and the seat it
+    /// was given on (#251 task 3.10, open problems 7.5): the Panels, the panel, the slot and the validator's key, so one
+    /// seat's receipt can't be posted for another. A counted verdict posts `receiptHash` of it on-chain; a proof type
+    /// switched on later reuses this format. A receipt whose seat fields aren't the seat it was posted on is false.
     struct Receipt {
         bytes32 proofType;
         bytes32 notary; // zkTLS: the notary that signed the proof; 0 for a TEE
@@ -108,6 +113,10 @@ interface IValidators {
         bytes32 answer;
         bytes32 tests; // each test's pass or fail, hashed
         bytes32 proof; // the proof bytes (a TEE quote or a zkTLS proof), hashed
+        address panels; // the seat: the Panels it was posted to,
+        uint256 pid; // the panel,
+        uint256 slot; // the seat's slot on it,
+        address key; // and the validator seated there
     }
 
     /// A candidate's qualification attempt and an active validator's reveal window.
@@ -123,9 +132,9 @@ interface IValidators {
 
     // ---------- reads ----------
 
-    /// Active: qualified, not suspended, not leaving (FeesV3 counts its price tables).
+    /// Active: qualified, not suspended, not leaving, bonded at least BOND_FLOOR (FeesV3 counts its price tables).
     function isActive(address key) external view returns (bool);
-    /// How many validators are active now.
+    /// How many validators are active now (never one below the floor: #251, L5).
     function activeCount() external view returns (uint256);
     /// Active, bonded at least BOND_FLOOR and in standing (its proof type, TEE type and image still listed, its firmware
     /// at its type's minimum): may be drawn for a counted panel (Panels still applies the parties, the caps, the family

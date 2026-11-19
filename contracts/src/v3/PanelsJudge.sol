@@ -5,10 +5,11 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IValidators} from "./IValidators.sol";
 import {PanelsDraw} from "./PanelsDraw.sol";
 import {PanelsVerdict} from "./PanelsVerdict.sol";
-import {PanelsBase, Store, Env, Submission, Panel, Seat, Kind, Tier} from "./PanelsBase.sol";
+import {PanelsBase, Store, Env, Submission, Panel, Seat, Kind, Tier, Status} from "./PanelsBase.sol";
 
 /// Panels' seats (proof-of-fix#138, task 3.2; design D18, D16): the drawn judges' signed seals, reveals and receipts,
-/// and the replacement of a seat that misses a deadline. A linked library on Panels' `Store`; see Panels for the rules.
+/// and the replacement of a seat that misses a deadline; and the release of rounds that can't complete (#251, L19). A
+/// linked library on Panels' `Store`; see Panels for the rules.
 library PanelsJudge {
     event Sealed(uint256 indexed pid, address indexed key, bytes32 seal);
     event Revealed(uint256 indexed pid, address indexed key, bool vote, uint8 mask);
@@ -16,6 +17,9 @@ library PanelsJudge {
     event Mismatch(uint256 indexed pid, address indexed key);
     event Missed(uint256 indexed pid, address indexed key, bool hadSeal);
     event Stalled(uint256 indexed pid, uint256 vacant);
+    event Released(uint256 indexed id, uint256 indexed pid, uint256 redraws);
+    event Refunded(uint256 indexed id);
+    event Waited(uint256 indexed id, uint256 k, uint8 level);
 
     error TooEarly();
     error TooLate();
@@ -29,6 +33,7 @@ library PanelsJudge {
     error EmptyHash();
     error NothingDue();
     error NotReady();
+    error WrongStatus();
 
     function seal(Store storage st, Env memory e, uint256 pid, address key, bytes32 sealHash, bytes calldata sig)
         external
@@ -135,6 +140,114 @@ library PanelsJudge {
         if (p.seats == before) revert NotReady();
     }
 
+    // ---------- stuck rounds (#251, design L19; specs/panel-liveness) ----------
+
+    /// A counted or audit panel with a seat its replacements couldn't fill, STUCK_GRACE after its reveal deadline: the
+    /// round ends. A seat that never sealed is silent and slashed as any silence (`_vacate`); a seat that sealed (it
+    /// couldn't reveal: the reveal window opens only on a full panel) or revealed is closed with no slash. A counted
+    /// round sends its submission back to waiting with a redraw scheduled (a fresh seed block and snapshot at the next
+    /// `draw`, once the registry changes or at `retryAt`); an audit round makes its audit due again, from a fresh audit
+    /// block. Each is one of the submission's MAX_REDRAWS released rounds; the last one refunds it (`_refund`).
+    function release(Store storage st, Env memory e, uint256 pid) external {
+        Panel storage p = _live(st, pid);
+        Kind kind = p.kind;
+        uint256 k = p.k;
+        if ((kind != Kind.Counted && kind != Kind.Audit) || p.seats == k || block.timestamp <= p.revealBy + e.stuckGrace)
+        {
+            revert NothingDue();
+        }
+        for (uint256 i; i < k; ++i) {
+            Seat storage x = st.seats[pid][i];
+            address key = x.key;
+            if (key == address(0)) continue;
+            if (!x.hasSeal) {
+                _vacate(st, e, pid, p, i, false);
+            } else {
+                e.reg.verdictFinal(key);
+                if (kind == Kind.Counted && k == 1) PanelsBase.k1Release(st, key);
+            }
+        }
+        p.closed = true;
+        uint256 id = p.id;
+        Submission storage s = st.subs[id];
+        emit Released(id, pid, s.redraws + 1);
+        if (kind == Kind.Audit) {
+            if (s.status != Status.Held && s.status != Status.Window) return; // already refunded: nothing to redraw
+            --s.auditsDrawn;
+            if (!_round(st, e, id, s)) _retargetAudits(e, s);
+            return;
+        }
+        s.pid = 0;
+        s.k = 0;
+        s.level = 0;
+        if (_round(st, e, id, s)) return;
+        s.status = Status.Waiting;
+        s.waitEpoch = uint64(e.reg.epoch() + 1);
+        s.retryAt = uint64(block.timestamp + e.retryDelay);
+        emit Waited(id, 0, 0);
+    }
+
+    /// A verdict in its window whose audit no validator could take for STUCK_GRACE (since its audits first found no
+    /// auditor in the window, or the last released round): the round is released, and the audit is drawn again from a
+    /// fresh audit block; the last of MAX_REDRAWS refunds the submission. Only in the window: while a k = 1 verdict is
+    /// held, its hold, not its audits, keeps it from finality, and it ends when the network has grown enough to judge
+    /// its challenge (D4), auditors included; the stuck clock restarts when its window starts.
+    function releaseAudits(Store storage st, Env memory e, uint256 id) external {
+        Submission storage s = st.subs[id];
+        if (s.status != Status.Window) revert WrongStatus();
+        uint256 since = s.auditStuckAt;
+        if (since == 0 || s.challengeOpen || s.auditsDrawn == s.auditsDue || block.timestamp <= since + e.stuckGrace) {
+            revert NothingDue();
+        }
+        emit Released(id, 0, s.redraws + 1);
+        if (_round(st, e, id, s)) return;
+        _retargetAudits(e, s);
+        s.auditStuckAt = uint64(block.timestamp);
+    }
+
+    /// The race's deadline (RaceV3's resultDays after the commitment) for a submission with a released round that is
+    /// parked: waiting, before its seed, or a verdict whose audits are due with none drawn and no challenge open.
+    function abandon(Store storage st, Env memory e, uint256 id) external {
+        Submission storage s = st.subs[id];
+        Status x = s.status;
+        bool parked = x == Status.Waiting || x == Status.Sealed
+            || ((x == Status.Held || x == Status.Window) && !s.challengeOpen && s.auditsDrawn < s.auditsDue);
+        if (s.redraws == 0 || !parked) revert WrongStatus();
+        _refund(st, e, id, s);
+    }
+
+    /// One more released round: the last of MAX_REDRAWS refunds the submission (returns true).
+    function _round(Store storage st, Env memory e, uint256 id, Submission storage s) private returns (bool) {
+        if (++s.redraws < e.maxRedraws) return false;
+        _refund(st, e, id, s);
+        return true;
+    }
+
+    /// Never judged: `Released`, the race refunds the bounty (RaceV3.release). A counted verdict's judges' verdicts close
+    /// unscored. A constitution-tier submission expires instead, its deposit refunded.
+    function _refund(Store storage st, Env memory e, uint256 id, Submission storage s) private {
+        if (s.status == Status.Held || s.status == Status.Window) {
+            uint256 pid = s.pid;
+            uint256 k = s.k;
+            for (uint256 i; i < k; ++i) {
+                address key = st.seats[pid][i].key;
+                if (key == address(0)) continue;
+                e.reg.verdictFinal(key);
+                if (k == 1) PanelsBase.k1Release(st, key);
+            }
+        }
+        if (s.tier != Tier.Issue) return PanelsBase.expire(e, id, s);
+        s.status = Status.Released;
+        emit Refunded(id);
+    }
+
+    function _retargetAudits(Env memory e, Submission storage s) private {
+        s.auditWaits = false;
+        s.auditBlock = uint64(block.number + PanelsBase.SEED_DELAY);
+        s.auditSnap = PanelsBase.snap(e, s.bounty);
+        s.auditEpoch = uint64(e.reg.epoch() + 1);
+    }
+
     // ---------- internals ----------
 
     /// A miss: the registry slashes and counts it, the seat's verdict closes, and the seat empties.
@@ -169,11 +282,11 @@ library PanelsJudge {
             IValidators.Validator memory v = e.reg.validator(x.key);
             c.members[c.m++] = PanelsDraw.Member(x.key, v.operator, v.host, v.family, v.teeType, x.level);
         }
-        c = PanelsDraw.fill(c, PanelsDraw.tries(c.snap) * (k - have), st.seatOf, st.k1Pending, st.k1FreedAt);
+        c = PanelsDraw.fill(c, PanelsDraw.tries(c.snap) * (k - have), st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
         p.counter = uint32(c.counter);
         if (c.unpriced != address(0)) PanelsBase.announce(e, c.unpriced);
         if (c.m > have) {
-            PanelsBase.resetTimeline(p);
+            PanelsBase.resetTimeline(e, p);
             uint256 j = have;
             for (uint256 i; i < k && j < c.m; ++i) {
                 if (st.seats[pid][i].key == address(0)) {

@@ -14,6 +14,7 @@ interface IPanelsRegistry is IValidators {
     function pool() external view returns (address);
     function rosterLength(uint256 t) external view returns (uint256);
     function rosterEntry(uint256 t, uint256 i) external view returns (address key, uint64 raisedAt, uint8 bucket);
+    function windowsHash() external view returns (bytes32);
 }
 
 /// What Panels asks of the check-fee meter (FeesV3, D19): a family is drawn only once priced; an unpriced family's

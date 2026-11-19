@@ -295,6 +295,18 @@ class Params:
     # A fee that only covers the judges' cost (JUDGE_FEE, dollars): every submission pays it on arrival, never
     # refunded, in place of its panels' per-check charges. 0: those charges, as before
     JUDGE_FEE: float = 0.0
+    # ---- #251 task 3.2 (launch design L6; report active-solvers-v1): the minimum of active solvers. Off by default
+    # and read only by `nodeposit.NDNet` (a plain `Net` refuses it, so no earlier report moves) ----
+    # The pledge gate (ACTIVE_GATE): an identity is active while, within ACTIVE_WINDOW_WEEKS, it has a fix whose
+    # passing verdict became final (funded or not) or a failing-test dispute that was upheld. While fewer than
+    # ACTIVE_SOLVERS_MIN identities are active, pledges are refused: an issue listed then stays unfunded (its fix is
+    # still judged, unpaid, and still makes its solver active) and actors start no new claim; claims already made
+    # go on. ACTIVE_COUNTS: whose upheld disputes count, "repository" (its honest solvers' and actors' identities)
+    # or "anyone" (the world's contenders too, one identity per contender seat)
+    ACTIVE_GATE: bool = False
+    ACTIVE_SOLVERS_MIN: int = 3
+    ACTIVE_WINDOW_WEEKS: float = 13.0
+    ACTIVE_COUNTS: str = "repository"
     # D9's idle signal: which validators count. "active" (v3): every active validator; "seated" (#236, a switch the
     # simulation adds): only those of families drawn for counted panels, so contenders, which are never drawn, don't
     # pull the fee to its floor

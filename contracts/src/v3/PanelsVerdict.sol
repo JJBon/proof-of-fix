@@ -30,10 +30,13 @@ library PanelsVerdict {
 
     // ---------- the draws ----------
 
+    /// A waiting submission is drawn again (a fresh seed block and snapshot) once the registry changed or at its
+    /// `retryAt` (#251, L19): RETRY_DELAY after it began waiting, or the capacity's window when a full or paused
+    /// validator was skipped (L16), whichever comes first. So every waiting submission has a scheduled redraw.
     function draw(Store storage st, Env memory e, uint256 id) external {
         Submission storage s = st.subs[id];
         if (s.status == Status.Waiting) {
-            if (e.reg.epoch() + 1 == s.waitEpoch) revert NothingChanged();
+            if (e.reg.epoch() + 1 == s.waitEpoch && block.timestamp < s.retryAt) revert NothingChanged();
             return _retarget(e, id, s);
         }
         if (s.status != Status.Sealed) revert WrongStatus();
@@ -48,14 +51,15 @@ library PanelsVerdict {
             if (con) return PanelsBase.expire(e, id, s);
             s.status = Status.Waiting;
             s.waitEpoch = uint64(e.reg.epoch() + 1);
+            s.retryAt = uint64(block.timestamp + (c.full ? e.capWindow : e.retryDelay));
             emit PanelsBase.Waited(id, k, level);
             uint256 sp = s.shadowPid;
             if (sp == 0 || st.panels[sp].closed) {
-                _drawShadows(st, e, id, 0, seed, PanelsBase.SHADOW_PER_WAITING, block.timestamp + PanelsBase.SEAL_WINDOW);
+                _drawShadows(st, e, id, 0, seed, PanelsBase.SHADOW_PER_WAITING, block.timestamp + e.seal);
             }
             return;
         }
-        (uint256 pid, Panel storage p) = PanelsBase.newPanel(st, id, Kind.Counted, seed, k, 0, s.snap, c.counter);
+        (uint256 pid, Panel storage p) = PanelsBase.newPanel(st, e, id, Kind.Counted, seed, k, 0, s.snap, c.counter);
         for (uint256 i; i < k; ++i) {
             PanelsBase.seat(st, e, pid, p, i, c.members[i].key, c.members[i].level);
         }
@@ -67,10 +71,20 @@ library PanelsVerdict {
         _drawShadows(st, e, id, pid, seed, n, p.sealBy);
     }
 
+    /// #251 task 3.10 (open problems 7.5): repeat calls are refused. A draw that finds no auditor re-targets (a fresh
+    /// audit block and snapshot) only if the registry changed since its snapshot was taken (`auditEpoch`); otherwise the
+    /// audits wait (`auditWaits`), and every call is refused until the registry changes, as a waiting submission's
+    /// `draw` and a waiting challenge's `drawChallenge` are. Then one call re-targets and the next, from the new audit
+    /// block, draws. So nobody can roll fresh audit blocks at will.
     function drawAudits(Store storage st, Env memory e, uint256 id) external {
         Submission storage s = st.subs[id];
         if (s.status != Status.Held && s.status != Status.Window) revert WrongStatus();
         if (s.auditDecided && s.auditsDrawn == s.auditsDue) revert NothingDue();
+        if (s.auditWaits) {
+            if (e.reg.epoch() + 1 == s.auditEpoch) revert NothingChanged();
+            s.auditWaits = false;
+            return _retargetAudits(e, id, s);
+        }
         bytes32 bh = PanelsBase.hashOf(s.auditBlock);
         if (bh != 0) {
             bytes32 base = keccak256(abi.encode(bh, st.panels[s.pid].seed, "audit"));
@@ -79,23 +93,39 @@ library PanelsVerdict {
                 if (uint256(base) % 10_000 < PanelsBase.AUDIT_RATE_BPS && !_splitC(s, st.panels[s.pid])) ++s.auditsDue;
                 emit AuditsDecided(id, s.auditsDue);
             }
+            bool full;
             while (s.auditsDrawn < s.auditsDue) {
                 PanelsDraw.Ctx memory c = PanelsBase.ctx(
                     st, e, id, s.bounty, keccak256(abi.encode(base, s.auditsDrawn)), s.auditSnap, st.panelCount + 1, s.pid
                 );
                 c.k = 1;
-                c = PanelsDraw.fill(c, PanelsDraw.tries(c.snap), st.seatOf, st.k1Pending, st.k1FreedAt);
+                c = PanelsDraw.fill(c, PanelsDraw.tries(c.snap), st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
                 if (c.unpriced != address(0)) PanelsBase.announce(e, c.unpriced);
+                full = c.full;
                 if (c.m == 0) break;
+                s.auditStuckAt = 0;
                 (uint256 apid, Panel storage ap) =
-                    PanelsBase.newPanel(st, id, Kind.Audit, c.seed, 1, s.pid, s.auditSnap, c.counter);
+                    PanelsBase.newPanel(st, e, id, Kind.Audit, c.seed, 1, s.pid, s.auditSnap, c.counter);
                 PanelsBase.seat(st, e, apid, ap, 0, c.members[0].key, c.members[0].level);
                 ++s.auditsDrawn;
             }
             if (s.auditsDrawn == s.auditsDue) return;
+            // no auditor: the audits are stuck from now (L19: Panels.releaseAudits after STUCK_GRACE)
+            if (s.auditStuckAt == 0) s.auditStuckAt = uint64(block.timestamp);
+            if (full) return; // busy auditors: retried from the same audit block once they have room (L16)
+            if (e.reg.epoch() + 1 == s.auditEpoch) {
+                s.auditWaits = true; // no auditor in a snapshot of the registry as it is: wait for it to change
+                emit AuditWaits(id, s.auditBlock);
+                return;
+            }
         }
+        _retargetAudits(e, id, s); // the snapshot is older than the registry, or the audit block is gone
+    }
+
+    function _retargetAudits(Env memory e, uint256 id, Submission storage s) private {
         s.auditBlock = uint64(block.number + PanelsBase.SEED_DELAY);
         s.auditSnap = PanelsBase.snap(e, s.bounty);
+        s.auditEpoch = uint64(e.reg.epoch() + 1);
         emit AuditWaits(id, s.auditBlock);
     }
 
@@ -115,15 +145,16 @@ library PanelsVerdict {
         c.kTop = PanelsBase.challengeK(k);
         c.kMin = k == PanelsBase.K_MAX ? PanelsBase.K_MAX : k + 2;
         uint256 kc;
-        (c, kc,) = PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt);
+        (c, kc,) = PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
         if (c.unpriced != address(0)) PanelsBase.announce(e, c.unpriced);
         if (kc == 0) {
+            if (c.full) return; // busy validators: retried from the same seed once they have room (L16)
             s.challengeEpoch = uint64(e.reg.epoch() + 1);
             emit ChallengeWaits(id);
             return;
         }
         (uint256 cpid, Panel storage cp) =
-            PanelsBase.newPanel(st, id, Kind.Challenge, seed, kc, s.pid, s.challengeSnap, c.counter);
+            PanelsBase.newPanel(st, e, id, Kind.Challenge, seed, kc, s.pid, s.challengeSnap, c.counter);
         for (uint256 i; i < kc; ++i) {
             PanelsBase.seat(st, e, cpid, cp, i, c.members[i].key, c.members[i].level);
         }
@@ -154,7 +185,7 @@ library PanelsVerdict {
         Submission storage s = st.subs[id];
         if (s.status != Status.Held) revert WrongStatus();
         if (!_challengersReady(st, e, id, s)) revert NotReady();
-        _startWindow(id, s);
+        _startWindow(e, id, s);
     }
 
     function finalize(Store storage st, Env memory e, uint256 id) external {
@@ -231,6 +262,7 @@ library PanelsVerdict {
         s.level = level;
         s.auditBlock = uint64(block.number + PanelsBase.SEED_DELAY);
         s.auditSnap = PanelsBase.snap(e, s.bounty);
+        s.auditEpoch = uint64(e.reg.epoch() + 1);
         s.auditsDue = uint8((k == 1 ? PanelsBase.K1_AUDITS : 0) + (_splitC(s, p) ? 1 : 0));
         emit Counted(id, pid, pass, passes, level);
         if (k == 1 && !_challengersReady(st, e, id, s)) {
@@ -238,7 +270,7 @@ library PanelsVerdict {
             s.heldAtCount = true;
             emit Held(id);
         } else {
-            _startWindow(id, s);
+            _startWindow(e, id, s);
         }
     }
 
@@ -299,14 +331,13 @@ library PanelsVerdict {
         emit ChallengeResolved(id, cpid, upheld, pass, falseReceipt);
     }
 
-    function _startWindow(uint256 id, Submission storage s) private {
+    function _startWindow(Env memory e, uint256 id, Submission storage s) private {
         Tier t = s.tier;
-        uint256 w = t == Tier.Adr
-            ? PanelsBase.ADR_WINDOW
-            : t == Tier.Removal ? PanelsBase.REMOVAL_WINDOW : PanelsBase.windowOf(s.k, s.level);
+        uint256 w = t == Tier.Adr ? e.adr : t == Tier.Removal ? e.removal : PanelsBase.windowOf(e, s.k, s.level);
         uint256 finalAt = block.timestamp + w;
         s.finalAt = uint64(finalAt);
         s.status = Status.Window;
+        if (s.auditStuckAt != 0) s.auditStuckAt = uint64(block.timestamp); // L19's clock runs in the window only
         emit WindowStarted(id, finalAt);
     }
 
@@ -316,14 +347,20 @@ library PanelsVerdict {
         returns (bool)
     {
         return PanelsDraw.challengersReady(
-            e.reg,
-            IPanelsHost(st.race),
-            id,
-            s.bounty,
-            st.panels[s.pid].seed,
-            PanelsBase.challengeK(1),
-            s.teeOnly,
-            st.seatOf[s.pid]
+            PanelsDraw.ShadowCtx(
+                e.reg,
+                IPanelsHost(st.race),
+                e.fees,
+                e.scores,
+                id,
+                s.bounty,
+                st.panels[s.pid].seed,
+                PanelsBase.challengeK(1),
+                s.teeOnly,
+                e.capWindow
+            ),
+            st.seatOf[s.pid],
+            st.load
         );
     }
 
@@ -349,15 +386,17 @@ library PanelsVerdict {
                 s.bounty,
                 keccak256(abi.encode(seed, "shadow")),
                 n,
-                s.teeOnly
-            )
+                s.teeOnly,
+                e.capWindow
+            ),
+            st.load
         );
         if (unpriced != address(0)) PanelsBase.announce(e, unpriced);
         if (keys.length == 0) return;
         (uint256 spid, Panel storage p) =
-            PanelsBase.newPanel(st, id, Kind.Shadow, seed, keys.length, countedPid, s.snap, 0);
+            PanelsBase.newPanel(st, e, id, Kind.Shadow, seed, keys.length, countedPid, s.snap, 0);
         p.sealBy = uint64(sealBy);
-        p.revealBy = uint64(sealBy + PanelsBase.REVEAL_WINDOW);
+        p.revealBy = uint64(sealBy + e.reveal);
         for (uint256 i; i < keys.length; ++i) {
             PanelsBase.seat(st, e, spid, p, i, keys[i], 0);
         }

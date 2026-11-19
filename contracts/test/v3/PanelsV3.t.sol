@@ -200,6 +200,7 @@ contract PanelsV3Test is PanelsSetup {
         address solver = makeAddr("solver");
         address mine = ks[0];
         for (uint256 i; i < 6; ++i) {
+            _nextCapWindow(); // four validators can't take six panels of three in one hour (L16's capacity)
             uint256 id = _id();
             race.setParty(id, solver, true);
             race.setParty(id, reg.validator(mine).operator, true); // the solver runs it
@@ -231,6 +232,7 @@ contract PanelsV3Test is PanelsSetup {
     function test_recomputingAPanel() public {
         _network(12, 5, 3);
         for (uint256 i; i < 5; ++i) {
+            _nextCapWindow(); // every validator has room again (L16's capacity)
             uint256 id = _id();
             _open(id, 300e6);
             uint256 sb = pn.submission(id).seedBlock;
@@ -497,7 +499,7 @@ contract PanelsV3Test is PanelsSetup {
         assertEq(pn.submission(id).k, 3);
         _judge(pid, _votes(3, 3));
         assertEq(pn.submission(id).level, 2);
-        assertEq(pn.submission(id).finalAt, vm.getBlockTimestamp() + 48 hours);
+        assertEq(pn.submission(id).finalAt, vm.getBlockTimestamp() + pn.windowOf(3, 2)); // 48 h in production
     }
 
     /// Scenarios "A network of ordinary PCs" and "A level C panel": panels still form at level C, with level C's
@@ -518,7 +520,7 @@ contract PanelsV3Test is PanelsSetup {
         assertEq(pn.submission(id).auditsDue, 1);
         Submission memory s = pn.submission(id);
         assertEq(s.level, 3);
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 72 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(3, 3)); // 72 h in production
         vm.warp(s.finalAt - 1);
         vm.expectRevert(Panels.TooEarly.selector);
         pn.finalize(id);
@@ -542,7 +544,7 @@ contract PanelsV3Test is PanelsSetup {
         }
         _judge(pid, _votes(7, 7));
         Submission memory s = pn.submission(id);
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 6 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(7, 1)); // 6 h in production
         _finalize(id);
         assertEq(uint256(pn.submission(id).status), uint256(Status.Final));
         for (uint256 i; i < 7; ++i) {
@@ -570,7 +572,7 @@ contract PanelsV3Test is PanelsSetup {
         pn.startWindow(id);
         Submission memory s = pn.submission(id);
         assertEq(uint256(s.status), uint256(Status.Window));
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 168 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(1, 1)); // 168 h in production
         assertEq(pn.k1Pending(genesisKey), 1);
         assertEq(_runAudits(id, true), 2); // both audits, by validators outside the panel
         vm.warp(s.finalAt);
@@ -592,7 +594,7 @@ contract PanelsV3Test is PanelsSetup {
         _judge(pid, _votes(1, 0));
         Submission memory s = pn.submission(id);
         assertEq(uint256(s.status), uint256(Status.Window));
-        assertEq(s.finalAt, vm.getBlockTimestamp() + 168 hours);
+        assertEq(s.finalAt, vm.getBlockTimestamp() + pn.windowOf(1, 1)); // 168 h in production
     }
 
     // ---------- A validator's pending lone verdicts are capped ----------
@@ -710,7 +712,9 @@ contract PanelsV3Test is PanelsSetup {
         }
         vm.prank(deployer);
         ValidatorsWithRemoval r = new ValidatorsWithRemoval(g);
-        Panels p = new Panels(IPanelsRegistry(address(r)), pn.fees(), IPanelScores(address(new PanelScores())), g.teeTypes);
+        Panels p = new Panels(
+            IPanelsRegistry(address(r)), pn.fees(), IPanelScores(address(new PanelScores())), g.teeTypes, g.windows
+        );
         assertEq(p.teeCapFrom(), 3);
         r.removeTeeType(IBM_SE);
         assertEq(p.teeCapFrom(), 5);
@@ -809,14 +813,20 @@ contract PanelsV3Test is PanelsSetup {
                 "bind,open,openHidden,openConstitution,withdraw,challenge,",
                 // anyone, under the rules: the draws, the judges' signed statements, deadlines, shadows, finality
                 "draw,drawAudits,drawChallenge,seal,reveal,receipt,advance,refill,settleShadows,startWindow,finalize,",
+                // stuck rounds (L19): anyone releases them; the race refunds a parked one at its deadline
+                "release,releaseAudits,abandon,",
+                // a validator's own capacity (L16, #253): its setting, not a parameter of the deployment
+                "setCapacity,capacity,",
                 // views
                 "sample,submission,panel,seat,judges,seedOf,commitmentOf,subjectOf,statementDigest,limitOf,windowOf,",
-                "challengeK,teeCapFrom,validators,fees,scores,coin,pool,race,panelCount,k1Pending,",
+                "challengeK,teeCapFrom,validators,fees,scores,coin,pool,race,panelCount,k1Pending,windows,",
                 // the parameters: constants
                 "K_MAX,DRAW_TRIES,SEED_DELAY,SEAL_WINDOW,REVEAL_WINDOW,K1_PENDING_MAX,TEE_CAP_K3_TYPES,BOUNTY_MAX,",
                 "SHADOW_PER_DRAW,SHADOW_PER_DRAW_SMALL,SHADOW_PER_WAITING,AUDIT_RATE_BPS,K1_AUDITS,CONSTITUTION_QUORUM,",
-                "CONSTITUTION_MIN_ELIGIBLE,REMOVAL_MIN_ELIGIBLE,ADR_DEPOSIT,ADR_WINDOW,REMOVAL_WINDOW,",
-                "SEAL_TAG,REVEAL_TAG,RECEIPT_TAG"
+                "CONSTITUTION_MIN_ELIGIBLE,REMOVAL_MIN_ELIGIBLE,ADR_DEPOSIT,ADR_WINDOW,REMOVAL_WINDOW,K1_WINDOW_MIN,",
+                "SEAL_TAG,REVEAL_TAG,RECEIPT_TAG,",
+                // and the deployment's liveness values (immutables) and capacity's constants
+                "STUCK_GRACE,RETRY_DELAY,MAX_REDRAWS,CAP_WINDOW,CHECKS_DEFAULT,CHECKS_CEILING,CAP_DELAY,REPO_CHECKS_PER_HOUR"
             ),
             ","
         );

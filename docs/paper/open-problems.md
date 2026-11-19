@@ -65,8 +65,10 @@ run shown.
 ## 7.5 The reference implementation is a prototype
 
 - No audit. The contracts pass their unit, invariant and replay tests; that is all.
-- `Panels.drawAudits` accepts repeat calls, which lets a caller re-target the audit draw.
-- The on-chain receipt does not name the validator's seat.
+- Two known findings are fixed for the testnet launch (#251, task 3.10). `Panels.drawAudits` accepted repeat calls,
+  which let a caller re-target the audit draw; now a draw that finds no auditor waits for the registry to change, and
+  every call until then is refused. The on-chain receipt didn't name the validator's seat; now it names the Panels,
+  the panel, the slot and the validator's key, so one seat's receipt can't be posted for another.
 - The zkTLS prover is a stub; the `simulated` proof type stands in for it.
 - The relay does not speak the v3 messages. `RaceV3` cannot open constitution changes or escalated fixes.
 - The rules decided after the judge measurement (seats by rank, the test-backed dispute, the solver's deposit, the

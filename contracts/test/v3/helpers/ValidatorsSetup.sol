@@ -7,6 +7,7 @@ import {Validators} from "../../../src/v3/Validators.sol";
 import {IValidators} from "../../../src/v3/IValidators.sol";
 import {Pool} from "../../../src/v2/Pool.sol";
 import {MockCoin} from "../../mocks/MockCoin.sol";
+import {suiteWindows} from "./SuiteWindows.sol";
 
 // The genesis lists of the test versions (D6's launch types, the official checker image).
 bytes32 constant TDX = keccak256("intel-tdx");
@@ -169,6 +170,7 @@ abstract contract ValidatorsSetup is Test {
     /// each bonded `bond` from this contract.
     function _genesis(bool simulated, IValidators.Registration[] memory gs, uint256 bond)
         internal
+        virtual
         returns (Validators.Genesis memory g)
     {
         g.coin = address(usd);
@@ -183,6 +185,7 @@ abstract contract ValidatorsSetup is Test {
         g.images = new bytes32[](1);
         g.images[0] = IMAGE;
         g.validators = gs;
+        g.windows = suiteWindows();
         g.signatures = new bytes[](gs.length);
         g.bonds = new uint256[](gs.length);
         address next = vm.computeCreateAddress(deployer, vm.getNonce(deployer));

@@ -105,6 +105,9 @@ interface IFeesV3 {
     /// period as drawn (the idle share's numerator is the active validators not drawn). Only the race.
     function drawn(address[] calldata judges) external;
 
+    /// The deployment's one repository (#251, L1): its CI profile is the only one.
+    function repo() external view returns (bytes32);
+
     /// Whether a model family has its first price (D19). An unpriced family's validators aren't drawn, as counted
     /// judges or as shadows, and `settle` and `shadowCost` refuse it.
     function isPriced(bytes32 family) external view returns (bool);

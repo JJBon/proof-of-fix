@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {IFeesV3Scores} from "./IFeesV3.sol";
+import {LaunchChain} from "./LaunchChain.sol";
 
 /// v3's per-family scores (proof-of-fix#138, task 3.2 of #132; design D14; ADR 0004; specs/judge-scores), fed by
 /// Panels and read by FeesV3 (`familyScore`) and by the draw (`isBarred`). Its own contract so FeesV3 can take its
@@ -18,7 +19,8 @@ import {IFeesV3Scores} from "./IFeesV3.sol";
 ///   SCORE_RECOVER_VERDICTS, each judged once when complete, balanced as the score is; a block at SCORE_MIN +
 ///   SCORE_RECOVER_MARGIN recovers it.
 ///
-/// Keyless: bound once by Panels (`bind`, from its constructor); every parameter a constant.
+/// Keyless: bound once by Panels (`bind`, from its constructor); every parameter a constant. The constructor reverts
+/// off Sepolia and the local test chains (LaunchChain).
 contract PanelScores is IFeesV3Scores {
     uint256 internal constant WAD = 1e18;
     uint256 public constant SCORE_WINDOW = 200;
@@ -58,6 +60,10 @@ contract PanelScores is IFeesV3Scores {
 
     error AlreadyBound();
     error NotPanels();
+
+    constructor() {
+        LaunchChain.check();
+    }
 
     function bind() external {
         if (panels != address(0)) revert AlreadyBound();

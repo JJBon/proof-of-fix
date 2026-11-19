@@ -18,6 +18,13 @@ import {Status} from "./PanelsBase.sol";
 /// `Panels` instead of v2's fixed `Verdicts`, and charged by `FeesV3` at market prices. No owner, no setter: Panels,
 /// FeesV3 and the sponsors' pool (`PoolV3`) are bound once, from the constructor.
 ///
+/// **One repository, one chain (#251, design L1, L2; specs/deployment-binding).** The race serves exactly one
+/// repository, `repo` (keccak256 of its Radicle RID), fixed at construction with its genesis head: its head registry
+/// holds that one entry and nothing adds another; an issue for any other repository, or for none, is refused, so every
+/// bounty is in it and every merged fix moves its head. The constructor reverts off Sepolia (11155111) and the two local
+/// test chains (LaunchChain); `chainId` reports where it runs. These checks bind this deployment, not the open code: a
+/// fork can remove them.
+///
 /// **Every check is a Panels submission under the same id.** A fix's submission, and an issue's registration check
 /// (judged at CHECK_BOUNTY, the lowest tier): each posts FeesV3's deposit for K_MAX counted judges (k is fixed only at
 /// the draw), FeesV3 fixes its prices (`open`), and Panels opens it with the bounty it's judged at: the price on offer
@@ -39,11 +46,23 @@ import {Status} from "./PanelsBase.sol";
 ///
 /// **The verdict (D4).** The counted verdict decides the queue at once (`result`): the earliest commitment that passes,
 /// once every earlier one is decided, wins, and its solver claims it (`claim`): it opens the commitment,
-/// keccak256(abi.encode(fix, base, salt, solver)), and in a repository of the head registry the head moves to the fix
-/// if `base` is still the head. Instalments start at the verdict's finality in Panels (`earned`): a k = 1 verdict held
-/// for its challengers, or a window frozen by a challenge, pays nothing. A verdict reversed by a challenge before its
+/// keccak256(abi.encode(fix, base, salt, solver)), and its award starts. A verdict reversed by a challenge before its
 /// finality claws the award back and reopens the bounty (`sync`); a failed verdict reversed to a pass wins if the
 /// bounty is still open, in its commitment's turn.
+///
+/// **The head moves at finality (#251, design L9; specs/canonical-head).** Claiming doesn't move the head. Once the
+/// winning verdict is final in Panels (its window passed with no challenge upheld, any k = 1 hold over), anyone calls
+/// `merge`: the head moves to the fix if its `base` is still the head (S1's stale-base rule: otherwise it reverts whole,
+/// and the winner keeps its place until mergeDays after the finality, when `mergeExpired` reopens the bounty). Final
+/// verdicts aren't challenged any more, so the head never names a fix whose verdict was reversed. Instalments are
+/// counted from the verdict's finality (`earned`) and paid once the fix is merged: a held verdict, a frozen window or
+/// an unmerged fix pays nothing.
+///
+/// **A check that can't be judged is refunded (#251, design L19; specs/panel-liveness).** When Panels releases its
+/// rounds MAX_REDRAWS times, or at its deadline (resultDays after the commitment) once a round was released, anyone
+/// calls `release`: the deposit's rest returns to the solver (no slash, no failed verdict), and the bounty (if it's
+/// open, or this check won it) is refunded to its funders by input, the issue stake back to its reporter; a
+/// registration check's issue is returned the same way.
 ///
 /// **Challenges (D4; specs/challenges).** Anyone challenges a verdict in its window (or held) with the published stake
 /// plus its panel's worst-case cost (`challenge`); the race holds both. Upheld, both return and the panel is paid from
@@ -57,13 +76,16 @@ import {Status} from "./PanelsBase.sol";
 /// RaceV3 runs its rarely called actions in RaceV3Annex (DELEGATECALL, its address fixed here), as RaceV2 did.
 contract RaceV3 is RaceV3Base {
     address public immutable annex;
+    /// The deployment's one repository: keccak256 of its Radicle RID (#251, L1).
+    bytes32 public immutable repo;
 
     error BadSignature();
 
-    /// The head registry's genesis (S10) is deployed here with this contract fixed as its only mover; Panels, FeesV3
-    /// and the pool are bound to this race once. The companion RaceV3Annex is deployed first (EIP-3860: RaceV3's
-    /// initcode can't hold it) with the same Panels, pool, start and caps, which its fingerprint proves; `start_` is
-    /// the same nonzero time for both.
+    /// The head registry's genesis (S10) is deployed here with one entry, `repo_` at `genesisHead_` (the commit of its
+    /// Radicle `main` at deployment; both nonzero, #251 L1), and this contract fixed as its only mover; Panels, FeesV3
+    /// and the pool are bound to this race once, and FeesV3's one CI profile must be `repo_`'s. The companion
+    /// RaceV3Annex is deployed first (EIP-3860: RaceV3's initcode can't hold it) with the same Panels, pool, start and
+    /// caps, which its fingerprint proves; `start_` is the same nonzero time for both.
     constructor(
         Config memory config_,
         uint256 bountyCap_,
@@ -71,8 +93,8 @@ contract RaceV3 is RaceV3Base {
         Panels panels_,
         PoolV3 pool_,
         uint256 start_,
-        bytes32[] memory repos_,
-        bytes32[] memory heads_,
+        bytes32 repo_,
+        bytes32 genesisHead_,
         bytes32 constitution_,
         RaceV3Annex annex_
     )
@@ -82,11 +104,13 @@ contract RaceV3 is RaceV3Base {
             totalCap_,
             panels_,
             pool_,
-            new Heads(Verdicts(address(panels_)), repos_, heads_, constitution_, address(this)),
+            new Heads(Verdicts(address(panels_)), _one(repo_), _one(genesisHead_), constitution_, address(this)),
             start_
         )
     {
+        if (repo_ == bytes32(0) || genesisHead_ == bytes32(0) || fees.repo() != repo_) revert BadParams();
         if (address(annex_).code.length == 0 || annex_.fingerprint() != _fingerprint()) revert BadParams();
+        repo = repo_;
         annex = address(annex_);
         panels_.bind();
         fees.bind();
@@ -94,6 +118,11 @@ contract RaceV3 is RaceV3Base {
     }
 
     // ---------- views ----------
+
+    /// The chain this deployment runs on: 11155111 (Sepolia), or a local test chain (#251, L2).
+    function chainId() external view returns (uint256) {
+        return block.chainid;
+    }
 
     function getConfig() external view returns (Config memory) {
         return config;
@@ -177,8 +206,9 @@ contract RaceV3 is RaceV3Base {
 
     // ---------- issues ----------
 
-    /// Anyone registers an issue in `repo`, with its registration check; `hidden` for hidden tests or a private
-    /// repository, whose checks only TEE judges may take (RaceV3Annex.register).
+    /// Anyone registers an issue in `repo` (the deployment's, `repo()`; any other is refused), with its registration
+    /// check; `hidden` for hidden tests or a private repository, whose checks only TEE judges may take
+    /// (RaceV3Annex.register).
     function register(bytes32, bool) external returns (uint256) {
         _delegate();
     }
@@ -273,8 +303,11 @@ contract RaceV3 is RaceV3Base {
         bytes memory ps = _sub(id);
         if (s.solver == address(0) || s.paid) revert Refused();
         Status st = Status(_w(ps, S_STATUS));
-        if (st != Status.Held && st != Status.Window && st != Status.Final) revert NotYet();
         uint256 pid = _w(ps, S_PID);
+        // a refunded check whose verdict had counted (its audits never drawn, L19) still pays its counted judges
+        if (st != Status.Held && st != Status.Window && st != Status.Final && (st != Status.Released || pid == 0)) {
+            revert NotYet();
+        }
         address[] memory keys = panels.judges(pid);
         _reportsDue(pid, _w(_pan(pid), P_REVEAL_BY), keys);
         s.paid = true;
@@ -293,10 +326,9 @@ contract RaceV3 is RaceV3Base {
         if (s.outcome == Outcome.None) _decided(id, _w(ps, S_PASS) != 0 ? Outcome.Pass : Outcome.Fail);
     }
 
-    /// Solved = merged: the winner's commitment opened. In a repository of the head registry the head moves to `fix`
-    /// only if `base` is the head (a stale base reverts whole: the winner keeps its place until mergeBy). Its award
-    /// starts; its instalments start at its verdict's finality. A fix already paid on a bounty is a duplicate: the
-    /// evaluation fee from the deposit's rest, and the bounty reopens. Anyone holding the opening may call it.
+    /// The winner's commitment opened (fix, base, salt): its award starts. The head doesn't move here (#251, L9): it
+    /// moves at the verdict's finality (`merge`). A fix already merged on a bounty is a duplicate: the evaluation fee
+    /// from the deposit's rest, and the bounty reopens. Anyone holding the opening may call it.
     function claim(uint256 b, bytes32 fix, bytes32 base, bytes32 salt) external nonReentrant {
         Bounty storage bt = _bounties[b];
         if (bt.state != State.Won) revert WrongState(b, bt.state);
@@ -315,14 +347,29 @@ contract RaceV3 is RaceV3Base {
             _reopen(b);
             return;
         }
-        bytes32 repo = _issues[bt.issue].repo;
-        if (repo != bytes32(0)) heads.move(repo, base, fix, b, id, keccak256(abi.encode(address(panels), id)));
         s.fix = fix;
-        paidFix[fix] = true;
+        s.base = base;
         bt.epoch += 1;
-        awards[b][bt.epoch] = Award(s.solver, fix, id, false, 0);
+        awards[b][bt.epoch] = Award(s.solver, fix, id, false, 0, false);
         _setState(b, State.Merged);
         emit Awarded(b, bt.epoch, s.solver);
+    }
+
+    /// Solved = merged (#251, L9): once the claimed fix's verdict is final and still a pass, the repository's head
+    /// moves to it, if its base is still the head (a stale base reverts whole: the winner keeps its place until
+    /// mergeDays after the finality). Its instalments, counted from the finality, are then paid. Anyone, once.
+    function merge(uint256 b) external nonReentrant {
+        Bounty storage bt = _bounties[b];
+        if (bt.state != State.Merged) revert WrongState(b, bt.state);
+        Award storage a = awards[b][bt.epoch];
+        uint256 id = a.sub;
+        (Status st, bool pass,) = _verdict(id);
+        if (st != Status.Final) revert NotYet();
+        if (a.closed || a.merged || !pass) revert Refused(); // reversed: `sync` reopens the bounty
+        heads.move(repo, _submissions[id].base, a.fix, b, id, keccak256(abi.encode(address(panels), id)));
+        a.merged = true;
+        paidFix[a.fix] = true;
+        emit HeadMerged(b, bt.epoch, id, a.fix);
     }
 
     // ---------- payouts ----------
@@ -340,13 +387,16 @@ contract RaceV3 is RaceV3Base {
 
     // ---------- delegated to RaceV3Annex, run in this contract's storage ----------
 
+    // withdrawIssue, withdraw, timeOut, mergeExpired and release run in RaceV3Endings, which the annex reaches for any
+    // call it doesn't have (its fallback): one more DELEGATECALL, still in this contract's storage.
+
     /// An issue's final registration check: a pass opens its bounty, a fail forfeits its stake
     /// (RaceV3Annex.openBounty).
     function openBounty(uint256) external returns (uint256) {
         _delegate();
     }
 
-    /// The reporter withdraws an issue whose check no panel was seated for (RaceV3Annex.withdrawIssue).
+    /// The reporter withdraws an issue whose check no panel was seated for (RaceV3Endings.withdrawIssue).
     function withdrawIssue(uint256) external {
         _delegate();
     }
@@ -356,18 +406,25 @@ contract RaceV3 is RaceV3Base {
         _delegate();
     }
 
-    /// The solver withdraws a submission no panel was seated for (RaceV3Annex.withdraw).
+    /// The solver withdraws a submission no panel was seated for (RaceV3Endings.withdraw).
     function withdraw(uint256) external {
         _delegate();
     }
 
-    /// A submission no panel was seated for within resultDays ends; anyone (RaceV3Annex.timeOut).
+    /// A submission no panel was seated for within resultDays ends; anyone (RaceV3Endings.timeOut).
     function timeOut(uint256) external {
         _delegate();
     }
 
-    /// A winning fix not claimed by its deadline: the bounty reopens (RaceV3Annex.mergeExpired).
+    /// A winning fix not claimed, or a claimed one not merged, by its deadline: the bounty reopens
+    /// (RaceV3Endings.mergeExpired).
     function mergeExpired(uint256) external {
+        _delegate();
+    }
+
+    /// A check Panels released for good, or one parked after a released round at its deadline: refunded (L19,
+    /// RaceV3Endings.release).
+    function release(uint256) external {
         _delegate();
     }
 
@@ -404,6 +461,11 @@ contract RaceV3 is RaceV3Base {
     /// The deposit's rest back to the solver after finality (RaceV3Annex.finish).
     function finish(uint256) external {
         _delegate();
+    }
+
+    function _one(bytes32 x) private pure returns (bytes32[] memory a) {
+        a = new bytes32[](1);
+        a[0] = x;
     }
 
     function _delegate() internal {

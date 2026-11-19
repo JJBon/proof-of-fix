@@ -65,11 +65,8 @@ contract FeesV3Test is Test {
             g.tokens[i] = T[i];
         }
         g.caps = IFeesV3.Caps(CAP_IN, CAP_OUT, CAP_MB, GAS_ALLOWANCE, GAS_OVERHEAD, MAX_GAS_PRICE);
-        g.repos = new bytes32[](1);
-        g.repos[0] = REPO;
-        g.profiles = new IFeesV3.Profile[](1);
-        g.profiles[0] = _profile();
-        g.defaultProfile = _profile();
+        g.repo = REPO;
+        g.profile = _profile();
         g.ciSingleRun = single;
         return new FeesV3(vals, sc, g);
     }
@@ -1003,7 +1000,8 @@ contract FeesV3Test is Test {
             g.tokens[f] = T[f % 3];
         }
         g.caps = IFeesV3.Caps(CAP_IN, CAP_OUT, CAP_MB, GAS_ALLOWANCE, GAS_OVERHEAD, MAX_GAS_PRICE);
-        g.defaultProfile = _profile();
+        g.repo = REPO;
+        g.profile = _profile();
         FeesV3 m = new FeesV3(vals, sc, g);
         for (uint256 f; f < fresh; ++f) {
             vals.setFamily(_v(200 + f), bytes32(priced + f + 1));
@@ -1106,7 +1104,8 @@ contract FeesV3Test is Test {
             g.tokens[f] = T[f % 3];
         }
         g.caps = IFeesV3.Caps(CAP_IN, CAP_OUT, CAP_MB, GAS_ALLOWANCE, GAS_OVERHEAD, MAX_GAS_PRICE);
-        g.defaultProfile = _profile();
+        g.repo = REPO;
+        g.profile = _profile();
         m = new FeesV3(vals, sc, g);
         for (uint256 f; f < fresh; ++f) {
             vals.setFamily(_v(200 + f), bytes32(priced + f + 1));

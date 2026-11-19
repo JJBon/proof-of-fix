@@ -8,6 +8,7 @@ import {IValidators} from "./IValidators.sol";
 import {Panels} from "./Panels.sol";
 import {PoolV3} from "./PoolV3.sol";
 import {Status, Kind} from "./PanelsBase.sol";
+import {LaunchChain} from "./LaunchChain.sol";
 
 /// RaceV3's state, types and internals (proof-of-fix#138, task 3.5 of #132). RaceV3 and its companion RaceV3Annex both
 /// inherit it, so they share one storage layout: RaceV3 runs its rarely called actions in its own storage by
@@ -29,7 +30,7 @@ abstract contract RaceV3Base is Baskets {
         uint256 finderFeeBps; // the reporter's fee, of the price
         uint256 idleDays; // an open bounty with no submission waiting for this long sunsets (D11)
         uint256 resultDays; // a submission no panel was seated for in this long can be timed out by anyone
-        uint256 mergeDays; // a winning fix must be claimed (merged) within this, or the bounty reopens
+        uint256 mergeDays; // a winning fix must be claimed within this of its win, and merged within this of its finality
         uint256 releaseEveryDays; // instalments are paid at each release after finality
         uint256 instalments;
     }
@@ -37,8 +38,9 @@ abstract contract RaceV3Base is Baskets {
     enum State {
         None,
         Open,
-        Won, // a submission's counted verdict passed; waiting for its claim (the merge)
-        Merged, // claimed; paid in instalments from its verdict's finality
+        Won, // a submission's counted verdict passed; waiting for its claim
+        Merged, // claimed: its award runs; the head moves at its verdict's finality (`merge`, #251 L9), and its
+        // instalments, counted from that finality, are paid once it has
         Paid,
         Refunded,
         Unsolved
@@ -58,11 +60,12 @@ abstract contract RaceV3Base is Baskets {
         Fail,
         Duplicate, // a passing fix already paid on a bounty (D10), found at its claim
         Withdrawn, // the solver withdrew it before a panel was seated
-        TimedOut // no panel seated within resultDays
+        TimedOut, // no panel seated within resultDays
+        Released // its rounds were released and it was never judged (#251, L19): deposit back, bounty refunded
     }
 
     struct Issue {
-        bytes32 repo; // a repository of the head registry, or 0 outside it (S8)
+        bytes32 repo; // the deployment's one repository (#251, L1: RaceV3.repo)
         address reporter;
         uint256 registration;
         uint256 stake;
@@ -104,6 +107,7 @@ abstract contract RaceV3Base is Baskets {
         bool paid; // its counted judges were paid
         bool done; // its deposit's rest returned
         bytes32 fix; // revealed at its claim
+        bytes32 base; // revealed at its claim: the head `merge` moves from (#251, L9)
     }
 
     struct Award {
@@ -112,6 +116,7 @@ abstract contract RaceV3Base is Baskets {
         uint256 sub; // the winning submission: its verdict's finality starts the instalments
         bool closed; // a reversal closed it
         uint256 earned; // instalments earned when it closed
+        bool merged; // the head moved to its fix (#251, L9): only then are its instalments earned
     }
 
     /// A challenge the race filed (Panels allows one open at a time): its stake and its panel's worst-case cost are
@@ -173,6 +178,7 @@ abstract contract RaceV3Base is Baskets {
     event ChallengeFiled(uint256 indexed submission, address indexed challenger);
     event ChallengeSettled(uint256 indexed submission, uint256 indexed pid, bool upheld);
     event PanelPaid(uint256 indexed submission, uint256 indexed pid, uint256 fromDeposit, uint256 fromPool);
+    event HeadMerged(uint256 indexed bounty, uint256 indexed epoch, uint256 indexed submission, bytes32 fix);
 
     error BadParams();
     error WrongState(uint256 bounty, State state);
@@ -188,6 +194,7 @@ abstract contract RaceV3Base is Baskets {
         Heads heads_,
         uint256 start_
     ) Baskets(bountyCap_, totalCap_) {
+        LaunchChain.check();
         if (config_.releaseEveryDays == 0 || config_.instalments == 0 || start_ > block.timestamp) revert BadParams();
         if (address(panels_).code.length == 0) revert BadParams();
         IFeesV3 fees_ = IFeesV3(address(panels_.fees()));
@@ -261,11 +268,11 @@ abstract contract RaceV3Base is Baskets {
     }
 
     /// Instalments earned by an award: one at each release after its verdict's finality, up to all of them. Nothing
-    /// before Panels' finality, or if the final verdict isn't a pass.
+    /// before Panels' finality, if the final verdict isn't a pass, or before the head moved to its fix (#251, L9).
     function _earned(uint256 b, uint256 epoch) internal view returns (uint256) {
         Award storage a = awards[b][epoch];
         if (a.closed) return a.earned;
-        if (a.winner == address(0)) return 0;
+        if (!a.merged) return 0;
         (Status st, bool pass, uint256 finalAt) = _verdict(a.sub);
         if (st != Status.Final || !pass) return 0;
         uint256 rel = config.releaseEveryDays;
@@ -290,6 +297,7 @@ abstract contract RaceV3Base is Baskets {
     uint256 internal constant S_PASS = 7;
     uint256 internal constant S_FINAL_AT = 15;
     uint256 internal constant S_PID = 16;
+    uint256 internal constant S_REDRAWS = 41;
     uint256 internal constant P_ID = 0; // Panels' Panel
     uint256 internal constant P_REVEAL_BY = 3;
     uint256 internal constant P_K = 5;

@@ -15,6 +15,8 @@ import {RaceV3Annex} from "../../../src/v3/RaceV3Annex.sol";
 import {RaceV3Base} from "../../../src/v3/RaceV3Base.sol";
 import {MockCoin} from "../../mocks/MockCoin.sol";
 import {PanelsSetup} from "./PanelsSetup.sol";
+import {Heads} from "../../../src/v2/Heads.sol";
+import {TEST_REPO, TEST_GENESIS_HEAD} from "./SuiteWindows.sol";
 
 /// The whole v3 version for the race's tests (task 3.5): the registry with one genesis validator (level A, TDX,
 /// family 0, $1,250), PanelScores, FeesV3 (PanelsSetup's genesis prices), Panels, the sponsors' pool PoolV3, and RaceV3
@@ -58,10 +60,11 @@ abstract contract RaceV3Setup is PanelsSetup {
 
     /// The version, with `n` spread validators besides the genesis one (each its own host, family and full bond).
     function _deployRace(uint256 n) internal {
-        _deployRaceWith(n, new bytes32[](0), new bytes32[](0));
+        _deployRaceWith(n, TEST_REPO, TEST_GENESIS_HEAD);
     }
 
-    function _deployRaceWith(uint256 n, bytes32[] memory repos, bytes32[] memory commits) internal {
+    /// The version for one repository `repo` at genesis head `head` (#251, L1); FeesV3's profile is TEST_REPO's.
+    function _deployRaceWith(uint256 n, bytes32 repo, bytes32 head) internal {
         usd = new MockCoin("Test USD", "tUSD", 6);
         address[] memory coins = new address[](1);
         coins[0] = address(usd);
@@ -75,10 +78,10 @@ abstract contract RaceV3Setup is PanelsSetup {
         scores = new PanelScores();
         fees = new FeesV3(IFeesV3Validators(address(reg)), scores, _feesGenesis());
         pn = new Panels(
-            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes
+            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows
         );
         RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
-        rc = new RaceV3(_config(), 625, 100_000, pn, pool3, block.timestamp, repos, commits, keccak256("c"), ax);
+        rc = new RaceV3(_config(), 625, 100_000, pn, pool3, block.timestamp, repo, head, keccak256("c"), ax);
         _network(n, FAMILIES, 3);
     }
 
@@ -112,7 +115,13 @@ abstract contract RaceV3Setup is PanelsSetup {
     function _register() internal returns (uint256 i) {
         _fund(reporter, 100 * C);
         vm.prank(reporter);
-        i = rc.register(bytes32(0), false);
+        i = rc.register(TEST_REPO, false);
+    }
+
+    /// The repository's head now: a commitment's base, and a claim's.
+    function _head() internal view returns (bytes32) {
+        (,,,, Heads h,,) = rc.contracts();
+        return h.head(TEST_REPO).commit;
     }
 
     /// A registered issue whose check passes and becomes final: its bounty opens; alice pledges 100.
@@ -129,18 +138,19 @@ abstract contract RaceV3Setup is PanelsSetup {
         rc.pledge(b, amount);
     }
 
-    function _commitment(bytes32 fix, address who) internal pure returns (bytes32) {
-        return keccak256(abi.encode(fix, bytes32(0), bytes32("salt"), who));
+    function _commitment(bytes32 fix, address who) internal view returns (bytes32) {
+        return keccak256(abi.encode(fix, _head(), bytes32("salt"), who));
     }
 
     function _commit(address who, uint256 b, bytes32 fix) internal returns (uint256) {
         _fund(who, 100 * C);
+        bytes32 c = _commitment(fix, who); // before the prank: it reads the head
         vm.prank(who);
-        return rc.commit(b, _commitment(fix, who));
+        return rc.commit(b, c);
     }
 
     function _claim(uint256 b, bytes32 fix, address who) internal {
-        rc.claim(b, fix, bytes32(0), bytes32("salt"));
+        rc.claim(b, fix, _head(), bytes32("salt"));
         who;
     }
 
@@ -193,6 +203,12 @@ abstract contract RaceV3Setup is PanelsSetup {
         uint256 at = pn.submission(id).finalAt;
         if (vm.getBlockTimestamp() < at) vm.warp(at);
         pn.finalize(id);
+    }
+
+    /// A claimed fix's verdict made final (`_final`), then merged: the head moves to it (#251, L9).
+    function _finalAndMerge(uint256 b, uint256 id) internal {
+        _final(id);
+        rc.merge(b);
     }
 
     /// The whole check: judged, posted and final.

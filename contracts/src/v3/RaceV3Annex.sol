@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {RaceV3Base} from "./RaceV3Base.sol";
+import {RaceV3Endings} from "./RaceV3Endings.sol";
 import {Heads} from "../v2/Heads.sol";
 import {IFeesV3} from "./IFeesV3.sol";
 import {IValidators} from "./IValidators.sol";
@@ -10,14 +11,21 @@ import {PoolV3} from "./PoolV3.sol";
 import {Status, Kind} from "./PanelsBase.sol";
 
 /// RaceV3's rarely called actions (proof-of-fix#138, task 3.5; v2's EIP-170 split, RaceV2Annex): registration and the
-/// registration check's outcome, withdrawals, appeals, time-outs, expired merges, challenges, reversals, the pay of
-/// audits, challenge panels and shadows, FeesV3's queue signals and the deposit's return. It's deployed first, with the
-/// race's Panels, pool, start and caps (its `fingerprint`, which RaceV3's constructor checks), and RaceV3 delegates
-/// those calls here (DELEGATECALL), so they run in RaceV3's storage, with its balances and its caller. Called directly,
-/// they refuse: this contract's own storage holds nothing. Each is described on RaceV3.
+/// registration check's outcome, appeals, challenges, reversals, the pay of audits, challenge panels and shadows,
+/// FeesV3's queue signals and the deposit's return. It's deployed first, with the race's Panels, pool, start and caps
+/// (its `fingerprint`, which RaceV3's constructor checks), and RaceV3 delegates those calls here (DELEGATECALL), so
+/// they run in RaceV3's storage, with its balances and its caller. Called directly, they refuse: this contract's own
+/// storage holds nothing. Each is described on RaceV3.
+///
+/// **A second companion (#251, contract batch 2).** The endings (withdrawals, time-outs, expired merges and L19's
+/// release) run in RaceV3Endings, which this annex deploys from its constructor with the same parameters, so the race
+/// and its deployers still name one companion. A call this annex doesn't have goes on to it (`fallback`, one more
+/// DELEGATECALL, still in the race's storage).
 contract RaceV3Annex is RaceV3Base {
     /// This contract's own address: called directly (not through a race's DELEGATECALL), its actions refuse.
     address internal immutable self;
+    /// The endings' companion, deployed here.
+    address public immutable endings;
 
     /// Deployed before its RaceV3 with the same parameters (`start_` nonzero); the race checks `fingerprint`.
     constructor(
@@ -32,6 +40,20 @@ contract RaceV3Annex is RaceV3Base {
     {
         if (start_ == 0) revert BadParams();
         self = address(this);
+        endings = address(new RaceV3Endings(config_, bountyCap_, totalCap_, panels_, pool_, start_));
+    }
+
+    /// The endings' calls (RaceV3Endings), run in the race's storage like this annex's own.
+    fallback() external {
+        if (address(this) == self) revert Refused();
+        address target = endings;
+        assembly ("memory-safe") {
+            calldatacopy(0, 0, calldatasize())
+            let ok := delegatecall(gas(), target, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            if iszero(ok) { revert(0, returndatasize()) }
+            return(0, returndatasize())
+        }
     }
 
     modifier delegated() {
@@ -73,20 +95,12 @@ contract RaceV3Annex is RaceV3Base {
         _setState(b, State.Open);
     }
 
-    /// The reporter withdraws an issue whose check no panel was seated for: its stake and deposit return; the
-    /// registration fee stays spent.
-    function withdrawIssue(uint256 issueId) external delegated nonReentrant {
-        Issue storage i = _issues[issueId];
-        if (i.reporter != msg.sender || i.state != IssueState.Posted || i.bounty != 0) revert Refused();
-        _end(i.check, Outcome.Withdrawn);
-        _closeIssue(issueId, IssueState.Returned, msg.sender);
-    }
-
-    /// Anyone registers an issue in `repo` (a repository of the head registry, or 0 outside it): the registration fee,
-    /// the issue stake and its registration check's deposit. Panels judges the check; its final pass opens the bounty
-    /// and its final fail forfeits the stake (`openBounty`).
+    /// Anyone registers an issue in `repo`, which must be the deployment's one repository (#251, L1: the head registry
+    /// holds only it; another id or zero is refused, so no bounty is won without moving the head): the registration
+    /// fee, the issue stake and its registration check's deposit. Panels judges the check; its final pass opens the
+    /// bounty and its final fail forfeits the stake (`openBounty`).
     function register(bytes32 repo, bool hidden) external delegated nonReentrant returns (uint256 id) {
-        if (repo != bytes32(0) && !heads.isRepo(repo)) revert Refused();
+        if (repo == bytes32(0) || !heads.isRepo(repo)) revert Refused();
         uint256 fee = _units(config.registrationFee);
         uint256 stake = _units(config.issueStake);
         if (fee != 0) _collect(coin, msg.sender, fee, config.infrastructure);
@@ -114,30 +128,6 @@ contract RaceV3Annex is RaceV3Base {
         if (fee != 0) _collect(coin, msg.sender, fee, config.infrastructure);
         newId = _submit(b, msg.sender, s.commitment);
         _submissions[newId].appealed = true;
-    }
-
-    /// The solver withdraws a submission no panel was seated for (waiting, or before its draw): its deposit returns
-    /// whole (no counted check was charged; shadows are the pool's).
-    function withdraw(uint256 id) external delegated nonReentrant {
-        Submission storage s = _submissions[id];
-        if (s.solver != msg.sender || s.bounty == 0 || s.outcome != Outcome.None) revert Refused();
-        _end(id, Outcome.Withdrawn);
-    }
-
-    /// A submission no panel was seated for within resultDays of its commitment ends as timed out, its deposit back:
-    /// it can't hold up the queue or the sunset. Anyone.
-    function timeOut(uint256 id) external delegated nonReentrant {
-        Submission storage s = _submissions[id];
-        if (s.bounty == 0 || s.outcome != Outcome.None) revert Refused();
-        if (_day() < s.day + config.resultDays) revert NotYet();
-        _end(id, Outcome.TimedOut);
-    }
-
-    /// A winning fix not claimed by its deadline: nothing is paid and the bounty reopens.
-    function mergeExpired(uint256 b) external delegated nonReentrant {
-        Bounty storage bt = _bounties[b];
-        if (bt.state != State.Won || _day() <= bt.mergeBy) revert NotYet();
-        _reopen(b);
     }
 
     // ---------- challenges and reversals ----------
@@ -278,17 +268,6 @@ contract RaceV3Annex is RaceV3Base {
     }
 
     // ---------- internals ----------
-
-    /// Panels withdraws the check (only before a panel is seated); its whole deposit returns.
-    function _end(uint256 id, Outcome o) internal {
-        panels.withdraw(id);
-        Submission storage s = _submissions[id];
-        s.done = true;
-        uint256 left = s.deposit;
-        s.deposit = 0;
-        _release(coin, left, s.solver);
-        _decided(id, o);
-    }
 
     function _payPanel(uint256 id, uint256 pid, IFeesV3.Report[] memory rs, uint256[] memory micro) internal {
         Submission storage s = _submissions[id];

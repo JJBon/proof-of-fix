@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
+import {LaunchChain} from "../../src/v3/LaunchChain.sol";
+import {WindowsLib} from "../../src/v3/Windows.sol";
+import {suiteWindows} from "./helpers/SuiteWindows.sol";
 import {Validators} from "../../src/v3/Validators.sol";
 import {IValidators} from "../../src/v3/IValidators.sol";
 import {FeeCoin} from "../mocks/FeeCoin.sol";
@@ -285,13 +288,15 @@ contract ValidatorsV3Test is ValidatorsSetup {
 
     // ---------- The simulated proof type (D18) ----------
 
-    /// `simulated` is listed only on a devnet chain id, and refused on every other.
+    /// `simulated` is listed only on a devnet chain id, and refused on every other: on Sepolia by the list's check,
+    /// on any other chain already by the constructor's chain check (#251, L2).
     function test_simulatedIsRefusedOnAnyOtherChain() public {
         uint256[4] memory ids = [uint256(1), 10, 8453, 11155111];
         for (uint256 i; i < ids.length; ++i) {
             vm.chainId(ids[i]);
             Validators.Genesis memory g = _genesis(true, new IValidators.Registration[](0), 0);
-            vm.expectRevert(Validators.BadParams.selector);
+            if (ids[i] == 11155111) vm.expectRevert(Validators.BadParams.selector);
+            else vm.expectRevert(abi.encodeWithSelector(LaunchChain.WrongChain.selector, ids[i]));
             _create(g);
         }
     }
@@ -300,7 +305,8 @@ contract ValidatorsV3Test is ValidatorsSetup {
         vm.assume(id != 31_337 && id != 7_193 && id != 0);
         vm.chainId(id);
         Validators.Genesis memory g = _genesis(true, new IValidators.Registration[](0), 0);
-        vm.expectRevert(Validators.BadParams.selector);
+        if (id == 11155111) vm.expectRevert(Validators.BadParams.selector);
+        else vm.expectRevert(abi.encodeWithSelector(LaunchChain.WrongChain.selector, uint256(id)));
         _create(g);
     }
 
@@ -441,10 +447,10 @@ contract ValidatorsV3Test is ValidatorsSetup {
                 "registrationDigest,statementDigest,coin,pool,panels,epoch,activeCount,totalBonds,totalOwed,poolOwed,",
                 "genesisKey,owed,acceptedProofType,acceptedTeeType,allowedImage,equivocationProven,",
                 "inStanding,acceptedNotary,minFirmware,notaryCounts,adr,adrCommitment,isRemoval,receiptHash,",
-                "reattestationDigest,teeTypeCount,imageCount,notaryCount,",
+                "reattestationDigest,teeTypeCount,imageCount,notaryCount,windowsHash,teeOnly,",
                 // the parameters: constants, readable and never written
                 "BPS,BOND_FLOOR,BOND_FACTOR,TIERS,QUALIFY_VERDICTS,QUALIFY_REVEAL_BPS,QUALIFY_AGREE_BPS,",
-                "QUALIFY_COOLDOWN,ACTIVE_REVEAL_WINDOW,ACTIVE_MISSES_MAX,UNBONDING_DELAY,GENESIS_MAX,",
+                "QUALIFY_COOLDOWN,ACTIVE_REVEAL_WINDOW,ACTIVE_MISSES_MAX,UNBONDING_DELAY,UNBONDING_MARGIN,GENESIS_MAX,",
                 "FALSE_VERDICT_SLASH_BPS,EQUIVOCATION_SLASH_BPS,DA_FAIL_SLASH_BPS,SILENCE_SLASH,SEALED_NO_REVEAL_SLASH,",
                 "CHALLENGE_REWARD_BPS,LEVEL_A,LEVEL_B,LEVEL_C,PROOF_TEE,PROOF_ZKTLS,PROOF_SIMULATED,LOCAL_CHAIN_ID,",
                 "DEVNET_CHAIN_ID,REGISTRATION_TYPEHASH,STATEMENT_TYPEHASH,REATTESTATION_TYPEHASH,RECEIPT_TYPEHASH,ADR_TAG"
@@ -477,7 +483,7 @@ contract ValidatorsV3Test is ValidatorsSetup {
         panels.slashFault(key, IValidators.Fault.Availability, stranger);
         vm.prank(key);
         reg.leave(key);
-        vm.warp(block.timestamp + 504 hours);
+        vm.warp(block.timestamp + reg.UNBONDING_DELAY());
         reg.withdraw(key);
         _checkParameters();
     }
@@ -491,7 +497,8 @@ contract ValidatorsV3Test is ValidatorsSetup {
         assertEq(reg.QUALIFY_COOLDOWN(), 7 days);
         assertEq(reg.ACTIVE_REVEAL_WINDOW(), 50);
         assertEq(reg.ACTIVE_MISSES_MAX(), 5);
-        assertEq(reg.UNBONDING_DELAY(), 504 hours);
+        assertEq(reg.UNBONDING_DELAY(), WindowsLib.unbondingDelay(suiteWindows())); // 504 h with production windows
+        assertEq(reg.UNBONDING_MARGIN(), 7 days);
         assertEq(reg.GENESIS_MAX(), 1);
         assertEq(reg.FALSE_VERDICT_SLASH_BPS(), 10_000);
         assertEq(reg.EQUIVOCATION_SLASH_BPS(), 10_000);
@@ -574,15 +581,18 @@ contract ValidatorsV3Test is ValidatorsSetup {
         panels.slashFault(key, IValidators.Fault.FalseVerdict, challenger);
         assertEq(_bond(key), 0);
         assertEq(reg.validator(key).slashed, 500e6);
-        assertTrue(reg.isActive(key));
+        assertFalse(reg.isActive(key)); // below the floor: visibly inactive (#251, L5)
+        assertTrue(_state(key) == IValidators.State.BelowFloor);
         assertFalse(reg.isDrawable(key));
         assertEq(reg.eligibleCount(250e6), 1);
         assertEq(reg.owed(challenger), 250e6);
         assertEq(reg.poolOwed(), 250e6);
         _topUp(key, 99e6);
         assertFalse(reg.isDrawable(key));
+        assertTrue(_state(key) == IValidators.State.BelowFloor);
         _topUp(key, 1e6);
         assertTrue(reg.isDrawable(key));
+        assertTrue(reg.isActive(key));
         assertEq(reg.eligibleCount(50e6), 2);
         assertEq(reg.eligibleCount(125e6), 1); // a $100 bond covers bounties up to $50
         // the challenger and the pool are paid
@@ -711,7 +721,7 @@ contract ValidatorsV3Test is ValidatorsSetup {
         panels.slashFault(key, IValidators.Fault.Availability, address(0)); // 20 %
         assertEq(_bond(key), 400e6);
         panels.verdictFinal(key);
-        vm.warp(block.timestamp + 504 hours - 1);
+        vm.warp(block.timestamp + reg.UNBONDING_DELAY() - 1);
         vm.expectRevert(Validators.TooEarly.selector);
         reg.withdraw(key);
         reg.proveEquivocation(key, subject, keccak256("x"), a, keccak256("y"), b);
@@ -731,7 +741,7 @@ contract ValidatorsV3Test is ValidatorsSetup {
         vm.prank(stranger);
         vm.expectRevert(Validators.WrongState.selector);
         reg.topUp(key, 1e6);
-        vm.warp(block.timestamp + 504 hours);
+        vm.warp(block.timestamp + reg.UNBONDING_DELAY());
         vm.prank(stranger); // anyone triggers it; the operator is paid
         reg.withdraw(key);
         assertEq(usd.balanceOf(op), 495e6);

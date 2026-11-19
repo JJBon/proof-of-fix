@@ -85,6 +85,21 @@ Across the runs made while writing this, the k = 1 case took 96 to 367 h and the
 - **Short test windows.** There are none (below), so these are the production windows on a clock the run moves.
 - **Separate machines.** The nodes share a process and a receipts folder, so every challenge judge can read the original receipts.
 
+### Under L9, with the windows in minutes (#251 task 3.12, contract batch 2)
+`DEVNET_V3_WINDOWS=minutes scripts/time-to-heal.sh` (every hour a minute; 202 s of wall time, 104.5 h of chain time, 187 panels, all checks passed) with the head moving only at finality (L9), stuck rounds released (L19) and capacity (L16) in the contracts:
+
+| | A wrong k = 1 verdict | A bad fix passed by a panel of 3 |
+|---|---|---|
+| **Wrong pass → reversal** | **53.1 h** | **102.6 h** |
+| until the challenge | 1 min | 0 |
+| the challenge waits for a panel to exist | 53.1 h | 102.5 h |
+| the panel's draw → its verdict | 2 min (the seal window, in minutes) | 2 min |
+| What was lost meanwhile | nothing: the registration ended forfeited | nothing: the award was clawed back unmerged, and **the reversed fix never reached the head** |
+
+**The wait L9 adds:** a good fix judged by a panel of 3 at level A was claimed, and a keeper node merged it 1 s after its verdict became final: **24 min after the claim**, i.e. CHALLENGE_WINDOW[3, A] in minutes (24 h with the production windows; 168 h for a k = 1 verdict, plus any hold). That is the time from a winning verdict to the head, and so the earliest the next fix to the same code can be based on it. Fixes on different code still rebase cleanly.
+
+As before, nearly all of the time to heal is the wait for a larger fresh panel, which here is the run's own schedule (validators join and qualify at fixed points of the story); with minutes, the chain hours are minute-windows' hours, so they compare with the table above only in shape. The run's figures are the `healK1`, `healFix` and `headAtFinality` entries of its JSON report.
+
 ## Task 5.0: what's done and what isn't
 - **Done:** `tests/integration/panel.py` is the panel interface. `PanelV2` reads `Verdicts.drawn`; `PanelV3` reads Panels' counted panel. Both answer who is drawn, how many decide, and whether a silent seat is replaced.
   - v2's suite reads its draws through it (scenarios 4, 7 and the books), and passes locally.

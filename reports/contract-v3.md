@@ -6,6 +6,101 @@ Task 3.2 builds `Panels`, v3's draw and verdict bookkeeping, on `Validators` (3.
 
 Task 3.5 builds `RaceV3`, the race on Panels and FeesV3, splits `FeesV3.roll` into bounded parts, and replays group 7's market on them (below, "Task 3.5").
 
+## #251, contract batch 2: the head at finality, stuck rounds released, capacity (tasks 3.5, 3.13, 3.14)
+Batch 2 of the testnet launch (`openspec/changes/proof-of-fix-251-testnet-launch`, design L9, L16, L19; #253's on-chain pause):
+- **The head moves at finality (L9, 3.5).** `claim` opens the commitment and starts the award; it no longer moves `Heads` (it records `fix` and `base` on the submission). `RaceV3.merge(b)`, anyone, once, moves the head when the claimed fix's verdict is `Final` and still a pass, from its committed `base`: a stale base reverts whole (`Heads.StaleVerdict`) and the winner keeps its place until `mergeDays` after the finality, when `mergeExpired` closes the award with nothing earned and reopens the bounty. `Award.merged` records the move; instalments still count from finality, but are paid only once merged (Solved = merged); `paid(fix)` is set at the merge. Final verdicts can't be challenged, so the head never names a reversed fix (`invariant_headNeverNamesAReversedFix`). **Batch 1's note, now:** two fixes from one base are both claimed; the first merged moves the head, and the second is refused at its merge, keeping its place until its merge deadline, after which its solver commits the fix rebased on the new head (`test_twoFixesFinalInTheSameWindow`).
+- **Stuck rounds are released (L19, 3.13).** `Panels.release(pid)`: a counted or audit panel with a seat its replacements couldn't fill, after its reveal deadline + `STUCK_GRACE`; seats that never sealed are slashed as silence, seats that sealed (they couldn't reveal: the reveal window opens only on a full panel) or revealed are closed unslashed. A counted round sends the submission back to `Waiting` with `retryAt` = now + `RETRY_DELAY`; an audit round makes its audit due again from a fresh audit block. `Panels.releaseAudits(id)`: audits no validator could take for `STUCK_GRACE` (`auditStuckAt`, set when a draw first finds no auditor), counted only in the verdict's window: while a k = 1 verdict is held, its hold keeps it from finality and ends only when the network can judge its challenge, so its audits aren't released then, and the clock restarts when the window starts (otherwise the genesis validator's first verdicts were refunded during the network's first days: the devnet run found it). Any waiting submission is now redrawn (a fresh seed block and snapshot) on a registry change **or** at `retryAt`. The `MAX_REDRAWS`-th released round makes it `Status.Released` (appended to the enum); `Panels.abandon(id)` (race only) does the same at the race's deadline for a parked one (waiting, sealed, or audits undrawn) with a released round. `RaceV3.release(id)` then refunds: outcome `Released` (appended), the deposit's rest back to the solver (no slash, no failed verdict; a counted verdict's judges are paid first by `result`), the bounty (open, or won by this check) `Refunded` to its funders by input, the award closed unmerged, the issue stake back; a registration check's issue is returned. `timeOut` refuses a check with a released round (it ends by `release`). The values are construction parameters in `Windows` (`stuckGrace` 24 h, `retryDelay` 24 h, `maxRedraws` 3, `capWindow` 1 h; minutes in `inMinutes()`, `maxRedraws` unchanged), checked (times nonzero and below 2^32 s, `maxRedraws` 1–255) and readable (`STUCK_GRACE`, `RETRY_DELAY`, `MAX_REDRAWS`, `CAP_WINDOW`).
+- **Capacity and the pause (L16, 3.14; #253).** Each validator's `Load` in Panels: its capacity (`CHECKS_DEFAULT` 5 until it sets one, at most `CHECKS_CEILING` 16; 0 pauses it) and the times of its last 16 seats. Every seat (counted, replacement, audit, challenge, shadow) counts; every draw, and the k = 1 hold's count of challengers, skips a validator with its capacity's worth of seats in the trailing `capWindow`, or paused: skipped like a seat it can't take, never slashed. A paused validator is as if absent (a panel steps down without it). A full one is only busy for at most `capWindow`, so **a panel that busy validators leave short waits for them rather than stepping down to a smaller k** (a counted draw waits with `retryAt` = `capWindow` away; an audit or a challenge is retried from the same seed): the minutes devnet run showed a k = 3 check shrinking to k = 1 when two validators were busy, which would trade a short wait for a weaker panel and a week-long k = 1 window. `Panels.setCapacity(key, n)` is the validator's own setting (its key or operator; not an admin power): it takes effect `CAP_DELAY` = 262 blocks later (a seed block's hash lives 256 blocks after `SEED_DELAY`), and no second change is accepted while one is pending, so a validator that sees from a seed block that it's about to be drawn can't pause in time to dodge that draw, nor cancel a pending unpause to do so; a seat already given is judged or slashed as usual. `REPO_CHECKS_PER_HOUR` is a public constant 0 (off) while one repository is served.
+- **The split.** RaceV3Annex had 443 bytes left. RaceV3 now has the least (916 bytes): the next race change should move another action out (to the endings, which has 11,745). The endings (`withdrawIssue`, `withdraw`, `timeOut`, `mergeExpired` and the new `release`) moved to **`RaceV3Endings`**, which the annex deploys from its own constructor with the same parameters and reaches through its `fallback` (one more DELEGATECALL, in the race's storage). Deployers and RaceV3 still name one companion: no deployment call site changed. The new Panels code went to `PanelsJudge` (the release paths) and `Panels` (capacity), which had room.
+
+Sizes (runtime bytes, `scripts/contracts.sh sizes` and the artifacts for the linked libraries):
+
+| Contract | Runtime | Margin under 24,576 | Batch 1 |
+|---|---|---|---|
+| `Panels` | 16,785 | 7,791 | 14,109 |
+| `PanelsVerdict` (linked library) | 21,789 | 2,787 | 20,824 |
+| `PanelsJudge` (linked library) | 15,080 | 9,496 | 12,291 |
+| `PanelsDraw` (linked library) | 9,716 | 14,860 | 9,095 |
+| `PanelScores` | 3,797 | 20,779 | 3,797 |
+| `Validators` | 22,435 | **2,141** | 22,436 |
+| `FeesV3` | 18,026 | 6,550 | 18,026 |
+| `RaceV3` | 23,660 | **916** | 23,003 |
+| `RaceV3Annex` (initcode 40,832, deploys the endings; EIP-3860 limit 49,152) | 22,730 | 1,846 | 24,133 |
+| `RaceV3Endings` (new) | 12,831 | 11,745 | – |
+| `PoolV3` | 1,927 | 22,649 | 1,927 |
+
+Gas (call frame; `test_gasPerStep`, `PanelsV3Test.test_gas`, `test_gasLiveness`, `test_gasCapacity`):
+
+| Call | Batch 1 | Batch 2 |
+|---|---|---|
+| `RaceV3.register` | 766,700 | 767,000 |
+| `openBounty` | 192,400 | 194,800 |
+| `commit` | 647,600 | 648,100 |
+| `signal` (3 drawn) | 140,400 | 143,200 |
+| `result` (k = 3) | 565,900 | 569,100 |
+| `claim` | 325,300 (moved the head) | **247,100** (opens the commitment only) |
+| `merge` (the head moves at finality) | – | **209,400** |
+| `claimInstalments` | 228,100 | 232,500 |
+| `settle` (paid) | 230,500 | 235,400 |
+| `challenge` | 530,000 | 533,000 |
+| `settleChallenge` (upheld, k = 5) | 693,200 | 696,500 |
+| `Panels.draw` k = 1 (1 eligible) | 381,700 | **428,200** |
+| `draw` k = 3 (4 eligible) | 598,000 | **735,000** |
+| `draw` k = 5 (6 eligible) | 821,500 | **1,049,100** |
+| `draw` k = 7 (40 eligible) | 1,032,900 | **1,351,000** |
+| `drawChallenge` (k = 7, fresh) | 1,111,500 | **1,429,300** |
+| `advance` (one silent seat replaced, k = 7) | 642,500 | 657,600 |
+| `seal` / `reveal` / `receipt` (not the last) | 72,500 / 50,500 / 84,500 | 73,200 / 51,000 / 85,100 |
+| `receipt` that counts a panel (k = 1 / k = 7) | 201,600 / 215,500 | 203,300 / 216,300 |
+| `finalize` (k = 7) | 466,300 | 466,700 |
+| `drawAudits` (the decision) | 44,100 | 44,800 |
+| `Panels.release` (k = 3, two sealed seats closed; back to waiting) | – | 103,200–137,400 |
+| `Panels.release` (the MAX_REDRAWS-th: `Released`) | – | 93,700 |
+| `draw` of a waiting submission at its `retryAt` (re-target) | – | 70,500 |
+| `RaceV3.release` (deposit back, bounty refunded, issue returned) | – | 184,900 |
+| `Panels.setCapacity` (first change / later change) | – | 47,200 / 34,600 |
+
+What moved and why: **`claim` is 78,100 cheaper** (no `Heads.move`) and **`merge` costs 209,400** (the move, now at finality). **Draws cost more: about +46,500 at k = 1 to +318,000 at k = 7** (`drawChallenge` k = 7: +318,000), because every seat now writes its validator's capacity record (the seat count and one ring slot) and every try that passes the cheap filters reads it. These test draws seat fresh validators, so each first write is a zero-to-nonzero store (about 44,000 a seat, the worst case); once a validator's 16 ring slots are written, a seat costs about 10,000 more than before. `advance` +15,000; seals, reveals, receipts, `result`, `settle` and the rest +0.2 to +1.5 % (a larger `Env` and `Submission`).
+
+Tests: `test/v3/HeadAtFinalityV3.t.sol` (8: the canonical-head contract scenarios by name), `test/v3/LivenessV3.t.sol` (19: the panel-liveness scenarios by name, the deadline, a registration check, a stuck audit, capacity, busy validators and the pause, and the gas), `test/v3/LivenessInvariantV3.t.sol` (L19's invariant over draws, silences, joins, leaves, pauses and time on the real Panels, with a liveness check after every run: once honest validators of every family have room, every submission ends final or refunded), the race invariant's `invariant_headNeverNamesAReversedFix`, and the existing tests moved to `merge`. `scripts/contracts.sh test`: 604 passed with production windows and 604 with `POF_TEST_WINDOWS=minutes` (575 before; the v3 suite is 320 of them).
+
+**Where the spec was open or the code chose:**
+- *"The bounty's deadline"* has no v3 field: it is read as the submission's `resultDays` after its commitment, the race's existing time-out for a check never judged.
+- *A refund with other fixes queued:* the spec refunds the bounty; the code does so when the bounty is open or this check won it, whatever else is queued (their deposits return by `withdraw`, `result`/`finish`).
+- *Judges of a released round* who sealed or revealed aren't paid (the round never counted, so there's no result to pay from), and a revealed vote of a released round is public when the round is redrawn.
+- *"Keeps its place until the merge deadline"* (stale base): kept as written, though in v3 the place buys nothing (a rebased fix is a new commitment); the solver waits `mergeDays` after finality to resubmit.
+- *Challenge panels that can't complete* aren't covered by L19 (counted panels and audits only): a challenge that never finds a panel still freezes its window.
+- *Audits of a held k = 1 verdict:* L19 releases audits that block finality; during the hold they don't, so the release counts only in the window (above).
+- *Busy versus paused:* the spec says a full validator is skipped and that with no capacity anywhere the submission waits; it doesn't say what happens when some capacity remains but not enough for the panel the network allows. The code waits (busy) or steps down (paused), as above.
+- *Capacity's hour* is `capWindow`, a construction value (a minute in the devnet profile), so the minutes devnet isn't throttled by wall-clock hours.
+
+## #251, contract batch 1: the launch's bindings (tasks 3.1, 3.4, 3.7, 3.8, 3.10)
+The testnet launch (`openspec/changes/proof-of-fix-251-testnet-launch`) binds one deployment at construction:
+- **One repository (L1):** `RaceV3` takes `repo` (keccak256 of the Radicle RID) and `genesisHead`; its `Heads` holds that one entry; `register` refuses any other id and zero; `FeesV3` keeps one CI profile (`repo`, `profileOf` refuses another). Every claim now moves the head, so a second fix on a stale base can't be claimed.
+- **Windows at construction (L4):** a `Windows` struct (`src/v3/Windows.sol`) goes to `Validators` (its genesis) and `Panels`, is checked for order (every window nonzero and below 2^32 s; k = 1 ≥ 3 ≥ 5 ≥ 7 at each level; level C ≥ B ≥ A; k = 1 ≥ `K1_WINDOW_MIN`), and is stored as immutables (Panels packs the twelve challenge windows in two words). `Validators.UNBONDING_DELAY` = the longest challenge window + `UNBONDING_MARGIN` (7 days): 504 h with the production values, which give exactly the old constants. Panels refuses windows other than the registry's (`windowsHash`). The suite runs with production windows and, with `POF_TEST_WINDOWS=minutes`, with every hour a minute.
+- **Below the floor (L5):** `State.BelowFloor`, entered and left in `_rebucket` with `WentBelowFloor` / `BackAboveFloor`; it isn't in `activeCount` or the draws; `topUp` brings it back without qualifying; `leave` works from it; its misses still count toward the reveal-rate floor.
+- **Sepolia only, TEE only (L2 option 1, L10):** every v3 constructor (Validators, Panels, PanelScores, FeesV3, PoolV3, RaceV3, RaceV3Annex) reverts unless the chain id is 11155111, 31337 or 7193 (`LaunchChain`); `teeOnly` makes `applyAdr` refuse an ADR adding zkTLS; `simulated` stays refused on Sepolia.
+- **Known findings (open problems 7.5):** `drawAudits` refuses repeat calls (a draw with no auditor in a snapshot of the registry as it is waits, `auditWaits`, until the registry changes; `recheck` bumps the epoch only when it moves a validator); the on-chain `Receipt` names its seat (Panels, pid, slot, key), and the node finds a receipt naming another seat false.
+
+| Contract | Runtime (bytes) | Margin under 24,576 | Before #251 |
+|---|---|---|---|
+| `Panels` | 14,109 | 10,467 | 12,662 |
+| `PanelsVerdict` (linked library) | 20,824 | 3,752 | 20,156 |
+| `PanelsJudge` (linked library) | 12,291 | 12,285 | 12,061 |
+| `PanelsDraw` (linked library) | 9,095 | 15,481 | 9,095 |
+| `PanelScores` | 3,797 | 20,779 | 3,797 |
+| `Validators` | 22,436 | **2,140** | 21,706 |
+| `FeesV3` | 18,026 | 6,550 | 17,943 |
+| `RaceV3` | 23,003 | 1,573 | 22,895 |
+| `RaceV3Annex` | 24,133 | **443** | 24,133 |
+| `PoolV3` | 1,927 | 22,649 | 1,927 |
+
+Gas that moved (call frame, the tests below): the `receipt` that counts a panel 174,000 → 201,600 (k = 1) and 187,900 → 215,500 (k = 7), mostly the audit snapshot's registry epoch in a fresh slot; `seal`, `reveal`, a non-final `receipt` and `draw` about +0.2 to +0.7 % (the windows ride in the libraries' `Env`); `claim` 223,000 → 325,300, because every claim now moves the head (it moved nothing in the test race before, which had no repository); `register` 743,100 → 766,700; `result` 552,800 → 565,900.
+
+Tests: `test/v3/LaunchV3.t.sol` (27: the deployment-binding scenarios, Sepolia and the other chains, production and minute windows, windows out of order, a fuzz of ordered windows, `drawAudits`' repeat calls, the validator-admission delta's scenarios and the TEE-only ADR); the receipt's seat in `ValidatorsLevelsV3`; and the recount invariant now also checks that `activeCount` never counts a BelowFloor validator.
+
+**A test-suite pitfall found on the way:** in the large test contracts, `new Panels`, `new RaceV3` and `new RaceV3Annex` are cheatcode deployments (`deployCode`), and a `vm.expectRevert` before one of them ends the test there, passing, without running the rest. The expected reverts now wrap an external call (`this.deployRace`, …), including two older tests in `RaceV3.t.sol` (`test_annexRunsOnlyThroughTheRace`, `test_paramsChecked`) that were silently cut short.
+
 ## Sizes
 Runtime bytecode, from the build artifacts (`scripts/contracts.sh sizes` doesn't list the linked libraries `PanelsJudge` and `PanelsVerdict`, so `test_everyPanelsContractFitsEip170` checks every one):
 
@@ -417,5 +512,5 @@ Audits differ in who pays, not in how much. The simulation books an audit's pay 
   - the deployment script deploys PoolV3, then the registry with it as the pool, …, RaceV3Annex, then RaceV3 with the same nonzero `start`;
   - `scripts/integration.sh --version 3` drives the race through the panel interface (5.0).
 - **Sizes:**
-  - `RaceV3Annex` has 443 bytes of margin and `RaceV3` 1,681. The next race feature needs a second annex, or the Baskets externals moved off the annex.
-  - `Validators` has 2,870 bytes of margin, as 3.4 left it.
+  - `RaceV3Annex` has 443 bytes of margin and `RaceV3` 1,573 (after #251's batch 1). The next race feature needs a second annex, or the Baskets externals moved off the annex.
+  - `Validators` has 2,140 bytes of margin after #251's batch 1 (BelowFloor, the windows' derived delay, `teeOnly`).

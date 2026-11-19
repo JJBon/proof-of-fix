@@ -11,9 +11,9 @@ one: no fix's code is run). Everything on-chain is real: Validators, Panels, Fee
 window and draw. Who is drawn and what decides is read through tests/integration/panel.py (PanelV3), the interface
 the v2 suite reads its draws through too (task 5.0).
 
-Time is the chain's. Panels' windows are constants in hours and days (SEAL_WINDOW 2 h, REVEAL_WINDOW 1 h, a k = 1
-window of 168 h): there are no short test windows in the contracts, so this run moves the chain's clock
-(evm_increaseTime, a devnet affordance) to the next deadline whenever no node has anything to do. Every duration it
+Time is the chain's. Panels' windows are the deployment's (#251, L4); the devnet deploys the production ones, in
+hours and days (SEAL_WINDOW 2 h, REVEAL_WINDOW 1 h, a k = 1 window of 168 h), as Sepolia will, so this run moves the
+chain's clock (evm_increaseTime, a devnet affordance) to the next deadline whenever no node has anything to do. Every duration it
 prints is chain time under the real windows. The devnet's 2-second blocks are switched to mining on demand for the
 run (evm_setIntervalMining 0, evm_setAutomine).
 
@@ -71,7 +71,7 @@ TEES = ("intel-tdx", "amd-sev-snp", "aws-nitro-enclaves")  # spread, so the TEE-
 FAMILIES = ["fake"] + [f"fake-{i}" for i in range(1, 9)]  # one family per validator: the family cap allows 1 at k = 3
 HOUR, DAY = 3600, 86400
 REPORT_WINDOW = 86400
-WON, MERGED, OPEN = 2, 3, 1  # RaceV3Base.State
+WON, CLAIMED, OPEN = 2, 3, 1  # RaceV3Base.State ("Merged": claimed; the head moves at finality, #251 L9)
 PASS, FAIL = 1, 2  # RaceV3Base.Outcome
 FORFEITED = 4  # RaceV3Base.IssueState
 
@@ -94,9 +94,9 @@ class Forge(Host):
     def pulls(self, state="all"):
         return list(self._pulls)
 
-    def add_pull(self, title: str, body: str, sha: str) -> int:
+    def add_pull(self, title: str, body: str, sha: str, base: str = "") -> int:
         self._pulls.append({"number": 500 + len(self._pulls), "title": title, "body": body, "head_sha": sha,
-                            "state": "open"})
+                            "base_sha": base, "state": "open"})
         return self._pulls[-1]["number"]
 
 
@@ -127,10 +127,10 @@ class Node(NodeV3):
             return False
         return super()._take(pid)
 
-    def _judge(self, s: int, p: dict, late: bool = False):
+    def _judge(self, s: int, p: dict, late: bool = False, seat: tuple | None = None):
         self.judge.lie = s in self.lies
         try:
-            return super()._judge(s, p, late)
+            return super()._judge(s, p, late, seat)
         finally:
             self.judge.lie = False
 
@@ -162,6 +162,7 @@ class Net(Run):
         self.seen_panels = 0
         self.jumps = 0
         self.pokes = 0
+        self.live_values: dict | None = None  # Panels' L19 values, read once (jump)
         self.names: dict = {}
         self.next_index = 1
 
@@ -255,7 +256,7 @@ class Net(Run):
     # ---------- issues, bounties and fixes ----------
 
     def register_issue(self, claim: bool = True) -> tuple:
-        receipt = self.reporter.send(self.chain.race, "register(bytes32,bool)", v3.ZERO, False)
+        receipt = self.reporter.send(self.chain.race, "register(bytes32,bool)", self.chain.repo(), False)
         log = next(x for x in receipt["logs"] if x["topics"][0] == topic(v3.REGISTERED))
         issue, s = int(log["topics"][1], 16), abi.decode(["uint256"], abi.hexdata(log["data"]))[0]
         if claim:
@@ -268,22 +269,30 @@ class Net(Run):
         log = next(x for x in receipt["logs"] if x["topics"][0] == topic("BountyOpened(uint256,uint256)"))
         return int(log["topics"][1], 16)
 
-    def submit_fix(self, bounty: int, issue: int, label: str, good: bool) -> tuple:
-        """The solver seals a fix and opens its pull request. Returns (the submission, the commitment's opening)."""
-        sha = hashlib.sha1(f"pof devnet v3 fix {label}".encode()).hexdigest()
+    @staticmethod
+    def fix_sha(label: str) -> str:
+        return hashlib.sha1(f"pof devnet v3 fix {label}".encode()).hexdigest()
+
+    def submit_fix(self, bounty: int, issue: int, label: str, good: bool, base: bytes | None = None) -> tuple:
+        """The solver seals a fix on `base` (default: the repository's head now; the race serves one repository and
+        its merge at finality moves its head only from the base, #251 L1 and L9) and opens its pull request. Returns (the submission, the
+        commitment's opening)."""
+        base = self.chain.head() if base is None else base
+        sha = self.fix_sha(label)
         (self.work / "src" / sha).mkdir(parents=True, exist_ok=True)
         if not good:
             self.bad.add(sha)
         fix, salt = v2.commit_word(sha), crypto.keccak256(f"salt {label}".encode())
         self.solver.send(self.chain.race, "attempt(uint256)", bounty)
         receipt = self.solver.send(self.chain.race, "commit(uint256,bytes32)", bounty,
-                                   v3.fix_commitment(fix, v3.ZERO, salt, self.solver.address))
+                                   v3.fix_commitment(fix, base, salt, self.solver.address))
         log = next(x for x in receipt["logs"] if x["topics"][0] == topic(v3.COMMITTED))
         s = int(log["topics"][2], 16)
         self.host.add_pull(f"Fix the median ({label})",
-                           logic.pr_body(100 + issue, bounty, s, "0x" + salt.hex(), self.solver.address), sha)
+                           logic.pr_body(100 + issue, bounty, s, "0x" + salt.hex(), self.solver.address), sha,
+                           base[:20].hex())
         self.chain.live[s] = True
-        return s, (fix, v3.ZERO, salt)
+        return s, (fix, base, salt)
 
     def bounty_state(self, b: int) -> int:
         return self.chain.bounty(b)["state"]
@@ -305,19 +314,25 @@ class Net(Run):
 
     def jump(self) -> bool:
         """Nothing to do now: move the chain's clock to the next deadline (a panel's seal or reveal deadline, a
-        window's end, a deposit's return), or only mine the blocks a draw's seed waits for. False, with nothing moved,
-        when there is no deadline ahead."""
+        window's end, a deposit's return; since #251's batch 2 also a waiting submission's scheduled redraw, and the
+        release of a stuck panel or of audits nobody can take, L19), or only mine the blocks a draw's seed waits for.
+        False, with nothing moved, when there is no deadline ahead."""
         c, now, targets = self.chain, self.chain.now(), []
+        if self.live_values is None:
+            self.live_values = c.liveness()
+        grace = self.live_values["stuckGrace"]
         block, blocks_only = c.block(), False  # a draw waits for its seed block: only blocks are needed, not time
         count = c.panel_count()
         self.open_panels |= set(range(self.seen_panels + 1, count + 1))
         self.seen_panels = count
         for pid in sorted(self.open_panels):
             p = c.panel(pid)
-            if p["counted"] or (p["kind"] == v3.SHADOW and p["closed"]) or now > p["revealBy"] + DAY:
+            if p["counted"] or p["closed"] or now > p["revealBy"] + grace + DAY:
                 self.open_panels.discard(pid)
                 continue
             targets += [p["sealBy"] + 1, p["revealBy"] + 1]
+            if p["seats"] < p["k"] and p["kind"] in (v3.COUNTED, v3.AUDIT):
+                targets.append(p["revealBy"] + grace + 1)  # replacements exhausted: released then (L19)
         for s in list(c.live):
             v = c.verdict(s)
             st = v["status"]
@@ -326,6 +341,10 @@ class Net(Run):
                 blocks_only |= v["auditBlock"] + 1 >= block and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"])
                 blocks_only |= (v["challengeOpen"] and v["challengePid"] == 0 and v["challengeEpoch"] == 0
                                 and v["challengeBlock"] + 1 >= block)
+            if st == v3.WAITING and v["retryAt"]:
+                targets.append(v["retryAt"])  # its scheduled redraw (L19's RETRY_DELAY, L16's capacity hour)
+            if st == v3.WINDOW and v["auditStuckAt"] and v["auditsDrawn"] < v["auditsDue"]:
+                targets.append(v["auditStuckAt"] + grace + 1)  # audits nobody can take: released then (L19)
             if v["status"] == v3.WINDOW and not v["challengeOpen"]:
                 targets.append(v["finalAt"])
             elif v["status"] == v3.FINAL:
@@ -333,6 +352,8 @@ class Net(Run):
                     del c.live[s]
                 else:
                     targets.append(v["finalAt"] + REPORT_WINDOW + 1)
+            elif v["status"] == v3.RELEASED and not c.submission(s)["done"]:
+                targets.append(now + 1)  # the race's refund is due now
             elif v["status"] not in (v3.SEALED, v3.WAITING, v3.JUDGING, v3.HELD, v3.WINDOW):
                 del c.live[s]
         ahead = [t for t in targets if t > now]
@@ -569,7 +590,9 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     s_h = 0
     if heal:
         n.funder.send(c.race, "pledge(uint256,uint256)", b2, 200 * COIN)
-        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False)
+        # on the good fix, as a solver building on a pending fix would: the good fix's merge at its finality moves the
+        # one head there (#251 L9); this one is reversed before its own finality and never merged
+        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False, base=v2.commit_word(n.fix_sha("a good fix")))
         for name in ("v1", "v2"):
             n.nodes[name].lies.add(s_h)  # the two validators that will sit with the genesis validator lie on it
     n.drive(lambda: c.verdict(s_b)["status"] == v3.WAITING and n.quiet(s_b), "the fix waits, its shadows settled")
@@ -594,8 +617,12 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
           f"it was drawn with k = 3 ({n.named(P.drawn(s_b))}) {(n.when(drawn_log) - topped_at) / 60:,.0f} minutes "
           f"after the top-ups (it had waited {hours(topped_at - waited_at)} for them), and passed")
     check(n.bounty_state(b1) == WON and c.bounty(b1)["winner"] == s_b, f"bounty {b1} is won by submission {s_b}")
+    genesis_head = c.head()
     n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b1, *opening)
-    check(n.bounty_state(b1) == MERGED, "the solver claimed it (the commitment opened): its award started")
+    claimed_at = c.now()
+    check(n.bounty_state(b1) == CLAIMED and c.head() == genesis_head,
+          "the solver claimed it (the commitment opened): its award started, and the head didn't move (#251 L9: it "
+          "moves at the verdict's finality)")
     out["waitingBounty"] = {"submission": s_b, "judgedAt": judged, "k1Limit": limit1, "k": k,
                             "waitedForTopUpsSeconds": topped_at - waited_at,
                             "topUpsToDrawSeconds": n.when(drawn_log) - topped_at}
@@ -605,7 +632,7 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
               f"lying judges (submission {s_h}), and won bounty {b2}")
         n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b2, *opening_h)
         n.fund(genesis.address, 1_000)
-        check(genesis.challenge(s_h) is not None and c.verdict(s_h)["challengeOpen"] and n.bounty_state(b2) == MERGED,
+        check(genesis.challenge(s_h) is not None and c.verdict(s_h)["challengeOpen"] and n.bounty_state(b2) == CLAIMED,
               "its solver claimed it; the outvoted judge (genesis) re-ran the check and challenged it inside its window")
 
     # ---------- 4. a silent judge is replaced ----------
@@ -629,19 +656,25 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
           f"its silence cost it {(c.validator(silent_key)['slashed'] - slashed) / COIN:,.2f} of its bond")
     check(P.replaces_silent() and n.seats_reported(c.verdict(s4)["pid"]) == P.reports(s4, silent=1) == 3,
           "the panel still decided with 3 verdicts and 3 usage reports")
+    below = c.validator(silent_key)["bond"] < floor
     out["silent"] = {"validator": n.name(silent_key), "slashed": c.validator(silent_key)["slashed"] - slashed,
-                     "belowFloor": c.validator(silent_key)["bond"] < floor}
-    if c.validator(silent_key)["bond"] < floor:
-        check(c.is_active(silent_key) and not n.drawable(silent_key),
+                     "belowFloor": below}
+    if below:
+        # #251, L5: visibly inactive, not counted, and nothing waits for it; it isn't topped up here (its operator
+        # may top up or leave; section 8 tops every validator up for its bounty)
+        went = n.evs(c.registry, "WentBelowFloor(address,uint256)", silent_key)
+        active_now = rpc.view(c.registry, "activeCount()", ["uint256"])[0]
+        check(c.validator(silent_key)["state"] == v3.BELOW_FLOOR and not c.is_active(silent_key)
+              and not n.drawable(silent_key) and len(went) == 1 and active_now == len(n.active()),
               f"its bond is now under the floor ({c.validator(silent_key)['bond'] / COIN:,.2f} of {floor / COIN:,.2f}): "
-              f"still active, but drawn for nothing until it tops up")
-        n.top_up(n.name(silent_key), floor)
-        check(n.drawable(silent_key), "it topped its bond back up to the floor and is drawn again")
+              f"it is BelowFloor, said so by an event, not counted active ({active_now} are) and drawn for nothing; "
+              f"no manual top-up")
 
     # ---------- 5. k reaches 5 ----------
     print("\n== 5. two more candidates qualify until k reaches 5 ==", flush=True)
-    made = n.grow(["v4", "v5"], 12, "v4 and v5 qualify")
-    check(len(n.active()) == 6, f"v4 and v5 qualified after {made} more checks: six validators are active")
+    growing = ["v4", "v5"] + ([n.join_next()] if below else [])  # one more in place of the validator below the floor
+    made = n.grow(growing, 12, f"{', '.join(growing)} qualify")
+    check(len(n.active()) == 6, f"{', '.join(growing)} qualified after {made} more checks: six validators are active")
     _, s5 = n.register_issue()
     n.drive(lambda: c.verdict(s5)["status"] in (v3.WINDOW, v3.FINAL), "a check counted by a panel of 5")
     judges = P.drawn(s5)
@@ -776,6 +809,24 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
               f"and the solver's only loss is the award it never received", flush=True)
         out["healFix"] = hh
 
+    # ---------- 9. the head moves at finality (#251 L9) ----------
+    print("\n== 9. the head moves at the winning verdict's finality (merge), never to a reversed fix ==", flush=True)
+    n.drive(lambda: c.verdict(s_b)["status"] == v3.FINAL and c.award(b1, c.bounty(b1)["epoch"])["merged"],
+            "the good fix's verdict final and merged by a keeper", poke=True)
+    head = rpc.view(c.heads, "head(bytes32)", [v3.HEAD], c.repo())[0]
+    merged_log = n.evs(c.race, "HeadMerged(uint256,uint256,uint256,bytes32)", b1)[0]
+    final_b = n.evs(c.panels, "Final(uint256,bool)", s_b)[0]
+    check(v3.b32(head[0]) == v2.commit_word(n.fix_sha("a good fix")) and head[4] == s_b and head[3] == b1,
+          f"a keeper merged it once its verdict was final: the head is the good fix (bounty {b1}, submission {s_b}); "
+          f"the merge came {hours(n.when(merged_log) - n.when(final_b))} after the finality, and "
+          f"{hours(n.when(merged_log) - claimed_at)} after the claim (the wait L9 adds before the head moves)")
+    out["headAtFinality"] = {"submission": s_b, "claimToMergeSeconds": n.when(merged_log) - claimed_at,
+                             "finalToMergeSeconds": n.when(merged_log) - n.when(final_b)}
+    if heal:
+        check(head[4] != s_h and not c.award(b2, 1)["merged"],
+              f"the reversed fix (submission {s_h}) never reached the head: its award was closed unmerged")
+        out["headAtFinality"]["reversedNeverMerged"] = True
+
     out["validators"] = {name: {"state": v3.STATES[c.validator(node.address)["state"]],
                                 "bond": c.validator(node.address)["bond"], "slashed": c.validator(node.address)["slashed"]}
                          for name, node in n.nodes.items()}
@@ -790,7 +841,7 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     print("not covered here: validators as separate processes over a relay (the relay doesn't speak v3 messages); real "
           "attestation and the zkTLS prover (the simulated proof type only); a model judge (the fake judge only); "
           "ADRs and escalated fixes (RaceV3 can't open them); the test-backed dispute and the appeal of D21-D23 "
-          "(task 10.4, not built); short test windows (the contracts' windows are constants)")
+          "(task 10.4, not built); short test windows (the devnet deploys the production ones; minutes are task 3.12's)")
     print("devnet-v3: all checks passed", flush=True)
     return 0
 

@@ -20,12 +20,16 @@ The chain is anvil with the real v3 contracts (contracts/script/NodeV3Local.s.so
 FeesV3, PoolV3, RaceV3) and real v3 node objects with the fake judge (tests/integration/suite_v3.py's network, no model
 call): a genesis validator, candidates that qualify by their shadow verdicts and become seated, panels drawn for
 registration checks and fixes, a validator that leaves, one slashed below the floor and topped up again. Panels'
-windows are constants in hours (task 3.4 isn't built), so the clock is moved with evm_increaseTime.
+windows are the production ones in hours (#251 L4 makes them constructor parameters; the spike keeps production's), so
+the clock is moved with evm_increaseTime.
 
-L9's stand-in: RaceV3 moves its own `Heads` at `claim`, before the verdict is final (task 3.5 isn't built). So RaceV3
-is deployed with no repository (its `claim` moves nothing), and a separate v2 `Heads` holds A's and B's heads, moved by
-one account standing in for `merge(bounty)`: only once the winning verdict is final (`merge_at_finality`). The
-contract itself doesn't enforce that; the stand-in does, and the run shows it refusing before finality.
+L9 (#251 task 3.5, contract batch 2): RaceV3 moves its own `Heads` only by `merge(bounty)`, once the claimed fix's
+verdict is final; the claim doesn't move it. Since #251's L1 RaceV3 serves exactly one repository, fixed at its
+construction: here A (its RID and the genesis commit), so A's head is the race's own `Heads`, moved by the real
+`merge` (the run shows the contract refusing it before finality, and a keeper node merging at finality). B's fixes are
+judged by the same race but not claimed there (B isn't the race's repository), so B's head lives in a separate v2
+`Heads`, moved by one account standing in for `merge` only once B's winning verdict is final (`merge_at_finality`).
+Every registration names A, the race's repository.
 
 L12's fix source: a fix is a Radicle patch whose description carries the claim (bounty, submission, salt, solver: the
 bot's pull request format). Each validator lists the patches on its own Radicle node, refuses a revision whose base
@@ -497,7 +501,8 @@ class Spike:
         self.radicle_version = rad.sh("owner", "rad --version")
         log(f"radicle: {self.radicle_version}; nodes: " + ", ".join(f"{n} {rad.did[n]}" for n in NODES))
 
-    def deploy_v3(self) -> dict:
+    def deploy_v3(self, rid: str, genesis_commit: str) -> dict:
+        """v3 for one repository (#251, L1): `rid` and its genesis commit; the windows are production's."""
         rpc = self.rpc
         sim = simulator()
         genesis = keys_for(sim, "genesis")
@@ -511,6 +516,7 @@ class Spike:
         started = time.time()
         try:
             docker("exec", "-i", "-w", "/work", "-e", f"LOCAL_ATTESTATION={attestation}",
+                   "-e", f"LOCAL_RID={rid}", "-e", f"LOCAL_GENESIS_HEAD=0x{genesis_commit}{'0' * 24}",
                    "-e", "LOCAL_FAMILIES=" + ",".join(SV.FAMILIES[:6]), "-e", "LOCAL_RECORD=radicle-spike-v3/local.json",
                    f"{P}-anvil", "sh", "-c",
                    'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK; forge script '
@@ -525,7 +531,8 @@ class Spike:
         return record
 
     def deploy_heads(self, commits: dict) -> None:
-        """L9's stand-in: a v2 Heads holding A's and B's heads, moved only by `merger` (merge_at_finality)."""
+        """B's head: a v2 Heads moved only by `merger` (merge_at_finality), standing in for a race of B's own. It is
+        created with A's entry too, unused: A's head is the race's (`heads_for`)."""
         self.merger = Wallet(self.rpc, secret("merger"), "merger")
         self.rpc.call("anvil_setBalance", [self.merger.address, ETH_100])
         self.repo_id = {r: R.repo_id(self.rad.rid[r]) for r in ("a", "b")}
@@ -543,10 +550,14 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                             timeout=1200)
         if not re.fullmatch(r"0x[0-9a-fA-F]{40}", self.heads):
             raise RuntimeError(f"Heads wasn't deployed: {self.heads!r}")
-        log(f"Heads (L9's stand-in) {self.heads}: mover {self.merger.address}")
+        log(f"Heads (B's stand-in) {self.heads}: mover {self.merger.address}")
+
+    def heads_for(self, repo: str) -> str:
+        """Where `repo`'s head lives: A's in the race's own Heads (moved by `merge`, L9), B's in the stand-in."""
+        return self.n.chain.heads if repo == "a" else self.heads
 
     def head(self, repo: str) -> str:
-        word = self.rpc.view(self.heads, "head(bytes32)", HEAD_T, self.repo_id[repo])[0][0]
+        word = self.rpc.view(self.heads_for(repo), "head(bytes32)", HEAD_T, self.repo_id[repo])[0][0]
         return R.sha_of(v3.b32(word))
 
     # ---------- the repositories ----------
@@ -782,7 +793,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
     def bounty(self, repo: str, label: str, files: dict, judges: list) -> dict:
         """A fix of `repo` through v3: a registration made final, a bounty opened and funded, the solver's sealed fix
         opened as a Radicle patch, drawn and judged by validators reading it from their own nodes, claimed, final,
-        then L9's stand-in moves Heads. Returns what happened."""
+        then merged (L9: A's by the race's `merge`, B's by the stand-in). Returns what happened."""
         res, rad, n = self.res, self.rad, self.n
         c = n.chain
         issue, s_reg = n.register_issue()
@@ -825,15 +836,16 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.check(bool(runs) and {r[0] for r in runs} >= set(drawn) and all(r[3] == 0 for r in runs),
                   "2.5: each drawn validator ran the tests on the commit from its own node, in its own node's "
                   f"container ({', '.join(f'{r[0]}: exit {r[3]}' for r in runs)}), and the fake judge followed them")
-        n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b, fix_w, base_w, salt)
+        if repo == "a":  # the race's one repository (L1): claimed there; B's fix isn't (its base isn't the race's head)
+            n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b, fix_w, base_w, salt)
         claimed_at = c.now()
         moved, why = self.merge_at_finality(repo, b, s, fix, base)
-        res.check(not moved, f"L9's stand-in refuses to move Heads at claim, before finality ({why})")
+        res.check(not moved, f"L9: Heads doesn't move at the claim, before finality ({why})")
         res.expect(f"Heads.head({repo.upper()}) still the base", self.head(repo)[:12], base[:12])
         n.drive(lambda: c.verdict(s)["status"] == v3.FINAL, f"fix {label} final", poke=True)
         final_at = c.verdict(s)["finalAt"]
         moved, why = self.merge_at_finality(repo, b, s, fix, base)
-        res.check(moved, f"at finality the stand-in moved Heads.head({repo.upper()}) to the fix ({why})")
+        res.check(moved, f"at finality Heads.head({repo.upper()}) moved to the fix ({why})")
         res.expect(f"Heads.head({repo.upper()})", self.head(repo)[:12], fix[:12])
         out = {"repo": repo, "bounty": b, "submission": s, "fix": fix, "base": base, "patch": patch, "drawn": drawn,
                "k": len(drawn), "claimToFinalChainSeconds": final_at - claimed_at}
@@ -843,13 +855,23 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         return out
 
     def merge_at_finality(self, repo: str, b: int, s: int, fix: str, base: str) -> tuple:
-        """L9's stand-in for `merge(bounty)`: moves Heads only once the winning verdict is final and claimed."""
+        """L9's merge: A's by the race's real `merge(bounty)` (anyone; the contract refuses it before finality, and a
+        keeper node may have made it already); B's by the stand-in, only once the winning verdict is final."""
         n = self.n
-        v = n.chain.verdict(s)
+        c = n.chain
+        if repo == "a":
+            if c.award(b, c.bounty(b)["epoch"])["merged"]:
+                return True, "merged by a keeper node at finality (RaceV3.merge)"
+            try:
+                n.anyone.send(c.race, "merge(uint256)", b)
+            except Reverted as e:
+                return False, f"RaceV3.merge refused: {e.reason}"
+            return True, f"RaceV3.merge({b}): {base[:12]} -> {fix[:12]}"
+        v = c.verdict(s)
         if v["status"] != v3.FINAL:
             return False, f"the verdict is {v3.STATUS[v['status']]}, not Final"
-        if not v["pass"] or n.bounty_state(b) != SV.MERGED:
-            return False, "not a passed and claimed fix"
+        if not v["pass"] or n.bounty_state(b) != SV.WON:
+            return False, "not a passed fix"
         try:
             self.merger.send(self.heads, "move(bytes32,bytes32,bytes32,uint256,uint256,bytes32)", self.repo_id[repo],
                              v2.commit_word(base), v2.commit_word(fix), b, s,
@@ -864,7 +886,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         old = rad.canonical("owner", repo)
         for i, name in enumerate(nodes, 1):
             start = time.time()
-            code, out = rad.gate(name, repo, fix, self.heads, self.repo_id[repo])
+            code, out = rad.gate(name, repo, fix, self.heads_for(repo), self.repo_id[repo])
             res.expect(f"{name}'s gate pushes Heads.head (exit)", code, 0)
             if i == threshold:
                 self.converge(key, repo, lambda n: rad.canonical(n, repo), fix,
@@ -907,8 +929,8 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.scenario("S", "setup (2.1): v3 on anvil, validators qualify and are seated, panels drawn, Heads at "
                           "genesis for A and B; isolation starts here")
         self.up()
-        record = self.deploy_v3()
         genesis_commit = self.repos()
+        record = self.deploy_v3(self.rad.rid["a"], genesis_commit)
         self.deploy_heads({"a": genesis_commit, "b": genesis_commit})
         n = self.n = SpikeNet(self.rpc, record, OUT / "work", self)
         c = n.chain
@@ -939,8 +961,9 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
             res.check(all(rad.canonical(x, r) == genesis_commit for x in NODES),
                       f"canonical main of {r.upper()} = genesis on all {len(NODES)} nodes")
         race_heads = self.rpc.view(c.race, "contracts()", ["address"] * 6 + ["uint256"])[4]
-        res.expect("RaceV3's own Heads holds no repository (its claim moves nothing; L9's stand-in holds A and B)",
-                   self.rpc.view(race_heads, "repos()", ["bytes32[]"])[0], [])
+        res.expect("RaceV3's own Heads holds A only (#251 L1: one repository; B's head is the stand-in's)",
+                   ["0x" + v3.b32(x).hex() for x in self.rpc.view(race_heads, "repos()", ["bytes32[]"])[0]],
+                   ["0x" + self.repo_id["a"].hex()])
 
         self.candidate_a_start(genesis_commit)
         self.both_bounties()
@@ -962,7 +985,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.check(not ok, f"before: verify-delegates fails ({'; '.join(problems)})")
         seated = [self.name_of(a) for a in self.seats()]
         for name in seated:  # a new delegate must have published main first (#190): through its gate, at the head
-            code, out = rad.gate(name, "a", genesis_commit, self.heads, self.repo_id["a"])
+            code, out = rad.gate(name, "a", genesis_commit, self.heads_for("a"), self.repo_id["a"])
             res.expect(f"{name} publishes main at Heads.head through its gate (exit)", code, 0)
         rad.sync("a", ["owner"])
         self.mark()
@@ -1012,7 +1035,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.notes["freshCloneBStale"] = text
         res.scenario("b3", "(b) the delegate of convenience pushes the head: verify-head passes, a fresh clone agrees")
         start = time.time()
-        code, outp = rad.gate("owner", "b", out["fix"], self.heads, self.repo_id["b"])
+        code, outp = rad.gate("owner", "b", out["fix"], self.heads_for("b"), self.repo_id["b"])
         res.expect("the owner's node pushes Heads.head through the same gate (exit)", code, 0)
         self.converge("b3", "b", lambda x: rad.canonical(x, "b"), out["fix"], "canonical main of B after 1 push",
                       start=start)
@@ -1039,7 +1062,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                                                                                                 "")[:12], unjudged[:12])
             res.check(all(rad.canonical(x, repo) == head for x in rad.online(NODES)),
                       f"canonical main of {repo.upper()} unchanged on every node (= Heads.head)")
-            code, out = rad.gate("v1", repo, unjudged, self.heads, self.repo_id[repo])
+            code, out = rad.gate("v1", repo, unjudged, self.heads_for(repo), self.repo_id[repo])
             res.expect("a seated node's gate on the unjudged commit (exit 3: not Heads.head)", code, 3)
             if repo == "a":
                 ok, problems = self.verify_delegates("v1", "a")
@@ -1072,7 +1095,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         ok, problems = self.verify_delegates("v1", "a")
         res.check(not ok, f"between the chain's change and the revision, verify-delegates reports it "
                           f"({'; '.join(problems)})")
-        code, out = rad.gate("v4", "a", self.head("a"), self.heads, self.repo_id["a"])
+        code, out = rad.gate("v4", "a", self.head("a"), self.heads_for("a"), self.repo_id["a"])
         res.expect("v4 publishes main at Heads.head through its gate (exit)", code, 0)
         self.mark()
         self.change("a4", "genesis", ["v1", "v2", "v3"], "Seat added: v4")
@@ -1111,11 +1134,12 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         low.mute_all = False
         val = c.validator(low.address)
         active = self.rpc.view(c.registry, "activeCount()", ["uint256"])[0]
-        res.check(val["state"] == v3.ACTIVE and not self.rpc.view(c.registry, "isDrawable(address)", ["bool"],
-                                                                   low.address)[0],
+        went = n.evs(c.registry, "WentBelowFloor(address,uint256)", low.address)
+        res.check(val["state"] == v3.BELOW_FLOOR and not c.is_active(low.address) and len(went) >= 1
+                  and not self.rpc.view(c.registry, "isDrawable(address)", ["bool"], low.address)[0],
                   f"{who} was silent on a counted panel after {made[0]} checks: bond {val['bond'] / COIN:,.2f} < floor "
-                  f"{floor / COIN:,.2f}; still Active and counted by activeCount ({active}) but not drawable (finding "
-                  f"7, what L5 fixes)")
+                  f"{floor / COIN:,.2f}; BelowFloor (L5, finding 7 fixed), said so by WentBelowFloor, out of "
+                  f"activeCount ({active}) and not drawable")
         res.meas["belowFloor"] = {"checks": made[0], "bond": val["bond"], "activeCount": active,
                                   "seats": len(self.seats())}
         self.mark()
@@ -1123,8 +1147,9 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         ok, problems = self.verify_delegates("v1", "a")
         res.check(ok, f"verify-delegates passes with {who} out" + ("" if ok else ": " + "; ".join(problems)))
         n.top_up(who, floor)
-        res.check(self.rpc.view(c.registry, "isDrawable(address)", ["bool"], low.address)[0],
-                  f"{who} topped up to the floor: drawable (seated) again")
+        res.check(self.rpc.view(c.registry, "isDrawable(address)", ["bool"], low.address)[0]
+                  and c.validator(low.address)["state"] == v3.ACTIVE,
+                  f"{who} topped up to the floor: Active and drawable (seated) again, without qualifying")
         self.mark()
         self.change("a6", "genesis", ["v1", "v3"], f"Back above the floor: {who}")
         ok, problems = self.verify_delegates("v3", "a")
@@ -1144,7 +1169,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
             rad.stop_node(x)
         up = [x for x in seated if x not in down]
         for x in up:
-            code, _ = rad.gate(x, "a", out["fix"], self.heads, self.repo_id["a"])
+            code, _ = rad.gate(x, "a", out["fix"], self.heads_for("a"), self.repo_id["a"])
             res.expect(f"{x}'s gate pushes (exit)", code, 0)
         rad.sync("a")
         res.expect(f"with {len(up)} of {doc['threshold']} votes: canonical main on genesis",
@@ -1153,7 +1178,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.expect(f"verify-head reports the lag: exit ({why})", code, 1)
         t = time.time()
         rad.start_node("v1")
-        code, _ = rad.gate("v1", "a", out["fix"], self.heads, self.repo_id["a"])
+        code, _ = rad.gate("v1", "a", out["fix"], self.heads_for("a"), self.repo_id["a"])
         res.expect("v1 back online: its gate pushes (exit)", code, 0)
         self.converge("a7", "a", lambda x: rad.canonical(x, "a"), out["fix"], "canonical main of A once v1 is back",
                       start=t)
@@ -1170,7 +1195,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                  (f"caught up after {got['v4']} s" if got["v4"] is not None else
                   f"still {rad.canonical('v4', 'a')[:12]} after {CONVERGE_S} s (a restarted node doesn't fetch what "
                   f"it missed until something announces or it syncs)"))
-        code, _ = rad.gate("v4", "a", out["fix"], self.heads, self.repo_id["a"])  # the gate syncs first
+        code, _ = rad.gate("v4", "a", out["fix"], self.heads_for("a"), self.repo_id["a"])  # the gate syncs first
         res.expect("v4's gate (which fetches first) pushes (exit)", code, 0)
         res.expect("v4's canonical main after its gate", rad.canonical("v4", "a")[:12], out["fix"][:12])
         self.fix_a2 = out["fix"]

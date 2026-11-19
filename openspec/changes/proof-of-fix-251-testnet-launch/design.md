@@ -233,7 +233,7 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 - **[Test coins make the economics untestable]** → the testnet tests the flow, not the incentives; the paper says so (7.6).
 - **[Local chain ids accepted by the constructor (L2 option 1)]** → the deploy script refuses them for any non-local endpoint.
 - **[The contracts aren't audited]** (open problems 7.5) → known findings (`drawAudits` repeat calls, the receipt without a seat) are fixed before the deploy (task 3.10); an audit is not in scope, and the README says so.
-- **[A lawyer's review delays the launch]** → accepted by the owner as a gate (2026-11-18).
+- **[No lawyer's review]** → the owner decided against one on 2026-11-18 ("no legal check"); the intended-use section and the wording check remain.
 
 ## Migration Plan
 1. Gates and decisions (group 1), in parallel with the Radicle spike (group 2) and the simulation of the minimum (task 3.2).
@@ -252,4 +252,4 @@ These don't change the approach; each waits for the owner or for a measurement.
 - L6: `ACTIVE_WINDOW`'s value, after task 3.2.
 - L14: who hosts the seed, and whether to ask public seeds to replicate.
 - L16: who runs the launch validators and their model budget.
-- #158's gates: the Ridges/storytold decision, the licence, the IP note.
+- #158's gates: closed on 2026-11-18 (publish without contact; "MIT OR Apache-2.0"; no company behind the code, so no IP note).

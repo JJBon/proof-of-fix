@@ -10,6 +10,7 @@ import {Status, Tier, Kind, Submission, Panel} from "../../../src/v3/PanelsBase.
 import {IPanelsRegistry, IPanelsFees, IPanelsHost, IPanelScores} from "../../../src/v3/IPanels.sol";
 import {PanelScores} from "../../../src/v3/PanelScores.sol";
 import {ValidatorsSetup, ValidatorsWithZkTls, TDX, SEV_SNP, NITRO, SGX, IMAGE} from "./ValidatorsSetup.sol";
+import {suiteWindows, TEST_REPO} from "./SuiteWindows.sol";
 
 bytes32 constant IBM_SE = keccak256("ibm-secure-execution");
 bytes32 constant ZKTLS = keccak256("zktls");
@@ -106,7 +107,7 @@ abstract contract PanelsSetup is ValidatorsSetup {
         scores = new PanelScores();
         fees = new FeesV3(IFeesV3Validators(address(reg)), scores, _feesGenesis());
         pn = new Panels(
-            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes
+            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows
         );
         race = new MockRace(pn);
     }
@@ -121,7 +122,8 @@ abstract contract PanelsSetup is ValidatorsSetup {
             g.tokens[i] = [uint256(4_000_000), 200_000, 20_000_000];
         }
         g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 50_000, 1 gwei);
-        g.defaultProfile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
+        g.repo = TEST_REPO;
+        g.profile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
     }
 
     /// An active validator: TEE `tee` at `level` (or zkTLS when `tee` is 0), on `host`, of `family`, bonded `bond`.
@@ -274,10 +276,11 @@ abstract contract PanelsSetup is ValidatorsSetup {
     function _runAudits(uint256 id, bool agree) internal returns (uint256 drawn) {
         Submission memory s = pn.submission(id);
         uint256 before = pn.panelCount();
-        for (uint256 t; t < 2; ++t) {
+        for (uint256 t; t < 3; ++t) {
             s = pn.submission(id);
             if (s.auditDecided && s.auditsDrawn == s.auditsDue) break;
-            _rollPast(s.auditBlock);
+            if (s.auditWaits && reg.epoch() + 1 == s.auditEpoch) break; // refused until the registry changes
+            if (!s.auditWaits) _rollPast(s.auditBlock);
             pn.drawAudits(id);
         }
         bool vote = agree ? s.pass : !s.pass;
@@ -306,6 +309,11 @@ abstract contract PanelsSetup is ValidatorsSetup {
         uint256 at = pn.submission(id).finalAt;
         if (vm.getBlockTimestamp() < at) vm.warp(at);
         pn.finalize(id);
+    }
+
+    /// Past the capacity's trailing window: every validator has room for its MAX_CHECKS_PER_HOUR again (L16).
+    function _nextCapWindow() internal {
+        vm.warp(vm.getBlockTimestamp() + pn.CAP_WINDOW());
     }
 
     function _contains(address[] memory xs, address x) internal pure returns (bool) {

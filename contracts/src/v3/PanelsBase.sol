@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IPanelsRegistry, IPanelsFees, IPanelsHost, IPanelScores, IPanelsPool} from "./IPanels.sol";
 import {PanelsDraw} from "./PanelsDraw.sol";
+import {WindowsLib} from "./Windows.sol";
 
 // Panels' state and its shared internals (proof-of-fix#138, task 3.2). Panels holds one `Store`; its logic lives in
 // the linked libraries PanelsJudge (seals, reveals, receipts, replacement), PanelsVerdict (draws, counting, audits,
@@ -21,7 +22,8 @@ enum Status {
     Window, // counted, its window running (frozen while a challenge is open)
     Final,
     Withdrawn,
-    Expired // a constitution-tier submission on too small a network (D7)
+    Expired, // a constitution-tier submission on too small a network (D7)
+    Released // its rounds were released MAX_REDRAWS times, or at the race's deadline: never judged, refunded (L19)
 }
 
 enum Tier {
@@ -69,6 +71,11 @@ struct Submission {
     PanelsDraw.Snap challengeSnap;
     address challenger;
     address author; // a constitution-tier submission's deposit returns here
+    uint64 auditEpoch; // registry epoch + 1 when its audit snapshot was taken (#251 task 3.10)
+    bool auditWaits; // no auditor in that snapshot, and the registry hasn't changed: drawAudits refuses until it does
+    uint8 redraws; // rounds released so far: stuck panels and audits that couldn't be drawn (#251, L19)
+    uint64 retryAt; // while waiting: when it's drawn again even if the registry didn't change (L19, L16)
+    uint64 auditStuckAt; // when its audits first found no auditor since the last one was drawn (0: not stuck)
 }
 
 struct Panel {
@@ -113,9 +120,10 @@ struct Store {
     mapping(uint256 pid => Panel) panels;
     mapping(uint256 pid => mapping(uint256 slot => Seat)) seats;
     mapping(uint256 pid => mapping(address key => uint8)) seatOf; // slot + 1, or GONE
+    mapping(address key => PanelsDraw.Load) load; // each validator's capacity and recent seats (#251, L16)
 }
 
-/// Panels' immutables, passed to its libraries.
+/// Panels' immutables, passed to its libraries: its bindings and the deployment's windows (#251, design L4).
 struct Env {
     IPanelsRegistry reg;
     IPanelsFees fees;
@@ -123,6 +131,16 @@ struct Env {
     address coin;
     address pool;
     bytes32 domain;
+    uint256 seal; // SEAL_WINDOW
+    uint256 reveal; // REVEAL_WINDOW
+    uint256 adr; // ADR_WINDOW
+    uint256 removal; // REMOVAL_WINDOW
+    uint256 chalAB; // CHALLENGE_WINDOW at levels A and B, packed (WindowsLib.pack)
+    uint256 chalC; // and at level C
+    uint256 stuckGrace; // STUCK_GRACE (L19)
+    uint256 retryDelay; // RETRY_DELAY
+    uint256 maxRedraws; // MAX_REDRAWS
+    uint256 capWindow; // the capacity's trailing window (L16)
 }
 
 library PanelsBase {
@@ -130,8 +148,6 @@ library PanelsBase {
 
     uint256 internal constant K_MAX = 7;
     uint256 internal constant SEED_DELAY = 5;
-    uint256 internal constant SEAL_WINDOW = 2 hours;
-    uint256 internal constant REVEAL_WINDOW = 1 hours;
     uint256 internal constant K1_PENDING_MAX = 10;
     uint256 internal constant TEE_CAP_K3_TYPES = 5;
     uint256 internal constant SHADOW_PER_DRAW = 1;
@@ -143,8 +159,6 @@ library PanelsBase {
     uint256 internal constant CONSTITUTION_MIN_ELIGIBLE = 21;
     uint256 internal constant REMOVAL_MIN_ELIGIBLE = 14;
     uint256 internal constant ADR_DEPOSIT = 15e6;
-    uint256 internal constant ADR_WINDOW = 14 days;
-    uint256 internal constant REMOVAL_WINDOW = 48 hours;
     uint8 internal constant LEVEL_C = 3;
     uint8 internal constant GONE = type(uint8).max; // seatOf: sat on the panel (or is excluded from its draws)
     bytes32 internal constant STATEMENT_TYPEHASH = keccak256("Statement(bytes32 subject,bytes32 content)");
@@ -213,6 +227,7 @@ library PanelsBase {
         c.teeFrom = teeCapFrom(e);
         c.teeOnly = st.subs[id].teeOnly;
         c.members = new PanelsDraw.Member[](K_MAX);
+        c.capWindow = e.capWindow;
     }
 
     /// The counted panel a submission's draw seats with `seed` (K_MAX exactly at the constitution tier).
@@ -228,11 +243,12 @@ library PanelsBase {
         c.kMin = con ? K_MAX : 1;
         c.limits = !con;
         c.k1Cap = true;
-        return PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt);
+        return PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
     }
 
     function newPanel(
         Store storage st,
+        Env memory e,
         uint256 id,
         Kind kind,
         bytes32 seed,
@@ -250,18 +266,19 @@ library PanelsBase {
         p.ex = uint64(ex);
         p.snap = sn;
         p.counter = uint32(counter);
-        resetTimeline(p);
+        resetTimeline(e, p);
         emit Drawn(id, pid, kind, k, seed);
     }
 
-    function resetTimeline(Panel storage p) internal {
-        uint256 sealBy = block.timestamp + SEAL_WINDOW;
+    function resetTimeline(Env memory e, Panel storage p) internal {
+        uint256 sealBy = block.timestamp + e.seal;
         p.sealBy = uint64(sealBy);
-        p.revealBy = uint64(sealBy + REVEAL_WINDOW);
+        p.revealBy = uint64(sealBy + e.reveal);
     }
 
     /// Seats `key`: counted, audit and challenge seats open a verdict in the registry; a counted k = 1 seat counts
-    /// toward K1_PENDING_MAX; an auditor is excluded from its verdict's later audits and challenge panels.
+    /// toward K1_PENDING_MAX; an auditor is excluded from its verdict's later audits and challenge panels. Every seat
+    /// counts toward its validator's capacity (L16).
     function seat(Store storage st, Env memory e, uint256 pid, Panel storage p, uint256 i, address key, uint8 level)
         internal
     {
@@ -269,6 +286,7 @@ library PanelsBase {
         x.key = key;
         x.level = level;
         st.seatOf[pid][key] = uint8(i + 1);
+        PanelsDraw.took(st.load[key]);
         ++p.seats;
         Kind kind = p.kind;
         if (kind != Kind.Shadow) e.reg.verdictOpened(key);
@@ -307,13 +325,10 @@ library PanelsBase {
         }
     }
 
-    /// CHALLENGE_WINDOW[k, level] (ADR 0004): level A k=1 168 h · k=3 24 h · k=5 12 h · k=7 6 h; level B twice A's;
-    /// level C k=1 336 h · k=3 72 h · k=5 48 h · k=7 24 h.
-    function windowOf(uint256 k, uint8 level) internal pure returns (uint256) {
-        uint256 a = k == 1 ? 168 hours : k == 3 ? 24 hours : k == 5 ? 12 hours : 6 hours;
-        if (level == 1) return a;
-        if (level == 2) return 2 * a;
-        return k == 1 ? 336 hours : k == 3 ? 72 hours : k == 5 ? 48 hours : 24 hours;
+    /// CHALLENGE_WINDOW[k, level], the deployment's (#251, L4; the production values are ADR 0004's: level A k=1
+    /// 168 h · k=3 24 h · k=5 12 h · k=7 6 h; level B twice A's; level C k=1 336 h · k=3 72 h · k=5 48 h · k=7 24 h).
+    function windowOf(Env memory e, uint256 k, uint8 level) internal pure returns (uint256) {
+        return WindowsLib.windowOf(e.chalAB, e.chalC, k, level);
     }
 
     /// CHALLENGE_K[k]: k=1→3 · k=3→5 · k=5→7 · k=7→7.

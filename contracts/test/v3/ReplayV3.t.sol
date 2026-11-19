@@ -13,6 +13,7 @@ import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
 import {MockCoin} from "../mocks/MockCoin.sol";
 import {MockScores} from "./helpers/FeesV3Mocks.sol";
 import {ReplayRegistry, ReplayPanels} from "./helpers/ReplayStubs.sol";
+import {TEST_REPO, TEST_GENESIS_HEAD} from "./helpers/SuiteWindows.sol";
 
 /// Task 3.5's replay (proof-of-fix#138, #132): group 7's market (round 2's rules, `pricing.Baseline`), run in the
 /// contracts' arithmetic by `pof.sim.openval.contract` and exported on fixed seeds, replays on RaceV3 and FeesV3 to the
@@ -152,7 +153,8 @@ contract ReplayV3Test is Test {
             g.tokens[f] = [first[3 * f], first[3 * f + 1], first[3 * f + 2]];
         }
         g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 50_000, 1 gwei);
-        g.defaultProfile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
+        g.repo = TEST_REPO;
+        g.profile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
         fees = new FeesV3(IFeesV3Validators(address(reg)), new MockScores(), g);
         assertEq(fees.serviceFee(), vm.parseJsonUint(json, ".fee"));
         pn = new ReplayPanels(address(fees), address(usd), address(pool), address(reg));
@@ -175,7 +177,7 @@ contract ReplayV3Test is Test {
         c.instalments = 4;
         Panels p = Panels(address(pn));
         RaceV3Annex ax = new RaceV3Annex(c, 625, 1e12, p, pool, block.timestamp);
-        rc = new RaceV3(c, 625, 1e12, p, pool, block.timestamp, new bytes32[](0), new bytes32[](0), "c", ax);
+        rc = new RaceV3(c, 625, 1e12, p, pool, block.timestamp, TEST_REPO, TEST_GENESIS_HEAD, "c", ax);
         uint256[] memory vids = vm.parseJsonUintArray(json, ".vids");
         uint256[] memory vf = vm.parseJsonUintArray(json, ".vidFamily");
         for (uint256 i; i < vids.length; ++i) {
@@ -193,7 +195,7 @@ contract ReplayV3Test is Test {
         uint256 n = vm.parseJsonUint(json, ".subs");
         for (uint256 i; i <= n; ++i) {
             vm.prank(reporter);
-            uint256 issueId = rc.register(bytes32(0), false);
+            uint256 issueId = rc.register(TEST_REPO, false);
             uint256 check = rc.issue(issueId).check;
             pn.setStatus(check, Status.Final, true, 0);
             if (i == n) {

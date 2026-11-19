@@ -29,6 +29,13 @@ import {IPanelsRegistry, IPanelsFees, IPanelsHost, IPanelScores} from "./IPanels
 /// - at most (k − 1) / 2 per TEE type, from `teeFrom` (3 while TEE_CAP_K3_TYPES types are accepted, else 5).
 /// Each k gets DRAW_TRIES × k tries; a k that can't be filled steps down by 2, keeping the members that still fit its
 /// caps, in order, and the sample continues from the same counter, down to `kMin`.
+///
+/// **Capacity (#251, design L16; #253).** Every draw (counted, replacement, audit, challenge, shadow, and the k = 1
+/// hold's count of challengers) also skips a validator with no room now: one that took its MAX_CHECKS_PER_HOUR seats
+/// (any kind) within the trailing `capWindow`, or that set its capacity to 0 (paused). It's skipped like a seat it
+/// can't take, never slashed. Its capacity (`Load`) is its own setting (`Panels.setCapacity`): CHECKS_DEFAULT until it
+/// sets one, at most CHECKS_CEILING, and a change takes effect CAP_DELAY blocks later, so a draw whose seed is already
+/// known can't be dodged by pausing (see Panels).
 library PanelsDraw {
     uint256 internal constant K_MAX = 7;
     uint256 internal constant DRAW_TRIES = 8;
@@ -38,6 +45,18 @@ library PanelsDraw {
     uint8 internal constant LEVEL_A = 1;
     uint8 internal constant LEVEL_B = 2;
     uint8 internal constant LEVEL_C = 3;
+    uint256 internal constant CHECKS_DEFAULT = 5; // MAX_CHECKS_PER_HOUR until a validator sets its own
+    uint256 internal constant CHECKS_CEILING = 16; // the protocol's ceiling on it (the ring below holds this many)
+
+    /// A validator's capacity and its last CHECKS_CEILING seats' times (#251, L16). `cap` and `prev` hold the checks an
+    /// hour plus one (0: CHECKS_DEFAULT): `cap` in force from block `from`, `prev` before it.
+    struct Load {
+        uint8 cap;
+        uint8 prev;
+        uint64 from;
+        uint32 n; // seats taken so far
+        uint32[16] at; // seat n's time at at[n % CHECKS_CEILING]
+    }
 
     /// What the caps and the level need to know of a drawn validator.
     struct Member {
@@ -82,9 +101,12 @@ library PanelsDraw {
         Member[] members;
         uint256 m;
         address unpriced; // the first validator of an unpriced family met, to announce
+        uint256 capWindow; // the capacity's trailing window (L16)
+        bool full; // a validator was skipped for its capacity: the submission's retry comes after capWindow
     }
 
-    /// A shadow draw (D5): `count` candidates, or validators of barred families, by the seed.
+    /// A shadow draw (D5): `count` candidates, or validators of barred families, by the seed. The k = 1 hold's count of
+    /// challengers reads the same context (`count`: the challengers needed).
     struct ShadowCtx {
         IPanelsRegistry reg;
         IPanelsHost host;
@@ -95,6 +117,33 @@ library PanelsDraw {
         bytes32 seed;
         uint256 count;
         bool teeOnly;
+        uint256 capWindow;
+    }
+
+    /// The checks an hour a validator's `Load` allows now (0: paused).
+    function capOf(Load storage l) internal view returns (uint256) {
+        uint256 c = block.number >= l.from ? l.cap : l.prev;
+        return c == 0 ? CHECKS_DEFAULT : c - 1;
+    }
+
+    /// Whether a validator may take one more seat now: its capacity is nonzero and fewer than that many of its seats
+    /// fall within the trailing `window` (its capacity-th latest seat is older).
+    function hasRoom(Load storage l, uint256 window) internal view returns (bool) {
+        uint256 c = capOf(l);
+        return c != 0 && _below(l, c, window);
+    }
+
+    /// Fewer than `c` of its seats within the trailing `window`.
+    function _below(Load storage l, uint256 c, uint256 window) private view returns (bool) {
+        uint256 n = l.n;
+        return n < c || uint256(l.at[(n - c) % CHECKS_CEILING]) + window <= block.timestamp;
+    }
+
+    /// Records a seat taken now.
+    function took(Load storage l) internal {
+        uint256 n = l.n;
+        l.at[n % CHECKS_CEILING] = uint32(block.timestamp);
+        l.n = uint32(n + 1);
     }
 
     /// The largest bounty a panel of k at `level` may judge (ADR 0004): level A k=1 $50 · k=3 $250 · k=5 $625 · k=7
@@ -138,7 +187,8 @@ library PanelsDraw {
         Ctx memory c,
         mapping(uint256 => mapping(address => uint8)) storage seatOf,
         mapping(address => uint256) storage k1Pending,
-        mapping(address => uint256) storage k1FreedAt
+        mapping(address => uint256) storage k1FreedAt,
+        mapping(address => Load) storage load
     ) public view returns (Ctx memory, uint256, uint8) {
         uint256 n = c.snap.nLive;
         uint256 k = n < c.kTop ? n : c.kTop;
@@ -147,8 +197,9 @@ library PanelsDraw {
             if (k == 0 || k < c.kMin || (c.limits && limitOf(k, LEVEL_A) < c.bounty)) return (c, 0, 0);
             c.k = k;
             _refilter(c, k1Pending, k1FreedAt);
-            c = fill(c, tries(c.snap) * k, seatOf, k1Pending, k1FreedAt);
+            c = fill(c, tries(c.snap) * k, seatOf, k1Pending, k1FreedAt, load);
             if (c.m == k) break;
+            if (c.full) return (c, 0, 0); // busy validators left it short: wait for them (capWindow), don't shrink
             if (k < 3) return (c, 0, 0);
             k -= 2;
         }
@@ -161,7 +212,8 @@ library PanelsDraw {
         uint256 budget,
         mapping(uint256 => mapping(address => uint8)) storage seatOf,
         mapping(address => uint256) storage k1Pending,
-        mapping(address => uint256) storage k1FreedAt
+        mapping(address => uint256) storage k1FreedAt,
+        mapping(address => Load) storage load
     ) public view returns (Ctx memory) {
         uint256 nr = c.snap.nRoster;
         if (nr == 0) return c;
@@ -174,6 +226,16 @@ library PanelsDraw {
             if (bucket <= c.tier || raisedAt > c.snap.blockNo) continue;
             if (seatOf[c.pid][key] != 0 || seatOf[c.exPid][key] != 0 || _has(c, key)) continue;
             if (c.k1Cap && k == 1 && !_k1Free(key, c.snap.blockNo, k1Pending, k1FreedAt)) continue;
+            {
+                // full or paused: skipped, not slashed (L16). A paused one is as if absent; a full one is busy for at
+                // most the window, so a panel it leaves short waits for it rather than stepping down (`drawPanel`)
+                uint256 cap = capOf(load[key]);
+                if (cap == 0) continue;
+                if (!_below(load[key], cap, c.capWindow)) {
+                    c.full = true;
+                    continue;
+                }
+            }
             IValidators.Validator memory v = c.reg.validator(key);
             if (c.teeOnly && v.level == LEVEL_C) continue;
             Member memory x = Member(key, v.operator, v.host, v.family, v.teeType, v.level);
@@ -216,7 +278,11 @@ library PanelsDraw {
     /// score (they judge only as shadows until it recovers), not parties, of a priced family (D19), and at level A or B
     /// for a hidden-test submission (D10). DRAW_TRIES tries a shadow, over the candidates and then the validators
     /// eligible for the bounty.
-    function shadows(ShadowCtx memory c) public view returns (address[] memory keys, address unpriced) {
+    function shadows(ShadowCtx memory c, mapping(address => Load) storage load)
+        public
+        view
+        returns (address[] memory keys, address unpriced)
+    {
         uint256 cc = c.reg.candidateCount();
         uint256 ne = c.scores.barredCount() == 0 ? 0 : c.reg.eligibleCount(c.bounty);
         keys = new address[](c.count);
@@ -229,7 +295,7 @@ library PanelsDraw {
             for (uint256 j; j < got; ++j) {
                 if (keys[j] == key) dup = true;
             }
-            if (dup) continue;
+            if (dup || !hasRoom(load[key], c.capWindow)) continue;
             IValidators.Validator memory v = c.reg.validator(key);
             bytes32 family = v.family;
             if (c.teeOnly && v.level == LEVEL_C) continue;
@@ -245,32 +311,28 @@ library PanelsDraw {
     }
 
     /// Whether `need` validators are eligible for a verdict's challenge: drawable and bonded for its bounty, outside
-    /// its panel (and its auditors), not parties, at level A or B for a hidden-test submission (D4, D10). Reads up to
+    /// its panel (and its auditors), not parties, at level A or B for a hidden-test submission (D4, D10), with room
+    /// for a check now (L16: a full or paused validator couldn't take its challenge's seat). Reads up to
     /// HOLD_SCAN_MAX of them from a seeded offset: exact up to that many eligible validators, a random window beyond.
     function challengersReady(
-        IPanelsRegistry reg,
-        IPanelsHost host,
-        uint256 id,
-        uint256 bounty,
-        bytes32 seed,
-        uint256 need,
-        bool teeOnly,
-        mapping(address => uint8) storage seated
+        ShadowCtx memory c, // `count`: the challengers needed
+        mapping(address => uint8) storage seated,
+        mapping(address => Load) storage load
     ) public view returns (bool) {
-        uint256 n = reg.eligibleCount(bounty);
-        if (n < need) return false;
-        uint256 start = uint256(keccak256(abi.encode(seed, "hold")));
+        uint256 n = c.reg.eligibleCount(c.bounty);
+        if (n < c.count) return false;
+        uint256 start = uint256(keccak256(abi.encode(c.seed, "hold")));
         uint256 reads = n < HOLD_SCAN_MAX ? n : HOLD_SCAN_MAX;
         uint256 found;
-        for (uint256 i; i < reads && found < need; ++i) {
-            address key = reg.eligibleAt(bounty, (start + i) % n);
-            if (seated[key] != 0 || !reg.isDrawable(key)) continue;
-            IValidators.Validator memory v = reg.validator(key);
-            if (teeOnly && v.level == LEVEL_C) continue;
-            if (host.isParty(id, key) || host.isParty(id, v.operator)) continue;
+        for (uint256 i; i < reads && found < c.count; ++i) {
+            address key = c.reg.eligibleAt(c.bounty, (start + i) % n);
+            if (seated[key] != 0 || !hasRoom(load[key], c.capWindow) || !c.reg.isDrawable(key)) continue;
+            IValidators.Validator memory v = c.reg.validator(key);
+            if (c.teeOnly && v.level == LEVEL_C) continue;
+            if (c.host.isParty(c.id, key) || c.host.isParty(c.id, v.operator)) continue;
             ++found;
         }
-        return found >= need;
+        return found >= c.count;
     }
 
     /// At a step-down: keeps, in order, the members that fit the new k's caps (and its pending cap at k = 1).

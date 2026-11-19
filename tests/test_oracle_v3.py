@@ -106,6 +106,7 @@ class Encodings(unittest.TestCase):
                 (race, "Issue", v3.RACE_ISSUE, v3.RACE_ISSUE_FIELDS),
                 (race, "Bounty", v3.RACE_BOUNTY, v3.RACE_BOUNTY_FIELDS),
                 (race, "Submission", v3.RACE_SUBMISSION, v3.RACE_SUBMISSION_FIELDS),
+                (race, "Award", v3.RACE_AWARD, v3.RACE_AWARD_FIELDS),
                 (race, "Config", v3.RACE_CONFIG, v3.RACE_CONFIG_FIELDS)):
             fields = _struct(text, name)
             self.assertEqual(_tuple(fields, nested), tup, name)
@@ -117,6 +118,8 @@ class Encodings(unittest.TestCase):
         self.assertEqual(_enum(base, "Status"), v3.STATUS)
         self.assertEqual(_enum(base, "Kind"), v3.KINDS)
         self.assertEqual(_enum(iv, "State"), v3.STATES)
+        self.assertEqual(_enum(race, "State"), v3.RACE_STATES)
+        self.assertEqual(_enum(race, "Outcome"), v3.RACE_OUTCOMES)
 
     def test_events_and_calls_exist_as_the_node_spells_them(self):
         base, panels, race = _text("PanelsBase.sol"), _text("Panels.sol"), _text("RaceV3Base.sol")
@@ -157,11 +160,11 @@ class Encodings(unittest.TestCase):
             abi.encode(["uint256[4]"], [[1, 2, 3]])
 
     def test_a_receipt_round_trips_and_its_hash_covers_every_field(self):
-        r = v3.Receipt(*(bytes([i]) * 32 for i in range(1, 11)))
+        r = v3.Receipt(*(bytes([i]) * 32 for i in range(1, 15)))
         self.assertEqual(v3.Receipt.from_json(r.to_json()), r)
         self.assertEqual(r.hash(), crypto.keccak256(v3.RECEIPT_TYPEHASH + b"".join(bytes([i]) * 32
-                                                                                   for i in range(1, 11))))
-        for i in range(10):
+                                                                                   for i in range(1, 15))))
+        for i in range(14):
             words = list(r.words())
             words[i] = b"\xff" * 32
             self.assertNotEqual(v3.Receipt(*words).hash(), r.hash())
@@ -207,6 +210,9 @@ class FakeChain:
         self.posted: dict = {}
         self.period, self.rolled_ = 0, 0
         self.priced = [FAMILY]
+        self.bounties: dict = {}  # b -> the race's bounty, beyond {"issue": 1}
+        self.awards: dict = {}  # (b, epoch) -> award
+        self.live = {"stuckGrace": 86400, "retryDelay": 86400, "maxRedraws": 3, "capWindow": 3600}
 
     # ----- test helpers -----
 
@@ -225,7 +231,8 @@ class FakeChain:
                         "outcome": 0, "appealed": False, "paid": False, "done": False, "fix": "0x" + "00" * 32}
         self.verdicts[s] = {"status": v3.SEALED, "seedBlock": self.height + 5, "pid": 0, "pass": False,
                             "challengeOpen": False, "auditBlock": 0, "auditDecided": False, "auditsDrawn": 0,
-                            "auditsDue": 0, "auditsDone": 0, "challengePid": 0, "challengeBlock": 0, "finalAt": 0}
+                            "auditsDue": 0, "auditsDone": 0, "challengePid": 0, "challengeBlock": 0, "finalAt": 0,
+                            "waitEpoch": 0, "redraws": 0, "retryAt": 0, "auditStuckAt": 0}
 
     def add_panel(self, s: int, kind: int, keys: list, ex: int = 0, seal_by: int | None = None) -> int:
         pid = len(self.panels_) + 1
@@ -253,6 +260,9 @@ class FakeChain:
 
     def chain_id(self):
         return CHAIN
+
+    def repo(self):
+        return v3.ZERO  # the issues' repository here
 
     def coin(self):
         return COIN
@@ -306,7 +316,13 @@ class FakeChain:
         return dict(self.subs[s])
 
     def bounty(self, b):
-        return {"issue": 1}
+        return {"issue": 1, "state": v3.OPEN, "winner": 0, "epoch": 0, **self.bounties.get(b, {})}
+
+    def award(self, b, epoch):
+        return dict(self.awards[(b, epoch)])
+
+    def liveness(self):
+        return dict(self.live)
 
     def issue(self, i):
         return dict(self.issues[i])
@@ -474,6 +490,42 @@ class FakeChain:
     def drawAudits(self, sender, s):  # noqa: N802 (the contract's name)
         self.verdicts[s]["auditBlock"] = self.height + 5  # nobody to draw here: it only re-targets, and never refuses
 
+    def merge(self, sender, b):
+        bt = self.bounty(b)
+        a = self.awards[(b, bt["epoch"])]
+        if bt["state"] != v3.CLAIMED or a["merged"] or self.verdicts[a["sub"]]["status"] != v3.FINAL:
+            _fail("NotYet()")
+        a["merged"] = True
+
+    def release(self, sender, pid):
+        """Panels.release (the race's `release` is `refund` here)."""
+        if not self._release_panel(pid):
+            _fail("NothingDue()")
+
+    def _release_panel(self, pid):
+        p = self.panels_[pid]
+        if p["closed"] or p["counted"] or p["seats"] == p["k"] or self.time <= p["revealBy"] + self.live["stuckGrace"]:
+            return False
+        p["closed"] = True
+        v = self.verdicts[p["id"]]
+        v["redraws"] += 1
+        v.update(status=v3.RELEASED if v["redraws"] >= self.live["maxRedraws"] else v3.WAITING, pid=0,
+                 retryAt=self.time + self.live["retryDelay"])
+        return True
+
+    def releaseAudits(self, sender, s):  # noqa: N802 (the contract's name)
+        v = self.verdicts[s]
+        if not v["auditStuckAt"] or self.time <= v["auditStuckAt"] + self.live["stuckGrace"]:
+            _fail("NothingDue()")
+        v["redraws"] += 1
+        v["auditStuckAt"] = self.time
+
+    def refund(self, sender, s):
+        """RaceV3.release, as the node calls it on the race (FakeWallet routes it here)."""
+        if self.verdicts[s]["status"] != v3.RELEASED or self.subs[s]["done"]:
+            _fail("NotYet()")
+        self.subs[s].update(done=True, outcome=6)
+
     def result(self, sender, s):
         if self.subs[s]["paid"] or self.verdicts[s]["status"] not in (v3.HELD, v3.WINDOW, v3.FINAL):
             _fail("NotYet()")
@@ -489,6 +541,8 @@ class FakeWallet:
 
     def send(self, to, signature, *args, **kw):
         name = signature.split("(")[0]
+        if to == RACE and name == "release":
+            name = "refund"  # the race's release refunds a check; Panels' releases a stuck panel
         fn = getattr(self.chain, name, None)
         if fn is None:
             raise Reverted(f"{name}: not due")
@@ -584,6 +638,13 @@ class Judging(unittest.TestCase):
         self.assertEqual(on.proof, crypto.keccak256(bytes.fromhex(doc["proof"]["quote"])))
         self.assertEqual(doc["proof"]["kind"], "dstack-simulator")
         self.assertEqual(on.model, crypto.keccak256(doc["receipt"]["model"]["id"].encode()))
+        # and the seat it was given on (#251 task 3.10)
+        self.assertEqual(on.seat(), (crypto.checksum(PANELS), counted, 0, net.keys[0].address()))
+        seat = c.seat(counted, 0)
+        self.assertEqual(node_v3.receipt_faults(doc, seat, c.validator(seat["key"]), c.panel(counted), None,
+                                                (PANELS, counted, 0)), [])
+        why = node_v3.receipt_faults(doc, seat, c.validator(seat["key"]), c.panel(counted), None, (PANELS, shadow, 0))
+        self.assertIn("it names another seat than the one it was posted on", why)
         self.assertEqual(net.nodes[3].seats, {})  # not drawn: it did nothing
         self.assertEqual(c.names(net.keys[3].address()), [])
         self.assertEqual(c.names(net.keys[0].address()), ["seal", "receipt", "reveal", "report"])
@@ -764,6 +825,61 @@ class KeeperTableChallenge(unittest.TestCase):
         keeper.tick(0)
         self.assertEqual(c.names(net.keys[3].address()), ["draw", "drawAudits", "result"])
         self.assertTrue(c.subs[1]["paid"] and c.panel(counted)["counted"])
+
+    def test_the_keeper_merges_a_claimed_fix_once_its_verdict_is_final(self):
+        """#251 L9: the head moves at finality, by `merge` (anyone, once), not at the claim."""
+        net = Net(self.tmp)
+        c = net.chain
+        keeper = net.node(3, keeper=True)
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.subs[1]["paid"] = True
+        c.bounties[1] = {"state": v3.CLAIMED, "winner": 1, "epoch": 1}
+        c.awards[(1, 1)] = {"winner": c.subs[1]["solver"], "fix": "0x" + "00" * 32, "sub": 1, "closed": False,
+                            "earned": 0, "merged": False}
+        keeper.tick(0)
+        self.assertNotIn("merge", c.names())  # its window is running
+        c.verdicts[1]["status"] = v3.FINAL
+        keeper.tick(0)
+        keeper.tick(0)
+        self.assertEqual(c.names().count("merge"), 1)
+        self.assertTrue(c.awards[(1, 1)]["merged"])
+
+    def test_the_keeper_releases_a_stuck_panel_and_refunds_it(self):
+        """#251 L19: a panel whose replacements are exhausted is released STUCK_GRACE after its reveal deadline; the
+        submission waits for its redraw; after MAX_REDRAWS rounds the race refunds it."""
+        net = Net(self.tmp)
+        c = net.chain
+        keeper = net.node(3, keeper=True)
+        for r in range(1, 4):
+            pid = c.add_panel(1, v3.COUNTED, net.addresses(0, 1, 2))
+            p = c.panels_[pid]
+            p["seats"] = 2  # a silent seat nobody could take
+            c.time = p["revealBy"] + c.live["stuckGrace"]
+            keeper.tick(0)
+            self.assertNotIn(("release", pid), [(n, a[0]) for _, n, a in c.txs])  # not before the grace
+            c.warp(1)
+            keeper.tick(0)
+            self.assertTrue(c.panels_[pid]["closed"])
+            self.assertEqual(c.verdicts[1]["redraws"], r)
+        self.assertEqual(c.verdict(1)["status"], v3.RELEASED)
+        keeper.tick(0)
+        self.assertEqual(c.names().count("refund"), 1)  # RaceV3.release: the bounty refunded
+        self.assertTrue(c.subs[1]["done"])
+
+    def test_the_keeper_releases_audits_nobody_can_take(self):
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.verdicts[1].update(status=v3.WINDOW, auditDecided=True, auditsDue=2, auditsDrawn=0, auditStuckAt=c.time)
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertNotIn("releaseAudits", c.names())
+        c.warp(c.live["stuckGrace"] + 1)
+        keeper.tick(0)
+        self.assertEqual(c.names().count("releaseAudits"), 1)
+        self.assertEqual(c.verdicts[1]["redraws"], 1)
 
     def test_the_keeper_doesnt_redraw_audits_forever(self):
         net = Net(self.tmp)

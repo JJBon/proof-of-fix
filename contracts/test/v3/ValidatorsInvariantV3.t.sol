@@ -7,7 +7,8 @@ import {ValidatorsSetup, TDX, SEV_SNP, NITRO, FAMILY_A, FAMILY_B} from "./helper
 import {ValidatorsHandler} from "./helpers/ValidatorsHandler.sol";
 
 /// The registry's counters against a full recount (design D2: the tier counters are kept on every change, so k is
-/// read without a pass over the registry; a recount must always agree).
+/// read without a pass over the registry; a recount must always agree). And L5 (#251): `activeCount` never counts a
+/// validator below the bond floor; every Active validator is bonded at least BOND_FLOOR, every BelowFloor one below it.
 abstract contract Recount is ValidatorsSetup {
     function _assertRecount() internal view {
         uint256[7] memory eligible;
@@ -19,7 +20,15 @@ abstract contract Recount is ValidatorsSetup {
             IValidators.Validator memory v = reg.validator(key);
             bool drawable = v.state == IValidators.State.Active && v.bond >= reg.BOND_FLOOR();
             assertEq(reg.isDrawable(key), drawable, "isDrawable");
-            if (v.state == IValidators.State.Active) ++active;
+            if (v.state == IValidators.State.Active) {
+                ++active;
+                assertGe(v.bond, reg.BOND_FLOOR(), "Active below the floor");
+                assertTrue(reg.isActive(key), "isActive");
+            }
+            if (v.state == IValidators.State.BelowFloor) {
+                assertLt(v.bond, reg.BOND_FLOOR(), "BelowFloor at the floor");
+                assertFalse(reg.isActive(key), "a BelowFloor validator counted active");
+            }
             if (v.state == IValidators.State.Candidate) ++candidates;
             if (!drawable) continue;
             for (uint256 t; t < 7; ++t) {

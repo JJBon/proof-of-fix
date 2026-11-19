@@ -169,7 +169,7 @@ class Run:
         raise AssertionError(f"not reached: {what}")
 
     def register_issue(self) -> tuple:
-        receipt = self.reporter.send(self.chain.race, "register(bytes32,bool)", v3.ZERO, False)
+        receipt = self.reporter.send(self.chain.race, "register(bytes32,bool)", self.chain.repo(), False)
         topic = "0x" + crypto.keccak256(v3.REGISTERED.encode()).hex()
         log = next(x for x in receipt["logs"] if x["topics"][0] == topic)
         issue, check = int(log["topics"][1], 16), abi.decode(["uint256"], abi.hexdata(log["data"]))[0]
@@ -266,7 +266,7 @@ def run(rpc: Rpc, record: dict, work: Path, grow: bool) -> int:
     check(ev is not None and c.verdict(target)["challengeOpen"]
           and c.verdict(target)["challenger"].lower() == watcher.address.lower(),
           "a watcher whose check disagrees filed a challenge: Panels has it open")
-    need = c.config()["challengeStake"] + c.deposit_for(target, v3.ZERO)
+    need = c.config()["challengeStake"] + c.deposit_for(target, c.repo())
     check(before - c.balance(watcher.address) == need, "RaceV3 holds its stake and its panel's worst-case cost")
     try:
         watcher.challenge(target)

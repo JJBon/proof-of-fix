@@ -23,7 +23,8 @@ REGISTRATION_TYPE = ("Registration(address key,address operator,bytes32 proofTyp
                      "bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)")
 STATEMENT_TYPE = "Statement(bytes32 subject,bytes32 content)"
 RECEIPT_TYPE = ("Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,"
-                "bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof)")
+                "bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof,address panels,uint256 pid,uint256 slot,"
+                "address key)")
 REGISTRATION_TYPEHASH = keccak256(REGISTRATION_TYPE.encode())
 STATEMENT_TYPEHASH = keccak256(STATEMENT_TYPE.encode())
 RECEIPT_TYPEHASH = keccak256(RECEIPT_TYPE.encode())
@@ -38,23 +39,24 @@ K_MAX = 7
 ZERO = b"\0" * 32
 
 # Panels' enums (PanelsBase.sol) and the registry's (IValidators.sol), in their declared order.
-STATUS = ["None", "Sealed", "Waiting", "Judging", "Held", "Window", "Final", "Withdrawn", "Expired"]
-SEALED, WAITING, JUDGING, HELD, WINDOW, FINAL = 1, 2, 3, 4, 5, 6
+STATUS = ["None", "Sealed", "Waiting", "Judging", "Held", "Window", "Final", "Withdrawn", "Expired", "Released"]
+SEALED, WAITING, JUDGING, HELD, WINDOW, FINAL, WITHDRAWN, EXPIRED, RELEASED = 1, 2, 3, 4, 5, 6, 7, 8, 9
 KINDS = ["Counted", "Shadow", "Audit", "Challenge"]
 COUNTED, SHADOW, AUDIT, CHALLENGE = 0, 1, 2, 3
-STATES = ["None", "Candidate", "Active", "Leaving", "Exited"]
-CANDIDATE, ACTIVE, LEAVING, EXITED = 1, 2, 3, 4
+STATES = ["None", "Candidate", "Active", "Leaving", "Exited", "BelowFloor"]
+CANDIDATE, ACTIVE, LEAVING, EXITED, BELOW_FLOOR = 1, 2, 3, 4, 5
 
 # The views' structs as ABI tuples, and their field names (tests/test_oracle_v3.py rebuilds both from the sources).
 SNAP = "(uint64,uint32,uint32,uint64)"
 PANELS_SUBMISSION = (f"(bytes32,uint128,uint64,uint8,uint8,uint8,uint8,bool,bool,bool,{SNAP},uint64,uint64,uint64,"
                      f"uint64,uint64,uint64,uint8,uint8,uint8,bool,bool,bool,uint64,uint64,uint64,{SNAP},{SNAP},"
-                     "address,address)")
+                     "address,address,uint64,bool,uint8,uint64,uint64)")
 PANELS_SUBMISSION_FIELDS = ["commitment", "bounty", "seedBlock", "status", "tier", "k", "level", "pass",
                             "heldAtCount", "teeOnly", "snap", "waitEpoch", "finalAt", "pid", "shadowPid",
                             "frozenLeft", "auditBlock", "auditsDue", "auditsDrawn", "auditsDone", "auditDecided",
                             "challengeOpen", "lastUpheld", "challengeBlock", "challengeEpoch", "challengePid",
-                            "auditSnap", "challengeSnap", "challenger", "author"]
+                            "auditSnap", "challengeSnap", "challenger", "author", "auditEpoch", "auditWaits",
+                            "redraws", "retryAt", "auditStuckAt"]
 PANEL = f"(uint256,bytes32,uint64,uint64,uint32,uint8,uint8,uint8,uint8,uint8,uint8,bool,uint8,bool,bool,uint64,{SNAP})"
 PANEL_FIELDS = ["id", "seed", "sealBy", "revealBy", "counter", "k", "seats", "nSealed", "done", "passes", "level",
                 "counted", "kind", "closed", "scored", "ex", "snap"]
@@ -72,15 +74,23 @@ RACE_BOUNTY = "(uint256,uint8,uint256,bool,uint256,uint256,uint256,uint256,uint2
 RACE_BOUNTY_FIELDS = ["issue", "state", "offerFrom", "locked", "lockBps", "idleSince", "attempting", "next", "winner",
                       "mergeBy", "epoch", "pledges"]
 RACE_SUBMISSION = ("(uint256,uint256,uint256,address,bytes32,uint256,uint256,uint256,uint256,uint8,bool,bool,bool,"
-                   "bytes32)")
+                   "bytes32,bytes32)")
 RACE_SUBMISSION_FIELDS = ["bounty", "issue", "day", "solver", "commitment", "deposit", "charged", "judged", "pledges",
-                          "outcome", "appealed", "paid", "done", "fix"]
+                          "outcome", "appealed", "paid", "done", "fix", "base"]
+RACE_AWARD = "(address,bytes32,uint256,bool,uint256,bool)"
+RACE_AWARD_FIELDS = ["winner", "fix", "sub", "closed", "earned", "merged"]
+# RaceV3's enums (RaceV3Base.sol), in their declared order. "Merged" is the claimed state: since #251's L9 the head
+# moves at the verdict's finality (`merge`), recorded on the award (`merged`).
+RACE_STATES = ["None", "Open", "Won", "Merged", "Paid", "Refunded", "Unsolved"]
+OPEN, WON, CLAIMED, PAID, REFUNDED, UNSOLVED = 1, 2, 3, 4, 5, 6
+RACE_OUTCOMES = ["None", "Pass", "Fail", "Duplicate", "Withdrawn", "TimedOut", "Released"]
 RACE_CONFIG = "(address,address," + ",".join(["uint256"] * 14) + ")"
 RACE_CONFIG_FIELDS = ["infrastructure", "insurance", "registrationFee", "issueStake", "attemptFee", "evaluationFee",
                       "appealFee", "challengeStake", "startPriceBps", "riseBpsPerDay", "finderFeeBps", "idleDays",
                       "resultDays", "mergeDays", "releaseEveryDays", "instalments"]
 USAGE = "(bytes32,uint64,uint64,uint64,uint64,uint64,uint64)"
 PROFILE = "(bytes32,uint32,uint32,uint32)"
+HEAD = "(bytes32,bytes32,uint256,uint256,uint256,bytes32)"  # v2's Heads.Head
 
 SEATED = "Seated(uint256,uint256,address,uint256)"
 COMMITTED = "Committed(uint256,uint256,address)"
@@ -164,12 +174,15 @@ class Registration:
 
 # ---------- the receipt's on-chain form ----------
 
-RECEIPT_FIELDS = ("proofType", "notary", "model", "weights", "image", "seed", "prompt", "answer", "tests", "proof")
+RECEIPT_FIELDS = ("proofType", "notary", "model", "weights", "image", "seed", "prompt", "answer", "tests", "proof",
+                  "panels", "pid", "slot", "key")
 
 
 @dataclass(frozen=True)
 class Receipt:
-    """What a receipt names on-chain (IValidators.Receipt, D11): a counted verdict posts `hash()` of it."""
+    """What a receipt names on-chain (IValidators.Receipt, D11): a counted verdict posts `hash()` of it. Its last four
+    fields are the seat it was given on (#251 task 3.10): the Panels' address, the panel, the slot and the validator's
+    key, each as one ABI word; a receipt whose seat isn't the one it was posted on is false (`receipt_faults`)."""
     proof_type: bytes
     notary: bytes  # zkTLS: the notary that signed the proof; 0 for a TEE
     model: bytes
@@ -180,10 +193,19 @@ class Receipt:
     answer: bytes
     tests: bytes
     proof: bytes  # the proof bytes (a TEE quote or a zkTLS proof), hashed
+    panels: bytes = ZERO  # the seat: the Panels it was posted to (an address word),
+    pid: bytes = ZERO  # the panel (a uint256 word),
+    slot: bytes = ZERO  # the seat's slot on it (a uint256 word),
+    key: bytes = ZERO  # and the validator seated there (an address word)
 
     def words(self) -> tuple:
         return (self.proof_type, self.notary, self.model, self.weights, self.image, self.seed, self.prompt,
-                self.answer, self.tests, self.proof)
+                self.answer, self.tests, self.proof, self.panels, self.pid, self.slot, self.key)
+
+    def seat(self) -> tuple:
+        """(panels address, pid, slot, key address) as this receipt names them."""
+        return (checksum("0x" + self.panels[-20:].hex()), int.from_bytes(self.pid, "big"),
+                int.from_bytes(self.slot, "big"), checksum("0x" + self.key[-20:].hex()))
 
     def hash(self) -> bytes:
         """`Validators.receiptHash`: keccak256(abi.encode(RECEIPT_TYPEHASH, receipt))."""
@@ -194,7 +216,7 @@ class Receipt:
 
     @classmethod
     def from_json(cls, d: dict) -> "Receipt":
-        return cls(*(b32(d[name]) for name in RECEIPT_FIELDS))
+        return cls(*(b32(d[name]) for name in RECEIPT_FIELDS if name in d))
 
 
 # ---------- the chain's v3 views ----------
@@ -215,7 +237,7 @@ class Chain:
             race, "contracts()", ["address", "address", "address", "address", "address", "address", "uint256"])
         self.panels, self.fees, self.pool = checksum(panels), checksum(fees), checksum(pool)
         self.registry, self.heads, self._coin, self.start = checksum(registry), checksum(heads), checksum(coin), start
-        self._chain_id = self._domain = None
+        self._chain_id = self._domain = self._repo = None
 
     def chain_id(self) -> int:
         if self._chain_id is None:
@@ -274,6 +296,20 @@ class Chain:
                         "block": int(log["blockNumber"], 16)})
         return out
 
+    def liveness(self) -> dict:
+        """Panels' liveness values (#251, L19 and L16): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS and the capacity's
+        window, in seconds (MAX_REDRAWS a count)."""
+        names = {"stuckGrace": "STUCK_GRACE()", "retryDelay": "RETRY_DELAY()", "maxRedraws": "MAX_REDRAWS()",
+                 "capWindow": "CAP_WINDOW()"}
+        return {k: self.rpc.view(self.panels, sig, ["uint256"])[0] for k, sig in names.items()}
+
+    def capacity(self, key: str) -> dict:
+        """A validator's capacity (#251 L16, #253): checks a window in force now, the next one and from which block,
+        and whether it has room for a seat now (0 checks: paused)."""
+        checks, nxt, frm, room = self.rpc.view(self.panels, "capacity(address)", ["uint256", "uint256", "uint256",
+                                                                                  "bool"], key)
+        return {"checks": checks, "next": nxt, "from": frm, "room": room}
+
     # ----- the registry -----
 
     def validator(self, key: str) -> dict:
@@ -287,6 +323,16 @@ class Chain:
 
     def is_active(self, key: str) -> bool:
         return self.rpc.view(self.registry, "isActive(address)", ["bool"], key)[0]
+
+    def repo(self) -> bytes:
+        """The deployment's one repository (RaceV3.repo, #251 L1): keccak256 of its Radicle RID."""
+        if self._repo is None:
+            self._repo = b32(self.rpc.view(self.race, "repo()", ["bytes32"])[0])
+        return self._repo
+
+    def head(self) -> bytes:
+        """The repository's canonical head in the race's Heads (a fix's base must be it at its merge, #251 L9)."""
+        return b32(self.rpc.view(self.heads, "head(bytes32)", [HEAD], self.repo())[0][0])
 
     def registration_digest(self, r: Registration) -> bytes:
         return b32(self.rpc.view(self.registry, f"registrationDigest({REGISTRATION})", ["bytes32"], r.as_tuple())[0])
@@ -304,6 +350,12 @@ class Chain:
 
     def bounty(self, b: int) -> dict:
         return _named(RACE_BOUNTY_FIELDS, self.rpc.view(self.race, "bounty(uint256)", [RACE_BOUNTY], b)[0])
+
+    def award(self, b: int, epoch: int) -> dict:
+        """An award (`merged`: the head moved to its fix at its verdict's finality, #251 L9)."""
+        row = _named(RACE_AWARD_FIELDS, self.rpc.view(self.race, "award(uint256,uint256)", [RACE_AWARD], b, epoch)[0])
+        row["winner"] = checksum(row["winner"])
+        return row
 
     def issue(self, i: int) -> dict:
         row = _named(RACE_ISSUE_FIELDS, self.rpc.view(self.race, "issue(uint256)", [RACE_ISSUE], i)[0])

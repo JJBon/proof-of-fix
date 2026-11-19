@@ -310,8 +310,8 @@ class Net:
                  family_ok: Callable[[str], bool] = EVERY_FAMILY,
                  vote_weight: Optional[Callable[[Validator], float]] = None):
         self.seed, self.p, self.w = seed, p, w
-        if (p.REP_CAP or p.POT != "off" or p.JUDGE_FEE) and not getattr(self, "NO_DEPOSIT_RULES", False):
-            raise ValueError("REP_CAP, POT and JUDGE_FEE are read by nodeposit.NDNet only")  # #236, report v5
+        if (p.REP_CAP or p.POT != "off" or p.JUDGE_FEE or p.ACTIVE_GATE) and not getattr(self, "NO_DEPOSIT_RULES", False):
+            raise ValueError("REP_CAP, POT, JUDGE_FEE and ACTIVE_GATE are read by nodeposit.NDNet only")  # #236, #251
         if ((p.MAX_CHECKS_PER_HOUR is not None or p.REPO_CHECKS_PER_HOUR is not None or p.QUEUE_ORDER != "fifo"
              or p.NEWCOMER_LANE or p.LANE_PER_ID_DAY is not None or p.REPO_LISTS or p.REPO_MIN_ELIGIBLE
              or p.REPO_STAKE_X) and not getattr(self, "REPO_RULES", False)):
