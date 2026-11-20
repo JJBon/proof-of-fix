@@ -20,7 +20,15 @@ tests (oracle/runtree.py, #251 L20) are made under the same root for the same re
 Two runs (#251 L22): `run_tests` runs the command twice on the same tree, each in a fresh container, one after the
 other, and both always run. Each gets half the check's time limit (the profile's `timeoutSeconds`), so FeesV3's
 worst-case deposit stays a true bound. The tests pass only if both exit 0; the receipt's `tests` records each run
-(`runs`) and `flaky` when they disagree, and the time the node meters is the runs' sum."""
+(`runs`) and `flaky` when they disagree, and the time the node meters is the runs' sum.
+
+The test image (#251 L21): `oracle/test-image/Dockerfile`, Python 3.12 on Debian slim with git and bash, pinned by
+digest, one per platform, built locally and reproducibly by `scripts/test-image.sh` (nothing is pulled for it; the
+measured disk of task 4.9 will carry it). The runs get two scratch folders, both tmpfs of `LIMITS["tmp"]` each and both
+counted against the memory limit: `/tmp`, noexec as before, and `/scratch`, the tests' TMPDIR, where a test may run a
+script it wrote (a fake `git` or token helper). The code under test can already run anything the interpreter can, so
+`/scratch`'s exec gives it nothing the read-only root, the missing network and capabilities, and the limits take away.
+POF_SANDBOX=1 tells a repository's tests they run here (proof-of-fix's own: tests/sandbox_env.py)."""
 
 from __future__ import annotations
 
@@ -28,6 +36,7 @@ import hashlib
 import http.client
 import json
 import os
+import platform
 import shutil
 import socket
 import subprocess
@@ -38,10 +47,26 @@ from pathlib import Path
 from typing import Callable, Optional, Tuple
 from urllib.parse import quote
 
-# Python 3.12 on Alpine: the same pinned image the loop tests fixes with (scripts/bounty-loop.sh).
-TEST_IMAGE = "python@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8"
+# The test image (oracle/test-image/Dockerfile): each platform's manifest digest, as scripts/test-image.sh builds it
+# and `docker load`s it (the containerd image store keeps the digest). The same build for both platforms gives one
+# index, sha256:9cc1863eb67841c1617b12fb39619654a15940ea4a23c7c40c6521a5f201a057.
+TEST_IMAGE_NAME = "pof-test-image"
+TEST_IMAGES = {
+    "amd64": f"{TEST_IMAGE_NAME}@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5",
+    "arm64": f"{TEST_IMAGE_NAME}@sha256:6cb55370a2a9a71429fc1ae8c49ee1306e8db99862eedbef263cffbe0c59274d",
+}
+
+
+def _arch(machine: str = "") -> str:
+    """The Docker platform of this machine (the node runs on its host's architecture): amd64 or arm64."""
+    return "arm64" if (machine or platform.machine()).lower() in ("aarch64", "arm64") else "amd64"
+
+
+TEST_IMAGE = TEST_IMAGES[_arch()]
 COMMAND = ("python", "-m", "unittest", "-q")
 LIMITS = {"memory": "256m", "pids": "64", "cpus": "1", "tmp": "64m", "timeout_s": 300}
+SCRATCH = "/scratch"  # the tests' TMPDIR: a tmpfs where a test may run a script it wrote (above)
+SANDBOX_ENV = (("PYTHONDONTWRITEBYTECODE", "1"), ("TMPDIR", SCRATCH), ("POF_SANDBOX", "1"))
 TIMED_OUT = 124  # the exit code of a run the outer time limit stopped, as coreutils' timeout reports it
 RUNS = 2  # each check runs the tests this many times, each in a fresh container (#251 L22)
 
@@ -134,17 +159,23 @@ class Spec:
     cpus: str = LIMITS["cpus"]
     tmp: str = LIMITS["tmp"]
     user: str = ""  # empty: the image's user (root inside, with no capabilities); "65534:65534" runs as nobody
-    env: tuple = field(default=(("PYTHONDONTWRITEBYTECODE", "1"),))
+    env: tuple = field(default=SANDBOX_ENV)
 
     def entrypoint(self) -> list:
         # The inner limit: the image's own timeout, so a run ends even if the outer limit doesn't fire. It needs the
-        # init process (--init, "Init"): a container's PID 1 ignores SIGTERM, and Busybox's timeout execs the command.
+        # init process (--init, "Init"): a container's PID 1 ignores SIGTERM, and timeout execs the command.
         return ["timeout", str(self.timeout_s), *self.command]
+
+    def tmpfs(self) -> dict:
+        """The two scratch folders (module docstring): /tmp noexec, the tests' TMPDIR with exec; both size-limited."""
+        return {"/tmp": f"rw,noexec,nosuid,size={self.tmp}", SCRATCH: f"rw,exec,nosuid,nodev,size={self.tmp}"}
 
     def argv(self) -> list:
         argv = ["docker", "run", "--rm", "--init", "--network", "none", "--read-only", "--cap-drop", "ALL",
                 "--security-opt", "no-new-privileges", "--pids-limit", str(self.pids), "--memory", self.memory,
-                "--cpus", self.cpus, "--tmpfs", f"/tmp:rw,noexec,nosuid,size={self.tmp}"]
+                "--cpus", self.cpus]
+        for path, options in self.tmpfs().items():
+            argv += ["--tmpfs", f"{path}:{options}"]
         if self.user:
             argv += ["--user", self.user]
         for k, v in self.env:
@@ -166,7 +197,14 @@ def _inner_limit(argv: list) -> int:
     return int(LIMITS["timeout_s"])
 
 
+def _missing_test_image(image: str) -> RuntimeError:
+    return RuntimeError(f"the test image {image} isn't here: build it with scripts/test-image.sh")
+
+
 def docker_runner(argv: list) -> Tuple[int, str, str]:
+    image = next((a for a in argv if a.startswith(f"{TEST_IMAGE_NAME}@")), "")
+    if image and subprocess.run(["docker", "image", "inspect", image], capture_output=True).returncode:
+        raise _missing_test_image(image)  # built here, never pulled (#251 L21): a setup error, not a failed run
     name = ""
     if argv[:2] == ["docker", "run"]:  # named, so the outer limit can kill the container, not just the CLI
         name = f"pof-sandbox-{uuid.uuid4().hex[:12]}"
@@ -226,6 +264,8 @@ class DockerApi:
         status, _ = self._call("GET", f"/images/{quote(image, safe='')}/json", ok=(200, 404))
         if status == 200:
             return
+        if image.startswith(f"{TEST_IMAGE_NAME}@"):  # built here, never pulled (#251 L21): a setup error
+            raise _missing_test_image(image)
         name, _, digest = image.partition("@")
         query = f"fromImage={quote(name, safe='')}" + (f"&tag={quote(digest, safe='')}" if digest else "")
         _, out = self._call("POST", f"/images/create?{query}", timeout=600)
@@ -237,7 +277,7 @@ class DockerApi:
         host = {"NetworkMode": "none", "ReadonlyRootfs": True, "CapDrop": ["ALL"],
                 "SecurityOpt": ["no-new-privileges"], "PidsLimit": spec.pids, "Memory": _bytes(spec.memory),
                 "MemorySwap": _bytes(spec.memory), "NanoCpus": int(float(spec.cpus) * 1e9),
-                "Tmpfs": {"/tmp": f"rw,noexec,nosuid,size={spec.tmp}"},
+                "Tmpfs": spec.tmpfs(),
                 "Binds": [f"{Path(spec.src).resolve()}:/src:ro"], "Init": True, "AutoRemove": False}
         body = {"Image": spec.image, "Cmd": spec.entrypoint(), "WorkingDir": "/src",
                 "Env": [f"{k}={v}" for k, v in spec.env], "NetworkDisabled": True,
@@ -278,7 +318,7 @@ class DockerApi:
         if warnings:
             raise RuntimeError(f"sandbox refused: the Docker daemon warned {warnings!r}")
         want, got = self.create_body(spec)["HostConfig"], inspected.get("HostConfig") or {}
-        wrong = [k for k in ("NetworkMode", "ReadonlyRootfs", "PidsLimit", "Memory", "NanoCpus", "Binds")
+        wrong = [k for k in ("NetworkMode", "ReadonlyRootfs", "PidsLimit", "Memory", "NanoCpus", "Binds", "Tmpfs")
                  if got.get(k) != want[k]]
         if "ALL" not in [c.upper() for c in got.get("CapDrop") or []]:
             wrong.append("CapDrop")

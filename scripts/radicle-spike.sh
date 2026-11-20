@@ -62,7 +62,14 @@ chain() { docker exec "$P-anvil" "$@"; }
 storage() { echo "$HOME_C/.radicle/storage/${RID#rad:}"; }
 canonical() { on_home "$1" "git --git-dir $(storage) rev-parse refs/heads/main"; } # the canonical ref on that node
 ns_main() { on_home "$1" "git --git-dir $(storage) rev-parse refs/namespaces/${2#did:key:}/refs/heads/main"; }
-sync_all() { for n in "${NODES[@]}"; do on_home "$n" "rad sync --fetch --rid $RID >/dev/null 2>&1 || true"; done; }
+# rad sync takes the RID as a positional argument (Radicle 1.10.3 refuses --rid); a failed sync is reported, not hidden
+# (it doesn't fail a scenario by itself: the checks after it read each node's own copy).
+sync_on() { # node [fetch|announce]
+  local out
+  out=$(on_home "$1" "rad sync --${2:-fetch} $RID 2>&1") ||
+    echo "  warn $1: rad sync --${2:-fetch} $RID failed: $(grep -v '^[[:space:]]*$' <<<"$out" | tail -1)"
+}
+sync_all() { for n in "${NODES[@]}"; do sync_on "$n"; done; }
 onchain_head() {
   chain cast call --rpc-url http://127.0.0.1:8545 "$HEADS" \
     "head(bytes32)((bytes32,bytes32,uint256,uint256,uint256,bytes32))" "$REPO_ID" | tr -d '()' | cut -d, -f1
@@ -88,7 +95,7 @@ fresh_clone_head() { # viewer-name: a brand-new node clones the repository from 
   start_node "$1" "${NODES[@]}"
   on_home "$1" "rad clone $RID fresh --no-confirm >/dev/null 2>&1 && git -C fresh rev-parse HEAD"
 }
-patch_status() { on "$1" "rad sync --fetch >/dev/null 2>&1; rad patch show $2" | sed -n 's/^│ *Status *\([a-z]*\).*/\1/p'; }
+patch_status() { sync_on "$1" >&2; on "$1" "rad patch show $2" | sed -n 's/^│ *Status *\([a-z]*\).*/\1/p'; }
 identity() { # node: "<number of delegates> <threshold>" of the identity document in force on that node
   on "$1" "rad inspect --identity" | tr -d ' \n' | sed -E 's/.*"delegates":\[([^]]*)\],"threshold":([0-9]+).*/\1 \2/' |
     awk '{ print gsub(/did:key:/, "", $1), $2 }'
@@ -124,10 +131,11 @@ echo "  RID $RID, genesis $GENESIS"
 for n in judge2 judge3 outsider; do on_home "$n" "rad clone $RID repo --no-confirm >/dev/null 2>&1"; done
 # A delegate must have published the default branch before it can be added (rad refuses: "the delegate is missing").
 for n in judge2 judge3; do on "$n" 'git push -q rad main 2>/dev/null'; done
-on judge1 "rad sync --fetch >/dev/null 2>&1; rad id update --title 'The judges are the delegates' \
+sync_on judge1
+on judge1 "rad id update --title 'The judges are the delegates' \
   --description 'Three judge seats, threshold 2 (proof-of-fix#190)' \
   --delegate ${DID[judge2]} --delegate ${DID[judge3]} --threshold 2 --no-confirm >/dev/null 2>&1"
-on judge1 'rad sync --announce >/dev/null 2>&1 || true'
+sync_on judge1 announce
 sync_all
 for n in "${NODES[@]}"; do expect_eq "identity on $n (delegates threshold)" "$(identity "$n")" "3 2"; done
 # Heads on anvil: repo id = keccak256(RID), genesis head = the initial commit, mover = anvil's 2nd dev account (it
@@ -234,7 +242,8 @@ expect_eq "judge1's gate on the next judged fix, from its rogue main: exit code"
 # --- F. one delegate alone tries to change the delegate set --------------------------------------------------------
 scenario "F. one delegate alone proposes 'drop judge3, threshold 1'; the identity doesn't change"
 on judge2 "rad id update --title 'Drop judge3' --description 'One delegate alone (proof-of-fix#190)' \
-  --rescind ${DID[judge3]} --threshold 1 --no-confirm >/dev/null 2>&1 || true; rad sync --announce >/dev/null 2>&1 || true"
+  --rescind ${DID[judge3]} --threshold 1 --no-confirm >/dev/null 2>&1 || true"
+sync_on judge2 announce
 sync_all
 REV=$(on judge2 'rad id list' | sed -n 's/^│ *● *\([0-9a-f]\{7\}\) *Drop judge3.*active.*/\1/p')
 if [[ -n "$REV" ]]; then ok "the revision $REV is proposed and active (not accepted)"; else bad "no active revision"; fi
@@ -248,8 +257,9 @@ all_canonical_eq "two delegates pushed the rogue commit:" "$ROGUE"
 expect_eq "Heads.head(repo) is the judged fix 2 (the chain and Radicle now disagree)" \
   "$(onchain_head)" "$(b32 "$FIX2")"
 if [[ -n "$REV" ]]; then
-  on judge1 "rad sync --fetch >/dev/null 2>&1; rad id accept $REV --no-confirm >/dev/null 2>&1 || true;
-    rad sync --announce >/dev/null 2>&1 || true"
+  sync_on judge1
+  on judge1 "rad id accept $REV --no-confirm >/dev/null 2>&1 || true"
+  sync_on judge1 announce
   sync_all
   expect_eq "identity on outsider after judge1 accepts F's revision (2 of 3)" "$(identity outsider)" "2 1"
 fi

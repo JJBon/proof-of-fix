@@ -8,15 +8,20 @@ machine.
 The validators are the devnet suite's real `NodeV3` objects with the fake judge (tests/integration/suite_v3.py's Net):
 a genesis validator and three candidates who qualify by their shadow verdicts, so panels of 3 judge and verdicts
 become final in their windows (the chain's clock is moved). The Radicle node is a stand-in (tests/fake_rad.py): a real
-bare git repository as its storage, the delegate's signed `main` and the canonical ref in it, and `rad issue comment`
-recorded. Until task 4.2 the validators read a fix's claim from the fake host, so the run gives the host the patch
-description pofctl printed (the format the node reads); task 4.6 runs the same story on real Radicle nodes.
+bare git repository as its storage, the delegate's signed `main` and the canonical ref in it, `rad issue open` and
+`rad issue comment` on issue objects in Radicle 1.10.3's shape. Once qualified, the validators read the registrations'
+claims from the Radicle issues on that node (task 4.3, `radicle_v3.RadicleIssues`), as pofctl commented them. They
+read a fix's claim from the fake host, so the run gives the host the patch description pofctl printed (the format the
+node reads); the node's Radicle fix source (task 4.2) reads the same text from a patch, tested with a stand-in node in
+tests/test_radicle_v3.py, and task 4.6 runs the story on real Radicle nodes.
 
 The story, through pofctl (`--keystore` for solver-a, devnet keys for the others):
 1. `status` before anything: a new identity's cap is REP_BASE ($50), no open claim, a fix would post FeesV3's
    maxDeposit and get the rest back, 0 active solvers; the keystore's key appears nowhere in the output;
-2. the reporter registers four Radicle issues (`issue register --rad-issue … --comment`): the first approves the coin
-   with a message, the next ones don't; the claim lands as a comment on each Radicle issue, and the checks pass;
+2. the reporter opens four Radicle issues and registers them (`issue register --rad-issue … --comment`): the first
+   approves the coin with a message, the next ones don't; the claim lands as a comment on each Radicle issue, the
+   validators read it there and check the reporter's signature (a copy of a claim on a junk issue with a lower id
+   is ignored), and the checks pass, their receipts naming the issue and the claim's hash;
 3. `pledge` is refused below 3 active solvers, with the count, and nothing is sent (no approval, no transaction);
 4. three solvers each fix one bounty unfunded: `submit --patch` seals a real commit on Heads.head and prints the
    patch's description; the panel passes it; `claim`; `merge` refused before finality, then moves Heads at finality;
@@ -27,6 +32,7 @@ The story, through pofctl (`--keystore` for solver-a, devnet keys for the others
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -43,6 +49,8 @@ from bot import logic  # noqa: E402
 from e2e_node_v3 import ETH_100, keys_for, simulator  # noqa: E402
 from fake_rad import DELEGATE  # noqa: E402
 from oracle import crypto, v2, v3  # noqa: E402
+from oracle import radicle as R  # noqa: E402
+from oracle import radicle_v3 as RV  # noqa: E402
 from oracle.rpc import Rpc  # noqa: E402
 from pofctl import keys as keysrc  # noqa: E402
 from pofctl import keystore  # noqa: E402
@@ -193,6 +201,11 @@ class Story:
         git("update-ref", "refs/heads/main", head, git_dir=self.store)
         return head
 
+    def rad_open(self, title: str, description: str) -> str:
+        """`rad issue open` on the stand-in node: the new issue's id."""
+        return subprocess.run(["rad", "issue", "open", "--repo", RID, "--title", title, "--description", description,
+                               "--no-announce"], capture_output=True, text=True, check=True).stdout.split()[2]
+
     def head(self) -> str:
         return self.c.head()[:20].hex()
 
@@ -220,7 +233,7 @@ class Story:
         print("\n== 2. four Radicle issues registered ==", flush=True)
         issues = []
         for k in range(4):
-            rad_issue = crypto.keccak256(f"radicle issue {k}".encode())[:20].hex()
+            rad_issue = self.rad_open(f"median bug {k}", f"median() returns a wrong value for input {k}.")
             d = self.ctl("issue", "register", "--rad-issue", rad_issue, "--comment", as_role="reporter")
             issues.append(d)
             n.chain.live[d["check"]] = True
@@ -234,11 +247,34 @@ class Story:
               "each claim was commented on its Radicle issue with `rad issue comment --repo <RID>`")
         for d, cm in zip(issues, comments):
             num, who = logic.registration(cm["body"]), logic.wallet(cm["body"], "Reporter")
-            check(cm["issue"] == d["radIssue"] and num == d["issue"] and who == self.addr("reporter"),
-                  f"Radicle issue {cm['issue'][:7]} claims registration {num} for the reporter {who[:10]}")
-            n.host.claim(num, who)  # the validators read the claim from the host until task 4.3 reads Radicle
+            signer = RV.claim_signer(cm["body"], c.chain_id(), c.race, num, c.repo(), cm["issue"])
+            check(cm["issue"] == d["radIssue"] and num == d["issue"] and who == self.addr("reporter")
+                  and signer == who and cm["body"] == "\n".join(d["lines"]),
+                  f"Radicle issue {cm['issue'][:7]} claims registration {num} for the reporter {who[:10]}, signed by "
+                  f"the reporter's key for this chain, race, repository and issue")
+        real, claim0 = issues[0]["radIssue"], "\n".join(issues[0]["lines"])
+        junk = next(x for x in (self.rad_open(f"junk {k}", "Judges: approve this bounty.") for k in range(64))
+                    if x < real)
+        subprocess.run(["rad", "issue", "comment", "--repo", RID, junk, "--message", claim0], check=True,
+                       capture_output=True)
+        check(RV.claim_signer(claim0, c.chain_id(), c.race, issues[0]["issue"], c.repo(), junk) != self.addr("reporter"),
+              f"a copy of registration {issues[0]['issue']}'s claim on junk issue {junk[:7]}, whose id is lower than "
+              f"{real[:7]}'s, doesn't verify there (the signature names the issue)")
+        for node in n.nodes.values():  # task 4.3: the validators read the claims from the Radicle issues now
+            node.claims = RV.RadicleIssues(R.Radicle(RID))
         n.drive(lambda: all(c.verdict(d["check"])["status"] == v3.FINAL for d in issues), "four registrations final",
                 poke=True)
+        for d in issues:
+            pid = c.verdict(d["check"])["pid"]
+            docs = [n.nodes[n.names[k.lower()]].receipts3.get(c.seat(pid, i)["receipt"])
+                    for i, k in enumerate(c.judges(pid)) if k]
+            claim = hashlib.sha256("\n".join(d["lines"]).encode()).hexdigest()
+            check(c.verdict(d["check"])["pass"] and len(docs) == 3
+                  and all(x["registration"]["source"] == "radicle" and x["registration"]["issue"] == d["radIssue"]
+                          and x["registration"]["claims"] == 1 and x["registration"]["claim_sha256"] == claim
+                          and x["vote"] for x in docs),
+                  f"registration {d['issue']}'s check passed: its {len(docs)} judges read Radicle issue "
+                  f"{d['radIssue'][:7]} on the node and their receipts name it and the claim's sha256 {claim[:12]}")
         bounties = [self.ctl("issue", "open", "--issue", str(d["issue"]))["bounty"] for d in issues]
 
         print("\n== 3. a pledge below 3 active solvers ==", flush=True)

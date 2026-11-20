@@ -450,6 +450,7 @@ class TestCommands(Records):
                      ["pledge", "--bounty", "1", "--amount", "5"], ["submit", "--bounty", "1", "--patch", "a" * 40],
                      ["claim", "--bounty", "1", "--patch", "a" * 40, "--base", "b" * 40, "--salt", "0x" + "1" * 64],
                      ["merge", "--bounty", "1"], ["checkout"], ["--v3", "status"], ["--v3", "verify-head"],
+                     ["verify-delegates"], ["--v3", "verify-delegates", "--rid", "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"],
                      ["--v3", "withdraw", "--role", "solver"], ["faucet"], ["faucet", "--when"],
                      ["faucet", "--role", "funder"]):
             self.assertTrue(callable(p.parse_args(argv).fn3), argv)
@@ -480,6 +481,15 @@ class TestCommands(Records):
                 v3cli.cmd_register(cli.Ctx(a), a)
         self.assertIn("--rad-issue is the Radicle issue's id", str(e.exception))
 
+    def test_registration_needs_the_whole_issue_id(self):
+        """The claim's signature names the Radicle issue (#251 L12, 2026-11-20): a prefix, which `rad` would take, is
+        refused before anything is read or sent."""
+        with mock.patch.object(cli, "Rpc", return_value=FakeRpc()):
+            a = cli.parser().parse_args(["--record", str(self.v3), "issue", "register", "--rad-issue", "ab" * 4])
+            with self.assertRaises(cli.Fail) as e:
+                v3cli.cmd_register(cli.Ctx(a), a)
+        self.assertIn("needs the issue's whole id (40 hex digits", str(e.exception))
+
     def test_a_fake_rad_records_the_comment(self):
         """`issue register --comment` runs `rad issue comment --repo <RID> <id> --message <claim>`: the stand-in node
         (tests/fake_rad.py) the end-to-end run uses takes exactly that."""
@@ -495,6 +505,51 @@ class TestCommands(Records):
             row = json.loads((Path(home) / "issue-comments.jsonl").read_text())
         self.assertEqual((row["repo"], row["issue"]), ("rad:z4Pofctr", "ab" * 20))
         self.assertIn("Registration: 3", row["body"])
+
+
+class TestVerifyDelegates(unittest.TestCase):
+    """`pofctl --v3 verify-delegates` (#251, L11): the identity's delegates against the seats' nodes on-chain, each
+    the key its registration signed (Validators.radNodeOf)."""
+
+    RID = "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+
+    def setUp(self):
+        from types import SimpleNamespace
+
+        from oracle import delegates, radicle
+
+        self.radicle = radicle
+        self.seats = [crypto.address(k) for k in (11, 22, 33)]
+        self.keys = {s: bytes([i + 1]) * 32 for i, s in enumerate(self.seats)}
+        self.dids = {s: delegates.did_from_key(k) for s, k in self.keys.items()}
+        chain = SimpleNamespace(repo=lambda: radicle.repo_id(self.RID), seats=lambda: list(self.seats),
+                                rad_node_of=lambda k: next((v for s, v in self.keys.items() if s.lower() == k.lower()),
+                                                           b"\0" * 32))
+        self.ctx = SimpleNamespace(v3=SimpleNamespace(chain=chain, record={"rid": self.RID}))
+        self.a = SimpleNamespace(rid=None, rad_exec="")
+
+    def run_it(self, delegates_, threshold):
+        cob = {"current": "c" * 40, "revisions": {"c" * 40: {"doc": {"delegates": delegates_, "threshold": threshold}}}}
+        with mock.patch.object(self.radicle.Radicle, "identity", return_value=(cob, "", "")):
+            return v3cli.cmd_verify_delegates(self.ctx, self.a)
+
+    def test_passes_when_the_delegates_are_the_seats_nodes(self):
+        data, lines = self.run_it(sorted(self.dids.values()), 2)
+        self.assertTrue(data["match"])
+        self.assertEqual(data["seats"], self.dids)  # by seat, as the chain lists them
+        self.assertIn("radNodeOf", lines[0])
+
+    def test_a_delegate_that_isnt_a_seats_node_fails(self):
+        with self.assertRaises(cli.Fail) as e:
+            self.run_it(sorted(self.dids.values()) + ["did:key:z6MkopH5QMoynapxG9Yis4TCpWgyaxQNEBeiL39wqJ2GZCR1"], 3)
+        self.assertIn("isn't the Radicle node any seat registered on-chain", str(e.exception))
+
+    def test_a_seat_without_a_node_is_reported_unmapped(self):
+        self.keys[self.seats[2]] = b"\0" * 32
+        with self.assertRaises(cli.Fail) as e:
+            self.run_it([self.dids[s] for s in self.seats[:2]], 2)
+        self.assertIn("(unmapped)", str(e.exception))
+        self.assertIn("registered no Radicle node key on-chain", str(e.exception))
 
 
 if __name__ == "__main__":

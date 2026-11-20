@@ -187,7 +187,7 @@ class Sandbox(unittest.TestCase):
         argv = seen[0]
         for flag in ("--network", "none", "--read-only", "--cap-drop", "ALL", "--pids-limit", "--memory"):
             self.assertIn(flag, argv)
-        self.assertIn("@sha256:", next(a for a in argv if a.startswith("python@")))
+        self.assertIn("@sha256:", next(a for a in argv if a.startswith("pof-test-image@")))
         self.assertFalse(run.passed)
         self.assertNotEqual(run.logs_sha256, run_tests(Path("."), runner=runner(1)).logs_sha256)
 

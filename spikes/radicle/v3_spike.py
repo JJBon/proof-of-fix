@@ -7,9 +7,12 @@ side by side on one local network and one chain, each on its own Radicle reposit
 
   (a) repository A: the delegates are the validators seated on-chain (`Validators.isDrawable`), threshold a majority.
       Each seated node's gate (spikes/radicle/gate.sh) pushes `Heads.head` when it moves and refuses anything else;
-      each node signs only an identity revision whose delegates equal the seats (spikes/radicle/seats.py,
-      `review_revision`); `verify_delegates` compares the identity document with the seats for anyone. The repository
-      starts with one delegate, the owner's node (`rad init`), which hands over to the seats.
+      each node signs only an identity revision whose delegates equal the seats (oracle/delegates.py,
+      `review_revision`); `verify_delegates` compares the identity document with the seats for anyone. A seat's node
+      is the one its validator signed into its v3 registration (`Registration.radNode`, #251's contract change of
+      2026-11-20), read from the chain (`Validators.radNodeOf`, `delegates.ChainSeatNodes`): no binding travels in the
+      identity document. The repository starts with one delegate, the owner's node (`rad init`), which hands over to
+      the seats.
   (b) repository B: the chain is the only truth. The owner's node stays the one delegate of convenience; anyone may
       push anything; readers take the commit `Heads.head` names from any namespace (`checkout`) and `verify_head`
       (oracle/radicle.py, what `pofctl verify-head` runs) reports the canonical `main` as a mismatch when it differs.
@@ -44,6 +47,17 @@ isn't `Heads.head`, takes the commit from its own node's storage, and runs the r
 its own node's container; the fake judge labels the fix by those tests. The node objects read those patches as their
 "pull requests" (`NodeHost`).
 
+L12's registration check (#251 task 4.3, scenario r1): a reporter's node opens a Radicle issue on A, the reporter
+registers it on-chain, and its node comments the claim lines on the issue (`pofctl --v3 issue register --rad-issue …
+--comment`'s command, `rad issue comment`). Each validator reads the issues on its own Radicle node
+(`radicle_v3.RadicleIssues` through `docker exec`), checks the claim against the on-chain registration and reporter,
+and its judge (the fake: no model call) passes the issue; each receipt names the issue and the sha256 of the issue's
+text and of the claim. The claim carries the reporter's signature for that issue (the owner's decision of 2026-11-20).
+A second registration whose issue names it only with another wallet is sealed as failing, saying there's no signed
+claim, at the seal margin: no silence. Scenario r2: a third registration's claim copied onto a junk issue with a lower
+id is ignored, and the real one passes. Everywhere else the registrations' claims stay on the shared fake host, as
+before.
+
 Isolation (#190's rules): everything on a Docker network created with --internal (no route out); Radicle's `test`
 network (no bootstrap nodes), no seeds, static peers connected by name; anvil on the same network. This process never
 has a network path to anvil: its JSON-RPC goes through a `docker exec -i` pipe into a relay container (the pinned
@@ -54,6 +68,7 @@ isolation evidence is checked at the end (scenario I). Results and node logs sta
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -79,7 +94,9 @@ import suite_v3 as SV  # noqa: E402
 from bot import logic  # noqa: E402
 from e2e_node_v3 import ETH_100, keys_for, secret, simulator  # noqa: E402
 from oracle import crypto, node_v3, v2, v3  # noqa: E402
+from oracle import delegates as D  # noqa: E402
 from oracle import radicle as R  # noqa: E402
+from oracle import radicle_v3 as RV  # noqa: E402
 from oracle.judge import FakeJudge  # noqa: E402
 from oracle.receipt import Store  # noqa: E402
 from oracle.rounds import Store as Rounds  # noqa: E402
@@ -101,8 +118,7 @@ PLEDGE = 200
 REP_PLEDGE = 105  # the solver's reputation fix: judged at about $44, under the $50 a new identity may claim (D29)
 K_MAX = 7  # RaceV3's: a fix's deposit is FeesV3's worst case for K_MAX judges under the taxi fare
 HOUR = 3600
-REGISTERED_V = ("Registered(address,address,bool,uint8,uint256,"
-                "(address,address,bytes32,bytes32,uint8,bytes32,bytes32,bytes32,bytes32,uint32))")
+REGISTERED_V = v3.VALIDATOR_REGISTERED  # its third topic is the validator's Radicle node key (#251, L11)
 HEAD_T = ["(bytes32,bytes32,uint256,uint256,uint256,bytes32)"]
 CONVERGE_S = 45  # how long a passive convergence is watched before a sync is forced
 
@@ -307,9 +323,13 @@ class Rad:
                 tips[m.group(1)] = m.group(2)
         return tips
 
-    def sync(self, repo: str, nodes=None) -> None:
+    def sync(self, repo: str, nodes=None, mode: str = "fetch") -> None:
+        """`rad sync --<mode> <RID>` on each online node (oracle/radicle.py's lines: the RID positional, a failure
+        reported, not hidden)."""
         for n in self.online(nodes):
-            self.sh(n, f"timeout 60 rad sync --fetch {self.rid[repo]} >/dev/null 2>&1 || true", check=False)
+            err = R.sync_error(self.sh(n, R.sync_lines(self.rid[repo], mode, 60), check=False))
+            if err:
+                log(f"  warn {n}: {err}")
 
     def id_cob(self, n: str, repo: str) -> dict:
         rid = self.rid[repo]
@@ -346,7 +366,8 @@ class Rad:
 
     def commit_on(self, n: str, repo: str, base: str, files: dict, what: str) -> str:
         wd = self.wd(repo)
-        self.sh(n, f"cd {wd} && rad sync --fetch >/dev/null 2>&1; {{ git cat-file -e {base}^{{commit}} 2>/dev/null || "
+        self.sync(repo, [n])
+        self.sh(n, f"cd {wd} && {{ git cat-file -e {base}^{{commit}} 2>/dev/null || "
                    f"git fetch -q {self.store(repo)} {base}; }} && git checkout -q -B work {base}")
         for path, text in files.items():
             self.sh(n, f"cat > {wd}/{path}", input=text)
@@ -391,7 +412,9 @@ class Rad:
         Returns (HEAD of the checkout, the namespaces holding it, the tests' exit code)."""
         s = self.store(repo)
         out = self.sh(n, f"""set -e
-git --git-dir {s} cat-file -e {head}^{{commit}} 2>/dev/null || timeout 60 rad sync --fetch {self.rid[repo]} >/dev/null 2>&1 || true
+if ! git --git-dir {s} cat-file -e {head}^{{commit}} 2>/dev/null; then
+{R.sync_lines(self.rid[repo], 'fetch', 60)}
+fi
 git --git-dir {s} cat-file -e {head}^{{commit}}
 d=$HOME/checkout-{repo}; rm -rf $d; git init -q $d; git -C $d fetch -q {s} {head}; git -C $d checkout -q --detach FETCH_HEAD
 echo "@head $(git -C $d rev-parse HEAD)"
@@ -399,6 +422,8 @@ echo "@ns $(git --git-dir {s} for-each-ref --contains {head} --format='%(refname
 cd $d; bash test.sh >/dev/null 2>&1 && echo "@tests 0" || echo "@tests $?"
 """, check=False)
         got = dict(re.findall(r"^@(\w+) ?(.*)$", out, re.M))
+        if R.sync_error(out):
+            log(f"  warn {n}: {R.sync_error(out)}")
         return got.get("head", ""), got.get("ns", "").split(), got.get("tests", "")
 
     def stop_node(self, n: str) -> None:
@@ -461,6 +486,8 @@ class SpikeNet(SV.Net):
     def __init__(self, rpc, record, work, spike) -> None:
         self.spike = spike
         super().__init__(rpc, record, work, verbose=False)
+        # each validator registers its own Radicle node's key (#251, L11): the seat-to-node link is on-chain
+        self.rad_nodes = {n: D.key_from_did(spike.rad.did[n]) for n in VALIDATORS}
 
     def make_node(self, name: str, family: str, keeper: bool = False, tag: str = "") -> Validator:
         keys = keys_for(self.sim, name)
@@ -541,6 +568,7 @@ class Spike:
         try:
             docker("exec", "-i", "-w", "/work", "-e", f"LOCAL_ATTESTATION={attestation}",
                    "-e", f"LOCAL_RID={rid}", "-e", f"LOCAL_GENESIS_HEAD=0x{genesis_commit}{'0' * 24}",
+                   "-e", f"LOCAL_GENESIS_RAD_NODE=0x{D.key_from_did(self.rad.did['genesis']).hex()}",
                    "-e", "LOCAL_FAMILIES=" + ",".join(SV.FAMILIES[:6]), "-e", "LOCAL_RECORD=radicle-spike-v3/local.json",
                    f"{P}-anvil", "sh", "-c",
                    'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK; forge script '
@@ -654,7 +682,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
             got[name] = [p["head_sha"] for p in usable]
         return got
 
-    # ---------- seats and bindings ----------
+    # ---------- seats and their nodes (on-chain) ----------
 
     def seats(self) -> list:
         """The validators seated on-chain: every registered key that `isDrawable` (read from the chain only)."""
@@ -666,41 +694,38 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
     def name_of(self, addr: str) -> str:
         return self.n.names.get(addr.lower(), addr[:10])
 
-    def binding(self, name: str, repo: str) -> dict:
-        node = self.n.nodes[name]
-        return S.make_binding(node.wallet.sign, node.address, self.chain_id, self.n.chain.registry, self.rad.rid[repo],
-                              self.rad.did[name])
+    def nodes(self) -> D.ChainSeatNodes:
+        """The seat-to-node mapping from the chain: each seat's node key as its registration signed it."""
+        return D.ChainSeatNodes.of(self.n.chain)
 
     def verify_delegates(self, n: str, repo: str) -> tuple:
         _, doc, _ = self.rad.identity(n, repo)
-        return S.verify_delegates(doc, self.seats(), self.chain_id, self.n.chain.registry, self.rad.rid[repo])
+        return D.verify_delegates(doc, self.seats(), self.nodes())
 
     def verify_head(self, n: str, repo: str) -> tuple:
         """What `pofctl verify-head --rid` decides (oracle/radicle.py verify_head), with the head read from L9's
         stand-in: (exit code, reason naming both commits)."""
-        self.rad.sync(repo, [n])  # oracle/radicle.py's own sync uses `rad sync --rid`, which 1.10.3 refuses
-        snap = self.rad.snapshot(n, repo, sync=False)
+        snap = self.rad.snapshot(n, repo, sync=True)  # oracle/radicle.py's own sync: `rad sync --fetch <RID>`
+        if snap.sync_error:
+            log(f"  warn {n}: {snap.sync_error}")
         d = R.verify_head(self.head(repo), snap)
         return (0 if d.action == R.SIGN else 1), d.reason
 
     def propose(self, by: str, repo: str, title: str, seats_to_did: dict | None = None, extra: list | None = None) -> str:
-        """`by` proposes the identity revision whose delegates are the seats on-chain (or `seats_to_did` as given),
-        with a majority threshold and the seats' bindings. Returns the revision id."""
+        """`by` proposes the identity revision whose delegates are the seats' nodes as the chain records them (or
+        `seats_to_did` as given), with a majority threshold. Returns the revision id."""
         rad = self.rad
         rad.sync(repo, [by])
         _, cur, _ = rad.identity(by, repo)
         if seats_to_did is None:
-            seats_to_did = {a: rad.did[self.name_of(a)] for a in self.seats()}
-        bindings = {}
-        for addr, did in seats_to_did.items():
-            name = self.name_of(addr)
-            bindings[did] = (self.binding(name, repo) if name in self.n.nodes else
-                             {"validator": addr, "sig": "0x" + "00" * 65})
-        args = S.update_args(cur, seats_to_did, bindings) + (extra or [])
+            nodes = self.nodes()
+            seats_to_did = {a: nodes.node_of(a) for a in self.seats()}
+        args = D.update_args(cur, seats_to_did) + (extra or [])
         self._signed_at = time.time()
         out = rad.sh(by, f"cd {rad.wd(repo)} && rad id update --title {shlex.quote(title)} --description "
                          f"{shlex.quote(title + ' (proof-of-fix#251)')} {' '.join(shlex.quote(a) for a in args)} "
-                         f"--no-confirm 2>&1; rad sync --announce >/dev/null 2>&1", check=False)
+                         f"--no-confirm 2>&1", check=False)
+        rad.sync(repo, [by], "announce")
         cob = rad.id_cob(by, repo)
         mine = [r for r in cob["revisions"].values() if r and r.get("title") == title]
         if not mine:
@@ -716,12 +741,11 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         prop = cob["revisions"].get(rev)
         if not prop:
             return None, "the revision isn't on this node"
-        ok, why = S.review_revision(cur, prop["doc"], self.seats(), rad.tips(n, repo), self.head(repo), self.chain_id,
-                                    self.n.chain.registry, rad.rid[repo])
+        ok, why = D.review_revision(cur, prop["doc"], self.seats(), self.nodes(), rad.tips(n, repo), self.head(repo))
         verb = "accept" if ok else "reject"
         self._signed_at = time.time()
-        out = rad.sh(n, f"cd {rad.wd(repo)} && rad id {verb} {rev} --no-confirm 2>&1; "
-                        f"rad sync --announce >/dev/null 2>&1", check=False)
+        out = rad.sh(n, f"cd {rad.wd(repo)} && rad id {verb} {rev} --no-confirm 2>&1", check=False)
+        rad.sync(repo, [n], "announce")
         if "rror" in out:
             why += f" ({verb} said: {out.strip()[-200:]})"
         return ok, why
@@ -998,6 +1022,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                                   f"registration checks ({(n.when(acts[-1]) - n.t0) / HOUR:,.0f} h of chain time)")
         res.expect("seated on-chain (isDrawable)", sorted(self.name_of(a) for a in self.seats()),
                    ["genesis", "v1", "v2", "v3"])
+        self.nodes_on_chain()
         kinds = [v3.KINDS[c.panel(p)["kind"]] for p in range(1, c.panel_count() + 1)]
         res.check(kinds.count("Counted") > 0 and kinds.count("Shadow") > 0,
                   f"panels drawn: {len(kinds)} ({kinds.count('Counted')} counted, {kinds.count('Shadow')} shadow, "
@@ -1015,6 +1040,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
 
         self.candidate_a_start()
         self.both_bounties()
+        self.registration_from_radicle()
         self.outsider()
         self.seat_added()
         self.seat_removed()
@@ -1023,6 +1049,27 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         self.rogue_one()
         self.rogue_majority()
         self.limits()
+
+    def nodes_on_chain(self) -> None:
+        """#251's contract change (L11 condition 1): each seat's Radicle node key is a signed field of its v3
+        registration, read from the chain by anyone; another registration naming a seat's node is refused."""
+        res, rad, n = self.res, self.rad, self.n
+        c = n.chain
+        nodes = self.nodes()
+        got = {self.name_of(a): nodes.node_of(a) for a in self.seats()}
+        res.check(all(did == rad.did[name] for name, did in got.items()),
+                  "each seat's Radicle node is on-chain as its registration signed it (Validators.radNodeOf = its "
+                  "node's did:key): " + ", ".join(f"{name} {did[8:20]}…" for name, did in sorted(got.items())))
+        copy = keys_for(n.sim, "copycat")
+        n.fund(copy.address(), 1_000)
+        try:
+            node_v3.register(c, copy, Wallet(self.rpc, copy.account_secret(), "copycat"), 100 * COIN, None,
+                             log=lambda m: None, proof="simulated", family=SV.FAMILIES[0], host="host-copycat",
+                             image=v2.DEVNET_IMAGE, tee_type="intel-tdx", rad_node=n.rad_nodes["v1"])
+            res.bad("a registration naming v1's Radicle node key landed")
+        except Reverted as e:
+            res.check("NodeTaken" in e.reason, f"a new key registering with v1's node key is refused ({e.reason}): "
+                                               f"two seats never share a node")
 
     # ---------- (a) and (b), in order ----------
 
@@ -1161,6 +1208,109 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         head, text = rad.fresh_clone("viewer-b3", "b")
         res.expect("a fresh `rad clone` of B (new node viewer-b3): HEAD", head[:12], out["fix"][:12])
         res.notes["freshCloneBUpdated"] = text
+
+    def rad_issue(self, n: str, repo: str, title: str, body: str) -> str:
+        """Node `n` opens an issue on `repo`, announced: its id (the issue COB's)."""
+        rid = self.rad.rid[repo]
+        listed = f"rad cob list --repo {rid} --type xyz.radicle.issue"
+        before = set(self.rad.sh(n, listed, check=False).split())
+        self.rad.sh(n, f"rad issue open --repo {rid} --title {shlex.quote(title)} --description {shlex.quote(body)} "
+                       f"--no-announce >/dev/null 2>&1")
+        (iid,) = set(self.rad.sh(n, listed).split()) - before
+        return iid
+
+    def rad_comment(self, n: str, repo: str, iid: str, text: str) -> None:
+        """What `pofctl --v3 issue register --rad-issue <id> --comment` runs on the reporter's node."""
+        self.rad.sh(n, f"rad issue comment --repo {self.rad.rid[repo]} {iid} --message {shlex.quote(text)} "
+                       f"--no-announce >/dev/null 2>&1")
+
+    def signed_claim(self, w: Wallet, registration: int, iid: str) -> str:
+        """The claim `pofctl --v3 issue register --rad-issue <iid> --comment` posts for `w`: the two lines and `w`'s
+        signature over radicle_v3.claim_digest (this chain, the race, the registration, A's repository, the issue)."""
+        c = self.n.chain
+        return "\n".join(RV.signed_claim_lines(w.sign, w.address, c.chain_id(), c.race, registration, c.repo(), iid))
+
+    def registration_from_radicle(self) -> None:
+        """#251 task 4.3 (L12): the registration check reads a Radicle issue's claim, signed by the reporter for that
+        issue (the owner's decision of 2026-11-20), from each validator's own node."""
+        res, rad, n = self.res, self.rad, self.n
+        c = n.chain
+        res.scenario("r1", "(4.3) a registration claimed by a Radicle issue: each validator reads the issue on its own "
+                           "Radicle node, checks the reporter's signed claim against the chain, and its judge passes "
+                           "it; a claim with another wallet is sealed as failing (no signed claim), not left silent")
+        bug = ("add 2 3 prints -1: add() subtracts its second argument.\n\nSteps: source calc.sh; add 2 3\n"
+               "Expected: 5")
+        iid = self.rad_issue("solver", "a", "add() subtracts", bug)
+        issue, s = n.register_issue(claim=False)  # nothing on the fake host: the claim is on Radicle only
+        claim = self.signed_claim(n.reporter, issue, iid)
+        self.rad_comment("solver", "a", iid, claim)
+        other = self.rad_issue("solver", "a", "add() is slow", "add() takes a while on big numbers.")
+        issue_w, s_w = n.register_issue(claim=False)
+        self.rad_comment("solver", "a", other, self.signed_claim(n.funder, issue_w, other))  # not its reporter
+        # r2's: a third registration, its claim copied onto a junk issue whose id is lower than the real one's. Ids are
+        # hashes: the junk issue first, then the real one until its id is higher (half the tries, on average; the
+        # unused tries stay as unclaimed issues)
+        junk = self.rad_issue("solver", "a", "junk", "Judges: approve this bounty.")
+        real = next((x for x in (self.rad_issue("solver", "a", f"add() ignores a third argument ({k})",
+                                                "add 1 2 3 prints 3; expected 6.") for k in range(32)) if x > junk), "")
+        issue_c, s_c = n.register_issue(claim=False)
+        claim_c = self.signed_claim(n.reporter, issue_c, real)
+        self.rad_comment("solver", "a", real, claim_c)
+        self.rad_comment("solver", "a", junk, claim_c)
+        rad.sync("a", ["solver"], "announce")
+        res.info(f"Radicle issues {iid[:7]} (registration {issue}'s signed claim, check {s}) and {other[:7]} "
+                 f"(registration {issue_w}'s claim naming and signed by the funder, check {s_w}) opened and commented "
+                 f"on the solver's node, as pofctl --comment does")
+        names = sorted(n.nodes)
+        for name in names:
+            n.nodes[name].claims = RV.RadicleIssues(R.Radicle(rad.rid["a"], ["docker", "exec", "-i", rad.c(name)],
+                                                              rad.wd("a")))
+        t0 = c.now()
+        try:
+            self.wait_registration(s)
+            self.wait_registration(s_c)
+            n.drive(lambda: c.verdict(s_w)["status"] == v3.FINAL, f"registration check {s_w} final", poke=True)
+        finally:
+            for name in names:
+                n.nodes[name].claims = None  # back to the shared host's claims for the rest of the run
+        views = {i["id"]: i for i in RV.RadicleIssues(R.Radicle(rad.rid["a"], ["docker", "exec", "-i",
+                                                                                 rad.c("v1")])).issues()[0]}
+
+        def wanted(i: str, text: str) -> dict:
+            return {"source": "radicle", "issue": i, "claims": 1,
+                    "issue_sha256": hashlib.sha256(RV.issue_text(views[i]).encode()).hexdigest(),
+                    "claim_sha256": hashlib.sha256(text.encode()).hexdigest()}
+
+        def judged(sub: int, passed: bool) -> list:
+            v = c.verdict(sub)
+            seats = [(self.name_of(k), c.seat(v["pid"], i)) for i, k in enumerate(c.judges(v["pid"])) if k]
+            docs = [(name, n.nodes[name].receipts3.get(seat["receipt"])) for name, seat in seats]
+            res.check(v["pass"] == passed and len(docs) >= 1 and all(d is not None for _, d in docs)
+                      and all(seat["revealed"] and seat["vote"] == passed for _, seat in seats),
+                      f"registration check {sub}: {'passed' if passed else 'failed'} by a counted panel of "
+                      f"{len(docs)} ({', '.join(x for x, _ in docs)}), every seat sealed and revealed (no silence)")
+            return docs
+
+        def read(docs: list, want: dict, what: str) -> None:
+            got = [{k: d["registration"].get(k) for k in want} for _, d in docs]
+            res.check(all(g == want for g in got) and all("refused" not in d for _, d in docs),
+                      f"each judge read Radicle issue {want['issue'][:7]} on its own node{what}: its receipt names the "
+                      f"issue and the sha256 of its text ({want['issue_sha256'][:12]}) and of the claim "
+                      f"({want['claim_sha256'][:12]})")
+
+        read(judged(s, True), wanted(iid, claim), " and verified the reporter's signature for it")
+        why = [d.get("refused", "") for _, d in judged(s_w, False)]
+        res.check(all(w.startswith("no signed claim") and "with another wallet" in w for w in why),
+                  f"each judge sealed a fail saying why, at the seal margin (no silence): {why[0][:150]}")
+        res.scenario("r2", "(4.3) a claim copied onto a junk Radicle issue with a lower id is ignored (the signature "
+                           "names the issue); the real registration passes")
+        res.check(bool(real) and junk < real and junk in views
+                  and any(c_["body"] == claim_c for c_ in views[junk]["comments"]),
+                  f"junk issue {junk[:7]} (lower id than {real[:7]}) carries a copy of registration {issue_c}'s claim "
+                  f"on every validator's node")
+        read(judged(s_c, True), wanted(real, claim_c), ", not the lower-id copy (claims counted: 1)")
+        res.meas["registrationFromRadicle"] = {"issue": iid, "check": s, "wrongWalletCheck": s_w, "copiedCheck": s_c,
+                                               "junk": junk, "real": real, "chainSeconds": c.now() - t0}
 
     def _who(self, nid_: str) -> str:
         return next((k for k, d in self.rad.did.items() if R.nid(d) == nid_), nid_[:12])
@@ -1399,8 +1549,8 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         rev = self.propose("genesis", "a", "Add a friend, by majority", seats_to_did)
         for x in ("v1", "v3"):
             rad.sync("a", [x])
-            out = rad.sh(x, f"cd {rad.wd('a')} && rad id accept {rev} --no-confirm 2>&1; "
-                            f"rad sync --announce >/dev/null 2>&1", check=False)
+            out = rad.sh(x, f"cd {rad.wd('a')} && rad id accept {rev} --no-confirm 2>&1", check=False)
+            rad.sync("a", [x], "announce")
             res.info(f"{x} accepts without the rule" + (f": {out.strip()[-160:]}" if "rror" in out else ""))
         rad.sync("a")
         cur, doc, _ = rad.identity("owner", "a")

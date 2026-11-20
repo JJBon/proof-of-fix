@@ -1,7 +1,7 @@
 # Design
 
 ## Context
-- **Why:** see proposal.md. The behaviour is in `specs/deployment-binding`, `specs/canonical-head`, `specs/radicle-hosting`, `specs/public-release` and the deltas to `validator-admission`, `reputation` and `bounty-market`. This document covers how, the parameters, the Radicle spike and the order of work. Decisions here are numbered **L1–L22** so they don't collide with #132's D-numbers, which are referenced as they are.
+- **Why:** see proposal.md. The behaviour is in `specs/deployment-binding`, `specs/canonical-head`, `specs/radicle-hosting`, `specs/public-release`, `specs/panel-liveness` and the deltas to `validator-admission`, `judge-panels`, `reputation` and `bounty-market`. This document covers how, the parameters, the Radicle spike and the order of work. Decisions here are numbered **L1–L25** so they don't collide with #132's D-numbers, which are referenced as they are.
 - **v3 today** (`contracts/src/v3`, [`reports/devnet-v3-local.md`](../../../reports/devnet-v3-local.md)): Validators, Panels, PanelScores, FeesV3, PoolV3 and RaceV3 run beside v2 on a local devnet, with the `simulated` proof type and the fake judge. #132's rules decided after the judge measurement (D20 seats by rank, D21 the test dispute, D24–D30) were in its specs and the simulation, not in the contracts (`docs/paper/open-problems.md` 7.5), until contract batch 3 (2026-11-19) built D20, D21, D24, D27, D29, D30 and L6 (tasks 3.3 and 3.6).
 - **Radicle today:** #190's spike ([`reports/radicle-spike-v1.md`](../../../reports/radicle-spike-v1.md)) showed a threshold merge gated by `Heads.head`, with three fixed judges as delegates. #201's adapter (`oracle/radicle.py`) and `pofctl verify-head` work for v2's fixed seats. The spike's limit: **v3's per-draw judges can't be Radicle delegates**, because the delegate set changes only by a threshold of the current delegates, and a new delegate must have published `main` first.
 
@@ -152,7 +152,7 @@ The question: who signs Radicle's canonical `main` when the judges change with e
   4. for each, a validator fetching a patch's commit and judging it (L12).
 - **The spike decides.** Its report names the choice and the reasons; the owner accepts it; then the adapter (task 4.1) is built for that choice.
 - **Decided (owner, 2026-11-18): (a), with (b)'s checks** as what tools rely on (`reports/radicle-spike-v2.md`, #261: 22 scenarios, 3 runs in a row). Conditions from the spike:
-  1. **Each validator's Radicle node ID goes on-chain at registration**, so a seat maps to exactly one node key, and `verify-delegates` reads it from the chain. Today v3 has no such link; the spike carried signed bindings in the identity document instead.
+  1. **Each validator's Radicle node ID goes on-chain at registration**, so a seat maps to exactly one node key, and `verify-delegates` reads it from the chain. Today v3 has no such link; the spike carried signed bindings in the identity document instead. **Decided and built (owner, 2026-11-20):** a signed field of the v3 registration, `Registration.radNode` (the node's 32-byte Ed25519 key), stored in the validator's record and readable by anyone (`Validators.radNodeOf`, the `Registered` event's third topic). The owner rejected a separate setter and keeping the key off-chain. 0 registers no node: the validator still judges, but its seat is never counted as a delegate. A key another registration still holds (not leaving or exited) is refused (`NodeTaken`). A validator changes its node by registering again (a new key, after leaving). The signed document bindings remain only for a registry from before the field.
   2. **`BelowFloor` (L5) is built**, so seats are the drawable validators.
   3. **The gate and the revision review run in the node's adapter (task 4.1)**, with **one pending identity revision at a time**: Radicle 1.10.3 blocks a delegate's second proposal while an earlier one is pending.
   4. **`rad sync` takes the RID as a positional argument** in Radicle 1.10.3. The `--rid` form fails, and every caller hid the error. It is fixed in #190's `gate.sh` and still to fix in `oracle/radicle.py`, the v1 spike script and `tests/integration/radicle.py` (task 4.1).
@@ -160,6 +160,7 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 
 ### L12. Bounties on Radicle
 - **The issue:** an on-chain issue carries a Radicle issue id (the issue's collaborative-object id, 20 bytes) in its registration. The registration check reads the Radicle issue the way v2's bot reads a labelled forge issue: its text claims the registration (`bot/logic`'s claim format).
+  - **Amended 2026-11-20 (owner, #251): the claim is signed by the reporter, and the issue id is not stored on-chain** (`RaceV3.register` takes no issue id; no contract change). `pofctl --v3 issue register --rad-issue <id>` comments three lines on the Radicle issue: `Registration: N`, `Reporter wallet: 0x…` and `Claim signature: 0x…`, the reporter's signature, by the key that registered on-chain (the keystore and devnet-key rules apply), as EIP-191 `personal_sign` over keccak256(abi.encode("pof-registration-claim-v1", chainId, race, registration id, keccak256(RID), the issue's 20-byte id)). A validator accepts a claim only when the signature recovers to that registration's on-chain reporter for its own chain, race, repository and that issue; a claim copied onto another issue, or with no valid signature, is ignored, and with none left it seals a fail saying there is no signed claim. The lowest issue id is only a tie-break between several validly signed claims (a reporter who signed for two issues).
 - **The fix:** a Radicle patch on proof-of-fix. The solver's commitment opens to the patch revision's head commit, its base and its salt; the claim (submission id, salt) is in the patch description, as it is in a pull request body today. The node replaces `_find_pull` with a Radicle source that lists patches on its own node.
 - **Funding:** `pofctl` gains v3 and Radicle commands (`issue register --rad-issue …`, `pledge`, `submit --patch …`) and a public-chain key path (a keystore file, never printed). A bot adapter (#210) is optional.
 - **The model judge's registration check:** the v3 node refuses it with a model judge today and stays silent, paying the silence slash. The launch needs it (task 4.3), since every Sepolia validator has a model.
@@ -229,8 +230,10 @@ The question: who signs Radicle's canonical `main` when the judges change with e
   2. **Back to waiting:** the submission returns to the waiting state, keeping its place, and is drawn again with a fresh seed when the eligible set grows or after `RETRY_DELAY`, whichever comes first.
   3. **Then refund:** after `MAX_REDRAWS` failed rounds, or at the bounty's deadline, the bounty is refunded to its funders. The solver's claim is released with no reputation loss and no slash, because the solver did nothing wrong.
 - **Audits too (found by the Radicle spike, #261):** when an audit falls due and no eligible validator outside the panel is left, the verdict never becomes final, and the keeper's `drawAudits` keeps retrying. The same rule applies: after `STUCK_GRACE` the audit is released, the verdict waits for an audit to be drawable, and the bounty is refunded after `MAX_REDRAWS` or at its deadline.
-- **Invariant:** every submission is, at every moment, in exactly one of these states: drawn with a live deadline, waiting with a scheduled redraw, final (paid or rejected), or refunded. No other state is reachable.
+- **Decided (owner, 2026-11-20): an audit nobody can take keeps refunding.** `reports/devnet-v3-local.md` finding 9 (#281) measured it: when a panel seats every eligible validator, the norm on a small network, a random audit that falls due can never be drawn, and after `MAX_REDRAWS` the passed fix is refunded. On the devnet 3.2 % of all verdicts ended this way; with 7 identically bonded launch validators every panel is 7 of 7, so about one passed fix in ten (`AUDIT_RATE_BPS` 1,000) would be refunded after about 72 h. The owner kept the refund rather than waiving the audit, shrinking panels or widening who may audit; it is a named launch limit (Risks). It shrinks as validators are added beyond the largest panel.
+- **Invariant (restated 2026-11-20 by L25 to include challenges):** every submission is, at every moment, in exactly one of these states: drawn with a live deadline; waiting with a scheduled redraw; counted with its window running, or frozen by one challenge that is itself drawn with a live deadline or waiting with a scheduled redraw, and that ends by `CHALLENGE_DEADLINE` or at its panel's release (L25); final (paid or rejected); or refunded. No other state is reachable. Before L25 an open challenge had none of these (`reports/challenge-drawability-v1.md`, section 4).
 - **Values** (proposed, to confirm by #256's scenario d and the simulation): `STUCK_GRACE` 24 h, `RETRY_DELAY` 24 h, `MAX_REDRAWS` 3.
+- **Note (2026-11-20, after L24):** the owner's decision of 2026-11-20 to keep the refund when no validator outside the panel can take a random audit (devnet report finding 9, PR #281) is **practically moot at the launch**. With panels of 3 (L24), 7 validators leave 4 outside every panel, so an audit that falls due finds an auditor unless 4 validators are full, paused or gone at once. The rule stays as written: it still applies to any network where a panel seats every eligible validator.
 
 ### L20. A fix can't change the tests that judge it: protected paths (tracked by the owner on 2026-11-19; the choice proposed)
 - **The gap:** the command comes from the base (`oracle/checkconfig.py`), but the tests run on `src_root/<head_sha>`, the fix's own tree (`node_v2._check`, `node_v3._fix`). A fix can weaken a test under `tests/` (drop an assertion, skip a case) and pass. Only the judge, reading the diff, might notice.
@@ -266,6 +269,7 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 - **Residual risk: prompt injection through what the fix writes.** The measured image proves what ran, not that the model wasn't fooled by the diff or by output the fix's code prints. D20's named trust point stays: while one family is seated, an injection that fools it decides the panel. Mitigation: today the judge gets no logs, only the result line the node writes, and the diff between per-check markers (`pof.judges.prompt.quote`). If logs are ever shown (for example which test failed), they go in the same way: quoted as data, capped at 4 KiB (the tail), with their hash in the receipt (`logs_sha256`, as today).
 - **Release candidate:** L18 gains item 6, the check `attestedImages` in `pof-release-candidate/1`. It fits L18: a named check that is `passed` or the deploy is refused, like `sevSnpValidator`. No record has been written yet (task 7.0 writes the first), so the format keeps its name.
 - **Before Sepolia:** required, under the release-candidate gate (task 7.0).
+- **The test image (2026-11-20):** rule 1's "allow-listed test image(s)" are `oracle/test-image/Dockerfile`'s build: Python 3.12 on Debian 13 slim, the base pinned by digest, plus exactly git and bash at pinned versions from the Debian snapshot the base names (Debian, because Alpine's repositories drop a pinned package version once it's replaced). `scripts/test-image.sh` builds it reproducibly (SOURCE_DATE_EPOCH, timestamps rewritten, no attestations; two builds without the cache give the same digest, on amd64 and arm64) and loads it into the local Docker; `oracle/sandbox.py` pins one manifest digest per platform (`TEST_IMAGES`), and the node never pulls it (a missing image is a setup error). This is the image the measured disk carries and `images.json` lists, one entry per platform the kit supports. Until 4.9, testnet validators build it locally from the pinned Dockerfile. The sandbox also gives the tests `TMPDIR=/scratch`, a tmpfs with exec, size-limited and counted in the memory limit like `/tmp`, which stays noexec. `.pof/check.json` still names no image.
 
 ### L22. Each validator runs the tests twice (tracked by the owner on 2026-11-19; proposed)
 - **The gap:** each validator runs the tests once. A flaky test (timing, ordering, randomness) can pass on one validator and fail on another, splitting the panel, and the split looks like a re-run that contradicts a receipt (D4's challenge).
@@ -278,8 +282,105 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 - **The time limit and the taxi fare:** the profile's `timeoutSeconds` stays the limit for the whole check, so each run gets half. FeesV3's worst-case deposit (`milliVcpus × timeoutSeconds`) then stays a true bound, with no contract change. The metered vCPU- and GB-seconds are the two runs' sum, about twice a single run's, and **the solver pays them** (L17's taxi fare). At Fargate's rates (`reports/costs-v1.md`, $0.04048 a vCPU-hour), a 300 vCPU-second run is about $0.003, so the second run adds well under a cent per judge, against $0.02–0.12 for the model (`validator-kit/COSTS.md`). Sepolia's profile sets its timeout for two runs of proof-of-fix's suite, with a margin.
 - **Before Sepolia:** cheap and recommended, not a gate.
 
+### L23. Panel caps are deployment settings, loose on Sepolia (owner, 2026-11-20)
+- **The gap** ([`reports/challenge-drawability-v1.md`](../../../reports/challenge-drawability-v1.md), "The layout precondition"): the operator, host and TEE-type caps are hard-coded, and the owner runs every launch validator. With one operator account, or one host value (the spec counts a host per cloud, and the kit is AWS only), every panel is k = 1. Then a $125 bounty is never judged, because k = 1's limit is $50, and a k = 1 verdict's challenge is never drawn. With every validator but the genesis one on SEV-SNP, the TEE cap holds k to 3. All three cases were tested.
+- **What changes, and where it lives today:**
+
+  | Cap | Today | Where |
+  |---|---|---|
+  | Operator: one seat per operator account, at every k | hard-coded | `PanelsDraw.fits`, `PanelsDraw.sol:270` |
+  | Host: at most (k − 1) / 2 per host, from k = 3 | hard-coded | `PanelsDraw.sol:264, 275` |
+  | TEE type: at most (k − 1) / 2 per type, from `teeFrom` (3 with at least `TEE_CAP_K3_TYPES` = 5 accepted types, else 5) | hard-coded | `PanelsDraw.sol:276`; `PanelsBase.sol:152, 202-204`; `Panels.sol` `TEE_CAP_K3_TYPES` |
+  | Family: at most (k − 1) / 2 per family while `CAP_MIN_FAMILIES` (3) families are seated | **unchanged** (D20) | `PanelsDraw.sol:275`; `PanelScores.sol:46, 219-221` |
+
+- **The rule:**
+  - `Panels`' constructor takes a `PanelRules` struct (shared with L24). It holds `operatorCap`, `hostCap` and `teeCap`, each `Strict` or `Off`. They are fixed at construction, keyless and readable (`panelRules()`), carried in `Env` to the draw, and written to the deployment record and the release-candidate record.
+  - `Strict` is today's rule for each cap: one per operator; (k − 1) / 2 per host; (k − 1) / 2 per TEE type from `teeFrom`. `Off` drops that cap from `fits`.
+  - **The mainnet defaults are all `Strict`.** The deploy script uses them unless told otherwise.
+  - **On Sepolia** the record sets all three to `Off` (`--panel-caps launch`), so the owner's validators fill panels whatever their operator account, host and TEE type.
+  - The family cap and its switch stay as D20 built them.
+- **The k = 1 hold's count follows the same caps:** `PanelsDraw.challengersReady` (`:320-339`) counts challengers without the caps. Under `Strict` it must count only challengers that could sit together under them, so a hold doesn't end while its challenge can't be drawn. Under `Off` the two already agree.
+- **Why a setting and not a code change for the launch:**
+  - The code stays one codebase, tested both ways. The release candidate (L18) runs with each setting.
+  - The record says which applies, as L4 did for the windows.
+  - A setting can't be loosened later: a keyless deployment keeps its caps for life (D15). Strict caps for outside validators mean a new deployment, by migration.
+- **A new trust point: "one operator runs every launch validator."** At the launch every verdict is one party's. The caps that would keep any operator, host or chip vendor from holding a majority are off, and stay off for this deployment even after outside validators join. Stated in the README's intended use and the paper, beside D20's family trust point.
+
+### L24. Launch panels of 3, and same-size fresh challenges (owner, 2026-11-20)
+- **The gap** (report, sections 1–3):
+  - At 7 validators a panel of 7 seats everyone. A challenge or test dispute of it needs 7 fresh validators that don't exist. With three known families it waits forever (tested).
+  - D27's second draw re-votes with the same 7, and only with fewer than 3 known families.
+  - Audits of those panels can't be drawn either (finding 9).
+- **The rule:**
+  1. **The largest issue-tier panel is 3 at the launch.** k is the largest odd number up to `kTop` that the count and caps allow. The constitution tier keeps `K_MAX` = 7: ADRs and escalated fixes still need exactly 7, `CONSTITUTION_QUORUM` 5 of them, and `CONSTITUTION_MIN_ELIGIBLE` 21. At the launch these expire unjudged anyway.
+  2. **A challenge, and a test dispute (D21, the same path), draws a fresh panel of the challenged verdict's size.** The panel comes from outside the challenged panel, its auditors and its replaced judges, and excludes parties. This replaces D4's larger panel. Its step-down stops at that size (`kTop = kMin = k`).
+     - **k = 1 keeps D4's 3:** a lone fresh judge's majority could otherwise take a whole bond for a false receipt. The k = 1 hold (`CHALLENGE_K[1]` = 3 challengers) is unchanged.
+  3. **D27's second draw stays the fallback:** while fewer than `CAP_MIN_FAMILIES` families are seated, a challenge that can't draw its fresh panel gets a second draw of the same size, the original judges allowed.
+- **A parameter, not a launch constant (recommended and chosen):**
+  - `PanelRules.kTop`: an odd number from 1 to `K_MAX`. The mainnet default is 7; the Sepolia record sets 3.
+  - `PanelRules.challengeSize`: `Larger` (D4, the mainnet default) or `Same`; the Sepolia record sets `Same`.
+  - **Why a parameter:**
+    - A launch constant would change mainnet's code or leave a fork to maintain.
+    - The parameter is recorded and checked like the windows, and the release candidate runs both settings.
+    - When the network grows, a new deployment (D15) can move to 7 without a code change.
+  - **Where today's constant is used** (each read becomes `kTop` for issue-tier panels):
+    - `PanelsBase.drawCounted` (`PanelsBase.sol:243`);
+    - `challengeK` and `drawChallenge`'s `kMin` (`PanelsBase.sol:336-338`; `PanelsVerdict.sol:146-147`);
+    - the race's worst-case deposit and a challenge's cover (`RaceV3Base.sol:147, 463`; `RaceV3Annex.sol:211`): `kTop` judges, not 7. That lowers what a solver and a challenger post.
+    - `SHADOW_PER_DRAW_SMALL`'s test (`PanelsVerdict.sol:71`) and the constitution tier keep `K_MAX`.
+- **The k table and the windows, checked with bounty size:**
+  - **Limits:** a panel of 3 judges up to $250 at level A and $125 at level B (`PanelsDraw.limitOf`, `PanelsDraw.sol:152-159`; ADR 0004). Every launch bounty ($10, $25, $50 and $125, with $250 bonds) is in range at both TEE levels. Level C is refused (L10), so no other row matters, and no bounty waits for a larger panel.
+  - **Challenge windows:** the window is the verdict's `CHALLENGE_WINDOW[3, level]`: **24 h at level A and 48 h at level B**, against 6 h and 12 h for a panel of 7 (`Windows.sol`, `WindowsLib.production`). The bounty doesn't change it.
+  - **What must change:** nothing in the windows or the limits. The windows are already per (k, level) and in the record (L4). The unbonding delay is unchanged, since it derives from the longest window, level C's 336 h.
+  - The challenge panel's own size no longer depends on k's row in `CHALLENGE_K` (except k = 1).
+- **What it gives at 7 validators:**
+  - 4 validators stay outside every panel, so random audits are drawable (L19's note) and a challenge's fresh 3 exist.
+  - Sampling estimate: the fresh panel fails about 0.2 % of the time with 4 left, and about 7 % with 3 left after an audit. A failure falls to D27, or to L25's retry with a fresh seed.
+  - At 15 validators, 12 stay outside.
+  - Panels are smaller, so each submission costs about half the checks: #253's $30–50 a month covers about twice the submissions, and capacity serves about twice the panels an hour.
+- **Trade-offs, named:**
+  - **Fewer judges per verdict:** 2 of 3 decide, not 4 of 7, so one wrong or bribed judge more flips a verdict. The windows are 4× longer (24 h and 48 h), so finality and L9's merges wait longer.
+  - **Challenges are fresh but equal, not larger:** a challenge corrects by freshness alone. 2 of 3 fresh judges decide the fix and a false receipt's whole-bond slash. D21's tests stay the main correction.
+  - **D27 still re-votes:** among one or two families a second draw of 3 may seat the same judges.
+
+### L25. Challenges always end (owner, 2026-11-20)
+- **The gap** (report, section 4):
+  - A waiting challenge is retried only on a registry change (`PanelsVerdict.sol:136-140`).
+  - A drawn challenge panel with a silent seat no one can fill is never released (`PanelsJudge.sol:155` releases only counted and audit panels).
+  - `finalize`, `releaseAudits` and `abandon` all refuse while `challengeOpen`.
+  - So a verdict with an open challenge can stay open forever: the bounty is neither paid nor refunded, the challenger's stake and cover stay held, and the judges' bonds stay locked.
+- **The rule:**
+  1. **A deadline:**
+     - Each challenge (filed, disputed, or opened by an auditor's mismatch) has `CHALLENGE_DEADLINE`, counted from its opening.
+     - Past it, a challenge **with no panel lapses**.
+     - A challenge **whose panel is drawn** lapses only if that panel is released (rule 2). A panel that completes is counted as today, even after the deadline.
+     - The longest a challenge lasts is therefore the deadline, or its last panel's reveal deadline plus `STUCK_GRACE`, whichever is later.
+  2. **A stuck challenge panel is released as L19 releases counted panels:**
+     - When its replacements are exhausted, it ends at its reveal deadline plus `STUCK_GRACE`. Its silent seats are slashed as today, and sealed or revealed seats close unslashed.
+     - Before the deadline, the challenge goes back to waiting (rule 3) with a fresh seed. After it, the challenge lapses.
+  3. **A retry clock:**
+     - A waiting challenge is drawn again with a fresh seed block and snapshot once the registry changes **or** at its `retryAt`, `RETRY_DELAY` after it began waiting, as a waiting submission is (`PanelsVerdict.sol:37-41`).
+     - The clock covers what isn't a registry change: a validator un-pausing (`setCapacity`), capacity freeing up, a bad sampling seed.
+     - A capacity change doesn't bump the registry's `epoch`, and needn't.
+  4. **What a lapse does:**
+     - **The original verdict stands.** The window resumes where it froze, as after a rejected challenge.
+     - The original judges' `challengeClosed` is called, so they can unbond.
+     - Nobody is slashed for the lapse itself.
+- **The stake on a lapse comes back (recommended and chosen):**
+  - A lapse means the network failed to draw or complete the panel, not that the challenger was wrong. The challenger's stake and cover (a D21 dispute's stake too) return whole, and there's no D21 reward.
+  - Seats of a released challenge panel that revealed with receipts are paid as an upheld challenge's panel is: from the check's deposit and the pool, not from the cover.
+  - The alternative, the stake to the accused judges as for a rejected challenge, would make the challenger pay for the network's failure.
+  - **Against free delay (proposed, for the owner):** a verdict accepts at most `MAX_REDRAWS` lapsed challenges. After that, new challenges of it are refused and it finalizes at its window. Each lapse holds the window frozen at most about `CHALLENGE_DEADLINE`, at no cost to the challenger.
+- **`CHALLENGE_DEADLINE` (proposed): a new `Windows` field, `challengeDeadline`.**
+  - **Production: 120 h.**
+  - **The order check:** at least `maxRedraws × retryDelay + seal + reveal + stuckGrace`, which is 99 h in production. So a challenge gets its three scheduled retries and one full round with its grace before it can lapse.
+  - Below 2^32 s like the others; minutes in `inMinutes()`.
+  - It doesn't change `UNBONDING_DELAY`: a judge named by an open challenge can't withdraw until it closes anyway (`Validators.sol:420`).
+- **The invariant:** L19's is restated above to include challenges. #256 and the Foundry invariant test check it with challenges, disputes, silences, pauses and joins applied in any order.
+- **Trade-off:** on a network that can't draw a challenge panel, a challenge or D21 dispute ends without correcting anything. The verdict stands, and a wrong pass is paid. L24 makes that rare at 7 validators; L25 makes it finite.
+
 ### Test runs: what can wait (not for this launch)
-- **A dependency lockfile.** proof-of-fix's own tests use the standard library only, so the pinned Python image runs them as they are. A repository with dependencies would need the node to fetch and hash-check them outside the sandbox (L21). It waits for a repository that needs it.
+- **A dependency lockfile.** proof-of-fix's own tests use the standard library only, so the pinned test image (Python, git and bash, L21) runs them as they are. A repository with dependencies would need the node to fetch and hash-check them outside the sandbox (L21). It waits for a repository that needs it.
 - **External attested runners** (`openspec/specs/checking`'s "Attested CI runs": test runners separate from the judges). The judges run the tests themselves, inside the same measured image. A later ADR, if ever.
 
 ### Parameters
@@ -305,11 +406,19 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 | `SECOND_PANEL` | "few families": only while fewer than `CAP_MIN_FAMILIES` families can judge | #132 D27, report measured-v4; ADR 0007 | #132 task 11.4 |
 | `MAX_CHECKS_PER_HOUR`, `REPO_CHECKS_PER_HOUR` | 5; the repository cap off while there is one repository | L16, report v6 (post hoc lane run) | #256 scenario o |
 | `STUCK_GRACE`, `RETRY_DELAY`, `MAX_REDRAWS` | 24 h, 24 h, 3 (proposed) | L19 | #256 scenario d; Foundry invariant |
+| `PanelRules.operatorCap`, `hostCap`, `teeCap` | `Off` on Sepolia; `Strict` the mainnet default | L23 (owner, 2026-11-20); report challenge-drawability-v1 | task 3.22; #256 scenario u |
+| `PanelRules.kTop` | 3 on Sepolia; 7 the mainnet default (the constitution tier keeps `K_MAX` 7) | L24 (owner, 2026-11-20) | task 3.23; #256 scenario v |
+| `PanelRules.challengeSize` | `Same` on Sepolia (k = 1 keeps 3); `Larger` (D4) the mainnet default | L24 | task 3.23; #256 scenarios f, g, v |
+| `CHALLENGE_DEADLINE` (`Windows.challengeDeadline`) | 120 h (proposed); at least `maxRedraws × retryDelay + seal + reveal + stuckGrace` (99 h) | L25 (owner, 2026-11-20) | task 3.24; #256 scenario w; Foundry invariant |
 | `.pof/check.json`'s `protected` | proof-of-fix: `tests/`; at most 32 paths per repository | L20 | `tests/test_checkconfig.py`; the devnet scenario (task 4.8) |
 | The checker image | one measured disk: the Docker engine, the node image, the test image(s), `images.json` | L21, Article 3 | task 4.9; release-candidate check `attestedImages` |
 | Test runs per check | 2, both must pass, within the profile's one `timeoutSeconds` | L22, D21 | `tests/test_sandbox.py`, the node's tests (task 4.10) |
 
 ## Risks / Trade-offs
+- **[One operator runs every launch validator]** → decided 2026-11-20 (L23): the operator, host and TEE-type caps are `Off` on Sepolia, so every verdict at the launch is the owner's, and they stay off for this deployment's life (D15). A named trust point in the README and the paper.
+- **[Panels of 3 at the launch]** → decided 2026-11-20 (L24): 2 of 3 judges decide, the windows are 24 h (A) and 48 h (B), and challenges are fresh but no larger. Accepted for drawable challenges and audits at 7 validators.
+- **[A challenge that lapses corrects nothing]** → decided 2026-11-20 (L25): past `CHALLENGE_DEADLINE` with no panel, the verdict stands and the stake returns. Rare once challenges are drawable (L24); bounded by `MAX_REDRAWS` lapses a verdict (proposed).
+- **[A random audit nobody can take refunds a passed fix]** → decided 2026-11-20 (L19): kept as a launch limit. About one passed fix in ten at k ≥ 3 while every eligible validator sits on the panel (7 launch validators); fewer as the network grows past the largest panel. Stated in the README and the paper. Practically moot at the launch once L24's panels of 3 leave 4 of 7 validators free.
 - **[The checks bind only this deployment]** → stated in the record, the README and the paper. Nothing else is possible with open code.
 - **[One party fakes three active solvers]** → bounded by D29's cap per identity and by disputes; measured by task 3.2. If the sybil of three gains, the owner chooses between a higher minimum, a longer window or a deposit while the repository is small (report v5's untested conditional deposit). **Measured: it gains with one honest solver** (up to +$3,680 a year), and only a deposit closes it. **The owner kept no deposit (2026-11-19): a named trust point** in the README and the paper (L6).
 - **[D21's and D24's assumed rates]** → the paid runs that would measure them (#132 tasks 10.3 and 11.3) are not decided; the launch's safety on disputes and appeals rests on assumed rates, a named trust point (ADR 0007).
@@ -339,6 +448,8 @@ The question: who signs Radicle's canonical `main` when the judges change with e
 Decided by the owner on 2026-11-18 ("proceed with recommendations"): L2 option 1, L4 production values, and the three safety items in `public-release`. L17: option 1 at first, then option 2 (Circle's Sepolia USDC) the same day, after report v6's post hoc run. On 2026-11-20 (#251), option 3: the project's own test coin (`POFTEST`) with a keyless faucet, replacing Circle's USDC.
 
 Decided by the owner on 2026-11-19 (#251), every value as recommended ([ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)): L6's `ACTIVE_WINDOW` 26 weeks and the minimum of 3, counting the repository's own solvers, with the sybil of three a named trust point; no solver's deposit; L7's D20, D21, D29 and D30 values; L8's D27 ("few families") and D24. D25 and D26 are left out of the launch.
+
+Decided by the owner on 2026-11-20 (#251, from [`reports/challenge-drawability-v1.md`](../../../reports/challenge-drawability-v1.md)): L23 (the operator, host and TEE-type caps as deployment settings, `Off` on Sepolia, with the trust point "one operator runs every launch validator"), L24 (panels of 3 at the launch, same-size fresh challenges and disputes, D27 as the fallback) and L25 (challenges always end: a deadline, the release of a stuck challenge panel, a retry clock). Proposed within them, for the owner's confirmation: `CHALLENGE_DEADLINE` 120 h and the bound of `MAX_REDRAWS` lapsed challenges a verdict.
 
 These don't change the approach; each waits for the owner or for a measurement.
 - The paid runs of #132 tasks 10.3 and 11.3 (D21's and D24's rates): not decided.

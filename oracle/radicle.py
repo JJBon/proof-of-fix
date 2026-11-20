@@ -22,7 +22,18 @@ The adapter runs `rad` and `git` through a command prefix (ORACLE_RADICLE_EXEC, 
 empty: on this machine), one shell call per snapshot. It never configures the Radicle node: its seeds, peers and
 network are the operator's (the integration suite's are on an internal Docker network, tests/integration/radicle.py).
 Protection lives where the delegate keys live: two delegates who skip this check can still move `main` (#190's
-scenario G); the enclave-held keys are #94's."""
+scenario G); the enclave-held keys are #94's.
+
+Under v3 (#251, model (a), task 4.1) the delegates are every seated validator's node and the threshold a majority;
+the chain moves `Heads.head` only at finality (`RaceV3.merge`, L9), and each seated node pushes its own `main` to it
+(`decide_head`); the identity follows the seats one pending revision at a time (oracle/delegates.py; the node's side is
+oracle/radicle_v3.py). The same `Radicle` object reads the identity COB, the patches (the v3 fix source, task 4.2)
+and the issues (the registration check's claims, task 4.3), and proposes or signs identity revisions.
+
+`rad sync` takes the RID as a positional argument (Radicle 1.10.3 refuses `--rid`); a failed sync isn't hidden: the
+scripts print `@syncerror <exit> <its last line>`, which the snapshot keeps (`Snapshot.sync_error`) and the callers
+log. A sync can fail harmlessly (no peer is connected just now), so it doesn't stop the read: the node's own copy is
+still what it decides on."""
 
 from __future__ import annotations
 
@@ -36,7 +47,7 @@ from .crypto import keccak256
 
 RID_RE = re.compile(r"^rad:z[1-9A-HJ-NP-Za-km-z]+$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
-SIGN, PUSH, WAIT, REFUSE = "sign", "push", "wait", "refuse"
+SIGN, PUSH, WAIT, REFUSE, DONE = "sign", "push", "wait", "refuse", "done"
 
 
 class Unavailable(Exception):
@@ -54,7 +65,27 @@ def sha_of(word: bytes) -> str:
 
 
 def nid(did: str) -> str:
-    return did.removeprefix("did:key:")
+    return did[len("did:key:"):] if did.startswith("did:key:") else did
+
+
+def sync_lines(rid: str, mode: str = "fetch", seconds: int = 30) -> str:
+    """Shell lines running `rad sync --<mode> <RID>`, the RID positional (Radicle 1.10.3 refuses `--rid`), under a time
+    limit when `timeout` exists; on failure they print `@syncerror <exit> <its last output line>` instead of hiding it,
+    and the script goes on (the node's own copy is still readable), under `set -e` too."""
+    if not RID_RE.match(rid):
+        raise ValueError(f"not a Radicle RID: {rid!r}")
+    if mode not in ("fetch", "announce"):
+        raise ValueError(f"rad sync --fetch or --announce, not {mode!r}")
+    return (f'if command -v timeout >/dev/null; then _o=$(timeout {seconds} rad sync --{mode} {rid} 2>&1) && _c=0 || '
+            f'_c=$?; else _o=$(rad sync --{mode} {rid} 2>&1) && _c=0 || _c=$?; fi\n'
+            f'[ "$_c" = 0 ] || echo "@syncerror $_c $(printf \'%s\\n\' "$_o" | grep -v \'^[[:space:]]*$\' | tail -1 '
+            f'| cut -c1-300)"\n')
+
+
+def sync_error(out: str) -> str:
+    """The `@syncerror` a script printed ("" when its sync succeeded or didn't run)."""
+    m = re.search(r"^@syncerror (\d+) ?(.*)$", out, re.M)
+    return f"rad sync failed (exit {m.group(1)}): {m.group(2).strip() or 'no message'}" if m else ""
 
 
 @dataclass
@@ -68,6 +99,7 @@ class Snapshot:
     canonical_ref: str | None
     parents: dict = field(default_factory=dict)
     missing: set = field(default_factory=set)
+    sync_error: str = ""  # the sync before the read failed (its exit and last line): the copy may be behind
 
     def ancestors(self, sha: str) -> set:
         """`sha` and every commit it descends from, as far as the graph goes."""
@@ -155,6 +187,36 @@ def verify_head(head: str, s: Snapshot) -> Decision:
                           f"delegates, threshold {s.threshold})")
 
 
+def decide_head(head: str, s: Snapshot, seated: bool) -> Decision:
+    """Model (a) on a validator's node (#251 L9, L11; task 4.1): `Heads.head` moves only when a judged fix's verdict
+    is final (`RaceV3.merge`), and each seated node (and each delegate, until it's removed) pushes its own signed
+    `main` to it and nothing else (#190's gate, spikes/radicle/gate.sh). `s` is a snapshot taken with `extra=[head]`.
+    PUSH: move this node's `main` to the head (a new seat publishes its first `main` there before it can be added).
+    WAIT: nothing to push yet (the head isn't on this node, or the other delegates haven't caught up). DONE: this
+    node's `main` is the head. REFUSE: the head doesn't fast-forward this node's `main`: Radicle and the chain
+    disagree, and nothing is pushed."""
+    me, delegates = nid(s.me), {nid(d) for d in s.delegates}
+    mine = s.tips.get(me)
+    if me not in delegates and not seated:
+        return Decision(WAIT, "this node is neither a delegate nor seated on-chain: watching only")
+    if mine == head:
+        counted = canonical(s)
+        if me not in delegates:
+            return Decision(DONE, f"main published at Heads.head {head[:12]}; not a delegate yet")
+        if counted == head:
+            return Decision(DONE, f"this node's main and the canonical main are Heads.head {head[:12]}")
+        return Decision(WAIT, f"main at Heads.head {head[:12]}; {len(s.votes(head))} of the {s.threshold} delegates "
+                              f"needed (canonical main {(counted or 'none')[:12]})")
+    if head in s.missing:
+        return Decision(WAIT, f"Heads.head {head[:12]} isn't on this Radicle node yet")
+    if mine is not None and not s.is_ancestor(mine, head):
+        return Decision(REFUSE, f"Heads.head {head[:12]} doesn't fast-forward this node's main {mine[:12]}: Radicle "
+                                f"and the chain disagree; nothing pushed")
+    if mine is None:
+        return Decision(PUSH, f"publishing this node's first main at Heads.head {head[:12]}")
+    return Decision(PUSH, f"Heads.head moved to {head[:12]}: pushing this node's main from {mine[:12]}")
+
+
 def parse_snapshot(out: str) -> Snapshot:
     """The snapshot script's output (Radicle.SNAPSHOT) as a Snapshot."""
     me, canonical_ref, section = "", None, ""
@@ -184,7 +246,7 @@ def parse_snapshot(out: str) -> Snapshot:
     except json.JSONDecodeError as e:
         raise Unavailable(f"no identity document in the snapshot ({e})") from None
     return Snapshot(me, list(doc.get("delegates", [])), int(doc.get("threshold", 0)), tips, canonical_ref, parents,
-                    missing)
+                    missing, sync_error(out))
 
 
 class Radicle:
@@ -193,11 +255,7 @@ class Radicle:
 
     SNAPSHOT = r"""set -u
 S="${RAD_HOME:-$HOME/.radicle}/storage/%(store)s"
-if [ "%(sync)s" = 1 ]; then
-  if command -v timeout >/dev/null; then timeout 30 rad sync --fetch --rid %(rid)s >/dev/null 2>&1 || true
-  else rad sync --fetch --rid %(rid)s >/dev/null 2>&1 || true; fi
-fi
-echo "@me $(rad self --did)"
+%(sync_lines)secho "@me $(rad self --did)"
 echo "@identity"; rad inspect %(rid)s --identity || exit 3
 echo "@canonical $(git --git-dir "$S" rev-parse --verify -q refs/heads/main || echo none)"
 echo "@refs"; git --git-dir "$S" for-each-ref --format='%%(refname) %%(objectname)' 'refs/namespaces/*/refs/heads/main'
@@ -220,6 +278,42 @@ me=$(rad self --did); me=${me#did:key:}
 echo "@main $(git --git-dir "$S" rev-parse "refs/namespaces/$me/refs/heads/main")"
 """
 
+    PATCHES = r"""set -u
+%(sync_lines)s
+ids=$(rad cob list --repo %(rid)s --type xyz.radicle.patch) || exit 3
+for p in $ids; do
+  obj=$(rad cob show --repo %(rid)s --type xyz.radicle.patch --object "$p") || exit 3
+  echo "@patch $p"; printf '%%s\n' "$obj" | head -1
+done
+echo "@end"
+"""
+
+    ISSUES = r"""set -u
+%(sync_lines)s
+ids=$(rad cob list --repo %(rid)s --type xyz.radicle.issue) || exit 3
+for i in $ids; do
+  obj=$(rad cob show --repo %(rid)s --type xyz.radicle.issue --object "$i") || exit 3
+  echo "@issue $i"; printf '%%s\n' "$obj" | head -1
+done
+echo "@end"
+"""
+
+    IDENTITY = r"""set -u
+%(sync_lines)s
+id=$(rad cob list --repo %(rid)s --type xyz.radicle.id | head -1)
+[ -n "$id" ] || { echo "no identity COB for %(rid)s" >&2; exit 3; }
+obj=$(rad cob show --repo %(rid)s --type xyz.radicle.id --object "$id") || exit 3
+echo "@me $(rad self --did)"
+echo "@identity"; printf '%%s\n' "$obj" | head -1
+echo "@end"
+"""
+
+    ID_CHANGE = r"""set -u
+out=$(rad id %(verb)s --repo %(rid)s %(args)s --no-confirm 2>&1); c=$?
+printf '%%s\n' "$out"
+[ "$c" = 0 ] || exit 4
+%(announce)s"""
+
     def __init__(self, rid: str, prefix=(), repo_dir: str = "", timeout: float = 120.0) -> None:
         if not RID_RE.match(rid):
             raise ValueError(f"not a Radicle RID: {rid!r}")
@@ -241,8 +335,58 @@ echo "@main $(git --git-dir "$S" rev-parse "refs/namespaces/$me/refs/heads/main"
         for c in extra:
             if not SHA_RE.match(c):
                 raise ValueError(f"not a SHA-1: {c!r}")
-        return parse_snapshot(self._sh(self.SNAPSHOT % {"store": self.rid[4:], "rid": self.rid, "sync": int(sync),
-                                                        "extra": " ".join(extra)}))
+        return parse_snapshot(self._sh(self.SNAPSHOT % {
+            "store": self.rid[4:], "rid": self.rid, "extra": " ".join(extra),
+            "sync_lines": sync_lines(self.rid) if sync else ""}))
+
+    def patches(self, sync: bool = True) -> tuple:
+        """(the patches on this node's own copy, as `rad cob show` objects with their ids under "_id"; the sync's
+        error, or ""). Synced first unless `sync` is false. Raises Unavailable when the copy can't be read."""
+        out = self._sh(self.PATCHES % {"rid": self.rid, "sync_lines": sync_lines(self.rid) if sync else ""})
+        return _cobs(out, "patch"), sync_error(out)
+
+    def issues(self, sync: bool = True) -> tuple:
+        """(the issues on this node's own copy, as `rad cob show --type xyz.radicle.issue` objects with their ids under
+        "_id": title, state, labels and the thread, whose first comment is the description; the sync's error, or "").
+        Synced first unless `sync` is false. Raises Unavailable when the copy can't be read."""
+        out = self._sh(self.ISSUES % {"rid": self.rid, "sync_lines": sync_lines(self.rid) if sync else ""})
+        return _cobs(out, "issue"), sync_error(out)
+
+    def identity(self, sync: bool = True) -> tuple:
+        """(the identity COB, `rad cob show --type xyz.radicle.id`: its revisions, their states and verdicts, the
+        current one; this node's DID; the sync's error, or ""). Raises Unavailable when it can't be read."""
+        out = self._sh(self.IDENTITY % {"rid": self.rid, "sync_lines": sync_lines(self.rid) if sync else ""})
+        m = re.search(r"^@me (\S+)$", out, re.M)
+        body = out.split("@identity\n", 1)[-1].split("\n@end", 1)[0]
+        try:
+            cob = json.loads(body)
+        except json.JSONDecodeError as e:
+            raise Unavailable(f"Radicle: no identity COB in the output ({e})") from None
+        return cob, (m.group(1) if m else ""), sync_error(out)
+
+    def propose(self, args, title: str, description: str) -> str:
+        """`rad id update` with `args` (oracle/delegates.py's update_args), then an announcement. Returns the output
+        (a failed announcement is in it as `@syncerror`). Raises Unavailable when the update fails. The decision to
+        propose is `delegates.identity_step`'s; this only does it."""
+        words = ["--title", title, "--description", description, *args]
+        return self._sh(self.ID_CHANGE % {"verb": "update", "rid": self.rid,
+                                          "args": " ".join(shlex.quote(str(a)) for a in words),
+                                          "announce": sync_lines(self.rid, "announce")})
+
+    def review(self, revision: str, accept: bool) -> str:
+        """`rad id accept|reject <revision>`, then an announcement. Returns the output; raises Unavailable when it
+        fails."""
+        if not SHA_RE.match(revision):
+            raise ValueError(f"not a revision id: {revision!r}")
+        return self._sh(self.ID_CHANGE % {"verb": "accept" if accept else "reject", "rid": self.rid,
+                                          "args": revision, "announce": sync_lines(self.rid, "announce")})
+
+    def storage(self) -> str:
+        """The repository's storage on the node (a bare git repository: every namespace, the patches' commits)."""
+        out = self._sh(f'echo "${{RAD_HOME:-$HOME/.radicle}}/storage/{self.rid[4:]}"').strip()
+        if not out.startswith("/"):
+            raise Unavailable(f"Radicle: no storage path ({out!r})")
+        return out
 
     def push(self, fix: str) -> str:
         """Pushes this delegate's signed `main` to `fix` (git-remote-rad signs and announces it). Returns its `main`
@@ -254,6 +398,23 @@ echo "@main $(git --git-dir "$S" rev-parse "refs/namespaces/$me/refs/heads/main"
         if not m or m.group(1) != fix:
             raise Unavailable(f"Radicle: the push of {fix[:12]} didn't land (main {m.group(1) if m else '?'})")
         return m.group(1)
+
+
+def _cobs(out: str, kind: str) -> list:
+    """The `@<kind> <id>` objects a listing script printed, each with its id under "_id". Raises Unavailable when one
+    isn't JSON: a copy that can't be read whole isn't read at all."""
+    cobs, cid, mark = [], None, f"@{kind} "
+    for line in out.splitlines():
+        if line.startswith(mark):
+            cid = line[len(mark):].strip()
+        elif cid is not None and line.strip():
+            try:
+                cob = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise Unavailable(f"Radicle: {kind} {cid[:7]} isn't readable ({e})") from None
+            cobs.append({**cob, "_id": cid})
+            cid = None
+    return cobs
 
 
 def from_env(env) -> Radicle | None:

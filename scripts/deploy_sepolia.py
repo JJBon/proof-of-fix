@@ -1,12 +1,14 @@
 """The Sepolia deploy's wrapper (proof-of-fix#251, task 3.9; design L2, L3, L17, L18; specs/deployment-binding).
 Run it as scripts/deploy-sepolia.sh. It is a dry run unless given `--broadcast-sepolia`, the flag naming the step.
 
-    scripts/deploy-sepolia.sh deploy --rpc-url URL --plan PLAN.json --release-candidate RC.json [signer] [options]
+    scripts/deploy-sepolia.sh deploy --rpc-url URL --plan PLAN.json --release-candidate RC.json
+                                     --genesis-rad-node did:key:z6Mk… [signer] [options]
     scripts/deploy-sepolia.sh hashes          each contract's creation-code hash, for a release-candidate record
 
 Before anything is signed, in this order, and stopping at the first refusal (exit 2) with nothing sent:
 1. the plan (the RID, the genesis head, the genesis validator, the families, TEE types and images) is well formed,
-   and a test key (`--dev-key`, `--genesis-dev-key`) is given only for a local endpoint;
+   the genesis validator's Radicle node (`--genesis-rad-node`, a did:key or 0x and 64 hex digits, never zero) is
+   well formed, and a test key (`--dev-key`, `--genesis-dev-key`) is given only for a local endpoint;
 2. the endpoint's chain id (`eth_chainId`, the only call made before the checks pass): 11155111 goes on; 31337 and
    7193, the local test ids the constructors also accept (L2 option 1), only for a local endpoint (http on 127.0.0.1,
    localhost or [::1], nothing else); anything else is refused, naming the chain id. A local anvil started with
@@ -31,6 +33,12 @@ genesis mint, fixed at deploy, is `--genesis-mint AMOUNT` coins in total (defaul
 seed bounties): the genesis validator's 250-coin bond goes to the registry maker, which bonds it into Validators, and
 the rest to `--genesis-mint-to ADDRESS` (default the deployer). The record's `testCoin` names the coin, the faucet, the
 genesis mint and the faucet's rule.
+
+The genesis validator's Radicle node (#251, design L11 condition 1, owner 2026-11-20): `--genesis-rad-node` names it
+(required). Its 32-byte Ed25519 key is a field of the genesis registration, inside the digest the genesis validator
+signs, and Validators stores it (`radNodeOf`), so the genesis seat maps to its node on-chain. The record names it twice:
+in the Validators constructor arguments (`validators.radNode`) and as `genesisRadNode` (the key and its did:key); the
+wrapper refuses a record whose key isn't the one asked for.
 
 Signers. A dry run signs nothing: it needs only the deploying address (`--deployer`, or the keystore's). A broadcast
 needs `--keystore FILE` (forge asks for its password; the key is never read here), or, on a local endpoint only,
@@ -91,6 +99,7 @@ if str(ROOT) not in sys.path:
 
 from oracle.crypto import address as address_of  # noqa: E402
 from oracle.crypto import keccak256  # noqa: E402
+from oracle.delegates import did_from_key, parse_node  # noqa: E402
 from pofctl.keys import MNEMONIC, derive  # noqa: E402
 
 SEPOLIA = 11_155_111
@@ -323,6 +332,24 @@ def genesis_mint(amount: str | None, to: str | None, deployer: str) -> tuple:
     return micro, recipient
 
 
+# ---------- the genesis validator's Radicle node (#251, L11) ----------
+
+def genesis_rad_node(value: str | None) -> tuple:
+    """(the bytes32 hex, the did:key) of `--genesis-rad-node`: the genesis validator's Radicle node, a did:key:z6Mk…,
+    its Node ID z6Mk… or 0x and 64 hex digits. It is signed into the genesis registration and stored on-chain, so it is
+    required, and never zero (the genesis seat is the first delegate after the owner's node hands over)."""
+    if not value:
+        raise Refused("--genesis-rad-node: the genesis validator's Radicle node (did:key:z6Mk… from its `rad self "
+                      "--did`, or 0x and 64 hex digits); it is signed into the genesis registration")
+    try:
+        key = parse_node(value)
+    except ValueError as e:
+        raise Refused(f"--genesis-rad-node: {e}") from None
+    if not any(key):
+        raise Refused("--genesis-rad-node: zero names no node; the genesis validator's seat needs one")
+    return "0x" + key.hex(), did_from_key(key)
+
+
 # ---------- the genesis head ----------
 
 def verify_head(cmd: list, rid: str, head: str) -> str:
@@ -420,6 +447,7 @@ def deploy(a) -> int:
     plan = load_plan(a.plan, gkey)
     deployer = _deployer(a)
     mint, mint_to = genesis_mint(a.genesis_mint, a.genesis_mint_to, deployer)
+    rad_key, rad_did = genesis_rad_node(a.genesis_rad_node)
 
     cid = chain_id(url)  # before anything is signed
     check_chain(cid, local)
@@ -442,6 +470,7 @@ def deploy(a) -> int:
     env = _env(plan, rc, deployer, url, name, gkey)
     env["DEPLOY_GENESIS_MINT"] = str(mint)
     env["DEPLOY_GENESIS_MINT_TO"] = mint_to
+    env["DEPLOY_GENESIS_RAD_NODE"] = rad_key
     script = f'forge script {SCRIPT} --rpc-url "$DEPLOY_RPC_URL" --sender "$DEPLOY_DEPLOYER"'
     stdin, mounts, tty = "", (), False
     if a.broadcast_sepolia:
@@ -477,6 +506,8 @@ def deploy(a) -> int:
     gm = (record.get("testCoin") or {}).get("genesisMint") or {}
     if int(gm.get("total", -1)) != mint or str(gm.get("restTo", "")).lower() != mint_to.lower():
         raise Refused("the record's genesis mint isn't the one asked for")
+    if str(_genesis_args(record).get("radNode", "")).lower() != rad_key:
+        raise Refused("the record's genesis Radicle node key isn't the one asked for")
     record["libraries"] = libraries(run_file)
     if a.broadcast_sepolia:
         _check_deployed(url, record, cid)
@@ -486,11 +517,23 @@ def deploy(a) -> int:
         "commit": git_head(),
         "releaseCandidate": {"path": _rel(a.release_candidate), "tag": rc.get("tag"), "commit": rc["commit"]},
         "genesisHeadCheck": {"rid": plan["rid"], "commit": plan["genesisHead"], "result": checked[-300:]},
+        "genesisRadNode": {"key": rad_key, "did": rad_did, "registry": "Validators.radNodeOf(genesis key)"},
     })
     out.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     verb = "deployed" if a.broadcast_sepolia else "dry run passed (nothing sent)"
     say(f"{verb}: RaceV3 {record['addresses']['race']}; record {out.relative_to(ROOT)}")
     return 0
+
+
+def _genesis_args(record: dict) -> dict:
+    """The genesis validator's registration as the record's constructor arguments give it."""
+    found = ((record.get("constructorArgs") or {}).get("Validators") or {}).get("validators") or {}
+    if isinstance(found, str):
+        try:
+            found = json.loads(found)
+        except ValueError:
+            return {}
+    return found if isinstance(found, dict) else {}
 
 
 def _deployer(a) -> str:
@@ -601,6 +644,9 @@ def parser() -> argparse.ArgumentParser:
     d.add_argument("--genesis-mint", metavar="AMOUNT", help=f"the test coin's genesis mint in coins, in total (default "
                    f"{GENESIS_MINT_COINS:,}); the genesis bond ({GENESIS_BOND_COINS}) goes to the registry")
     d.add_argument("--genesis-mint-to", metavar="ADDRESS", help="the genesis mint's recipient (default the deployer)")
+    d.add_argument("--genesis-rad-node", metavar="DID", help="required: the genesis validator's Radicle node, "
+                   "did:key:z6Mk… (its `rad self --did`) or 0x and 64 hex digits; signed into its registration and "
+                   "stored on-chain (#251, L11)")
     d.set_defaults(fn=deploy)
     h = sub.add_parser("hashes", help="print each contract's creation-code hash (a release-candidate record's)")
     h.set_defaults(fn=lambda a: print(json.dumps({"bytecode": hashes()}, indent=2)) or 0)

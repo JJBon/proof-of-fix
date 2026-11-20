@@ -156,7 +156,9 @@ class TheIssueIsReal(unittest.TestCase):
         fb = _first_bounty()
         with tempfile.TemporaryDirectory() as tmp:
             sample = Path(tmp) / "bot" / "sample"
-            shutil.copytree(ROOT / "bot" / "sample", sample)
+            # Writable copies: in the validator's sandbox the run tree is read-only, and so are its files' modes.
+            shutil.copytree(ROOT / "bot" / "sample", sample, copy_function=shutil.copyfile)
+            sample.chmod(0o755)
             if fix:
                 shutil.copy(ROOT / "bot" / "fixes" / fix, sample / "stats.py")
             if with_test:

@@ -36,6 +36,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from fake_radicle import snapshot  # noqa: E402
 from oracle.crypto import address, keccak256, sign  # noqa: E402
+from oracle.delegates import did_from_key  # noqa: E402
 from pofctl.keys import MNEMONIC, derive  # noqa: E402
 
 IMAGE = "ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
@@ -49,6 +50,8 @@ DEPLOYER = address(derive(MNEMONIC, 0))
 CLAIMANT = address(derive(MNEMONIC, 9))  # claims from the faucet (anvil's accounts are unlocked)
 RECIPIENT = address(derive(MNEMONIC, 5))  # scenario 5's genesis mint recipient
 RECORDS = ROOT / "contracts" / "deployments" / "sepolia-local"
+RAD_KEY = keccak256(b"the genesis validator's Radicle node (test)")  # #251, L11: an Ed25519 key's 32 bytes
+RAD_DID = did_from_key(RAD_KEY)
 
 
 def sh(*cmd, **kw):
@@ -119,7 +122,8 @@ class Rig:
         rad = f"{sys.executable} {ROOT / 'tests' / 'fake_radicle.py'} {self.snap}"
         signer = ["--genesis-dev-key", "1"] if genesis_key else []
         r = sh(str(ROOT / "scripts" / "deploy-sepolia.sh"), "deploy", "--rpc-url", URL, "--plan", str(plan or self.plan),
-               "--release-candidate", str(rc), "--dev-key", "0", *signer, "--rad-exec", rad, *extra,
+               "--release-candidate", str(rc), "--dev-key", "0", *signer, "--rad-exec", rad,
+               "--genesis-rad-node", RAD_DID, *extra,
                env={**os.environ, "DEPLOY_FORGE_CONTAINER": NAME}, timeout=1800)
         print(r.stderr.strip()[-1500:])
         return r
@@ -276,6 +280,13 @@ def deployed(rig: Rig, rc: Path, chain: int, *mint: str, recipient: str = DEPLOY
     check(int(call(race, "solverBook()"), 16) == int(rec["addresses"]["solverBook"], 16), "the race's SolverBook")
     check(int(call(rec["addresses"]["registry"], "teeOnly()"), 16) == 1, "the registry is TEE only")
     check(int(call(rec["addresses"]["registry"], "activeCount()"), 16) == 1, "the genesis validator is active")
+    genesis = call(rec["addresses"]["registry"], "genesisKey()")
+    on_chain = call(rec["addresses"]["registry"], "radNodeOf(address)", "0x" + genesis[-40:])
+    check(on_chain == "0x" + RAD_KEY.hex() and rec["genesisRadNode"] == {"key": "0x" + RAD_KEY.hex(), "did": RAD_DID,
+                                                                         "registry": "Validators.radNodeOf(genesis key)"}
+          and rec["constructorArgs"]["Validators"]["validators"]["radNode"] == "0x" + RAD_KEY.hex(),
+          f"the genesis validator's Radicle node ({RAD_DID[:20]}…) is signed into its registration and on-chain "
+          "(radNodeOf), and the record names it")
     check(rec["network"] == ("sepolia" if chain == 11_155_111 else "local"), "the record names the network")
     coin_checks(rec, recipient, total)
     if chain != 11_155_111:

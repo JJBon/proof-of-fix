@@ -442,7 +442,7 @@ contract ValidatorsV3Test is ValidatorsSetup {
                 "recordShadow,scoreShadow,recordCounted,verdictOpened,verdictFinal,challengeOpened,challengeClosed,",
                 "slashFault,adrPassed,",
                 // views
-                "isActive,isDrawable,canShadow,validator,progress,familyOf,validatorCount,validatorAt,candidateCount,",
+                "isActive,isDrawable,canShadow,validator,progress,familyOf,radNodeOf,validatorCount,validatorAt,candidateCount,",
                 "candidateAt,tierStep,tierOf,eligibleCount,eligibleAt,rosterLength,rosterEntry,bucketSize,groups,domainSeparator,",
                 "registrationDigest,statementDigest,coin,pool,panels,epoch,activeCount,totalBonds,totalOwed,poolOwed,",
                 "genesisKey,owed,acceptedProofType,acceptedTeeType,allowedImage,equivocationProven,",

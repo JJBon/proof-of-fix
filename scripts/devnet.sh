@@ -197,7 +197,8 @@ deploy_v2() {
 
 # v3 beside v2 (#140 task 5.1; design D18): contracts/script/NodeV3Local.s.sol, with its test values and a coin anyone
 # can mint, for one repository (#251 L1: the script's default RID and genesis head). Its windows are production's
-# unless DEVNET_V3_WINDOWS=minutes (every hour a minute, #251 L4); the record lists them. The `simulated` proof type
+# unless DEVNET_V3_WINDOWS=minutes (every hour a minute, #251 L4); the record lists them. DEVNET_V3_GENESIS_RAD_NODE,
+# a bytes32, is the genesis validator's Radicle node key (#251 L11; default 0: no node). The `simulated` proof type
 # is accepted on chains 31337 and 7193 only, so this is a devnet's deployment and nothing else's; the AWS devnet's
 # (task 5.2) is not written yet, and remote mode refuses.
 deploy_v3() {
@@ -213,7 +214,8 @@ deploy_v3() {
   # Both keys go in on stdin: never on a command line or in the output.
   printf '%s\n%s\n' "$deployer" "$DEVNET_V3_GENESIS_PK" | in_devnet -e LOCAL_ATTESTATION="$DEVNET_V3_ATTESTATION" \
     -e LOCAL_FAMILIES="${DEVNET_V3_FAMILIES:-fake}" -e LOCAL_RECORD="${RECORD_V3#contracts/deployments/}" \
-    -e LOCAL_BESIDE="$beside" -e LOCAL_WINDOWS="${DEVNET_V3_WINDOWS:-production}" "$NAME" sh -c \
+    -e LOCAL_BESIDE="$beside" -e LOCAL_WINDOWS="${DEVNET_V3_WINDOWS:-production}" \
+    -e LOCAL_GENESIS_RAD_NODE="${DEVNET_V3_GENESIS_RAD_NODE:-0x$(printf '0%.0s' {1..64})}" "$NAME" sh -c \
     'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK
      forge script script/NodeV3Local.s.sol:NodeV3LocalScript --rpc-url '"$RPC"' --broadcast --private-key "$PK" --slow' \
     | sed -n '/== Logs ==/,/^$/p'

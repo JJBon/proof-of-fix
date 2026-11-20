@@ -25,6 +25,13 @@ interface IPoolFund {
 /// its operator account. Nobody co-signs. The record is public and the family never changes: another family is
 /// another key (D6, gap 17). The attestation itself is checked off-chain by the drawn panel (design, Non-goals).
 ///
+/// The Radicle node key (#251, design L11 condition 1, owner 2026-11-20): each registration signs its node's Ed25519
+/// public key (`radNode`), stored in the record and readable by anyone (`radNodeOf`, the `Registered` event's indexed
+/// topic), so a seat maps to one node and `verify-delegates` reads it from the chain. 0 names no node: the validator
+/// still judges, but its seat isn't counted as a delegate. A node key held by another registration that isn't leaving
+/// or exited is refused (`NodeTaken`); once that one leaves, the key is free again. There is no setter: a validator
+/// changes its node by registering again (a new key, after leaving with the old one).
+///
 /// Lists (D6, D10, D11, D18; task 3.4): the accepted proof types, TEE types (each with its minimum firmware level),
 /// checker image digests and zkTLS notaries. The genesis lists them (no notary, no zkTLS); after that only an ADR the
 /// constitution tier passed changes them (`applyAdr`, from Panels' `adrPassed` at the ADR's finality: REMOVAL_WINDOW
@@ -123,7 +130,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     bytes32 internal constant DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant REGISTRATION_TYPEHASH = keccak256(
-        "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)"
+        "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware,bytes32 radNode)"
     );
     bytes32 public constant STATEMENT_TYPEHASH = keccak256("Statement(bytes32 subject,bytes32 content)");
     bytes32 public constant REATTESTATION_TYPEHASH =
@@ -229,9 +236,19 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     address[][TIERS] internal _roster;
     mapping(address key => uint8) internal _rostered; // tiers 0 .. _rostered - 1 hold the key
     mapping(address key => uint64) internal _raisedAt;
+    /// The last key registered with each Radicle node key (#251, L11): it holds the node while it isn't leaving or exited.
+    mapping(bytes32 radNode => address key) internal _radHolder;
 
     event Bound(address indexed panels);
-    event Registered(address indexed key, address indexed operator, bool genesis, uint8 level, uint256 bond, Registration r);
+    event Registered(
+        address indexed key,
+        address indexed operator,
+        bool genesis,
+        uint8 level,
+        uint256 bond,
+        Registration r,
+        bytes32 indexed radNode
+    );
     event ToppedUp(address indexed key, address indexed from, uint256 amount);
     event Activated(address indexed key);
     event QualificationFailed(address indexed key, uint256 cooldownUntil);
@@ -283,6 +300,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     error NoNotary();
     error BadChange();
     error TeeOnly();
+    error NodeTaken();
 
     constructor(Genesis memory g) {
         LaunchChain.check();
@@ -721,6 +739,13 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         return _v[key].family;
     }
 
+    /// The Radicle node key `key` registered with (#251, L11; specs/radicle-hosting): the 32-byte Ed25519 public key its
+    /// node's did:key names, whatever its state; 0 for none (its seat isn't counted as a delegate) or a key never
+    /// registered. `verify-delegates` reads the seats' nodes here.
+    function radNodeOf(address key) external view returns (bytes32) {
+        return _v[key].radNode;
+    }
+
     function validatorCount() external view returns (uint256) {
         return _keys.length;
     }
@@ -834,7 +859,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
                     r.image,
                     r.host,
                     r.family,
-                    r.firmware
+                    r.firmware,
+                    r.radNode
                 )
             )
         );
@@ -844,6 +870,11 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     function _checkRegistration(Registration memory r) internal view returns (uint8) {
         if (r.key == address(0) || _v[r.key].state != State.None) revert KeyTaken();
         if (r.operator == address(0) || r.host == bytes32(0) || r.family == bytes32(0)) revert BadRegistration();
+        if (r.radNode != bytes32(0)) {
+            // one node per seat (#251, L11): refused while another registration that isn't leaving or exited holds it
+            State h = _v[_radHolder[r.radNode]].state;
+            if (h == State.Candidate || h == State.Active || h == State.BelowFloor) revert NodeTaken();
+        }
         if (!_proofs[r.proofType].on) revert ProofTypeNotAccepted();
         if (!_images[r.image].on) revert ImageNotAllowed();
         if (r.proofType == PROOF_ZKTLS) {
@@ -872,6 +903,8 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         v.host = r.host;
         v.family = r.family;
         v.firmware = r.firmware;
+        v.radNode = r.radNode;
+        if (r.radNode != bytes32(0)) _radHolder[r.radNode] = r.key;
         v.bond = uint128(bond);
         v.registeredAt = uint64(block.timestamp);
         _keys.push(r.key);
@@ -883,7 +916,7 @@ contract Validators is IValidators, ReentrancyGuardTransient {
             _addCandidate(r.key);
         }
         ++epoch;
-        emit Registered(r.key, r.operator, genesis, level, bond, r);
+        emit Registered(r.key, r.operator, genesis, level, bond, r, r.radNode);
     }
 
     function _known(address key) internal view returns (address) {

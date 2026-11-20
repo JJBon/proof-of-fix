@@ -78,6 +78,12 @@ def _static(t: str, value) -> bytes:
         if len(raw) != WORD:
             raise ValueError("bytes32 needs 32 bytes")
         return raw
+    if t.startswith("bytes") and t[5:].isdigit() and 1 <= int(t[5:]) <= 32:  # bytesN: left-aligned, as Solidity
+        n = int(t[5:])
+        raw = value if isinstance(value, bytes) else bytes.fromhex(value[2:] if value.startswith("0x") else value)
+        if len(raw) != n:
+            raise ValueError(f"{t} needs {n} bytes")
+        return raw.ljust(WORD, b"\0")
     raise ValueError(f"unsupported type {t}")
 
 

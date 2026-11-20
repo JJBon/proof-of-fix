@@ -70,6 +70,15 @@ The chain knows a validator by its Ethereum key. Radicle knows a delegate by its
   - each new delegate has published `main` at `Heads.head`;
   - nothing else in the document changes.
 
+**Since 2026-11-20 (owner's choice, #251; condition 1 below):** the binding is a field of the v3 registration instead.
+Each validator signs its node's Ed25519 key (`Registration.radNode`) with the rest of its registration; `Validators`
+stores it (`radNodeOf`), refuses a key another seat still holds (`NodeTaken`), and a validator changes its node by
+registering again. `verify-delegates` and the review read each seat's node from the chain
+(`oracle/delegates.py` `ChainSeatNodes`); a seat registered without one is unmapped and never counted. The spike
+(`scripts/radicle-spike.sh --v3`) registers each seat with its node's key and no binding travels in the identity
+document. The document bindings above stay in `oracle/delegates.py` (`DocumentBindings`) only for a registry from
+before the field.
+
 ## Results per scenario
 
 Every scenario passed in runs 1, 2 and 3.
@@ -261,7 +270,7 @@ Not run. `oracle/keys.py` has one enclave provider, `DstackKeys`, a Phala dstack
 
 **(a), with (b)'s checks as what anyone relies on**, as design L11 proposed, if the owner accepts these conditions:
 
-1. **A validator's Radicle node ID on-chain.** Add it to the v3 registration, signed with the rest. Until then, keep this spike's signed bindings in the identity document. Without one of the two, nobody can check that the delegates are the seats.
+1. **A validator's Radicle node ID on-chain.** Add it to the v3 registration, signed with the rest. Until then, keep this spike's signed bindings in the identity document. Without one of the two, nobody can check that the delegates are the seats. **Built 2026-11-20** (`Registration.radNode`, `Validators.radNodeOf`; the owner chose a registration field over a separate setter or keeping it off-chain).
 2. **Seats = drawable,** with L5's `BelowFloor` built, so the chain's own count agrees.
 3. **Every validator runs a Radicle node,** with the gate (push only `Heads.head`) and the review rule (sign only the revision whose delegates are the seats). This is task 4.1's adapter: a node process, not driver code. Also:
    - one pending revision at a time;

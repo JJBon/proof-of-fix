@@ -492,6 +492,12 @@ class FakeChain:
     def drawAudits(self, sender, s):  # noqa: N802 (the contract's name)
         self.verdicts[s]["auditBlock"] = self.height + 5  # nobody to draw here: it only re-targets, and never refuses
 
+    def drawChallenge(self, sender, s):  # noqa: N802 (the contract's name)
+        v = self.verdicts[s]
+        if not v["challengeOpen"] or v["challengePid"]:
+            _fail("WrongStatus()")
+        # busy validators leave the fresh panel short (L16): it neither draws nor refuses, as the contract's `c.full`
+
     def merge(self, sender, b):
         bt = self.bounty(b)
         a = self.awards[(b, bt["epoch"])]
@@ -956,6 +962,32 @@ class KeeperTableChallenge(unittest.TestCase):
             keeper.tick(0)
         self.assertEqual(c.names().count("drawAudits"), 2 * node_v3.AUDIT_TRIES)
 
+    def test_the_keeper_doesnt_redraw_a_challenge_forever(self):
+        """drawChallenge succeeds without drawing while busy validators leave its fresh panel short (L16), so the keeper
+        tries it a few times per state, not on every pass: on the devnet a keeper that called it every pass made
+        progress forever, and the run's clock never moved on to free the capacity it waited for."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.verdicts[1].update(challengeOpen=True, challengeBlock=c.height, challengeEpoch=0)
+        keeper = net.node(3, keeper=True)
+        for _ in range(8):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawChallenge"), node_v3.CHALLENGE_TRIES)
+        self.assertFalse(keeper.tick(0))  # nothing left to do: the network is idle, and time can pass
+        c.add_validator(SimKeys(7))  # the registry changed: a fresh panel may be drawable now
+        for _ in range(8):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawChallenge"), 2 * node_v3.CHALLENGE_TRIES)
+        c.warp(c.live["capWindow"])  # a capacity window later the busy validators may have room again
+        for _ in range(8):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawChallenge"), 3 * node_v3.CHALLENGE_TRIES)
+
     def test_a_challenge_is_filed_only_on_a_disagreement(self):
         net = Net(self.tmp, exit_code=1)
         c = net.chain
@@ -1048,6 +1080,45 @@ class Registering(unittest.TestCase):
                                       image=IMAGE)
         self.assertEqual((r.proof_type, r.tee_type, r.attestation, r.level, r.firmware, doc),
                          (v3.PROOF_ZKTLS, v3.ZERO, v3.ZERO, 0, 0, {}))
+
+    def test_the_radicle_node_key_is_signed_with_the_registration(self):
+        """#251, L11: the node key is the registration's last field, in the typehash, the digest and the tuple."""
+        node = bytes(range(32))
+        plain, _ = node_v3.registration(FakeChain(), LocalDevKeys(0), proof="zktls", family="f", host="h", image=IMAGE)
+        r, _ = node_v3.registration(FakeChain(), LocalDevKeys(0), proof="zktls", family="f", host="h", image=IMAGE,
+                                    rad_node=node)
+        self.assertEqual((plain.rad_node, r.rad_node, r.as_tuple()[-1]), (v3.ZERO, node, node))
+        self.assertTrue(v3.REGISTRATION_TYPE.endswith(",uint32 firmware,bytes32 radNode)"))
+        self.assertNotEqual(r.digest(b"d" * 32), plain.digest(b"d" * 32))
+        with self.assertRaises(SetupError):
+            node_v3.registration(FakeChain(), LocalDevKeys(0), proof="zktls", family="f", host="h", image=IMAGE,
+                                 rad_node=b"short")
+
+    def test_the_command_lines_radicle_node(self):
+        """`oracle register --rad-node`: a did:key, a Node ID, hex, `none`, or the node's own `rad self --did`; never a
+        silent default."""
+        from types import SimpleNamespace
+
+        from oracle import delegates
+
+        did = "did:key:z6MkopH5QMoynapxG9Yis4TCpWgyaxQNEBeiL39wqJ2GZCR1"
+        key = delegates.key_from_did(did)
+        self.assertEqual(node_v3.rad_node_arg(did, {}), key)
+        self.assertEqual(node_v3.rad_node_arg(did[len("did:key:"):], {}), key)
+        self.assertEqual(node_v3.rad_node_arg("0x" + key.hex(), {}), key)
+        self.assertEqual(node_v3.rad_node_arg("none", {}), v3.ZERO)
+        seen = []
+
+        def rad(cmd, **kw):
+            seen.append(cmd)
+            return SimpleNamespace(returncode=0, stdout=did + "\n")
+        self.assertEqual(node_v3.rad_node_arg("", {"ORACLE_RADICLE_EXEC": "docker exec -i node"}, run=rad), key)
+        self.assertEqual(seen, [["docker", "exec", "-i", "node", "rad", "self", "--did"]])
+        with self.assertRaises(SetupError) as e:
+            node_v3.rad_node_arg("", {}, run=lambda cmd, **kw: SimpleNamespace(returncode=127, stdout=""))
+        self.assertIn("--rad-node none", str(e.exception))
+        with self.assertRaises(SetupError):
+            node_v3.rad_node_arg("did:key:zNotAnEd25519Key", {})
 
 
 class Transport(unittest.TestCase):

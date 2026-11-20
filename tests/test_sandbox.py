@@ -4,8 +4,9 @@ which is how the node starts it from inside its own container on a validator's i
 The API runner is tested against a fake Docker daemon on a Unix socket. `DockerFromANodeContainer` runs it for real:
 a container standing in for the node (the node image's base, uid 10001, the host's socket, the checkouts at the same
 path) starts the sandbox through the socket, and the sandbox can't reach the network, can't write the fix's code and
-is stopped at its time limit. It runs where a Docker daemon is reachable and already has the pinned test image (no
-pulls in a check); POF_DOCKER_TESTS=1 runs it anyway, POF_DOCKER_TESTS=0 skips it."""
+is stopped at its time limit. It runs where a Docker daemon is reachable and already has the pinned test image (built
+by scripts/test-image.sh; never pulled); POF_DOCKER_TESTS=1 makes a missing image a failure, POF_DOCKER_TESTS=0 skips
+it."""
 
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ import textwrap
 import threading
 import time
 import unittest
+import unittest.mock
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -139,7 +141,10 @@ class DockerApiRunner(unittest.TestCase):
         self.assertEqual((host["PidsLimit"], host["Memory"], host["MemorySwap"], host["NanoCpus"]),
                          (64, 256 * 1024**2, 256 * 1024**2, 10**9))
         self.assertEqual(host["Binds"], [f"{Path('.').resolve()}:/src:ro"])
-        self.assertEqual(host["Tmpfs"], {"/tmp": "rw,noexec,nosuid,size=64m"})
+        self.assertEqual(host["Tmpfs"], {"/tmp": "rw,noexec,nosuid,size=64m",
+                                         "/scratch": "rw,exec,nosuid,nodev,size=64m"})
+        self.assertIn("TMPDIR=/scratch", body["Env"])  # the tests' scratch folder, where a test may run a script
+        self.assertIn("POF_SANDBOX=1", body["Env"])  # what tests/sandbox_env.py reads
         self.assertTrue(host["Init"])  # so the inner time limit's SIGTERM reaches the tests
         self.assertNotIn("Privileged", host)
         self.assertNotIn("User", body)
@@ -148,18 +153,38 @@ class DockerApiRunner(unittest.TestCase):
         cli = run_tests(Path("."), runner=lambda argv: (0, "Ran 1 test\ndone\n", "OK\n"))
         self.assertEqual(run.record(), cli.record())
 
-    def test_pulls_the_pinned_image_when_missing(self):
+    def test_never_pulls_the_test_image(self):
+        # Built here from oracle/test-image/Dockerfile (#251 L21): a missing one is a setup error, never a pull.
         fake = self.fake(have_image=False)
-        DockerApi(fake.path).run_spec(spec_for(Path("."), env={}))
+        with self.assertRaisesRegex(RuntimeError, "isn't here: build it with scripts/test-image.sh"):
+            DockerApi(fake.path).run_spec(spec_for(Path("."), env={}))
+        self.assertFalse([c for c in fake.paths() if c[1].startswith("/v1.41/images/create")])
+        self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
+
+    def test_pulls_another_pinned_image_when_missing(self):
+        fake = self.fake(have_image=False)
+        image = "python@sha256:" + "ab" * 32
+        DockerApi(fake.path).run_spec(spec_for(Path("."), image=image, env={}))
         method, path, _ = fake.calls[2]
         self.assertEqual(method, "POST")
-        name, digest = TEST_IMAGE.split("@")
+        name, digest = image.split("@")
         self.assertEqual(path, f"/v1.41/images/create?fromImage={name}&tag={digest.replace(':', '%3A')}")
+
+    def test_the_test_image_is_pinned_per_platform(self):
+        self.assertEqual(set(sandbox.TEST_IMAGES), {"amd64", "arm64"})
+        for image in sandbox.TEST_IMAGES.values():
+            self.assertRegex(image, r"^pof-test-image@sha256:[0-9a-f]{64}$")
+        self.assertEqual((sandbox._arch("x86_64"), sandbox._arch("aarch64"), sandbox._arch("arm64")),
+                         ("amd64", "arm64", "arm64"))
+        self.assertIn(TEST_IMAGE, sandbox.TEST_IMAGES.values())
+        dockerfile = (ROOT / "oracle/test-image/Dockerfile").read_text()
+        self.assertRegex(dockerfile, r"\nFROM python@sha256:[0-9a-f]{64}\n")  # the base, by digest
+        self.assertIn('"bash=${BASH_VERSION}" "git=${GIT_VERSION}"', dockerfile)  # exactly two packages, pinned
 
     def test_a_failed_pull_fails_the_run(self):
         fake = self.fake(have_image=False, pull_error="manifest unknown")
         with self.assertRaisesRegex(RuntimeError, "manifest unknown"):
-            DockerApi(fake.path).run_spec(spec_for(Path("."), env={}))
+            DockerApi(fake.path).run_spec(spec_for(Path("."), image="python@sha256:" + "ab" * 32, env={}))
         self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
 
     def test_refuses_a_daemon_that_can_t_enforce_limits(self):
@@ -316,11 +341,25 @@ class CliRunner(unittest.TestCase):
         argv = Spec(Path("."), TEST_IMAGE, ("python", "-V")).argv()
         for flag in ("--init", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
                      "--pids-limit", "64", "--memory", "256m", "--cpus", "1", "--tmpfs",
-                     "/tmp:rw,noexec,nosuid,size=64m", f"{Path('.').resolve()}:/src:ro", TEST_IMAGE):
+                     "/tmp:rw,noexec,nosuid,size=64m", "/scratch:rw,exec,nosuid,nodev,size=64m",
+                     "TMPDIR=/scratch", "POF_SANDBOX=1", f"{Path('.').resolve()}:/src:ro", TEST_IMAGE):
             self.assertIn(flag, argv)
         self.assertNotIn("--user", argv)
         self.assertNotIn("--privileged", argv)
         self.assertEqual(argv[-5:], [TEST_IMAGE, "timeout", "300", "python", "-V"])
+
+    def test_never_pulls_the_test_image(self):
+        calls = []
+
+        def run(argv, **kw):
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 1, "", "No such image")
+
+        argv = Spec(Path("."), TEST_IMAGE, ("python", "-V")).argv()
+        with unittest.mock.patch.object(sandbox.subprocess, "run", run):
+            with self.assertRaisesRegex(RuntimeError, "isn't here: build it with scripts/test-image.sh"):
+                sandbox.docker_runner(argv)
+        self.assertEqual(calls, [["docker", "image", "inspect", TEST_IMAGE]])  # no `docker run`, so no pull
 
     def test_the_outer_time_limit_is_a_timeout(self):
         old = sandbox.LIMITS["timeout_s"]
@@ -353,7 +392,7 @@ def docker_ready() -> str:
     except Exception as e:  # no daemon, or no permission on the socket
         return f"Docker isn't reachable: {e}"
     if status != 200 and flag != "1":
-        return "the pinned test image isn't pulled (POF_DOCKER_TESTS=1 pulls it)"
+        return "the pinned test image isn't built (scripts/test-image.sh builds it)"
     return ""
 
 
@@ -378,6 +417,12 @@ NODE_SCRIPT = textwrap.dedent("""
         ("pids", ("python", "-c", "import threading, time; [threading.Thread(target=time.sleep, args=(5,)).start() "
                   "for _ in range(100)]"), 60),
         ("time_limit", ("python", "-c", "import time; time.sleep(120)"), 3),
+        ("exec_tmp", ("sh", "-c", "printf '#!/bin/sh\\necho ran\\n' >/tmp/x && chmod +x /tmp/x && /tmp/x"), 60),
+        ("exec_scratch", ("sh", "-c", "printf '#!/bin/sh\\necho ran\\n' >$TMPDIR/x && chmod +x $TMPDIR/x && $TMPDIR/x"),
+         60),
+        ("scratch_size", ("python", "-c",
+                          "import os; open(os.environ['TMPDIR'] + '/big', 'wb').write(b'x' * (80 << 20))"), 60),
+        ("tools", ("sh", "-c", "git --version && bash -c 'echo bash $BASH_VERSION'"), 60),
     ]:
         started = time.monotonic()
         code, stdout, stderr = runner.run_spec(spec_for(src, command=command, timeout_s=timeout_s))
@@ -449,6 +494,19 @@ class DockerFromANodeContainer(unittest.TestCase):
         self.assertNotIn(str(512 << 20), self.r["memory"]["out"])
         self.assertNotEqual(self.r["pids"]["code"], 0, self.r["pids"])  # 100 threads under a 64-process limit
         self.assertIn("can't start new thread", self.r["pids"]["err"])
+
+    def test_exec_only_in_the_tests_scratch_folder(self):
+        # /tmp stays noexec; the tests' TMPDIR (/scratch) runs a script a test wrote, within its size limit.
+        self.assertNotEqual(self.r["exec_tmp"]["code"], 0, self.r["exec_tmp"])
+        self.assertIn("Permission denied", self.r["exec_tmp"]["err"])
+        self.assertEqual((self.r["exec_scratch"]["code"], self.r["exec_scratch"]["out"].strip()), (0, "ran"),
+                         self.r["exec_scratch"])
+        self.assertNotEqual(self.r["scratch_size"]["code"], 0, self.r["scratch_size"])  # 80 MB in a 64 MB tmpfs
+        self.assertIn("No space left on device", self.r["scratch_size"]["err"])
+
+    def test_the_image_has_git_and_bash(self):
+        self.assertEqual(self.r["tools"]["code"], 0, self.r["tools"])
+        self.assertRegex(self.r["tools"]["out"], r"git version 2\.47\.3\nbash 5\.2\.37")
 
     def test_stopped_at_the_time_limit(self):
         self.assertIn(self.r["time_limit"]["code"], (TIMED_OUT, 143), self.r["time_limit"])

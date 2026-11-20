@@ -11,8 +11,9 @@ What it does:
      panel; it seals in the counted panel's seal window, so before any counted reveal is public;
    - audit: a one-seat panel checking a counted verdict;
    - challenge: a fresh, larger panel, which also names the original judges' false receipts (the mask).
-   For each: the check (the fix's tests in the sandbox and the judge, as in v2; a registration check by the claim
-   rule), a receipt, then its seal, and after the seal window its receipt's hash and its reveal, all on-chain through
+   For each: the check (the fix's tests in the sandbox and the judge, as in v2; a registration check: the issue that
+   claims the registration, on the host or on Radicle, judged a genuine bug report in scope or not), a receipt,
+   then its seal, and after the seal window its receipt's hash and its reveal, all on-chain through
    the `onchain` transport, and its usage report to RaceV3. Seals always go out before reveals in a pass.
 3. Its cost table, once a pricing period: its own shared-unit costs and every family's public list price (D9, D19).
 4. The keeper's calls anyone may make (ORACLE_KEEPER, on by default): draws, replacements, audits, challenge draws,
@@ -39,15 +40,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 
-from . import evidence, receipt as receipts, v2, v3
+from . import delegates, evidence, receipt as receipts, v2, v3
 from .crypto import checksum, keccak256, word
-from .judge import FakeJudge, case_for, refused
+from .judge import MAX_ISSUE_CHARS, case_for, refused, refused_registration, registration_case
 from .models import ModelError
 from .node_v2 import CHECKER_IMAGE, NodeV2, same
 from .rpc import Reverted, Unavailable
 from .sandbox import TestRun, nothing_ran
 
 RECEIPT_VERSION = "pof-receipt-v3-1"
+REFUSED_BACKEND = "node:evidence-refused"  # oracle/judge.py `refused`: no model call, the reason in its answer
 EVIDENCE_VERSION = "pof-challenge-evidence-1"
 REGISTRATION_NOTE = b"proof-of-fix v3 registration"
 QUOTE_KINDS = {v3.PROOF_SIMULATED: "dstack-simulator", v3.PROOF_TEE: "dstack-tdx"}
@@ -61,6 +63,7 @@ LIST_NAMES = {"anthropic": "anthropic/claude", "openai": "openai/gpt", "google":
 SEAL_MARGIN_S = 600.0  # a check that still can't be run this long before the seal deadline is sealed as not passed
 REPORT_WINDOW_S = 86400  # RaceV3's REPORT_WINDOW: a panel is paid without the reports missing after it
 AUDIT_TRIES = 3  # drawAudits calls per state of the registry while no auditor can be drawn
+CHALLENGE_TRIES = 3  # drawChallenge calls per state of the challenge, the registry and the capacity window
 GIVE_UP = 50  # a keeper's once-only call refused this often is left to others
 
 
@@ -221,6 +224,9 @@ class NodeV3(NodeV2):
         self._tries: dict = {}
         self._kept: set = set()
         self._live: dict | None = None
+        self.fixes = None  # a Radicle fix source (oracle/radicle_v3.py, #251 task 4.2); None: the host's pull requests
+        self.claims = None  # the registrations' Radicle issues (radicle_v3.RadicleIssues, task 4.3); None: the host's
+        self.radicle_seat = None  # model (a) on this node's Radicle node (#251 task 4.1); None: nothing on Radicle
 
     # ---------- setup ----------
 
@@ -299,7 +305,20 @@ class NodeV3(NodeV2):
             self._say(("table", e.reason), f"table: the chain refused it ({e.reason}); trying again")
         if self.keeper:
             progress |= self._keep(from_block, now)
+        if self.radicle_seat is not None:
+            progress |= self._radicle()
         return progress
+
+    def _radicle(self) -> bool:
+        """The seat's pass on Radicle (oracle/radicle_v3.py): `Heads.head` as its `main`, the identity following the
+        seats. A Radicle node that doesn't answer is logged (once per message) and tried again next pass."""
+        from . import radicle as rad
+
+        try:
+            return self.radicle_seat.tick()
+        except rad.Unavailable as e:
+            self._say(("radicle", str(e)), f"Radicle: {e}; trying again")
+            return False
 
     def _advance(self, r: Round, step, now: int) -> bool:
         st = self._state(r)
@@ -422,23 +441,33 @@ class NodeV3(NodeV2):
         onchain = self.chain.issue(issue_id)
         profile = self.chain.profile(onchain["repo"])
         if sub["bounty"] == 0:
-            answer, tests, fix_tree, seconds = self._registration(issue_id, onchain, late)
-        else:
-            answer, tests, fix_tree, seconds = self._fix(s, sub, issue_id, onchain, late,
-                                                         timeout_s=profile.get("timeoutSeconds"))
+            answer, read = self._registration(issue_id, onchain, late)
+            return self._receipt(s, sub, p, answer, _no_run(), "", 0.0, profile, seat, read=read)
+        answer, tests, fix_tree, seconds = self._fix(s, sub, issue_id, onchain, late,
+                                                     timeout_s=profile.get("timeoutSeconds"))
         return self._receipt(s, sub, p, answer, tests, fix_tree, seconds, profile, seat)
 
     def _fix(self, s: int, sub: dict, issue_id: int, onchain: dict, late: bool, timeout_s: int | None = None) -> tuple:
         """(the answer, the test runs, the fix's commit, the runs' seconds summed). The tests run on the fix's tree, or
         with protected paths on a run tree with the base's copies (#251 L20), twice each, within the profile's one time
-        limit `timeout_s` (L22)."""
-        pull = self._find_pull(s, sub)
+        limit `timeout_s` (L22). The fix comes from the repository host's pull requests, or with a Radicle fix source
+        (#251 task 4.2) from the patches on this node's own Radicle node."""
+        if self.fixes is not None:
+            pull, missing, stale = self._find_patch(s, sub)
+        else:
+            pull, stale = self._find_pull(s, sub), ""
+            missing = "no pull request opened the sealed commitment before the seal deadline" if pull is None else ""
         if pull is None:
             if not late:
-                raise evidence.NotReady(f"no pull request opens submission {s}'s sealed commitment yet")
-            why = "no pull request opened the sealed commitment before the seal deadline"
-            self.log(f"submission {s}: not passed: {why}")
-            return refused(case_for(self.repo_name, "", "", ""), _no_run(), why), _no_run(), "", 0.0
+                raise evidence.NotReady(missing if self.fixes is not None else
+                                        f"no pull request opens submission {s}'s sealed commitment yet")
+            self.log(f"submission {s}: not passed: {missing}")
+            return refused(case_for(self.repo_name, "", "", ""), _no_run(), missing), _no_run(), "", 0.0
+        if stale:  # a revision on another base than Heads.head: refused now, its tests not run (S1)
+            self.log(f"submission {s}: not sent to the model, and not passed: {stale}")
+            title = pull.get("title", "")
+            answer = refused(case_for(self.repo_name, title, title, ""), _no_run(), stale)
+            return answer, _no_run(), pull["head_sha"], 0.0
         c = SimpleNamespace(pull=pull, bounty=sub["bounty"], submission=s)
         case, refusal = self._case(c, onchain, issue_id)
         project, protected, why = self._test_config(pull)
@@ -449,6 +478,48 @@ class NodeV3(NodeV2):
             self.log(f"submission {s}: not sent to the model, and not passed: {refusal}")
         answer = refused(case, tests, refusal) if refusal else self.judge.judge(case, tests)
         return answer, tests, pull["head_sha"], seconds
+
+    def _find_patch(self, s: int, sub: dict) -> tuple:
+        """The fix as a Radicle patch (#251 L12, task 4.2): (the revision, or None; why it isn't available, or "";
+        why it's refused, or ""). Among the patches on this node's own Radicle node (synced first), the revision whose
+        description claims the submission and whose head commit, base and salt open its commitment,
+        keccak256(abi.encode(fix, base, salt, solver)); refused unless its base is `Heads.head` (stale, S1); then its
+        commit fetched from this node's own storage, verified and read-only (oracle/fetch.py)."""
+        from bot import logic
+
+        from . import fetch
+        from . import radicle as rad
+
+        try:
+            revisions, sync_error = self.fixes.revisions()
+        except rad.Unavailable as e:
+            return None, f"the fix wasn't available: this node's Radicle copy couldn't be read ({e})", ""
+        if sync_error:
+            self._say(("rad sync", sync_error), f"submission {s}: Radicle: {sync_error}; reading this node's own copy")
+        head = rad.sha_of(self.chain.head())
+        for pr in revisions:
+            cl = logic.claim(pr["body"])
+            if cl is None or cl.submission != s or cl.bounty != sub["bounty"] or not same(cl.solver, sub["solver"]):
+                continue
+            where = f"patch {pr['patch'][:7]} revision {pr['revision'][:7]}"
+            if not (fetch.SHA.match(pr["head_sha"]) and fetch.SHA.match(pr["base_sha"])):
+                self._say((s, "refused", pr["revision"]), f"submission {s}: {where} has no head or base commit; "
+                                                          f"refused")
+                continue
+            fix, base = v2.commit_word(pr["head_sha"]), v2.commit_word(pr["base_sha"])
+            if v3.fix_commitment(fix, base, bytes.fromhex(cl.salt[2:]), cl.solver) != v3.b32(sub["commitment"]):
+                self._say((s, "refused", pr["revision"]), f"submission {s}: {where} doesn't open its seal; refused")
+                continue
+            found = {**pr, "fix": fix, "base": base}
+            if pr["base_sha"] != head:
+                return found, "", (f"its {where} is based on {pr['base_sha'][:12]}, not on Heads.head {head[:12]} "
+                                   f"(a stale base: the merge would revert, S1)")
+            if not fetch.ensure(self.src_root, pr, fix, getattr(self, "fetcher", None)):
+                return None, (f"the fix wasn't available: commit {pr['head_sha'][:12]} of {where} couldn't be fetched "
+                              f"from this node's Radicle copy"), ""
+            return found, "", ""
+        return None, ("the fix wasn't available: no patch revision on this node's Radicle copy opens the sealed "
+                      "commitment"), ""
 
     def _find_pull(self, s: int, sub: dict):
         """The pull request whose body claims the submission and whose head commit and salt open its commitment:
@@ -478,27 +549,79 @@ class NodeV3(NodeV2):
         return None
 
     def _registration(self, issue_id: int, onchain: dict, late: bool) -> tuple:
-        """A registration check, by v2's rule (#210): it passes when a labelled issue on the repository host validly
-        claims the registration. With the fake judge only, as in v2: a model's registration check isn't designed
-        yet (#160), and until it is such a node stays silent on these (which costs it the silence slash)."""
+        """A registration check (#251 task 4.3): (the answer, what was read, for the receipt). The issue that validly
+        claims the registration is found (`_claimed_issue`: on this node's Radicle node with a Radicle issue source,
+        L12, else v2's labelled issue on the host, #210), then the judge decides whether it's a genuine bug report in
+        the repository's scope (oracle/judge.py's registration prompt; the fake labels by the claim). When no issue
+        can be read for it, NotReady until the seal margin, then a failing seal whose receipt says why: never silence.
+        A judge with no registration check, or a model that doesn't answer, raises ModelError (as for a fix)."""
+        issue, comment, read, missing = self._claimed_issue(issue_id, onchain)
+        if issue is None:
+            if not late:
+                raise evidence.NotReady(missing)
+            self.log(f"registration {issue_id}: not passed: {missing}")
+            case = registration_case(self.repo_name, "", refusal=missing)
+            reads = getattr(self.judge, "reads_evidence", True)
+            answer = refused_registration(case, missing) if reads else self.judge.registration(case)
+            return answer, read
+        from . import radicle_v3 as RV
+
+        text = RV.issue_text(issue)
+        where = (f"Radicle issue {issue['id']}" if read["source"] == "radicle" else f"issue #{issue['id']}")
+        notes = [f"The node's check: registration {issue_id} on-chain has reporter {onchain['reporter']}, and {where} "
+                 f"carries its claim (comment {comment['id']}). The claim is valid; judge the issue itself."]
+        if read["claims"] > 1:
+            notes.append(f"{read['claims']} issues claim it; the one with the lowest id is shown.")
+        if len(text) > MAX_ISSUE_CHARS:
+            notes.append(f"The issue's text was cut at {MAX_ISSUE_CHARS} of its {len(text)} characters.")
+        case = registration_case(self.repo_name, text[:MAX_ISSUE_CHARS], notes=tuple(notes))
+        ask = getattr(self.judge, "registration", None)
+        if ask is None:
+            raise ModelError(f"this judge ({type(self.judge).__name__}) has no registration check")
+        answer = ask(case)
+        verdict = "a genuine bug report in scope" if answer.solves else "not a genuine bug report in scope"
+        self.log(f"registration {issue_id}: {where} judged {verdict} ({answer.model})")
+        return answer, read
+
+    def _claimed_issue(self, issue_id: int, onchain: dict) -> tuple:
+        """(the issue that validly claims registration `issue_id` as radicle_v3.issue_view gives it, or None; the
+        comment carrying its claim; what was read, for the receipt; why there's none, or ""). With a Radicle issue
+        source the issues on this node's own Radicle node (synced first; a failed sync logged and the copy read);
+        otherwise the host's labelled issues, by v2's first-claim rule (bot/logic)."""
         from bot import logic
 
-        if not isinstance(self.judge, FakeJudge):
-            raise ModelError("registration checks with a model judge aren't supported yet")
-        issues = evidence.host_call(self.host.issues, "all", logic.LABEL)
-        claim = logic.first_valid_claim(issues, {"id": issue_id, "reporter": onchain["reporter"],
-                                                 "repo": onchain["repo"]}, self._repo_id(), logic.LABEL)
-        if claim is None and not late:
-            raise evidence.NotReady(f"registration {issue_id} isn't claimed by a labelled issue yet")
-        why = (f"issue #{claim} validly claims registration {issue_id}" if claim is not None else
-               f"no labelled issue claimed registration {issue_id} before the seal deadline")
-        text = json.dumps({"solves": claim is not None, "probability": 1 if claim is not None else 0,
-                           "constitutional": True, "reason": why, "evidence": []})
-        from .judge import Answer
+        from . import radicle as rad
+        from . import radicle_v3 as RV
 
-        model = f"fake-judge-{self.judge.family}" + ("-lying" if self.judge.lie else "")
-        solves = (claim is not None) != self.judge.lie
-        return Answer(solves, model, "fake", f"registration check: issue {issue_id}", text), _no_run(), "", 0.0
+        want = {"id": issue_id, "reporter": onchain["reporter"], "repo": onchain["repo"]}
+        if self.claims is None:
+            issues = evidence.host_call(self.host.issues, "all", logic.LABEL)
+            number = logic.first_valid_claim(issues, want, self._repo_id(), logic.LABEL)
+            read = {"source": "host", "issues_read": len(issues)}
+            if number is None:
+                return None, None, read, f"no labelled issue on the host claims registration {issue_id}"
+            found = next(i for i in issues if i["number"] == number)
+            body = str(found.get("body") or "")
+            issue = {"id": str(number), "title": str(found.get("title") or ""),
+                     "state": str(found.get("state") or "open"), "labels": [],
+                     "comments": [{"id": str(number), "author": "", "body": body}]}
+            return issue, issue["comments"][0], {**read, **_read_of(issue, issue["comments"][0], 1)}, ""
+        try:
+            issues, sync_error = self.claims.issues()
+        except rad.Unavailable as e:
+            return None, None, {"source": "radicle"}, (f"the issue wasn't available: this node's Radicle copy couldn't "
+                                                       f"be read ({e})")
+        if sync_error:
+            self._say(("rad sync issues", sync_error),
+                      f"registration {issue_id}: Radicle: {sync_error}; reading this node's own copy")
+        issue, comment, count, problems = RV.find_claim(issues, want, self._repo_id(), self.chain.chain_id(),
+                                                        self.chain.race)
+        read = {"source": "radicle", "issues_read": len(issues)}
+        if issue is None:
+            why = (f"no signed claim: no Radicle issue on this node's copy carries a claim of registration {issue_id} "
+                   f"signed by its reporter for this issue")
+            return None, None, read, why + (f" ({'; '.join(problems[:3])})" if problems else "")
+        return issue, comment, {**read, **_read_of(issue, comment, count)}, ""
 
     def _repo_id(self) -> bytes:
         """The repository a registration must name: the configured one, else the deployment's own (v3 serves exactly
@@ -506,7 +629,7 @@ class NodeV3(NodeV2):
         return self.repo_id if self.repo_id != v3.ZERO else self.chain.repo()
 
     def _receipt(self, s: int, sub: dict, p: dict, answer, tests: TestRun, fix_tree: str, seconds: float,
-                 profile: dict, seat: tuple | None = None) -> Judgement:
+                 profile: dict, seat: tuple | None = None, read: dict | None = None) -> Judgement:
         val = self.me()
         proof_type = v3.b32(val["proofType"])
         where = (v3.ZERO,) * 4
@@ -539,6 +662,10 @@ class NodeV3(NodeV2):
                                usage=getattr(answer, "usage", None), inference=getattr(answer, "inference", None))
         doc = {"version": RECEIPT_VERSION, "onchain": onchain.to_json(), "vote": bool(answer.solves),
                "receipt": inner, "proof": shown}
+        if answer.backend == REFUSED_BACKEND:  # no judge read it: the receipt says why (e.g. the fix wasn't available)
+            doc["refused"] = str(json.loads(answer.response).get("reason", ""))
+        if read is not None:  # a registration check: where its issue was read, and the hashes of what was read
+            doc["registration"] = read
         h = self.receipts3.put(doc)
         usage = v2.measured_usage(h, answer.prompt, answer.response, seconds, profile["milliVcpus"],
                                   profile["memoryMb"], len(receipts.canonical(doc)), getattr(answer, "usage", None))
@@ -636,7 +763,15 @@ class NodeV3(NodeV2):
                     # audits nobody could take for STUCK_GRACE: the round is released (L19), the audit drawn afresh
                     progress |= self._call(c.panels, "releaseAudits(uint256)", s)
                 if v["challengeOpen"] and v["challengePid"] == 0 and block > v["challengeBlock"]:
-                    progress |= self._call(c.panels, "drawChallenge(uint256)", s)
+                    # drawChallenge succeeds without drawing while busy validators leave the fresh panel short (L16:
+                    # retried from the same seed once they have room), so a success isn't progress by itself. A few
+                    # tries per state of the challenge (its seed block and wait), of the registry, and per capacity
+                    # window (room comes back with time), never every pass.
+                    tried = ("challenge", s, v["challengeBlock"], v.get("challengeEpoch", 0), c.epoch(),
+                             now // max(self._liveness()["capWindow"], 1))
+                    if self._tries.get(tried, 0) < CHALLENGE_TRIES:
+                        self._tries[tried] = self._tries.get(tried, 0) + 1
+                        progress |= self._call(c.panels, "drawChallenge(uint256)", s)
                 if (st == v3.WINDOW and now >= v["finalAt"] and not v["challengeOpen"] and v["auditDecided"]
                         and v["auditsDone"] >= v["auditsDue"]):
                     progress |= self._call(c.panels, "finalize(uint256)", s)
@@ -720,7 +855,7 @@ class NodeV3(NodeV2):
         return self._call(c.race, "merge(uint256)", b, once=True)
 
     def _liveness(self) -> dict:
-        """Panels' L19 values (read once): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS."""
+        """Panels' L19 and L16 values (read once): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS, CAP_WINDOW."""
         if self._live is None:
             self._live = self.chain.liveness()
         return self._live
@@ -758,6 +893,16 @@ class NodeV3(NodeV2):
         return ev
 
 
+def _read_of(issue: dict, comment: dict, claims: int) -> dict:
+    """What a registration check read, for its receipt: the issue and the comment carrying the claim, the sha256 of the
+    issue's whole text (radicle_v3.issue_text) and of the claim's text, and how many issues validly claimed it."""
+    from . import radicle_v3 as RV
+
+    return {"issue": issue["id"], "claim": comment["id"], "claims": claims,
+            "issue_sha256": hashlib.sha256(RV.issue_text(issue).encode()).hexdigest(),
+            "claim_sha256": hashlib.sha256(comment["body"].encode()).hexdigest()}
+
+
 def _no_run() -> TestRun:
     """A check with no fix to test: nothing ran."""
     return nothing_ran()
@@ -773,13 +918,17 @@ def _quote_hint(proof: bytes, kind: str) -> str:
 # ---------- register and leave ----------
 
 def registration(chain: v3.Chain, keys, *, proof: str, family: str, host: str, image: bytes, operator: str = "",
-                 tee_type: str = "", level: int = v3.LEVEL_A, firmware: int = 0) -> tuple:
+                 tee_type: str = "", level: int = v3.LEVEL_A, firmware: int = 0, rad_node: bytes = v3.ZERO) -> tuple:
     """(the registration this key would sign, its attestation's document). For a TEE and for `simulated` the
-    attestation is the hash of a quote over this key and registry; zkTLS has none."""
+    attestation is the hash of a quote over this key and registry; zkTLS has none. `rad_node`: the validator's
+    Radicle node key (32 bytes, Ed25519; #251, L11), signed with the rest; ZERO for none (its seat is then never
+    counted as a delegate)."""
     me, proof_type = keys.address(), v3.PROOFS[proof]
+    if len(rad_node) != 32:
+        raise SetupError("a Radicle node key has 32 bytes (the Ed25519 public key its did:key names)")
     if proof_type == v3.PROOF_ZKTLS:
         return (v3.Registration(me, operator or me, proof_type, v3.ZERO, 0, v3.ZERO, image, v3.name_id(host),
-                                v3.name_id(family), 0), {})
+                                v3.name_id(family), 0, rad_node), {})
     q = keys.quote(keccak256(REGISTRATION_NOTE + chain.domain() + v3.address_word(me)))
     if q.kind != QUOTE_KINDS[proof_type]:
         raise SetupError(_quote_hint(proof_type, q.kind))
@@ -787,8 +936,36 @@ def registration(chain: v3.Chain, keys, *, proof: str, family: str, host: str, i
         raise SetupError("the guest agent gave no quote")
     attestation = keccak256(bytes.fromhex(q.quote))
     r = v3.Registration(me, operator or me, proof_type, v3.name_id(tee_type), level, attestation, image,
-                        v3.name_id(host), v3.name_id(family), firmware)
+                        v3.name_id(host), v3.name_id(family), firmware, rad_node)
     return r, {"kind": q.kind, "quote": q.quote, "report_data": q.report_data}
+
+
+def rad_node_arg(value: str, env, run=None) -> bytes:
+    """The Radicle node key `oracle register` signs (#251, L11): `value` (did:key:z6Mk…, a Node ID z6Mk…, 0x and 64
+    hex digits, or `none`); when empty, the node's own `rad self --did`, through ORACLE_RADICLE_EXEC's prefix. Raises
+    SetupError when neither names one: registering without a node is a choice (`none`), never a default."""
+    import shlex
+    import subprocess
+
+    text = (value or "").strip()
+    if text.lower() == "none":
+        return v3.ZERO
+    if not text:
+        cmd = shlex.split(env.get("ORACLE_RADICLE_EXEC", "")) + ["rad", "self", "--did"]
+        try:
+            out = (run or subprocess.run)(cmd, capture_output=True, text=True, timeout=30)
+            text = out.stdout.strip() if out.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            text = ""
+        if not text:
+            raise SetupError("name this validator's Radicle node: --rad-node did:key:z6Mk… (its `rad self --did`), "
+                             "or ORACLE_RADICLE_EXEC to reach the node; --rad-node none registers without one, and "
+                             "the seat is then never counted as a delegate")
+    try:
+        key = delegates.parse_node(text)
+    except ValueError as e:
+        raise SetupError(f"--rad-node: {e}") from None
+    return key
 
 
 def register(chain: v3.Chain, keys, wallet, bond: int, store_root: Path | None = None, log=print, **what):
@@ -806,8 +983,10 @@ def register(chain: v3.Chain, keys, wallet, bond: int, store_root: Path | None =
         d = Path(store_root) / "v3"
         d.mkdir(parents=True, exist_ok=True)
         (d / f"attestation-{r.attestation.hex()}.json").write_bytes(receipts.canonical(attestation))
-    log(f"registered {r.key} as a candidate (operator {r.operator}, bond {bond / 10**6:,.2f}); it's drawn as a "
-        f"shadow until it qualifies")
+    node = (f"Radicle node {delegates.did_from_key(r.rad_node)}" if any(r.rad_node) else
+            "no Radicle node (its seat won't be counted as a delegate)")
+    log(f"registered {r.key} as a candidate (operator {r.operator}, bond {bond / 10**6:,.2f}, {node}); it's drawn as "
+        f"a shadow until it qualifies")
     return r
 
 

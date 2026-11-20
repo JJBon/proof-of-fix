@@ -110,6 +110,7 @@ class Fetcher:
         self.url, self.protocol = url, check_url(url)
         self._token, self._user = token, user
         self.max_bytes, self.timeout_s, self.retry_s, self.log, self.git = max_bytes, timeout_s, retry_s, log, git
+        self.upload_pack = ""  # a command that reaches the source's git-upload-pack (a Radicle node in a container)
         self._failed: dict = {}  # sha -> when it last failed (monotonic): retried after retry_s, not every pass
         self._files: dict = {}  # "sha:path" -> Blob: a commit's files never change
 
@@ -200,9 +201,14 @@ class Fetcher:
 
     # -- internals
 
+    def _via(self) -> list:
+        """git's --upload-pack when the source is reached through a command (a local file:// source only)."""
+        return ["--upload-pack", self.upload_pack] if self.upload_pack and self.protocol == "file" else []
+
     def _file_at(self, tmp: Path, sha: str, path: str, max_bytes: int) -> Blob:
         self._run(tmp, ["init", "-q"], tmp)
-        self._run(tmp, ["fetch", "-q", "--depth", "1", "--no-tags", "--no-recurse-submodules", "--", self.url, sha], tmp)
+        self._run(tmp, ["fetch", "-q", "--depth", "1", "--no-tags", "--no-recurse-submodules", *self._via(), "--",
+                        self.url, sha], tmp)
         fetched = self._run(tmp, ["rev-parse", "--verify", "FETCH_HEAD^{commit}"], tmp, capture=True)
         if fetched != sha:
             raise FetchRefused(f"the host served commit {fetched[:12]}, not {sha[:12]}")
@@ -223,8 +229,8 @@ class Fetcher:
         self._run(tmp, ["init", "-q"], tmp)
         merge_base = ""
         for depth in DIFF_DEPTHS:
-            self._run(tmp, ["fetch", "-q", "--depth", str(depth), "--no-tags", "--no-recurse-submodules", "--", self.url,
-                            *sorted({sha, base})], tmp)
+            self._run(tmp, ["fetch", "-q", "--depth", str(depth), "--no-tags", "--no-recurse-submodules", *self._via(),
+                            "--", self.url, *sorted({sha, base})], tmp)
             for commit in (sha, base):
                 if self._run(tmp, ["rev-parse", "--verify", f"{commit}^{{commit}}"], tmp, capture=True) != commit:
                     raise FetchRefused(f"the host didn't serve commit {commit[:12]}")
@@ -296,8 +302,8 @@ class Fetcher:
         tmp = Path(tempfile.mkdtemp(prefix=f".fetch-{sha[:12]}-", dir=root))
         try:
             self._run(tmp, ["init", "-q"], tmp)
-            self._run(tmp, ["fetch", "-q", "--depth", "1", "--no-tags", "--no-recurse-submodules", "--", self.url, sha],
-                      tmp)
+            self._run(tmp, ["fetch", "-q", "--depth", "1", "--no-tags", "--no-recurse-submodules", *self._via(), "--",
+                            self.url, sha], tmp)
             fetched = self._run(tmp, ["rev-parse", "--verify", "FETCH_HEAD^{commit}"], tmp, capture=True)
             if fetched != sha:
                 raise FetchRefused(f"the host served commit {fetched[:12]}, not {sha[:12]}")

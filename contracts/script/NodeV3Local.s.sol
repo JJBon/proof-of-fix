@@ -28,6 +28,8 @@ import {RegistryMaker} from "./RegistryMaker.sol";
 /// devnet's (task 5.2 writes that): every value here is a test value, and the coin is one anyone can mint.
 ///   LOCAL_GENESIS_PK      the genesis validator's key: a throwaway test key, it signs its registration here
 ///   LOCAL_ATTESTATION     the genesis validator's attestation hash (the node's simulated quote, hashed)
+///   LOCAL_GENESIS_RAD_NODE the genesis validator's Radicle node key, bytes32 (the Ed25519 key its did:key names;
+///                         #251, L11). Default 0: no node, its seat isn't counted as a delegate
 ///   LOCAL_FAMILIES        the model families priced from the start, comma-separated names (hashed); the first
 ///                         is the genesis validator's. Default "fake". A family not priced isn't drawn (D19), and a
 ///                         network this small can't price a new one (it takes three tables from other families)
@@ -97,7 +99,8 @@ contract NodeV3LocalScript is Script {
             image: IMAGE,
             host: keccak256("genesis-host"),
             family: family,
-            firmware: 0
+            firmware: 0,
+            radNode: vm.envOr("LOCAL_GENESIS_RAD_NODE", bytes32(0))
         });
         g.signatures = new bytes[](1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest(maker.next(), g.validators[0]));
@@ -179,6 +182,8 @@ contract NodeV3LocalScript is Script {
             vm.toString(race.getConfig().judgeFee),
             ', "genesis": "',
             vm.toString(key),
+            '", "genesisRadNode": "',
+            vm.toString(reg.radNodeOf(key)),
             '"',
             binding,
             "}"
@@ -235,7 +240,7 @@ contract NodeV3LocalScript is Script {
         bytes32 h = keccak256(
             abi.encode(
                 keccak256(
-                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)"
+                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware,bytes32 radNode)"
                 ),
                 r.key,
                 r.operator,
@@ -246,7 +251,8 @@ contract NodeV3LocalScript is Script {
                 r.image,
                 r.host,
                 r.family,
-                r.firmware
+                r.firmware,
+                r.radNode
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domain, h));

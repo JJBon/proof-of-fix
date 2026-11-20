@@ -26,7 +26,8 @@ The story, in order (each step needs the one before):
    submissions that waited meanwhile were shadowed; a check judged by a panel of 3 is final after its window;
 3. a waiting bounty (task 5.1, second bullet): that registration's bounty opens, is funded above k = 1's limit, and a
    fix is sealed: it waits (only the genesis validator's bond covers that bounty), shadowed by candidates, until two
-   validators top up their bonds; then it is drawn with k = 3, judged, won and claimed;
+   validators top up their bonds; then it is drawn with k = 3, judged, won and claimed (a third tops up after the draw,
+   so the verdict's random audit, if due, has an auditor outside its panel);
 4. a silent judge (scenario 4): a drawn validator never answers on its seat; it is slashed for silence and replaced
    from the same sample, and the panel still decides with k verdicts and k usage reports;
 5. k reaches 5: two more candidates qualify, and a check is judged by a counted panel of 5;
@@ -251,6 +252,7 @@ class Net(Run):
         self.live_values: dict | None = None  # Panels' L19 values, read once (jump)
         self.names: dict = {}
         self.next_index = 1
+        self.rad_nodes: dict = {}  # name -> its Radicle node key (32 bytes); the spike sets its nodes' real keys
 
     def account(self, name: str) -> Wallet:
         w = Wallet(self.rpc, int.from_bytes(crypto.keccak256(f"pof devnet v3 e2e {name}".encode()), "big") % crypto.N or 1,
@@ -291,14 +293,21 @@ class Net(Run):
         text = " ".join(str(a) for a in argv)
         return (1, "", "1 failed") if any(sha in text for sha in self.bad) else (0, "ok", "")
 
+    def rad_node(self, name: str) -> bytes:
+        """The Radicle node key `name` registers with (#251, L11): its node's, when the run has real nodes; otherwise a
+        stand-in key of its own (no Radicle node runs in this suite; the registry only needs 32 distinct bytes)."""
+        return self.rad_nodes.get(name) or crypto.keccak256(f"pof devnet v3 radicle node {name}".encode())
+
     def join(self, i: int, bond: int = 100) -> Node:
-        """Validator v<i> registers as a candidate: its own family, host and operator, bonded, signed by its key."""
+        """Validator v<i> registers as a candidate: its own family, host, operator and Radicle node key, bonded, signed
+        by its key."""
         name = f"v{i}"
         keys = keys_for(self.sim, name)
         self.fund(keys.address(), 5_000)
         node_v3.register(self.chain, keys, Wallet(self.rpc, keys.account_secret(), name), bond * COIN,
                          self.work / "receipts", log=self.log(name), proof="simulated", family=FAMILIES[i],
-                         host=f"host-{i}", image=v2.DEVNET_IMAGE, tee_type=TEES[i % 3])
+                         host=f"host-{i}", image=v2.DEVNET_IMAGE, tee_type=TEES[i % 3],
+                         rad_node=self.rad_node(name))
         self.nodes[name] = self.make_node(name, FAMILIES[i])
         return self.nodes[name]
 
@@ -620,6 +629,8 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
         n.join_next()
     check(all(c.validator(n.nodes[f"v{i}"].address)["state"] == v3.CANDIDATE for i in (1, 2, 3)),
           "v1, v2 and v3 registered as candidates (bonded 100 each, signed by their keys, their own families and hosts)")
+    check(all(c.rad_node_of(n.nodes[f"v{i}"].address) == n.rad_node(f"v{i}") for i in (1, 2, 3)),
+          "each registration signed its validator's Radicle node key, and the registry holds it (radNodeOf, #251 L11)")
     n.start = max(rpc.block() - 20, 0)
 
     issue1, s1 = n.register_issue()
@@ -768,6 +779,15 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
           f"it was drawn with k = 3 ({n.named(P.drawn(s_b))}) {(n.when(drawn_log) - topped_at) / 60:,.0f} minutes "
           f"after the top-ups (it had waited {hours(topped_at - waited_at)} for them), and passed")
     check(n.bounty_state(b1) == WON and c.bounty(b1)["winner"] == s_b, f"bounty {b1} is won by submission {s_b}")
+    # A counted verdict is audited at random (AUDIT_RATE_BPS: one k = 3 verdict in ten) by a validator outside its
+    # panel and bonded for its bounty. With only its three judges bonded nobody could take that audit, and L19 released
+    # the good fix's verdict (refunded, never merged) after MAX_REDRAWS rounds of STUCK_GRACE: step 9 failed whenever
+    # its audit fell due. A fourth validator bonded after the draw is the auditor it may need.
+    n.top_up("v3", need)
+    v_b = c.verdict(s_b)
+    check(n.eligible(judged) == 4,
+          f"v3 topped its bond up too, after the draw: an auditor outside the panel is eligible for it if its random "
+          f"audit falls due (audits due: {v_b['auditsDue'] if v_b['auditDecided'] else 'not decided yet'})")
     genesis_head = c.head()
     n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b1, *opening)
     claimed_at = c.now()
@@ -1015,7 +1035,7 @@ def protected_tests(n: Net) -> dict:
     """Step 10 (#251 L20): real fixes, real tests in the Docker sandbox, judged by the network's panels."""
     c = n.chain
     if subprocess.run(["docker", "image", "inspect", sandbox.TEST_IMAGE], capture_output=True).returncode:
-        raise AssertionError(f"the pinned test image isn't here ({sandbox.TEST_IMAGE}); nothing is pulled by this run")
+        raise AssertionError(f"the pinned test image isn't here ({sandbox.TEST_IMAGE}); build it: scripts/test-image.sh")
     repo = ProtectedRepo(n.work / "protected-repo")
     broken = STATS.format(median=GOOD_MEDIAN).replace("sum(xs) / len(xs)", "0")  # median fixed, mean broken
     weakened = repo.fix({"stats.py": broken, "test_issue.py": ISSUE_TEST, "tests/test_stats.py": WEAK_TEST},

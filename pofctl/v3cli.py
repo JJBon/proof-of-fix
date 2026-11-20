@@ -9,6 +9,7 @@ and the solver of a v3 race whose one repository lives on Radicle, as they play 
     pofctl --v3 claim --bounty B --patch <c> --base <c> --salt 0x…   the winner opens its seal
     pofctl --v3 merge --bounty B                        at finality, anyone moves Heads to the fix (L9)
     pofctl --v3 verify-head [--rid … --rad-exec …]      Radicle's canonical main is Heads.head
+    pofctl --v3 verify-delegates [--rid … --rad-exec …] the identity's delegates are the seats' nodes on-chain
     pofctl --v3 checkout [--rid … --rad-exec …]         the commit Heads.head names, from any namespace
     pofctl --v3 withdraw --role solver                  the refunded deposits' rest and other credit, to the wallet
     pofctl faucet [--when]                              claim 20 test coins for your key (one claim every 2 hours)
@@ -288,14 +289,26 @@ def cmd_status(ctx, a) -> tuple:
 def cmd_register(ctx, a) -> tuple:
     """A Radicle issue registered on-chain: the registration fee, the issue stake and its registration check's
     deposit. The check reads the Radicle issue's claim (`Registration: N`, `Reporter wallet: 0x…`, bot/logic's
-    format), so those two lines go on the issue, as a comment."""
+    format, and `Claim signature: 0x…`), so those lines go on the issue, as a comment. The signature is the reporter's,
+    by the key that registered (a keystore's or a devnet key, by the same rules), over radicle_v3.claim_digest: this
+    chain, the race, the registration, the repository and the issue's whole id, so it holds on that issue only (#251
+    L12, the owner's decision of 2026-11-20)."""
+    from oracle import radicle as rad
+    from oracle import radicle_v3 as RV
+
     rc: RaceV3 = ctx.v3
     rad_issue = (a.rad_issue or "").strip().lower()
     if not RAD_ISSUE_RE.match(rad_issue):
         raise Fail(f"--rad-issue is the Radicle issue's id (hex, as `rad issue list` shows it), not {a.rad_issue!r}")
+    if not RV.ISSUE_ID_RE.match(rad_issue):
+        raise Fail(f"--rad-issue needs the issue's whole id (40 hex digits, as `rad issue list` or `rad cob list --type "
+                   f"xyz.radicle.issue` shows it): the claim's signature names it, so a prefix ({rad_issue}) won't do")
     rid = a.rid or rc.record.get("rid", "")
     if a.comment and not rid:
         raise Fail("--comment needs the repository's RID (--rid, or `rid` in the record)")
+    repo = rc.chain.repo()
+    if rid and rad.repo_id(rid) != repo:
+        raise Fail(f"{rid} isn't the race's repository (its keccak256 isn't the race's repo())")
     w = ctx.wallet("reporter")
     cfg = rc.chain.config()
     deposit = rc.rpc.view(rc.chain.fees, "maxDeposit(bytes32,uint256)", ["uint256"], rc.chain.repo(), K_MAX)[0]
@@ -305,7 +318,7 @@ def cmd_register(ctx, a) -> tuple:
     log = _log_of(receipt, v3.REGISTERED)
     issue = int(log["topics"][1], 16)
     check = int(log["data"][2:66], 16)
-    paste = logic.claim_lines(issue, w.address)
+    paste = RV.signed_claim_lines(w.sign, w.address, rc.chain.chain_id(), rc.address, issue, repo, rad_issue)
     message = "\n".join(paste)
     cmd = ["rad", "issue", "comment", "--repo", rid or "<RID>", rad_issue, "--message", message]
     data = {"issue": issue, "check": check, "reporter": w.address, "radIssue": rad_issue, "rid": rid, "lines": paste,
@@ -320,8 +333,8 @@ def cmd_register(ctx, a) -> tuple:
         lines.append(f"commented the claim on the Radicle issue {rad_issue[:12]} ({rid}):")
         lines += ["", *paste, ""]
     else:
-        lines += ["the registration check reads the claim on the Radicle issue: comment these two lines on it, each on "
-                  "its own line:", "", *paste, "", "  " + shlex.join(cmd)]
+        lines += ["the registration check reads the claim on the Radicle issue: comment these three lines on it, each "
+                  "on its own line (the signature holds for this issue only):", "", *paste, "", "  " + shlex.join(cmd)]
     lines.append(f"once the check is final, anyone opens the bounty: pofctl --v3 issue open --issue {issue}")
     return data, lines
 
@@ -578,18 +591,49 @@ def cmd_verify_head(ctx, a) -> tuple:
             raise Fail(str(e)) from None
         d = radicle.verify_head(head, snap)
         canonical = radicle.canonical(snap)
+    synced = snap.sync_error if rid else ""
     if d.action != radicle.SIGN:
-        raise Fail(f"verify-head refused: {d.reason}")
+        raise Fail(f"verify-head refused: {d.reason}" + (f" (and {synced}: the node's copy may be behind)"
+                                                         if synced else ""))
     return ({"repo": "0x" + repo.hex(), "rid": rid, "head": head, "canonical": canonical, "match": True},
-            [f"repository 0x{repo.hex()[:12]}{' (' + rid + ')' if rid else ''}: {d.reason}"])
+            [f"repository 0x{repo.hex()[:12]}{' (' + rid + ')' if rid else ''}: {d.reason}"]
+            + ([f"  note: {synced}; this is the node's own copy"] if synced else []))
+
+
+def cmd_verify_delegates(ctx, a) -> tuple:
+    """`verify-delegates` (specs/radicle-hosting, "Delegates follow the seats"; #251, L11): the Radicle identity's
+    delegates are exactly the nodes of the validators seated on-chain (`isDrawable`), with a majority threshold. Each
+    seat's node is read from the chain, the key its registration signed (`Validators.radNodeOf`); a seat registered
+    without one is reported as unmapped. Nothing is signed or sent."""
+    from oracle import delegates, radicle
+
+    rc: RaceV3 = ctx.v3
+    rid = _rid(rc, a.rid)
+    try:
+        cob, _, synced = radicle.Radicle(rid, shlex.split(a.rad_exec or "")).identity()
+    except radicle.Unavailable as e:
+        raise Fail(str(e)) from None
+    doc = ((cob.get("revisions") or {}).get(cob.get("current")) or {}).get("doc") or {}
+    seats = rc.chain.seats()
+    nodes = delegates.ChainSeatNodes.of(rc.chain)
+    ok, problems = delegates.verify_delegates(doc, seats, nodes)
+    mapped = {s: nodes.node_of(s) for s in seats}
+    if not ok:
+        raise Fail("verify-delegates refused: " + "; ".join(problems)
+                   + (f" (and {synced}: the node's copy may be behind)" if synced else ""))
+    return ({"rid": rid, "seats": mapped, "delegates": doc.get("delegates", []), "threshold": doc.get("threshold"),
+             "match": True},
+            [f"{rid}: the {len(seats)} seats on-chain are the {len(doc.get('delegates', []))} delegates, threshold "
+             f"{doc.get('threshold')} (each seat's node from its registration, Validators.radNodeOf)"]
+            + [f"  {s} {d}" for s, d in mapped.items()]
+            + ([f"  note: {synced}; this is the node's own copy"] if synced else []))
 
 
 CHECKOUT = r"""set -u
 S="${RAD_HOME:-$HOME/.radicle}/storage/%(store)s"
 have() { git --git-dir "$S" cat-file -e "%(head)s^{commit}" 2>/dev/null; }
 if ! have; then
-  if command -v timeout >/dev/null; then timeout 60 rad sync --fetch %(rid)s >/dev/null 2>&1 || true
-  else rad sync --fetch %(rid)s >/dev/null 2>&1 || true; fi
+%(sync_lines)s
 fi
 have || { echo "@missing %(head)s"; exit 4; }
 d=%(dir)s
@@ -604,19 +648,24 @@ echo "@ns $(git --git-dir "$S" for-each-ref --contains %(head)s --format='%%(ref
 def cmd_checkout(ctx, a) -> tuple:
     """The commit Heads.head names, from whichever namespace of the node's copy has it (synced first if none does),
     checked out by its hash into a new directory on that node: (b)'s reader, which trusts the chain, not `main`."""
+    from oracle import radicle
+
     rc: RaceV3 = ctx.v3
     rid = _rid(rc, a.rid)
     head = rc.head()
     target = a.dir or f"pof-checkout-{head[:12]}"
-    script = CHECKOUT % {"store": rid[4:], "rid": shlex.quote(rid), "head": head, "dir": shlex.quote(target)}
+    script = CHECKOUT % {"store": rid[4:], "head": head, "dir": shlex.quote(target),
+                         "sync_lines": radicle.sync_lines(rid, "fetch", 60)}
     try:
         r = subprocess.run(shlex.split(a.rad_exec or "") + ["bash", "-c", script], capture_output=True, text=True,
                            timeout=180)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise Fail(f"checkout: {e}") from None
     got = dict(re.findall(r"^@(\w+) ?(.*)$", r.stdout, re.M))
+    synced = radicle.sync_error(r.stdout)
     if r.returncode == 4:
-        raise Fail(f"checkout: Heads.head {head} isn't on the node's copy of {rid}, even after a sync")
+        raise Fail(f"checkout: Heads.head {head} isn't on the node's copy of {rid}, even after a sync"
+                   + (f" ({synced})" if synced else ""))
     if r.returncode == 5:
         raise Fail(f"checkout: {target} exists and isn't empty; give a new --dir")
     if r.returncode or got.get("head") != head:
@@ -628,4 +677,4 @@ def cmd_checkout(ctx, a) -> tuple:
              "this is the judged code whatever Radicle's main says; pofctl --v3 verify-head checks main against it"])
 
 
-V3_ONLY = {"issue", "pledge", "submit", "claim", "merge", "checkout", "faucet"}
+V3_ONLY = {"issue", "pledge", "submit", "claim", "merge", "checkout", "faucet", "verify-delegates"}

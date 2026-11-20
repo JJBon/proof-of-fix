@@ -20,10 +20,15 @@
 v3 (ORACLE_VERSION=3, ORACLE_RACE the RaceV3: an open validator, #139; oracle/node_v3.py):
     python3 -m oracle register --bond COINS [--proof simulated|tee|zktls] [--family NAME] [--host NAME]
                                     [--tee-type NAME] [--level A|B] [--firmware N] [--operator ADDRESS] [--image ID]
+                                    [--rad-node DID|NID|0xKEY|none]
                                            register this key as a candidate, signed by it and bonded from its account.
                                            `simulated` (devnets only, the default) and `tee` attest with a quote from
                                            the key provider: ORACLE_KEYS=dstack, with DSTACK_SIMULATOR_ENDPOINT for
-                                           `simulated`
+                                           `simulated`. The registration signs this validator's Radicle node key
+                                           (#251, L11; on-chain, `radNodeOf`): --rad-node, ORACLE_RAD_NODE, or the
+                                           node's own `rad self --did` (through ORACLE_RADICLE_EXEC); `none` registers
+                                           without one, and the seat is then never counted as a Radicle delegate. The
+                                           node can't be changed later: another node is another registration
     python3 -m oracle leave                announce leaving; `withdraw-bond` after the unbonding delay
     python3 -m oracle run [--until-idle S] [--from-block N]
                                            act on every seat Panels gives this key (counted judge, shadow, auditor,
@@ -109,6 +114,19 @@ Configuration (environment):
     ORACLE_KEEPER    "off": don't make the calls anyone may make (draws, replacements, finality, pay, the roll)
     ORACLE_RECEIPT_SOURCES  directories where other validators' receipts are published, comma-separated (a
                      challenge judge reads the original judges' receipts there)
+    ORACLE_FIX_SOURCE  "host" (the default: ORACLE_REPO's pull requests, and its labelled issues for the registration
+                     checks' claims) or "radicle" (#251 tasks 4.2 and 4.3, oracle/radicle_v3.py: the patches on this
+                     validator's Radicle node, the commit fetched from its storage; a fix it can't find or fetch by the
+                     seal deadline is sealed as not available; and the Radicle issue that claims a registration, which
+                     the judge checks is a genuine bug report in scope, or a failing seal saying why none was read)
+    ORACLE_MERGE_VIA      on v3, "radicle" (#251 task 4.1, model (a)): push Heads.head as this node's main when it moves
+                     at finality, and keep the identity's delegates equal to the seats, one pending revision at a time.
+                     Both Radicle parts take ORACLE_RADICLE_RID (keccak256 of it must be the race's repo()),
+                     ORACLE_RADICLE_EXEC and ORACLE_RADICLE_REPO as on v2; ORACLE_SEAT_NODES ("chain", the default:
+                     each seat's node key from its registration, Validators.radNodeOf; "bindings", signed bindings in
+                     the identity document, the default and only choice for a registry from before that field),
+                     ORACLE_SEAT_BINDINGS (bindings only: a JSON file of other validators' bindings to carry),
+                     ORACLE_RADICLE_EVERY (seconds between passes, default 30)
     ORACLE_ZKTLS_BIN, ORACLE_ZKTLS_NOTARY, ORACLE_ZKTLS_MODE
                      a level C validator's zkTLS prover (oracle/zktls.py: a stub until the pinned build is run)
     (ORACLE_ROUNDS defaults to .oracle-rounds on v3: a node that loses what it sealed is slashed for not revealing)
@@ -209,7 +227,7 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     """The v3 node, configured from the environment (see the module's docstring)."""
     from bot.forge import load_config, repo_for
 
-    from . import fetch, receipt, rounds, v3, zktls
+    from . import fetch, radicle_v3, receipt, rounds, v3, zktls
     from .judge import DirectJudge, judge_from_env
     from .models import ConfigError
     from .node_v3 import NodeV3
@@ -251,6 +269,15 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
                   sources=sources)
     if host is not None:
         node.fetcher = fetch.from_env(env, repo, host, log=node.log)
+    try:  # Radicle (#251 tasks 4.1, 4.2): patches as the fix source, and model (a)'s seat on this node's Radicle node
+        fixes, rad_fetcher, seat = radicle_v3.from_env(env, chain, me, sign=keys.sign, log=node.log)
+    except ValueError as e:
+        raise SystemExit(f"oracle: {e}") from None
+    if fixes is not None:
+        node.fixes = fixes
+        node.claims = radicle_v3.RadicleIssues(fixes.radicle)  # the registrations' issues on the same node (task 4.3)
+        node.fetcher = rad_fetcher if env.get("ORACLE_FETCH", "1") != "0" else None
+    node.radicle_seat = seat
     rpc.log = node.log
     if hasattr(judge, "log"):
         judge.log = node.log
@@ -281,13 +308,17 @@ def command_v3(argv: list, rpc, race_address: str, keys) -> int:
             ap.add_argument("--firmware", type=int, default=0)
             ap.add_argument("--operator", default="", help="the operator account (default: this key)")
             ap.add_argument("--image", default=env.get("ORACLE_IMAGE", ""))
+            ap.add_argument("--rad-node", default=env.get("ORACLE_RAD_NODE", ""),
+                            help="this validator's Radicle node: did:key:z6Mk…, its Node ID z6Mk… or 0x and 64 hex "
+                                 "digits; `none` for no node (default: ORACLE_RAD_NODE, else `rad self --did` on the "
+                                 "node ORACLE_RADICLE_EXEC reaches)")
             a = ap.parse_args(argv[2:])
             chain = v3.Chain(rpc, race_address)
             node_v3.register(chain, keys, Wallet(rpc, keys.account_secret(), "node"), int(round(a.bond * 10**6)),
                              Path(env.get("ORACLE_RECEIPTS", ".oracle-receipts")), proof=a.proof, family=a.family,
                              host=a.host, image=v3.name_id(a.image) if a.image else v2.DEVNET_IMAGE,
                              operator=a.operator, tee_type=a.tee_type, level={"A": 1, "B": 2}[a.level],
-                             firmware=a.firmware)
+                             firmware=a.firmware, rad_node=node_v3.rad_node_arg(a.rad_node, env))
             return 0
         if cmd in ("leave", "withdraw-bond"):
             chain = v3.Chain(rpc, race_address)

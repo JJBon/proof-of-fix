@@ -122,3 +122,21 @@ The faucet SHALL mint a fixed amount (20 coins) to the address that claims, at m
 #### Scenario: A claim too soon
 - **WHEN** the same address claims again before 2 hours have passed
 - **THEN** the call reverts with the time of its next claim, and no coin is minted
+
+### Requirement: The panel caps are set at construction
+The operator, host and TEE-type caps SHALL each be a constructor setting, `Strict` (today's rule) or `Off`, immutable, readable and listed in the deployment record. The deploy script's default SHALL be `Strict` for all three, and the Sepolia record SHALL set all three `Off` (design L23). The family cap SHALL be unchanged.
+
+#### Scenario: The owner's validators fill panels on Sepolia
+- **WHEN** 7 validators of one operator account, on one host value and one TEE type, are eligible on a deployment with every cap `Off`
+- **THEN** a panel of `kTop` is drawn
+
+#### Scenario: No change after deployment
+- **WHEN** anyone tries to change a cap setting after construction
+- **THEN** there is no function that does it
+
+### Requirement: The k = 1 hold counts challengers under the caps
+Under `Strict` caps, a k = 1 verdict's hold SHALL end only when a challenge panel of 3 could be drawn under the operator, host and TEE-type caps.
+
+#### Scenario: The owner's validators on a strict deployment
+- **WHEN** 7 validators of one operator account are eligible on a deployment with every cap `Strict`
+- **THEN** panels are k = 1, and a k = 1 verdict stays held, since no challenge panel of 3 could be drawn

@@ -105,7 +105,7 @@ abstract contract ValidatorsSetup is Test {
         return _newKey(string.concat("validator", vm.toString(++keyCount)));
     }
 
-    /// A level A TDX registration of `key`, its operator, host and family.
+    /// A level A TDX registration of `key`, its operator, host and family, with a Radicle node key of its own.
     function _reg(address key, address operator, bytes32 host, bytes32 family)
         internal
         pure
@@ -120,6 +120,12 @@ abstract contract ValidatorsSetup is Test {
         r.image = IMAGE;
         r.host = host;
         r.family = family;
+        r.radNode = radNodeFor(key);
+    }
+
+    /// The Radicle node key the helpers register `key` with (#251, L11): one per key.
+    function radNodeFor(address key) internal pure returns (bytes32) {
+        return keccak256(abi.encode("radicle node", key));
     }
 
     function _sign(Validators v, address signer, IValidators.Registration memory r) internal view returns (bytes memory) {
@@ -145,7 +151,7 @@ abstract contract ValidatorsSetup is Test {
         bytes32 h = keccak256(
             abi.encode(
                 keccak256(
-                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)"
+                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware,bytes32 radNode)"
                 ),
                 r.key,
                 r.operator,
@@ -156,7 +162,8 @@ abstract contract ValidatorsSetup is Test {
                 r.image,
                 r.host,
                 r.family,
-                r.firmware
+                r.firmware,
+                r.radNode
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domain, h));

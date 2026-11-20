@@ -6,6 +6,24 @@ Task 3.2 builds `Panels`, v3's draw and verdict bookkeeping, on `Validators` (3.
 
 Task 3.5 builds `RaceV3`, the race on Panels and FeesV3, splits `FeesV3.roll` into bounded parts, and replays group 7's market on them (below, "Task 3.5").
 
+## #251: the Radicle node key in the registration (launch design L11 condition 1, owner 2026-11-20; tasks 3.21 and 4.1)
+The owner chose a signed field of the v3 registration (not a separate setter, not an off-chain binding) for the link between a seat and its Radicle node (`specs/radicle-hosting`, "A seat maps to one Radicle node key on-chain").
+- **The field.** `IValidators.Registration.radNode` (`bytes32`, last field): the 32-byte Ed25519 public key behind the node's `did:key:z6Mk…`. It is in `REGISTRATION_TYPEHASH` (`…,uint32 firmware,bytes32 radNode)`) and so in the digest the key signs, at genesis and at `register`. `IValidators.Validator.radNode` (last field) stores it; `radNodeOf(address)` reads it (in `IValidators`), whatever the validator's state, 0 for a key never registered.
+- **Zero is allowed:** it registers no node. The validator is drawn and judges as before; off-chain, its seat is reported as unmapped by `verify-delegates` and never counted as a delegate (no honest node signs a revision giving it a key).
+- **One seat per node:** a nonzero key that another registration still holds (Candidate, Active or BelowFloor) is refused, `NodeTaken()`. A Leaving or Exited validator holds none, so its node can be registered again by a new key. There is no setter: a validator changes its node by registering again (a new key, after leaving with the old one). `KeyTaken` still refuses a second registration of the same key.
+- **The event:** `Registered(address indexed key, address indexed operator, bool genesis, uint8 level, uint256 bond, Registration r, bytes32 indexed radNode)`: the node key is in `r` and is the event's third topic, so a node's seat can be found by a log filter. The event's signature changed (`Registered(address,address,bool,uint8,uint256,(…,uint32,bytes32),bytes32)`).
+- **Signature changes:** `Registration` and `Validator` gain their last field (so `register(Registration,uint256,bytes)`, `registrationDigest(Registration)`, `validator(address)`, `Validators.Genesis.validators` and the `Registered` event change their ABI); `radNodeOf(address)` and `NodeTaken()` are new. The deploy script takes `DEPLOY_GENESIS_RAD_NODE` (never 0 for the genesis validator) and `NodeV3Local` `LOCAL_GENESIS_RAD_NODE` (default 0); both records name the key.
+- **Tests:** `test/v3/RadNodeV3.t.sol` (10: the genesis's node, a registration's node with its event and getter, the key covered by the signature, 0 allowed and read back as no node for a drawable seat, a node held by a candidate, an active, the genesis or a below-floor validator refused, a node freed when its validator leaves, registering again (the same key refused as `KeyTaken`; a new key on a new node, the old node then free), a fuzz of two keys, gas); `scripts/contracts.sh test`: 693 passed with production windows and 693 with `POF_TEST_WINDOWS=minutes` (683 before); the test helpers register every validator with a node key of its own (`radNodeFor`), so every suite runs with the field set; `radNodeOf` in the ABI's list.
+
+| Contract | Runtime | Margin under 24,576 | Initcode | Margin under 49,152 | Before |
+|---|---|---|---|---|---|
+| `Validators` | 22,908 | **1,668** | 31,040 | 18,112 | 22,435 (2,141) |
+| `Panels` (reads the longer `Validator`) | 17,254 | 7,322 | 20,357 | 28,795 | 17,242 |
+
+The other contracts are unchanged. `Validators` has the smallest margin of the deployed set now (RaceV3 2,006, RaceV3Annex 2,845). If it needs more, `applyAdr` and `_change` can still move to a linked library (as noted under 3.4).
+
+Gas (call frame, `RadNodeV3Test.test_gasRegister`, after a first registration warms the shared slots): `Validators.register` **428,600** with a node key, 383,500 without (+45,200: the record's word and the holder's word, two new slots, and the topic). The race's steps (`test_gasPerStep`) don't call the registry's registration: `RaceV3.register` 770,600, `commit` 536,400, `result` (k = 3) 576,300, `claim` 247,200, `merge` 310,100.
+
 ## #251: the test coin and its faucet (launch design L17 as amended on 2026-11-20, tasks 3.17 and 3.18)
 The owner replaced Circle's Sepolia USDC with the project's own valueless test coin on 2026-11-20.
 - **`TestCoin`** ("proof-of-fix test coin", `POFTEST`, 6 decimals): an OpenZeppelin ERC-20 whose genesis mint is in its constructor (`genesisMint()` reads its total) and whose `mint` only its `faucet()`, the contract that created it, may call (`NotFaucet`).

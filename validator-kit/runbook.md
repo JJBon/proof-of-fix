@@ -322,6 +322,23 @@ protected tests and its own on its code (the repository's commands, without the 
 Every check runs the tests **twice** (#251 L22), each in a fresh container with half the profile's time limit: they
 pass only if both runs pass, and a disagreement shows as `flaky` in the receipt and in the judge's test-run line.
 
+**The test image (#251 L21).** The tests run in `pof-test-image`, built from `oracle/test-image/Dockerfile`: Python 3.12
+on Debian slim, pinned by digest, plus git and bash at pinned versions from one Debian snapshot. The node never pulls it:
+each validator builds it on its own host, reproducibly, and the build must give the digest `oracle/sandbox.py` pins for
+its platform (`TEST_IMAGES`, amd64 and arm64), or the script refuses it. From a checkout of the release:
+
+```
+scripts/test-image.sh            # builds, loads and checks it: TEST_IMAGE (arm64) = pof-test-image@sha256:...
+scripts/test-image.sh --twice    # builds it twice without Docker's cache first: the digest must repeat
+```
+
+It needs Docker with buildx and the containerd image store (Docker Engine 29's default; on an older engine,
+`"features": {"containerd-snapshotter": true}` in `/etc/docker/daemon.json`), and reaches Docker Hub for the base image
+and snapshot.debian.org for git's packages. A node without the image stops at its first check's tests with "build it with
+scripts/test-image.sh", before any model call. Inside each run the tests get `TMPDIR=/scratch`, a size-limited tmpfs
+where a test may run a script it wrote (`/tmp` stays noexec), and `POF_SANDBOX=1`. On Sepolia the checker image's
+measured disk (task 4.9) carries this image, so an attested validator loads it from there instead.
+
 **Which judges are real.** One: seat 6, the owner's. The 6 role seats run the **fake judge**: free, deterministic, following
 the sandbox's test result. The contracts can't tell the difference: the verdict and the usage report are the same bytes, a
 seat's model family only sets its price, and the kit's words "not counted" are a convention no code enforces. A draw of 3 of

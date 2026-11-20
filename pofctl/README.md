@@ -221,8 +221,11 @@ scripts/pofctl --v3 status                                 # your cap (REP_BASE 
                                                            # refunded), active solvers, wallet and credit
 scripts/pofctl --v3 issue register --rad-issue <id> --comment --rad-exec "docker exec -i <node>"
                                                            # the fee, the stake and its check's deposit; the claim
-                                                           # (Registration: N, Reporter wallet: 0x…) commented on the
-                                                           # Radicle issue (without --comment: printed, with the command)
+                                                           # (Registration: N, Reporter wallet: 0x…, Claim signature:
+                                                           # 0x…, the reporter's key's signature for this chain, race,
+                                                           # repository and issue) commented on the Radicle issue
+                                                           # (without --comment: printed, with the command). <id> is the
+                                                           # issue's whole id (40 hex): the signature names it
 scripts/pofctl --v3 issue open --issue <n>                 # anyone, once its registration check is final
 scripts/pofctl --v3 pledge --bounty <b> --amount 20        # refused, with the count, while fewer than 3 solvers are
                                                            # active (L6): nothing is sent, not even an approval
@@ -234,6 +237,8 @@ scripts/pofctl --v3 merge --bounty <b>                     # anyone, at the verd
                                                            # before it, refused with the time left
 scripts/pofctl --v3 withdraw --role solver                 # the refunded deposits' rest, and other credit
 scripts/pofctl --v3 verify-head --rad-exec "docker exec -i <node>"   # Radicle's canonical main is Heads.head
+scripts/pofctl --v3 verify-delegates --rad-exec "…"                  # the identity's delegates are the seats' nodes,
+                                                                     # each read from the chain (Validators.radNodeOf)
 scripts/pofctl --v3 checkout --rad-exec "…" --dir <new dir>          # the commit Heads.head names, from any namespace
 ```
 

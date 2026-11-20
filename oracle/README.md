@@ -58,7 +58,7 @@ counts the reveals.
 
 | Command | What it does |
 |---|---|
-| `python3 -m oracle register --bond 100` | registers this key as a candidate: signed by the key, bonded from its account. On a devnet the proof type is `simulated`, and its attestation is a quote from the dstack simulator (`ORACLE_KEYS=dstack` with `DSTACK_SIMULATOR_ENDPOINT`, design D18) |
+| `python3 -m oracle register --bond 100 --rad-node did:key:z6Mk…` | registers this key as a candidate: signed by the key, bonded from its account. On a devnet the proof type is `simulated`, and its attestation is a quote from the dstack simulator (`ORACLE_KEYS=dstack` with `DSTACK_SIMULATOR_ENDPOINT`, design D18). The registration also signs the validator's Radicle node key (#251, L11; on-chain as `radNodeOf`): `--rad-node` (a did:key, a Node ID or 0x and 64 hex digits), else `ORACLE_RAD_NODE`, else the node's own `rad self --did` through `ORACLE_RADICLE_EXEC`; `--rad-node none` registers without one, and the seat is then never counted as a delegate. Another node is another registration (leave, then register a new key) |
 | `python3 -m oracle leave`, `withdraw-bond` | announces leaving; the bond returns after the unbonding delay |
 | `python3 -m oracle run` | acts on every seat Panels gives the key, posts its cost table once a pricing period, and makes the keeper's calls |
 | `python3 -m oracle challenge <submission>` | re-runs a counted verdict's check; if it disagrees, or finds a false receipt, files a challenge with its evidence |

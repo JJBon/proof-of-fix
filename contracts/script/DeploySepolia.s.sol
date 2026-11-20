@@ -61,6 +61,8 @@ import {RegistryMaker} from "./RegistryMaker.sol";
 ///   DEPLOY_IMAGES                the accepted checker images, comma-separated bytes32 digests
 ///   DEPLOY_GENESIS_KEY, _OPERATOR, _TEE_TYPE (a name), _LEVEL (1 = A, 2 = B), _ATTESTATION, _IMAGE, _HOST,
 ///   _FIRMWARE (default 0)        the genesis validator's registration (proof type `tee`)
+///   DEPLOY_GENESIS_RAD_NODE      its Radicle node's Ed25519 public key, bytes32 (#251, L11: the key its did:key names;
+///                                signed in the registration, stored on-chain); never 0 for the genesis validator
 ///   DEPLOY_GENESIS_SIG           its signature over the registration digest for the registry's address (printed as
 ///                                GENESIS_DIGEST); or, on a local endpoint only, DEPLOY_GENESIS_PK, a test key, to sign
 ///                                here (the wrapper refuses it for any other endpoint)
@@ -242,8 +244,10 @@ contract DeploySepoliaScript is Script {
             image: vm.envBytes32("DEPLOY_GENESIS_IMAGE"),
             host: vm.envBytes32("DEPLOY_GENESIS_HOST"),
             family: p.families[0],
-            firmware: uint32(vm.envOr("DEPLOY_GENESIS_FIRMWARE", uint256(0)))
+            firmware: uint32(vm.envOr("DEPLOY_GENESIS_FIRMWARE", uint256(0))),
+            radNode: vm.envBytes32("DEPLOY_GENESIS_RAD_NODE")
         });
+        if (r.radNode == bytes32(0)) revert("no Radicle node key for the genesis validator");
     }
 
     /// The genesis validator's signature for the registry at `registryAt`: given (its key stays in its enclave), or
@@ -574,7 +578,8 @@ contract DeploySepoliaScript is Script {
         vm.serializeBytes32(o, "host", r.host);
         vm.serializeString(o, "familyName", p.familyNames[0]);
         vm.serializeBytes32(o, "family", r.family);
-        return vm.serializeUint(o, "firmware", r.firmware);
+        vm.serializeUint(o, "firmware", r.firmware);
+        return vm.serializeBytes32(o, "radNode", r.radNode);
     }
 
     function _feesArgs(Plan memory p, Deployed memory d) internal returns (string memory) {
@@ -772,7 +777,7 @@ contract DeploySepoliaScript is Script {
         bytes32 h = keccak256(
             abi.encode(
                 keccak256(
-                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)"
+                    "Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware,bytes32 radNode)"
                 ),
                 r.key,
                 r.operator,
@@ -783,7 +788,8 @@ contract DeploySepoliaScript is Script {
                 r.image,
                 r.host,
                 r.family,
-                r.firmware
+                r.firmware,
+                r.radNode
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domain, h));

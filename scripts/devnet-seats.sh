@@ -178,7 +178,7 @@ PY
   check_exchange
   local image
   image=$(python3 -c 'from oracle.sandbox import TEST_IMAGE; print(TEST_IMAGE)')
-  docker image inspect "$image" >/dev/null 2>&1 || docker pull -q "$image" >/dev/null
+  docker image inspect "$image" >/dev/null 2>&1 || scripts/test-image.sh >/dev/null  # built here, never pulled (#251 L21)
   declare -A keys
   local role out
   for role in "${SEATS[@]}"; do

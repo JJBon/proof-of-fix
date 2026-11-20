@@ -46,7 +46,7 @@ ERRORS = ["NotOracle()", "TooFewSignatures()", "DuplicateSigner()", "Replayed()"
           "WrongState()", "Locked()", "FirmwareTooOld()", "WrongStatus()", "BadBounty()", "Busy()", "TooLate()",
           "NothingChanged()", "NotOpen()", "NotSeated()", "AlreadySealed()", "NotSealed()", "AlreadyRevealed()",
           "AlreadyReceipted()", "EmptyHash()", "NothingDue()", "NotReady()", "NotActive()", "BadTable()",
-          "NotRegistered()", "AlreadyOpen()", "Unpriced(bytes32)", "RollInProgress()"]
+          "NotRegistered()", "AlreadyOpen()", "Unpriced(bytes32)", "RollInProgress()", "NodeTaken()"]
 _BY_SELECTOR = {abi.selector(e).hex(): e for e in ERRORS}
 
 TRANSIENT_STATUS = frozenset({429, 502, 503, 504})

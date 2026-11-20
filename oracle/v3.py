@@ -20,7 +20,7 @@ from .crypto import checksum, keccak256, word
 from .v2 import DOMAIN_TYPEHASH, Usage, b32, commit_word, typed  # noqa: F401 (Usage and b32 are v3's too)
 
 REGISTRATION_TYPE = ("Registration(address key,address operator,bytes32 proofType,bytes32 teeType,uint8 level,"
-                     "bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware)")
+                     "bytes32 attestation,bytes32 image,bytes32 host,bytes32 family,uint32 firmware,bytes32 radNode)")
 STATEMENT_TYPE = "Statement(bytes32 subject,bytes32 content)"
 RECEIPT_TYPE = ("Receipt(bytes32 proofType,bytes32 notary,bytes32 model,bytes32 weights,bytes32 image,bytes32 seed,"
                 "bytes32 prompt,bytes32 answer,bytes32 tests,bytes32 proof,address panels,uint256 pid,uint256 slot,"
@@ -63,11 +63,11 @@ PANEL_FIELDS = ["id", "seed", "sealBy", "revealBy", "counter", "k", "seats", "nS
 SEAT = "(address,uint8,bool,bool,bool,bool,uint8,bytes32,bytes32)"
 SEAT_FIELDS = ["key", "level", "hasSeal", "revealed", "receipted", "vote", "mask", "seal", "receipt"]
 VALIDATOR = ("(address,uint8,uint8,bool,uint8,address,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint128,"
-             "uint128,uint32,uint32,uint64,uint32,uint32)")
+             "uint128,uint32,uint32,uint64,uint32,uint32,bytes32)")
 VALIDATOR_FIELDS = ["key", "level", "state", "genesis", "suspensions", "operator", "leftAt", "proofType", "teeType",
                     "attestation", "image", "host", "family", "bond", "slashed", "openVerdicts", "openChallenges",
-                    "registeredAt", "firmware", "reattestations"]
-REGISTRATION = "(address,address,bytes32,bytes32,uint8,bytes32,bytes32,bytes32,bytes32,uint32)"
+                    "registeredAt", "firmware", "reattestations", "radNode"]
+REGISTRATION = "(address,address,bytes32,bytes32,uint8,bytes32,bytes32,bytes32,bytes32,uint32,bytes32)"
 RACE_ISSUE = "(bytes32,address,uint256,uint256,uint256,uint256,uint8,bool)"
 RACE_ISSUE_FIELDS = ["repo", "reporter", "registration", "stake", "bounty", "check", "state", "hidden"]
 RACE_BOUNTY = "(uint256,uint8,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"
@@ -95,6 +95,8 @@ HEAD = "(bytes32,bytes32,uint256,uint256,uint256,bytes32)"  # v2's Heads.Head
 SEATED = "Seated(uint256,uint256,address,uint256)"
 COMMITTED = "Committed(uint256,uint256,address)"
 REGISTERED = "Registered(uint256,address,uint256)"
+# Validators' own; its third topic is the Radicle node key (#251, L11)
+VALIDATOR_REGISTERED = f"Registered(address,address,bool,uint8,uint256,{REGISTRATION},bytes32)"
 
 
 def name_id(name: str) -> bytes:
@@ -151,6 +153,9 @@ def fix_commitment(fix: bytes, base: bytes, salt: bytes, solver: str) -> bytes:
 
 @dataclass(frozen=True)
 class Registration:
+    """What a validator's key signs to register (IValidators.Registration). `rad_node` (#251, design L11) is its
+    Radicle node's 32-byte Ed25519 public key, the one its `did:key` names; ZERO registers no node (the seat is never
+    counted as a Radicle delegate)."""
     key: str
     operator: str
     proof_type: bytes
@@ -161,15 +166,16 @@ class Registration:
     host: bytes
     family: bytes
     firmware: int
+    rad_node: bytes = ZERO
 
     def as_tuple(self) -> tuple:
         return (self.key, self.operator, self.proof_type, self.tee_type, self.level, self.attestation, self.image,
-                self.host, self.family, self.firmware)
+                self.host, self.family, self.firmware, self.rad_node)
 
     def digest(self, domain: bytes) -> bytes:
         return typed(domain, keccak256(REGISTRATION_TYPEHASH + word(self.key) + word(self.operator) + self.proof_type
                                        + self.tee_type + word(self.level) + self.attestation + self.image + self.host
-                                       + self.family + word(self.firmware)))
+                                       + self.family + word(self.firmware) + self.rad_node))
 
 
 # ---------- the receipt's on-chain form ----------
@@ -317,12 +323,27 @@ class Chain:
         v["key"], v["operator"] = checksum(v["key"]), checksum(v["operator"])
         return v
 
+    def rad_node_of(self, key: str) -> bytes:
+        """The Radicle node key (32 bytes, Ed25519) `key` registered with; ZERO for none (#251, L11)."""
+        return b32(self.rpc.view(self.registry, "radNodeOf(address)", ["bytes32"], key)[0])
+
     def epoch(self) -> int:
         """Bumped on every change to the registry."""
         return self.rpc.view(self.registry, "epoch()", ["uint256"])[0]
 
     def is_active(self, key: str) -> bool:
         return self.rpc.view(self.registry, "isActive(address)", ["bool"], key)[0]
+
+    def is_drawable(self, key: str) -> bool:
+        """Active, bonded at least BOND_FLOOR and in standing: the set #251's L5 counts as seated."""
+        return self.rpc.view(self.registry, "isDrawable(address)", ["bool"], key)[0]
+
+    def seats(self, from_block: int = 0) -> list:
+        """The validators seated on-chain (#251 L11, model (a): the Radicle repository's delegates): every key the
+        registry's Registered events name that `isDrawable` now, checksummed and sorted."""
+        topic = "0x" + keccak256(VALIDATOR_REGISTERED.encode()).hex()
+        keys = {checksum("0x" + log["topics"][1][-40:]) for log in self.rpc.logs(self.registry, from_block, [topic])}
+        return sorted(k for k in keys if self.is_drawable(k))
 
     def repo(self) -> bytes:
         """The deployment's one repository (RaceV3.repo, #251 L1): keccak256 of its Radicle RID."""

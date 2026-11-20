@@ -751,6 +751,12 @@ def parser() -> argparse.ArgumentParser:
     co.add_argument("--dir", help="a new directory for the checkout, on that node (default pof-checkout-<head>)")
     co.set_defaults(fn=v3cli.cmd_checkout, fn3=v3cli.cmd_checkout)
 
+    vd = sub.add_parser("verify-delegates", help="v3: the Radicle identity's delegates are the nodes the seats on-chain "
+                                                 "registered (Validators.radNodeOf), with a majority threshold")
+    vd.add_argument("--rid", help="the repository's RID (default: the record's)")
+    vd.add_argument("--rad-exec", help="a command prefix that reaches the Radicle node (default: this machine)")
+    vd.set_defaults(fn=v3cli.cmd_verify_delegates, fn3=v3cli.cmd_verify_delegates)
+
     fc = sub.add_parser("faucet", help="v3: claim 20 test coins for your key from the deployment's keyless faucet (one "
                                        "claim per address every 2 hours); prints the next claim time")
     fc.add_argument("--when", action="store_true", help="only show when this key may claim next; send nothing")
@@ -927,7 +933,7 @@ def run(argv: list) -> tuple:
         fn = getattr(a, "fn3", None)
         if fn is None:
             raise Fail(f"`{a.command}` is v2's; on v3: status, issue register|open, pledge, submit, claim, merge, "
-                       f"withdraw, faucet, verify-head and checkout")
+                       f"withdraw, faucet, verify-head, verify-delegates and checkout")
         return fn(ctx, a)
     if a.command in v3cli.V3_ONLY:
         raise Fail(f"`{a.command}` is v3's (--v3)")

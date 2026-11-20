@@ -77,6 +77,9 @@ def paid_comment(race: str, bounty: int, tx: str, block: int, chain_id: int, exp
 # ---------- the claim (proof-of-fix#210, D2): an issue names its registration ----------
 
 REGISTRATION = re.compile(r"^Registration:\s*(\d+)\s*$", re.M)
+# v3 on Radicle (#251, the owner's decision of 2026-11-20): the reporter's signature over the claim, bound to the chain,
+# the race, the registration, the repository and the Radicle issue (oracle/radicle_v3.py `claim_digest`).
+CLAIM_SIGNATURE = re.compile(r"^Claim signature:\s*(0x[0-9a-fA-F]{130})\s*$", re.M)
 # Why a labelled issue's claim isn't valid (the hint names it): no lines, no such registration, another wallet, another
 # repository, or a lower-numbered issue claims it first.
 NO_LINES, UNKNOWN, WRONG_WALLET, WRONG_REPO, TAKEN = "no-lines", "unknown", "wallet", "repository", "taken"
@@ -197,9 +200,17 @@ def ended(comments: list) -> tuple[str, int, str, str] | None:
     return None
 
 
-def claim_lines(onchain_issue: int, reporter: str) -> list:
-    """The two lines a reporter pastes into the forge issue's body (`pofctl reporter register` prints them)."""
-    return [f"Registration: {onchain_issue}", f"Reporter wallet: {reporter}"]
+def claim_lines(onchain_issue: int, reporter: str, signature: str = "") -> list:
+    """The two lines a reporter pastes into the forge issue's body (`pofctl reporter register` prints them); on v3 and
+    Radicle a third, the reporter's signature over the claim (`pofctl --v3 issue register --rad-issue`)."""
+    lines = [f"Registration: {onchain_issue}", f"Reporter wallet: {reporter}"]
+    return lines + [f"Claim signature: {signature}"] if signature else lines
+
+
+def claim_signature(body: str) -> bytes | None:
+    """The 65-byte signature a claim's `Claim signature:` line carries, if any."""
+    m = CLAIM_SIGNATURE.search(body or "")
+    return bytes.fromhex(m.group(1)[2:]) if m else None
 
 
 def pr_body(issue: int, bounty: int, submission: int, salt: str, solver: str) -> str:

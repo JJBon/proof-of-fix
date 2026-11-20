@@ -536,6 +536,9 @@ class NodeV2:
             head = rad.sha_of(self.chain.head(repo)["commit"])
             try:
                 snap = r.snapshot(extra=[fix])
+                if snap.sync_error and snap.sync_error != getattr(self, "_rad_sync_error", ""):  # not hidden (#251)
+                    self.log(f"submission {c.submission}: Radicle: {snap.sync_error}; deciding on this node's copy")
+                self._rad_sync_error = snap.sync_error
                 d = rad.decide(fix, base, head, snap, v2.ISSUE_QUORUM)
                 if d.action == rad.PUSH:
                     r.push(fix)

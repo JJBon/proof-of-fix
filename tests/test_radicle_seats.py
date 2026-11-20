@@ -1,5 +1,6 @@
-"""The Radicle spike under v3 (proof-of-fix#251): the seats-to-delegates rules of spikes/radicle/seats.py, alone (the
-spike itself, scripts/radicle-spike.sh --v3, needs Docker)."""
+"""The Radicle spike under v3 (proof-of-fix#251): the seats-to-delegates rules through spikes/radicle/seats.py's own
+signatures, alone (the spike itself, scripts/radicle-spike.sh --v3, needs Docker). The rules live in oracle/delegates.py
+since task 4.1; tests/test_delegates.py tests them there, with both seat-to-node mappings."""
 
 from __future__ import annotations
 
@@ -58,7 +59,7 @@ class TestSeats(unittest.TestCase):
     def test_verify_delegates_names_every_difference(self):
         ok, problems = S.verify_delegates(doc([0, 1]), ADDRS[:3], CHAIN, REGISTRY, RID)  # a seat with no delegate
         self.assertFalse(ok)
-        self.assertIn(f"seat {ADDRS[2].lower()} has no delegate", problems)
+        self.assertIn(f"seat {ADDRS[2].lower()} has no delegate: no seat binding names it (unmapped)", problems)
         ok, problems = S.verify_delegates(doc([0, 1, 2]), ADDRS[:2], CHAIN, REGISTRY, RID)  # a delegate not seated
         self.assertFalse(ok)
         self.assertTrue(any("isn't seated on-chain" in p for p in problems))

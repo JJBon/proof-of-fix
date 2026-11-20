@@ -40,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from oracle import abi, crypto, node_v3, v2, v3  # noqa: E402
+from oracle import abi, crypto, delegates, node_v3, v2, v3  # noqa: E402
 from oracle.judge import FakeJudge  # noqa: E402
 from oracle.keys import DstackKeys  # noqa: E402
 from oracle.node_v3 import NodeV3  # noqa: E402
@@ -312,9 +312,12 @@ def command_line(r: Run) -> None:
             raise AssertionError(f"oracle {' '.join(args)} exited {p.returncode}: {p.stdout[-400:]} {p.stderr[-400:]}")
         return p.stdout
 
-    oracle("register", "--bond", "100")
+    node = delegates.did_from_key(crypto.keccak256(b"the command line's Radicle node"))
+    oracle("register", "--bond", "100", "--rad-node", node)
     check("registry state Candidate, bond 100.00" in oracle("info"),
           "`oracle register` on the command line registered its key (the simulator's): `oracle info` shows a candidate")
+    check(c.rad_node_of(keys.address()) == delegates.key_from_did(node),
+          "its registration signed the Radicle node it named (--rad-node), and the registry holds that key (#251 L11)")
     check("0 seat(s) finished" in oracle("run", "--until-idle", "1"), "`oracle run` starts as that validator and idles")
     oracle("leave")
     check("registry state Leaving" in oracle("info"), "`oracle leave` announced its exit")

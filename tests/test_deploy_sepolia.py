@@ -23,6 +23,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
 from fake_radicle import snapshot  # noqa: E402
+from sandbox_env import outside_sandbox  # noqa: E402
+
+# Why some of these skip in the validator's sandbox (tests/sandbox_env.py): its run tree has no .git and is read-only.
+NEEDS_HEAD = ("needs this repository's git checkout (the release candidate is checked against HEAD); the run tree "
+              "has no .git")
+NEEDS_CHECKOUT = ("needs this repository's git checkout (HEAD) and a writable contracts/deployments/ for the record; "
+                  "the run tree has no .git and is read-only")
 
 spec = importlib.util.spec_from_file_location("deploy_sepolia", ROOT / "scripts" / "deploy_sepolia.py")
 ds = importlib.util.module_from_spec(spec)
@@ -34,6 +41,8 @@ OTHER = "2" * 40
 DEV_KEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # anvil's public key 0
 IMAGE = "0x" + "ab" * 32
 GENESIS = ds.address_of(ds.derive(ds.MNEMONIC, 1))  # anvil's public key 1, the genesis validator's in these tests
+RAD_KEY = bytes(range(1, 33))  # the genesis validator's Radicle node key (#251, L11), as 32 bytes
+RAD_DID = ds.did_from_key(RAD_KEY)
 
 
 def head_commit() -> str:
@@ -82,7 +91,8 @@ import json, os, sys
 from pathlib import Path
 script = sys.argv[-1]
 Path(os.environ["FAKE_DOCKER_LOG"]).write_text(json.dumps({"argv": sys.argv[1:], "stdin": sys.stdin.read(),
-    "mint": os.environ.get("DEPLOY_GENESIS_MINT"), "mintTo": os.environ.get("DEPLOY_GENESIS_MINT_TO")}))
+    "mint": os.environ.get("DEPLOY_GENESIS_MINT"), "mintTo": os.environ.get("DEPLOY_GENESIS_MINT_TO"),
+    "radNode": os.environ.get("DEPLOY_GENESIS_RAD_NODE")}))
 if os.environ.get("FAKE_DOCKER_FAIL"):
     print("Error: script failed: " + os.environ["FAKE_DOCKER_FAIL"])
     sys.exit(1)
@@ -93,6 +103,8 @@ rec.parent.mkdir(parents=True, exist_ok=True)
 rec.write_text(json.dumps({"chainId": int(cid), "deployer": os.environ["DEPLOY_DEPLOYER"],
                            "limit": "a fork can remove both checks", "rid": os.environ["DEPLOY_RID"],
                            "addresses": {"race": "0x" + "11" * 20, "pool": "0x" + "22" * 20},
+                           "constructorArgs": {"Validators": {"validators": {
+                               "radNode": os.environ.get("FAKE_RAD_NODE") or os.environ["DEPLOY_GENESIS_RAD_NODE"]}}},
                            "testCoin": {"genesisMint": {"total": int(os.environ["DEPLOY_GENESIS_MINT"])
                                                         + int(os.environ.get("FAKE_MINT_OFF", "0")),
                                                         "restTo": os.environ["DEPLOY_GENESIS_MINT_TO"]}}}))
@@ -142,6 +154,15 @@ class TestTestCoin(unittest.TestCase):
         self.assertNotIn("MockCoin", self.src)
         self.assertIn("d.faucet = new CoinFaucet(to, amounts);", self.src)
         self.assertIn("d.coin = address(d.faucet.coin());", self.src)
+
+    def test_the_genesis_rad_node_parses_a_did_a_node_id_and_hex(self):
+        want = ("0x" + RAD_KEY.hex(), RAD_DID)
+        self.assertEqual(ds.genesis_rad_node(RAD_DID), want)
+        self.assertEqual(ds.genesis_rad_node(RAD_DID[len("did:key:"):]), want)  # `rad self --nid`
+        self.assertEqual(ds.genesis_rad_node("0x" + RAD_KEY.hex()), want)
+        for bad in (None, "", "0x" + "00" * 32, "0x" + "zz" * 32, "did:key:zQ3s", "did:web:example"):
+            with self.assertRaises(ds.Refused):
+                ds.genesis_rad_node(bad)
 
     def test_the_genesis_mints_defaults(self):
         deployer = "0x" + "88" * 20
@@ -225,6 +246,7 @@ class TestReleaseCandidate(unittest.TestCase):
             self.load(rc)
         self.assertIn(says, str(e.exception))
 
+    @outside_sandbox(NEEDS_HEAD)
     def test_a_passing_record_for_this_commit(self):
         self.assertEqual(self.load(good_rc())["result"], "passed")
 
@@ -232,6 +254,7 @@ class TestReleaseCandidate(unittest.TestCase):
         with self.assertRaises(ds.Refused):
             ds.load_release_candidate("/nonexistent/rc.json")
 
+    @outside_sandbox(NEEDS_HEAD)
     def test_refusals(self):
         self.refused("not json", "isn't JSON")
         self.refused(good_rc(format="something else"), "pof-release-candidate/1")
@@ -307,7 +330,8 @@ class TestDeploy(unittest.TestCase):
         self.addCleanup(self.server.shutdown)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
 
-    def run_deploy(self, *extra, chain=11_155_111, head=HEAD, url=None, fail="", mint_off=0):
+    def run_deploy(self, *extra, chain=11_155_111, head=HEAD, url=None, fail="", mint_off=0, rad_node=RAD_DID,
+                   record_node=""):
         Chain.chain = chain
         if head:
             self.snap.write_text(snapshot(head), encoding="utf-8")
@@ -315,10 +339,11 @@ class TestDeploy(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("DEPLOY_")}
         env.update({"PATH": f"{self.bin}:{env['PATH']}", "DEPLOY_FORGE_CONTAINER": "fake-anvil",
                     "FAKE_DOCKER_LOG": str(self.docker_log), "FAKE_ROOT": str(ROOT), "FAKE_CHAIN": str(chain),
-                    "FAKE_DOCKER_FAIL": fail, "FAKE_MINT_OFF": str(mint_off)})
+                    "FAKE_DOCKER_FAIL": fail, "FAKE_MINT_OFF": str(mint_off), "FAKE_RAD_NODE": record_node})
+        node = ["--genesis-rad-node", rad_node] if rad_node is not None else []
         return subprocess.run([sys.executable, str(ROOT / "scripts" / "deploy_sepolia.py"), "deploy", "--rpc-url",
                                url or self.url, "--plan", str(self.plan), "--release-candidate", str(self.rc),
-                               "--rad-exec", rad, "--record", self.record, *extra],
+                               "--rad-exec", rad, "--record", self.record, *node, *extra],
                               capture_output=True, text=True, timeout=120, env=env, cwd=ROOT)
 
     def assert_refused(self, r, says: str, rpc=("eth_chainId",)):
@@ -330,13 +355,16 @@ class TestDeploy(unittest.TestCase):
     def test_mainnet_is_refused_naming_the_chain_and_nothing_is_sent(self):
         self.assert_refused(self.run_deploy("--dev-key", "0", "--broadcast-sepolia", chain=1), "chain 1 refused")
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_a_wrong_genesis_head_is_refused(self):
         self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, head=OTHER),
                             f"canonical main {OTHER} isn't the genesis head {HEAD}")
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_a_repository_that_doesnt_exist_is_refused(self):
         self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, head=""), "can't be read")
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_an_injected_verify_head_refusal_is_refused(self):
         cmd = f"{sys.executable} -c \"import sys; print('no such repository'); sys.exit(1)\""
         self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, "--verify-head-cmd", cmd),
@@ -355,6 +383,7 @@ class TestDeploy(unittest.TestCase):
         self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, "--broadcast-sepolia"), "needs a signer",
                             rpc=())
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_dry_run_sends_nothing_and_writes_the_record(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -372,6 +401,7 @@ class TestDeploy(unittest.TestCase):
         self.assertEqual(rec["libraries"], {"PanelsDraw": "0x" + "33" * 20})
         self.assertEqual(rec["genesisHeadCheck"]["commit"], HEAD)
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_broadcast_flag_broadcasts_with_the_key_on_stdin(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", "--broadcast-sepolia")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -384,6 +414,7 @@ class TestDeploy(unittest.TestCase):
         rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
         self.assertFalse(rec["dryRun"])
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_genesis_mint_goes_to_forge_with_its_defaults(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -391,6 +422,7 @@ class TestDeploy(unittest.TestCase):
         self.assertEqual(ran["mint"], str(5_000 * 10**6))
         self.assertEqual(ran["mintTo"].lower(), ds.address_of(ds.derive(ds.MNEMONIC, 0)).lower())  # the deployer
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_genesis_mint_flags_go_to_forge(self):
         to = "0x" + "99" * 20
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", "--genesis-mint", "6000",
@@ -405,11 +437,37 @@ class TestDeploy(unittest.TestCase):
         self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, "--genesis-mint-to", "0x12"),
                             "nonzero address", rpc=())
 
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_a_record_with_another_genesis_mint_is_refused(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", mint_off=1)
         self.assertEqual(r.returncode, 2)
         self.assertIn("genesis mint isn't the one asked for", r.stderr)
 
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_the_genesis_rad_node_goes_to_forge_and_into_the_record(self):
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.docker_log.read_text())["radNode"], "0x" + RAD_KEY.hex())
+        rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
+        self.assertEqual(rec["genesisRadNode"]["key"], "0x" + RAD_KEY.hex())
+        self.assertEqual(rec["genesisRadNode"]["did"], RAD_DID)
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", rad_node="0x" + RAD_KEY.hex())
+        self.assertEqual(r.returncode, 0, r.stderr)  # the same key in hex
+
+    def test_a_missing_or_bad_genesis_rad_node_is_refused_before_any_call(self):
+        self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, rad_node=None), "--genesis-rad-node",
+                            rpc=())
+        for bad in ("did:key:z6MkNotBase58l0O", "0x1234", "0x" + "00" * 32, "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"):
+            self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, rad_node=bad), "--genesis-rad-node",
+                                rpc=())
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_a_record_with_another_genesis_rad_node_is_refused(self):
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", record_node="0x" + "ee" * 32)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("genesis Radicle node key isn't the one asked for", r.stderr)
+
+    @outside_sandbox(NEEDS_CHECKOUT)
     def test_forges_refusal_is_a_refusal(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", fail="the bytecode of Panels differs")
         self.assertEqual(r.returncode, 2)

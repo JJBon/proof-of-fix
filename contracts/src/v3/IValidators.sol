@@ -38,6 +38,10 @@ interface IValidators {
 
     /// What a registration declares, signed by `key` (specs/validator-admission, "A registration records what the
     /// caps need"). `level` is read only for the TEE proof type (A or B); zkTLS is level C and `simulated` level A.
+    /// `radNode` (#251, design L11 condition 1; specs/radicle-hosting, "A seat maps to one Radicle node key on-chain"):
+    /// the 32-byte Ed25519 public key of the validator's Radicle node, the key its `did:key:z6Mk…` names. 0 registers
+    /// no node: the validator may still be drawn and judge, but its seat is never counted as a Radicle delegate. Two
+    /// registered validators that aren't leaving or exited never share one; another node is another registration.
     struct Registration {
         address key;
         address operator; // the declared operator account: one per panel (D6), and where the bond returns
@@ -49,6 +53,7 @@ interface IValidators {
         bytes32 host; // the infrastructure host the attestation identifies or the operator declares
         bytes32 family; // the declared model family, fixed for this key
         uint32 firmware; // the TEE's attested firmware (TCB) level, at least its type's minimum (D10); 0 for zkTLS
+        bytes32 radNode; // its Radicle node's Ed25519 public key (did:key); 0: none, never counted as a delegate
     }
 
     /// A registered validator, readable by anyone.
@@ -73,6 +78,7 @@ interface IValidators {
         uint64 registeredAt;
         uint32 firmware; // its latest attested firmware (TCB) level (0 for zkTLS)
         uint32 reattestations; // attestations after the registration's: the next re-attestation's nonce
+        bytes32 radNode; // its Radicle node's Ed25519 public key, as registered (0: none)
     }
 
     /// An ADR's operations on the constitution's lists (D10, D11; task 3.4). The removal kind (an ADR that only removes
@@ -143,6 +149,8 @@ interface IValidators {
     /// A candidate in standing, not cooling off after a failed attempt: may be drawn as a shadow judge.
     function canShadow(address key) external view returns (bool);
     function validator(address key) external view returns (Validator memory);
+    /// The Radicle node key (Ed25519, 32 bytes) `key` registered with, whatever its state; 0 for none (#251, L11).
+    function radNodeOf(address key) external view returns (bytes32);
     function progress(address key) external view returns (Progress memory);
 
     /// The bond tier a bounty falls in (D2): the smallest step at or above it; reverts above the largest step.

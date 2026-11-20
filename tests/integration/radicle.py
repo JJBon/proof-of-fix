@@ -170,10 +170,11 @@ class Net:
         for n in SEATS[1:]:
             self.sh(n, "cd repo && git push -q rad main 2>/dev/null")
         delegates = " ".join(f"--delegate {dids[n]}" for n in SEATS[1:])
-        self.sh(first, f"cd repo && rad sync --fetch >/dev/null 2>&1; rad id update --title 'The seats are the delegates' "
+        self.sync_on(first)
+        self.sh(first, f"cd repo && rad id update --title 'The seats are the delegates' "
                        f"--description 'Seven seats, threshold {THRESHOLD} = the issue quorum (proof-of-fix#201)' "
                        f"{delegates} --threshold {THRESHOLD} --no-confirm >/dev/null")
-        self.sh(first, "cd repo && rad sync --announce >/dev/null 2>&1 || true")
+        self.sync_on(first, "announce")
         self.sync()
         for n in NODES:
             s = self.snapshot(n)
@@ -187,9 +188,17 @@ class Net:
 
     # ---------- reading and pushing ----------
 
+    def sync_on(self, n: str, mode: str = "fetch") -> str:
+        """`rad sync --<mode> <RID>` on node `n` (the RID positional: Radicle 1.10.3 refuses `--rid`); a failure is
+        logged, not hidden, and returned ("" when it worked)."""
+        err = rad.sync_error(self.sh(n, rad.sync_lines(self.rid, mode), check=False))
+        if err:
+            log(f"radicle: {n}: {err}")
+        return err
+
     def sync(self, nodes=NODES) -> None:
         for n in nodes:
-            self.sh(n, f"timeout 30 rad sync --fetch --rid {self.rid} >/dev/null 2>&1 || true", check=False)
+            self.sync_on(n)
 
     def snapshot(self, n: str, sync: bool = False) -> rad.Snapshot:
         return rad.Radicle(self.rid, ["docker", "exec", "-i", self.c(n)]).snapshot(sync=sync)
@@ -212,14 +221,16 @@ class Net:
 
     def commit_on(self, n: str, base: str, what: str) -> str:
         """An unjudged commit on top of `base`, made on node `n`."""
-        return self.sh(n, f"cd repo && rad sync --fetch >/dev/null 2>&1; git fetch -q {self.storage()} {base} && "
+        self.sync_on(n)
+        return self.sh(n, f"cd repo && git fetch -q {self.storage()} {base} && "
                           f"git checkout -q -B work {base} && printf '\\n# {what}\\n' >> stats.py && "
                           f"git commit -q -a -m '{what} (proof-of-fix#201)' && git rev-parse HEAD")
 
     def push_main(self, n: str, sha: str) -> None:
         """Node `n` pushes its own signed main to `sha` with no check at all (an outsider, or a delegate who skips the
         node's): what Radicle alone allows."""
-        self.sh(n, f"cd repo && rad sync --fetch >/dev/null 2>&1; {{ git cat-file -e {sha}^{{commit}} 2>/dev/null || "
+        self.sync_on(n)
+        self.sh(n, f"cd repo && {{ git cat-file -e {sha}^{{commit}} 2>/dev/null || "
                    f"git fetch -q {self.storage()} {sha}; }} && git push -q -f rad {sha}:refs/heads/main 2>/dev/null")
 
     # ---------- isolation (#190's checks) ----------

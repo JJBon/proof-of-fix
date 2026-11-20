@@ -31,7 +31,9 @@ want="0x${fix}000000000000000000000000"
 
 # 2. The commit is on this node (from the patch or branch it was proposed on), and it fast-forwards this delegate's
 #    own signed `main` (its namespace in storage, not the canonical ref and not the working copy).
-rad sync --fetch "$RID" >/dev/null 2>&1 || true
+if ! synced=$(rad sync --fetch "$RID" 2>&1); then # reported, not hidden; the checks below read this node's copy
+  echo "gate: warn: rad sync --fetch $RID failed: $(grep -v '^[[:space:]]*$' <<<"$synced" | tail -1)" >&2
+fi
 git --git-dir "$storage" cat-file -e "$fix^{commit}" 2>/dev/null || refuse "commit $fix not on this node" 5
 me=$(rad self --did); me=${me#did:key:}
 mine=$(git --git-dir "$storage" rev-parse --verify -q "refs/namespaces/$me/refs/heads/main" || true)

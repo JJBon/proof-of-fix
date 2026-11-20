@@ -67,6 +67,14 @@ Each validator SHALL record its Radicle node ID on-chain when it registers, and 
 - **WHEN** a validator is seated but registered no Radicle node ID
 - **THEN** no honest node signs an identity revision adding a key for it, and `verify-delegates` reports the seat as unmapped
 
+#### Scenario: Two registrations name one node
+- **WHEN** a key registers with a Radicle node ID that another registered validator, neither leaving nor exited, holds
+- **THEN** the registration is refused, and the node stays mapped to the first seat
+
+#### Scenario: A validator moves to another node
+- **WHEN** a validator wants its seat on another Radicle node
+- **THEN** it leaves and registers again, with a new key, naming the new node; no call changes a registered node ID
+
 ### Requirement: One pending identity revision at a time
 A seated node SHALL NOT propose a new identity revision while an earlier one is pending, and SHALL review pending revisions in order.
 
