@@ -40,6 +40,12 @@ The story, in order (each step needs the one before):
    is claimed; the outvoted judge challenges it; more validators qualify until a fresh panel of 5 can be drawn; the
    panel reverses it, the award is clawed back with nothing earned, and the bounty reopens.
 
+10. protected tests (#251 L20, task 4.8): a repository of real code on this machine (git over file://) whose
+   `.pof/check.json` protects `tests/`. A bad fix that also weakens its protected test fails, and so does the same bad
+   fix without that edit: every judge ran the base's test, twice in a fresh container each (L22), on a run tree whose
+   hash is the unedited fix's tree. A good fix passes. These fixes' tests run in the real Docker sandbox; without the
+   overlay, the weakened fix's own tests pass, as the run shows.
+
 What it doesn't cover is listed at the end of the run (and in reports/devnet-v3-local.md)."""
 
 from __future__ import annotations
@@ -47,6 +53,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -58,7 +66,7 @@ sys.path.insert(0, str(ROOT / "tests" / "integration"))
 
 from bot import logic  # noqa: E402
 from e2e_node_v3 import COIN, ETH_100, Host, Run, check, keys_for, simulator  # noqa: E402
-from oracle import abi, crypto, node_v3, v2, v3  # noqa: E402
+from oracle import abi, checkconfig, crypto, fetch, node_v3, sandbox, v2, v3  # noqa: E402
 from oracle.judge import FakeJudge  # noqa: E402
 from oracle.node_v3 import NodeV3  # noqa: E402
 from oracle.receipt import Store  # noqa: E402
@@ -69,7 +77,7 @@ from panel import PanelV3  # noqa: E402
 
 TEES = ("intel-tdx", "amd-sev-snp", "aws-nitro-enclaves")  # spread, so the TEE-type cap lets k = 5 and 7 fill
 FAMILIES = ["fake"] + [f"fake-{i}" for i in range(1, 9)]  # one family per validator: the family cap allows 1 at k = 3
-HOUR, DAY = 3600, 86400
+HOUR, DAY, WEEK = 3600, 86400, 7 * 86400
 REPORT_WINDOW = 86400
 WON, CLAIMED, OPEN = 2, 3, 1  # RaceV3Base.State ("Merged": claimed; the head moves at finality, #251 L9)
 PASS, FAIL = 1, 2  # RaceV3Base.Outcome
@@ -98,6 +106,83 @@ class Forge(Host):
         self._pulls.append({"number": 500 + len(self._pulls), "title": title, "body": body, "head_sha": sha,
                             "base_sha": base, "state": "open"})
         return self._pulls[-1]["number"]
+
+
+class Sources:
+    """The nodes' fetcher: the protected-tests scenario's repository (step 10) through a real fetcher (oracle/fetch.py,
+    git over file://), every other fix as before: a checkout already under the source root, and no repository
+    settings at its base (so the sandbox's own command, and nothing protected)."""
+
+    def __init__(self) -> None:
+        self.real: fetch.Fetcher | None = None
+        self.shas: set = set()
+
+    def use(self, url: str, shas, log) -> None:
+        self.real = fetch.Fetcher(url, log=log)
+        self.shas |= set(shas)
+
+    def ensure(self, root, sha, fix) -> bool:
+        if self.real is not None and sha in self.shas:
+            return self.real.ensure(root, sha, fix)
+        return (Path(root) / sha).is_dir()
+
+    def file_at(self, root, sha, path, max_bytes):
+        if self.real is not None and sha in self.shas:
+            return self.real.file_at(root, sha, path, max_bytes)
+        return fetch.Blob()
+
+
+STATS = "def mean(xs):\n    return sum(xs) / len(xs)\n\n\ndef median(xs):\n    return {median}\n"
+GOOD_MEDIAN = "(sorted(xs)[(len(xs) - 1) // 2] + sorted(xs)[len(xs) // 2]) / 2"
+MEAN_TEST = ("import unittest\n\nfrom stats import mean\n\n\nclass Mean(unittest.TestCase):\n"
+             "    def test_mean(self):\n        self.assertEqual(mean([1, 2, 3]), 2)\n")
+WEAK_TEST = "import unittest\n\n\nclass Mean(unittest.TestCase):\n    def test_mean(self):\n        pass\n"
+ISSUE_TEST = ("import unittest\n\nfrom stats import median\n\n\nclass Issue(unittest.TestCase):\n"
+              "    def test_median(self):\n        self.assertEqual(median([4, 1, 3, 2]), 2.5)\n")
+SUITE = ["python", "-m", "unittest", "discover", "-s", "tests", "-t", "tests", "-q"]
+
+
+def git(cwd: Path, *args) -> str:
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(cwd), "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_TERMINAL_PROMPT": "0"}
+    return subprocess.run(["git", "-c", "user.name=pof", "-c", "user.email=pof@example.invalid",
+                           "-c", "init.defaultBranch=main", *args], cwd=str(cwd), env=env, capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
+class ProtectedRepo:
+    """Step 10's repository, on this machine: a base whose `.pof/check.json` runs its suite and protects `tests/`
+    (its test of `mean`), and fixes for an issue about `median` on branches off it."""
+
+    def __init__(self, root: Path) -> None:
+        root = Path(root).resolve()
+        self.work, self.bare = root / "work", root / "repo.git"
+        self.work.mkdir(parents=True)
+        git(root, "init", "-q", "--bare", str(self.bare))
+        git(self.work, "init", "-q")
+        self.base = self.commit({"stats.py": STATS.format(median="0"), "tests/test_stats.py": MEAN_TEST,
+                                 ".pof/check.json": json.dumps({"commands": [SUITE], "protected": ["tests/"]})},
+                                "the base: its suite, tests/ protected", parent="")
+        self.url = f"file://{self.bare}"
+
+    def commit(self, files: dict, message: str, parent: str | None = None) -> str:
+        if parent:
+            git(self.work, "checkout", "-q", "--detach", parent)
+        for name, data in files.items():
+            path = self.work / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(data)
+        git(self.work, "add", "-A")
+        git(self.work, "commit", "-q", "-m", message)
+        sha = git(self.work, "rev-parse", "HEAD")
+        git(self.work, "push", "-q", str(self.bare), f"{sha}:refs/heads/c-{sha[:12]}")
+        return sha
+
+    def fix(self, files: dict, message: str) -> str:
+        return self.commit(files, message, parent=self.base)
+
+    def tree(self, sha: str) -> str:
+        return git(self.work, "rev-parse", f"{sha}^{{tree}}")
 
 
 class LiveChain(v3.Chain):
@@ -151,6 +236,7 @@ class Net(Run):
         self.host = Forge()
         self.panel = PanelV3(self.chain)
         self.bad: set = set()  # the fixes whose tests fail
+        self.sources = Sources()  # step 10's fixes are real code, fetched; the rest are stand-ins
         self.funder = self.account("funder")
         self.solver = self.account("solver")
         self.anyone = self.account("anyone")
@@ -187,15 +273,21 @@ class Net(Run):
         wallet = Wallet(self.rpc, keys.account_secret(), name)
         me = keys.address()
         self.names[me.lower()] = name
-        return Node(self.chain, keys, FakeJudge(family=family), self.host, "demo/median", self.work / "src",
+        node = Node(self.chain, keys, FakeJudge(family=family), self.host, "demo/median", self.work / "src",
                     OnchainExchange(self.chain, keys, wallet=wallet), Store(self.work / "receipts"),
                     runner=self.tests, log=self.log(name + tag), wallet=wallet,
                     rounds=Rounds(self.work / "rounds", self.chain.chain_id(), self.chain.race, me + tag),
                     keeper=keeper, costs={"vcpu_second": 12_000_000, "gb_second": 1_300_000} if keeper else None,
                     seal_margin=3 * HOUR)  # a check that can't be run is sealed at once as not passed
+        node.fetcher = self.sources
+        return node
 
     def tests(self, argv: list) -> tuple:
-        """Stands in for the Docker sandbox: a bad fix's tests fail. No fix's code exists, so none is run."""
+        """Stands in for the Docker sandbox: a bad fix's tests fail. No fix's code exists, so none is run. Step 10's
+        fixes are real code: their run trees and checkouts run in the real sandbox (oracle/sandbox.py's CLI runner)."""
+        mount = next((a[:-len(":/src:ro")] for a in argv if str(a).endswith(":/src:ro")), "")
+        if "/.run-" in mount or Path(mount).name in self.sources.shas:
+            return sandbox.docker_runner(argv)
         text = " ".join(str(a) for a in argv)
         return (1, "", "1 failed") if any(sha in text for sha in self.bad) else (0, "ok", "")
 
@@ -273,26 +365,54 @@ class Net(Run):
     def fix_sha(label: str) -> str:
         return hashlib.sha1(f"pof devnet v3 fix {label}".encode()).hexdigest()
 
-    def submit_fix(self, bounty: int, issue: int, label: str, good: bool, base: bytes | None = None) -> tuple:
-        """The solver seals a fix on `base` (default: the repository's head now; the race serves one repository and
-        its merge at finality moves its head only from the base, #251 L1 and L9) and opens its pull request. Returns (the submission, the
-        commitment's opening)."""
+    def submit_fix(self, bounty: int, issue: int, label: str, good: bool, base: bytes | None = None,
+                   solver: Wallet | None = None) -> tuple:
+        """The solver (`solver`, default the run's) seals a fix on `base` (default: the repository's head now; the race
+        serves one repository and its merge at finality moves its head only from the base, #251 L1 and L9) and opens
+        its pull request. Returns (the submission, the commitment's opening)."""
+        w = self.solver if solver is None else solver
         base = self.chain.head() if base is None else base
         sha = self.fix_sha(label)
         (self.work / "src" / sha).mkdir(parents=True, exist_ok=True)
         if not good:
             self.bad.add(sha)
         fix, salt = v2.commit_word(sha), crypto.keccak256(f"salt {label}".encode())
-        self.solver.send(self.chain.race, "attempt(uint256)", bounty)
-        receipt = self.solver.send(self.chain.race, "commit(uint256,bytes32)", bounty,
-                                   v3.fix_commitment(fix, base, salt, self.solver.address))
+        w.send(self.chain.race, "attempt(uint256)", bounty)
+        receipt = w.send(self.chain.race, "commit(uint256,bytes32)", bounty, v3.fix_commitment(fix, base, salt, w.address))
         log = next(x for x in receipt["logs"] if x["topics"][0] == topic(v3.COMMITTED))
         s = int(log["topics"][2], 16)
         self.host.add_pull(f"Fix the median ({label})",
-                           logic.pr_body(100 + issue, bounty, s, "0x" + salt.hex(), self.solver.address), sha,
+                           logic.pr_body(100 + issue, bounty, s, "0x" + salt.hex(), w.address), sha,
                            base[:20].hex())
         self.chain.live[s] = True
         return s, (fix, base, salt)
+
+    def submit_real(self, bounty: int, issue: int, label: str, sha: str, base: str) -> int:
+        """Step 10: a solver of its own seals a real commit `sha` and opens its pull request against the git commit
+        `base`, whose `.pof/check.json` the judges read. The seal's base is 0 (a repository outside the head
+        registry's history: this repository isn't Heads' genesis), which the node accepts as before."""
+        w = self.account(f"protected {label}")
+        fix, salt = v2.commit_word(sha), crypto.keccak256(f"salt {label}".encode())
+        w.send(self.chain.race, "attempt(uint256)", bounty)
+        receipt = w.send(self.chain.race, "commit(uint256,bytes32)", bounty,
+                         v3.fix_commitment(fix, v3.ZERO, salt, w.address))
+        log = next(x for x in receipt["logs"] if x["topics"][0] == topic(v3.COMMITTED))
+        s = int(log["topics"][2], 16)
+        self.host.add_pull(f"Fix the median ({label})", logic.pr_body(100 + issue, bounty, s, "0x" + salt.hex(),
+                                                                      w.address), sha, base)
+        self.chain.live[s] = True
+        return s
+
+    def merged_fix(self, solver: Wallet, bounty: int, issue: int, label: str) -> int:
+        """`solver`'s good fix to `bounty`, judged, claimed, final and merged by a keeper (the head moves to it).
+        Returns its submission."""
+        s, opening = self.submit_fix(bounty, issue, label, good=True, solver=solver)
+        self.drive(lambda: self.bounty_state(bounty) == WON and self.chain.bounty(bounty)["winner"] == s,
+                   f"{label}: won")
+        solver.send(self.chain.race, "claim(uint256,bytes32,bytes32,bytes32)", bounty, *opening)
+        self.drive(lambda: self.chain.award(bounty, self.chain.bounty(bounty)["epoch"])["merged"], f"{label}: merged",
+                   poke=True)
+        return s
 
     def bounty_state(self, b: int) -> int:
         return self.chain.bounty(b)["state"]
@@ -572,6 +692,36 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     check(c.verdict(s3)["pass"], f"it became final after its window of {hours(window3)}, with no hold: a k = 1 verdict "
                                  f"is held, a k = 3 verdict isn't")
 
+    # ---------- 2b. the minimum of active solvers (#251 task 3.3, contract batch 3) ----------
+    print("\n== 2b. three solvers made active by unfunded fixes, then pledges open; reputation before large claims "
+          "==", flush=True)
+    book = crypto.checksum(rpc.view(c.race, "solverBook()", ["address"])[0])
+    healer = n.account("healer")  # the heal step's solver (step 8): its own reputation
+    third = n.account("third solver")
+    regs = [n.register_issue() for _ in range(5)]
+    n.drive(lambda: all(c.verdict(x)["status"] == v3.FINAL for _, x in regs), "five registrations final")
+    unfunded = [(w, n.open_bounty(i), i) for w, (i, _) in zip((n.solver, healer, third), regs[:3])]
+    try:
+        n.funder.send(c.race, "pledge(uint256,uint256)", unfunded[0][1], 10 * COIN)
+        raise AssertionError("a pledge landed before three solvers were active")
+    except Reverted as e:
+        check(True, f"no active solver yet: a pledge is refused ({e.reason}), and the issues are raced unfunded")
+    for k, (w, b, i) in enumerate(unfunded):
+        n.merged_fix(w, b, i, f"an unfunded fix {k + 1}")
+    actives = rpc.view(book, "activeCount()", ["uint256"])[0]
+    check(actives == 3, f"three solvers' unfunded fixes were merged: {actives} active solvers, pledges open "
+                        f"(ACTIVE_SOLVERS_MIN 3, ACTIVE_WINDOW {rpc.view(book, 'ACTIVE_WINDOW()', ['uint256'])[0] / WEEK:g} "
+                        f"weeks)")
+    for w, (i, _) in zip((n.solver, healer), regs[3:]):  # reputation: a funded fix each, about $44 (D29's cap is $50)
+        b = n.open_bounty(i)
+        n.funder.send(c.race, "pledge(uint256,uint256)", b, 105 * COIN)
+        n.merged_fix(w, b, i, f"a funded fix by {w.role}")
+    reps = [rpc.view(book, "reputation(address)", ["uint256"], w.address)[0] for w in (n.solver, healer)]
+    check(all(r > 30 * COIN for r in reps),
+          f"each of the two solvers has a merged funded fix: reputation {', '.join(f'{r / COIN:,.2f}' for r in reps)}, "
+          f"so its cap is above the $50 a new identity may claim")
+    out["activeSolvers"] = {"active": actives, "reputations": reps}
+
     # ---------- 3. a bounty above k = 1's limit ----------
     print("\n== 3. a bounty above k = 1's limit waits, is shadowed, and is drawn when k = 3 is reached ==", flush=True)
     b1 = n.open_bounty(issue3)
@@ -592,7 +742,8 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
         n.funder.send(c.race, "pledge(uint256,uint256)", b2, 200 * COIN)
         # on the good fix, as a solver building on a pending fix would: the good fix's merge at its finality moves the
         # one head there (#251 L9); this one is reversed before its own finality and never merged
-        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False, base=v2.commit_word(n.fix_sha("a good fix")))
+        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False, base=v2.commit_word(n.fix_sha("a good fix")),
+                                      solver=healer)
         for name in ("v1", "v2"):
             n.nodes[name].lies.add(s_h)  # the two validators that will sit with the genesis validator lie on it
     n.drive(lambda: c.verdict(s_b)["status"] == v3.WAITING and n.quiet(s_b), "the fix waits, its shadows settled")
@@ -827,6 +978,11 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
               f"the reversed fix (submission {s_h}) never reached the head: its award was closed unmerged")
         out["headAtFinality"]["reversedNeverMerged"] = True
 
+    # ---------- 10. protected tests (#251 L20, task 4.8) ----------
+    print("\n== 10. protected tests: a bad fix that weakens a protected test fails, and so does the same fix without "
+          "that edit ==", flush=True)
+    out["protectedTests"] = protected_tests(n)
+
     out["validators"] = {name: {"state": v3.STATES[c.validator(node.address)["state"]],
                                 "bond": c.validator(node.address)["bond"], "slashed": c.validator(node.address)["slashed"]}
                          for name, node in n.nodes.items()}
@@ -840,10 +996,73 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
           f"registry's epoch was bumped {n.pokes} times to retry a waiting draw")
     print("not covered here: validators as separate processes over a relay (the relay doesn't speak v3 messages); real "
           "attestation and the zkTLS prover (the simulated proof type only); a model judge (the fake judge only); "
-          "ADRs and escalated fixes (RaceV3 can't open them); the test-backed dispute and the appeal of D21-D23 "
-          "(task 10.4, not built); short test windows (the devnet deploys the production ones; minutes are task 3.12's)")
+          "ADRs and escalated fixes (RaceV3 can't open them); the test-backed dispute and the appeal (D21, D24: in the "
+          "contracts since #251's contract batch 3, not yet in the node, #132 tasks 10.5 and 11.5); short test windows "
+          "(the devnet deploys the production ones; minutes are task 3.12's)")
     print("devnet-v3: all checks passed", flush=True)
     return 0
+
+
+def receipts_of(n: Net, s: int) -> list:
+    """The `tests` of every receipt on submission `s`'s counted panel."""
+    c = n.chain
+    pid = c.verdict(s)["pid"]
+    any_node = next(iter(n.nodes.values()))
+    return [any_node.receipts3.get(c.seat(pid, i)["receipt"])["receipt"]["tests"] for i in range(c.panel(pid)["k"])]
+
+
+def protected_tests(n: Net) -> dict:
+    """Step 10 (#251 L20): real fixes, real tests in the Docker sandbox, judged by the network's panels."""
+    c = n.chain
+    if subprocess.run(["docker", "image", "inspect", sandbox.TEST_IMAGE], capture_output=True).returncode:
+        raise AssertionError(f"the pinned test image isn't here ({sandbox.TEST_IMAGE}); nothing is pulled by this run")
+    repo = ProtectedRepo(n.work / "protected-repo")
+    broken = STATS.format(median=GOOD_MEDIAN).replace("sum(xs) / len(xs)", "0")  # median fixed, mean broken
+    weakened = repo.fix({"stats.py": broken, "test_issue.py": ISSUE_TEST, "tests/test_stats.py": WEAK_TEST},
+                        "a bad fix that also weakens the protected test of mean")
+    unedited = repo.fix({"stats.py": broken, "test_issue.py": ISSUE_TEST}, "the same bad fix, the test untouched")
+    good = repo.fix({"stats.py": STATS.format(median=GOOD_MEDIAN), "test_issue.py": ISSUE_TEST}, "a good fix")
+    n.sources.use(repo.url, [repo.base, weakened, unedited, good], n.log("fetch"))
+    # Three registrations, so one that L19 releases (its audit undrawable in this run's draws) doesn't stop the step.
+    regs = [n.register_issue() for _ in range(3)]
+    final = lambda: [i for i, x in regs if c.verdict(x)["status"] == v3.FINAL]  # noqa: E731
+    n.drive(lambda: final() or all(c.verdict(x)["status"] in (v3.FINAL, v3.RELEASED, v3.EXPIRED) for _, x in regs),
+            "the scenario's registrations decided", poke=True)
+    if not final():
+        raise AssertionError(f"none of the scenario's registrations became final: "
+                             f"{[v3.STATUS[c.verdict(x)['status']] for _, x in regs]}")
+    issue = final()[0]
+    bounty = n.open_bounty(issue)
+    s_weak = n.submit_real(bounty, issue, "weakened", weakened, repo.base)
+    s_plain = n.submit_real(bounty, issue, "unedited", unedited, repo.base)
+    def judged(x: int) -> bool:  # counted: in its window, final, or released after counting (L19's audits)
+        v = c.verdict(x)
+        return v["status"] in (v3.WINDOW, v3.FINAL) or (v["status"] == v3.RELEASED and v["pid"] != 0
+                                                         and c.panel(v["pid"])["counted"])
+    n.drive(lambda: judged(s_weak) and judged(s_plain), "the two bad fixes judged", poke=True)
+    weak, plain = receipts_of(n, s_weak), receipts_of(n, s_plain)
+    same_tree = repo.tree(unedited)
+    check(not c.verdict(s_weak)["pass"] and all(t["exit_code"] != 0 for t in weak)
+          and all(t["protected"] == ["tests"] and t["not_run"] == 1 and t["run_tree"] == same_tree for t in weak)
+          and all(len(t["runs"]) == 2 and all(r["exit_code"] != 0 for r in t["runs"]) for t in weak),
+          f"the bad fix that weakens the protected test failed (submission {s_weak}, a panel of {len(weak)}): each "
+          f"judge ran the base's test twice on a run tree whose hash is the unedited fix's tree ({same_tree[:12]}), "
+          f"and its receipt says 1 changed file was protected and not run")
+    check(not c.verdict(s_plain)["pass"] and all(t["exit_code"] != 0 and t["not_run"] == 0
+                                                 and t["run_tree"] == same_tree for t in plain),
+          f"the same bad fix without that edit failed too (submission {s_plain}), on the same run tree")
+    alone = sandbox.run_tests(n.work / "src" / weakened, command=checkconfig.command((tuple(SUITE),)),
+                              runner=sandbox.docker_runner, timeout_s=240)
+    check(alone.passed, "without the overlay, the weakened fix's own tests pass in the same sandbox (both runs exit "
+                        "0): the protected path is what failed it")
+    s_good = n.submit_real(bounty, issue, "good", good, repo.base)
+    n.drive(lambda: judged(s_good), "the good fix judged", poke=True)
+    good_tests = receipts_of(n, s_good)
+    check(c.verdict(s_good)["pass"] and all(t["exit_code"] == 0 and not t.get("flaky") for t in good_tests),
+          f"a good fix passed (submission {s_good}): its acceptance test at the root and the base's protected test "
+          f"both ran, twice each")
+    return {"weakened": s_weak, "unedited": s_plain, "good": s_good, "runTree": same_tree,
+            "judges": len(weak)}
 
 
 def prepare() -> int:

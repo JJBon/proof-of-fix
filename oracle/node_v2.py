@@ -39,12 +39,12 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import checkconfig, crypto, evidence, radicle as rad, receipt as receipts, rounds as round_store, v2
+from . import checkconfig, crypto, evidence, radicle as rad, receipt as receipts, rounds as round_store, runtree, v2
 from .judge import case_for, refused
 from .models import ModelError
 from .keys import KeyProvider
 from .rpc import Reverted, Unavailable, Wallet
-from .sandbox import run_tests
+from .sandbox import LIMITS, nothing_ran, run_tests
 from .transport import FolderExchange as Exchange  # noqa: F401 (the folder, under its old name)
 
 CHECKER_IMAGE = os.environ.get("POF_ORACLE_IMAGE", "local-unpinned")
@@ -275,25 +275,78 @@ class NodeV2:
                             c.bounty, issue_id, onchain["reporter"])
         return case_for(self.repo_name, e.issue, e.commit, e.diff, notes=e.notes), e.refusal
 
-    def _test_command(self, p: dict) -> tuple:
-        """(what the sandbox runs, why this fix can't pass, or ""). The repository's own tests come from
+    def _test_config(self, p: dict) -> tuple:
+        """(the repository's commands, its protected paths, why this fix can't pass, or ""). Both come from
         `.pof/check.json` at the pull request's base, fetched by this node, never from the fix (oracle/checkconfig.py);
-        without that file, or without a fetcher or a base to read it from, the sandbox's own command, as before.
-        Raises NotReady when the base can't be fetched just now: that's not the fix's doing."""
+        without that file, or without a fetcher or a base to read it from, none (the sandbox's own command, as
+        before). Raises NotReady when the base can't be fetched just now: that's not the fix's doing."""
         fetcher, base = getattr(self, "fetcher", None), p.get("base_sha", "")
         if fetcher is None or not base:
-            return checkconfig.command(), ""
+            return (), (), ""
         blob = fetcher.file_at(self.src_root, base, checkconfig.PATH, checkconfig.MAX_BYTES)
         if blob is None:
             raise evidence.NotReady(f"no {checkconfig.PATH} from the base {base[:12]} yet")
         if blob.refusal:
-            return checkconfig.command(), f"the repository's test command: {blob.refusal}"
+            return (), (), f"the repository's test command: {blob.refusal}"
         if blob.data is None:
-            return checkconfig.command(), ""
+            return (), (), ""
         try:
-            return checkconfig.command(checkconfig.parse(blob.data)), ""
+            config = checkconfig.parse_config(blob.data)
         except checkconfig.Invalid as e:
-            return checkconfig.command(), f"the repository's {checkconfig.PATH} at its base {base[:12]} is invalid: {e}"
+            return (), (), f"the repository's {checkconfig.PATH} at its base {base[:12]} is invalid: {e}"
+        return config.commands, config.protected, ""
+
+    def _test_command(self, p: dict) -> tuple:
+        """(what the sandbox runs, why this fix can't pass, or ""): `_test_config`'s commands as the sandbox's
+        command."""
+        project, _, why = self._test_config(p)
+        return checkconfig.command(project), why
+
+    def _base_tree(self, p: dict) -> Path:
+        """The base's checkout, from this node's own fetch (#251 L20: the protected paths' copies come from it).
+        Raises NotReady when it can't be fetched just now."""
+        from . import fetch
+
+        base = p.get("base_sha", "")
+        fetcher = getattr(self, "fetcher", None)
+        if fetcher is None or not fetch.ensure(self.src_root, {"head_sha": base}, v2.commit_word(base), fetcher):
+            raise evidence.NotReady(f"no checkout of the base {base[:12]} for the protected paths yet")
+        return self.src_root / base
+
+    def _run_check(self, p: dict, project: tuple, protected: tuple, timeout_s: int | None) -> tuple:
+        """(the check's test runs, why the fix can't pass, or ""). Without protected paths, the fix's checkout as
+        before. With them (#251 L20), a fresh run tree: the fix's tree with the base's copies of the protected paths,
+        never the shared checkout; a tests-only fix also runs its own protected tests, on its own tree, and both sets
+        must pass. Each run is in a fresh container, twice per tree (L22), all of them within the profile's one time
+        limit. Raises NotReady (before anything runs) when the base can't be fetched just now."""
+        src = self.src_root / p["head_sha"]
+        command = checkconfig.command(project)
+        if not protected:
+            return run_tests(src, command=command, runner=self.runner, timeout_s=timeout_s), ""
+        base = self._base_tree(p)
+        try:
+            fix_files = runtree.entries(src)
+            plan = runtree.plan(fix_files, runtree.entries(base), protected)
+            tree = runtree.build(src, base, protected, self.src_root)
+        except runtree.Unsafe as e:
+            return nothing_ran(), f"the fix's protected tests can't be overlaid: {e}"
+        try:
+            run_tree = runtree.tree_hash(tree)
+            if not plan.tests_only:
+                tests = run_tests(tree, command=command, runner=self.runner, timeout_s=timeout_s)
+                return tests.with_tree(protected, run_tree, plan.not_run), ""
+            # A tests-only fix: the base's protected tests and its own, each set with half the check's limit; the
+            # repository's commands only, since its new tests are what it adds (no acceptance test at the root).
+            share = max(1, int(timeout_s or LIMITS["timeout_s"]) // 2)
+            only = checkconfig.command(project, acceptance=False)
+            theirs = run_tests(tree, command=only, runner=self.runner, timeout_s=share)
+            own = run_tests(src, command=only, runner=self.runner, timeout_s=share)
+            own = own.with_tree(protected, runtree.tree_hash(src, fix_files))
+            return theirs.with_tree(protected, run_tree, plan.not_run, own), ""
+        finally:
+            from .fetch import remove
+
+            remove(tree)
 
     def _check(self, c: Check, sub: dict) -> bool:
         p = c.pull
@@ -303,13 +356,10 @@ class NodeV2:
         onchain = self.chain.issue(issue_id)
         profile = self.chain.profile(onchain["repo"])
         case, refusal = self._case(c, onchain, issue_id)
-        command, why = self._test_command(p)
-        refusal = refusal or why
-        src = self.src_root / p["head_sha"]
-        started = time.monotonic()
-        tests = (run_tests(src, command=command, runner=self.runner) if self.runner
-                 else run_tests(src, command=command))
-        seconds = time.monotonic() - started
+        project, protected, why = self._test_config(p)
+        tests, unsafe = self._run_check(p, project, protected, profile.get("timeoutSeconds"))
+        refusal = refusal or why or unsafe
+        seconds = tests.seconds  # the runs' time, summed (#251 L22)
         if refusal:
             self.log(f"submission {c.submission}: not sent to the model, and not passed: {refusal}")
         answer = refused(case, tests, refusal) if refusal else self.judge.judge(case, tests)

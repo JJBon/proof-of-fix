@@ -12,7 +12,8 @@ proof-of-fix is **research**: a mechanism, its simulations and a reference imple
 
 - **The only deployment its authors run** is a test deployment on **Ethereum Sepolia**, a public test chain whose coins have no value. Its contracts serve **one repository, proof-of-fix itself**, and refuse to deploy on any other chain (design: [`openspec/changes/proof-of-fix-251-testnet-launch/`](openspec/changes/proof-of-fix-251-testnet-launch/)).
 - **Those limits bind that deployment, not the code.** The code is open; anyone may fork it and deploy it elsewhere. Such deployments are their operators' own, with their own responsibilities, and nothing here endorses them.
-- **No token sale, no promise of earnings.** Test bounties and fees are test USDC. Nothing in this repository is financial advice or an offer of anything of value.
+- **No token sale, no promise of earnings.** Test bounties and fees are paid in the project's own **test coin**, "proof-of-fix test coin" (`POFTEST`), which has no value: nobody sells it and there is no market for it. Nothing in this repository is financial advice or an offer of anything of value.
+- **Where the test coin comes from.** A fixed genesis mint at deployment (the launch validators' bonds and a few seed bounties), then only a keyless faucet contract: 20 coins a claim, one claim per address every 2 hours, anyone for itself (`pofctl faucet`). Addresses are free, so a bot can claim from many; spam on the testnet is bounded by the validators' capacity and spending caps, not by the coin, a known risk ([ADR 0007](docs/adr/0007-solver-side-parameters.md), trust point 6).
 - **Not audited.** The contracts haven't had an external security audit. Don't put real money in them.
 
 ## Where it stands

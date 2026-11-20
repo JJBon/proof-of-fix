@@ -24,7 +24,8 @@ from . import abi
 from .rpc import Rpc, Wallet
 
 ROOT = Path(__file__).resolve().parent.parent
-RECORDS = {2: ROOT / "contracts" / "deployments" / "devnet-v2.json", 1: ROOT / "contracts" / "deployments" / "devnet.json"}
+RECORDS = {3: ROOT / "contracts" / "deployments" / "devnet-v3.json",
+           2: ROOT / "contracts" / "deployments" / "devnet-v2.json", 1: ROOT / "contracts" / "deployments" / "devnet.json"}
 C = 10**6
 MAX = 2**256 - 1
 STATES = ["None", "Open", "Won", "Merged", "Paid", "Refunded", "Unsolved"]
@@ -100,7 +101,7 @@ _BYTES32 = {"image", "attestationType", "attestation", "receipt"}
 def load_record(version: int = 2, path: str | None = None) -> dict:
     p = Path(path) if path else RECORDS[version]
     if not p.exists():
-        cmd = "deploy-v2" if version == 2 else "deploy"
+        cmd = {3: "deploy-v3", 2: "deploy-v2"}.get(version, "deploy")
         raise FileNotFoundError(f"no deployment record at {p}: run scripts/devnet.sh {cmd}")
     return json.loads(p.read_text(encoding="utf-8"))
 

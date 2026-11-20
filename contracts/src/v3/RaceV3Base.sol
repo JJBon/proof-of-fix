@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Baskets} from "../Baskets.sol";
 import {Heads} from "../v2/Heads.sol";
 import {IFeesV3} from "./IFeesV3.sol";
@@ -9,12 +11,15 @@ import {Panels} from "./Panels.sol";
 import {PoolV3} from "./PoolV3.sol";
 import {Status, Kind} from "./PanelsBase.sol";
 import {LaunchChain} from "./LaunchChain.sol";
+import {SolverBook} from "./SolverBook.sol";
 
 /// RaceV3's state, types and internals (proof-of-fix#138, task 3.5 of #132). RaceV3 and its companion RaceV3Annex both
 /// inherit it, so they share one storage layout: RaceV3 runs its rarely called actions in its own storage by
 /// delegating to RaceV3Annex, whose address RaceV3 fixes at its deployment (no key, no upgrade), as v2 did.
 /// Everything here is described on RaceV3.
 abstract contract RaceV3Base is Baskets {
+    using SafeERC20 for IERC20;
+
     /// Fixed at deployment. Amounts are in micro-coins (1e-6) of the version's fee coin; shares in bps; days.
     struct Config {
         address infrastructure; // the registration, attempt, evaluation and appeal fees
@@ -33,6 +38,14 @@ abstract contract RaceV3Base is Baskets {
         uint256 mergeDays; // a winning fix must be claimed within this of its win, and merged within this of its finality
         uint256 releaseEveryDays; // instalments are paid at each release after finality
         uint256 instalments;
+        /// The judges' fee mode (#132 D30; ADR 0007). 0, the pure taxi fare (the Sepolia launch's, owner 2026-11-19):
+        /// a fix's submission posts FeesV3's worst-case deposit for K_MAX judges, its judges are paid by the meter,
+        /// and whatever is left returns to the solver, pass or fail, withdrawn or not, as a registration check's.
+        /// Above 0, JUDGE_FEE, a flat fee (kept for a later mainnet decision): every fix's submission pays it on
+        /// arrival in place of a deposit sized to the quote, its judges are paid from it, and its rest goes to the
+        /// sponsors' pool, never back, except when the network never judged the fix (timed out, released). A
+        /// registration check posts FeesV3's deposit in both modes.
+        uint256 judgeFee;
     }
 
     enum State {
@@ -127,9 +140,17 @@ abstract contract RaceV3Base is Baskets {
         uint256 cover; // FeesV3.depositFor(id, repo, K_MAX), in units
         bool wasPass; // the verdict challenged
         uint256 floor; // Panels' panel count at the filing: its panel's id is above it
+        bool test; // a failing-test dispute of a pass (#132 D21), not a receipt challenge
     }
 
+
     uint256 internal constant K_MAX = 7;
+    /// D21's stake (D24's appeal has none since 2026-11-19): the larger of $5 and 10 % of the bounty (micro-coins, bps); D21's reward, of the bounty.
+    uint256 internal constant STAKE_MIN = 5e6;
+    uint256 internal constant STAKE_BPS = 1_000;
+    uint256 internal constant EVIDENCE_REWARD_BPS = 1_000;
+    /// Launch L6: pledges are refused while fewer solvers are active (SolverBook.ACTIVE_SOLVERS_MIN).
+    uint256 internal constant ACTIVE_SOLVERS_MIN = 3;
     /// The bounty a registration check is judged at (micro-coins): the lowest tier, as Panels' ADRs.
     uint256 internal constant CHECK_BOUNTY = 1;
     /// The judges' usage reports: a panel's pay waits for every seat's, or this long after its reveal deadline.
@@ -162,6 +183,7 @@ abstract contract RaceV3Base is Baskets {
     mapping(uint256 pid => mapping(uint256 slot => address)) internal reportedBy;
     mapping(uint256 pid => bool) internal panelPaid; // an audit or challenge panel
     mapping(uint256 pid => uint256) internal shadowsPaid; // a shadow panel: one bit per seat
+    SolverBook internal book; // reputation, claims and active solvers (#251 batch 3): deployed by RaceV3
 
     event Registered(uint256 indexed issue, address indexed reporter, uint256 check);
     event IssueClosed(uint256 indexed issue, IssueState state);
@@ -179,11 +201,18 @@ abstract contract RaceV3Base is Baskets {
     event ChallengeSettled(uint256 indexed submission, uint256 indexed pid, bool upheld);
     event PanelPaid(uint256 indexed submission, uint256 indexed pid, uint256 fromDeposit, uint256 fromPool);
     event HeadMerged(uint256 indexed bounty, uint256 indexed epoch, uint256 indexed submission, bytes32 fix);
+    event Disputed(uint256 indexed submission, address indexed disputer, bytes32 test, uint256 stake);
+    event DisputeRewarded(uint256 indexed submission, address indexed disputer, uint256 reward);
+    event Appealed(uint256 indexed submission, uint256 indexed appeal, bytes32 test);
+    event ToPool(uint256 indexed submission, uint256 amount);
 
     error BadParams();
     error WrongState(uint256 bounty, State state);
     error NotYet();
     error Refused();
+    error BadSignature();
+    error TooFewActiveSolvers(uint256 active);
+    error AppealClosed();
 
     constructor(
         Config memory config_,
@@ -430,7 +459,8 @@ abstract contract RaceV3Base is Baskets {
         s.commitment = commitment;
         s.judged = judged;
         if (b != 0) s.pledges = _bounties[b].pledges;
-        uint256 deposit = _units(fees.maxDeposit(_repoOf(s), K_MAX));
+        uint256 fee = b != 0 ? config.judgeFee : 0;
+        uint256 deposit = _units(fee != 0 ? fee : fees.maxDeposit(_repoOf(s), K_MAX));
         if (deposit != 0) _hold(coin, solver, deposit);
         s.deposit = deposit;
         fees.open(id);
@@ -440,7 +470,9 @@ abstract contract RaceV3Base is Baskets {
 
     function _submit(uint256 b, address solver, bytes32 commitment) internal returns (uint256 id) {
         uint256 judged = _lockedPrice(b, coin) * 1e6 / unit[coin];
-        id = _newCheck(b, 0, solver, commitment, judged == 0 ? 1 : judged);
+        judged = judged == 0 ? 1 : judged;
+        id = _newCheck(b, 0, solver, commitment, judged);
+        book.openClaim(id, solver, judged); // D29: refused over the solver's cap, before anything is judged
         _bySubmission[b].push(id);
         emit Committed(b, id, solver);
     }
@@ -531,6 +563,48 @@ abstract contract RaceV3Base is Baskets {
             _release(coin, a, to);
         }
         if (amount > a) rest = pool.spend(coin, to, amount - a);
+    }
+
+    /// The rest of check `s`'s deposit, once: back to its solver (a registration check's reporter, any check under the
+    /// taxi fare, `judgeFee` 0, or `refund`: the network never judged it), or else, a fix's flat judges' fee, to the
+    /// sponsors' pool (D30's flat fee is never refunded).
+    function _rest(uint256 id, bool refund) internal {
+        Submission storage s = _submissions[id];
+        s.done = true;
+        uint256 left = s.deposit;
+        s.deposit = 0;
+        if (refund || s.bounty == 0 || config.judgeFee == 0) {
+            _release(coin, left, s.solver);
+        } else if (left != 0) {
+            _toPool(left);
+            emit ToPool(id, left);
+        }
+    }
+
+    /// Moves `amount` of the race's deposits into the sponsors' pool.
+    function _toPool(uint256 amount) internal {
+        totalDeposits[coin] -= amount;
+        IERC20(coin).forceApprove(address(pool), amount);
+        pool.fund(coin, amount);
+    }
+
+    /// D21's stake for check `id`: the larger of $5 and 10 % of the bounty it was judged at, in units.
+    function _stakeOf(uint256 id) internal view returns (uint256) {
+        uint256 p = _submissions[id].judged * STAKE_BPS / BPS;
+        return _units(p > STAKE_MIN ? p : STAKE_MIN);
+    }
+
+    /// A fix whose counted panel passed it and whose verdict in Panels is now a fail was reversed (by a test dispute or
+    /// a challenge): its solver's reputation pays REP_LOSS_X × its bounty (D29), once.
+    function _penalize(uint256 id) internal {
+        Submission storage s = _submissions[id];
+        if (s.bounty == 0) return;
+        bytes memory ps = _sub(id);
+        uint256 pid = _w(ps, S_PID);
+        if (pid == 0 || _w(ps, S_PASS) != 0) return;
+        bytes memory p = _pan(pid);
+        if (_w(p, P_COUNTED) == 0 || 2 * _w(p, P_PASSES) <= _w(p, P_K)) return;
+        book.reversed(id, s.solver, s.judged);
     }
 
     function _closeIssue(uint256 id, IssueState state, address to) internal {

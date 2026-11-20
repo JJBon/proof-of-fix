@@ -228,6 +228,7 @@ library PanelsBase {
         c.teeOnly = st.subs[id].teeOnly;
         c.members = new PanelsDraw.Member[](K_MAX);
         c.capWindow = e.capWindow;
+        c.famCap = e.scores.capApplies(sn.blockNo);
     }
 
     /// The counted panel a submission's draw seats with `seed` (K_MAX exactly at the constitution tier).

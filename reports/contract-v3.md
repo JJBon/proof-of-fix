@@ -6,6 +6,93 @@ Task 3.2 builds `Panels`, v3's draw and verdict bookkeeping, on `Validators` (3.
 
 Task 3.5 builds `RaceV3`, the race on Panels and FeesV3, splits `FeesV3.roll` into bounded parts, and replays group 7's market on them (below, "Task 3.5").
 
+## #251: the test coin and its faucet (launch design L17 as amended on 2026-11-20, tasks 3.17 and 3.18)
+The owner replaced Circle's Sepolia USDC with the project's own valueless test coin on 2026-11-20.
+- **`TestCoin`** ("proof-of-fix test coin", `POFTEST`, 6 decimals): an OpenZeppelin ERC-20 whose genesis mint is in its constructor (`genesisMint()` reads its total) and whose `mint` only its `faucet()`, the contract that created it, may call (`NotFaucet`).
+- **`CoinFaucet`**: deploys the token in its own constructor (so neither needs the other's address in advance, and the faucet's creation code holds the token's); `claim()` mints `CLAIM_AMOUNT` (20 coins) to the caller, at most once per address every `CLAIM_INTERVAL` (2 hours) from its last claim (`TooSoon(next)`; `nextClaim(address)` readable). No owner, admin, pause, setter or upgrade on either; both call `LaunchChain`.
+- **The deploy (DeploySepolia.s.sol):** CoinFaucet first, on Sepolia and the local ids alike, then the rest as before with the token as the coin. The genesis mint is 5,000 coins by default: the genesis validator's 250 to the registry maker's precomputed address (it bonds them into Validators), the rest to the recipient named at deploy. The release-candidate set is 11 contracts (TestCoin and CoinFaucet added).
+- **Tests:** `test/v3/TestCoinV3.t.sol`, 17 tests (each scenario of `deployment-binding`'s two coin requirements by name, repeat claims, a fuzz of the wait and of other minters, the ABI's only writers, chain 1 and other public chains refused for both).
+
+| Contract | Runtime | Margin under 24,576 | Initcode | Margin under 49,152 |
+|---|---|---|---|---|
+| `TestCoin` (created by CoinFaucet) | 1,914 | 22,662 | 3,409 | 45,743 |
+| `CoinFaucet` (initcode holds TestCoin's) | 649 | 23,927 | 4,693 | 44,459 |
+
+## #251, contract batch 3: seats by rank, test disputes, the appeal, reputation, the judges' fee, active solvers (tasks 3.3, 3.6; #132 10.4, 11.4, 12.5)
+Batch 3 of the testnet launch builds the solver-side rules the owner decided on 2026-11-19, with [ADR 0007](../docs/adr/0007-solver-side-parameters.md)'s values (launch design L6, L7, L8; #132 D20, D21, D24, D27, D29, D30). No solver's deposit exists anywhere.
+- **Seats by rank (D20, `PanelScores`, `PanelsDraw`).** A Scored family more than `SEAT_MARGIN` (5 points) below the best Scored family is a contender: not drawn for counted, audit, challenge or replacement seats, drawn as a shadow (with barred families: `unseatedCount`). Neutral and Recovering families stay seated (D23's contender start for a new family isn't built). The family cap applies only while at least `CAP_MIN_FAMILIES` (3) families are seated (`capApplies`). PanelScores knows a family from its first scored counted verdict (`families()`), and re-ranks at every counted verdict and recovery (`_reseat`: one read a family, a write only where a seat or a count changes). Against grinding, as `isBarredSince`: a family seated by rank after a draw's snapshot isn't drawn by it (`isSeatedSince`), and a draw whose snapshot predates a switch of the cap applies it.
+- **The second draw among few families (D27).** While fewer than 3 families are seated at a challenge's snapshot, a challenge of a panel of 3 or more that can't draw its larger fresh panel is judged by a second draw of the original size, the original judges not excluded (`SecondDraw`); with three families seated it waits as before. **Judgement call:** not for k = 1 (a second draw of one could seat the lone judge on its own verdict; its hold already waits for CHALLENGE_K[1] challengers).
+- **The test dispute (D21, `RaceV3.dispute(id, test)`).** Against a pass in its window (or held): the stake is the larger of $5 and 10 % of the bounty, beside the panel's worst-case cover (as a challenge). The challenge panel decides whether the fix fails (the test's hash is its evidence; the checker image's run is the judges'). Upheld (reversed): stake and cover back, the panel paid from the fix's fee and the pool, `EVIDENCE_REWARD_BPS` 1,000 of the bounty to the disputer from the pot when the reversed fix had won the bounty (otherwise no pot pays: a later pass would never have been paid), and the disputer counts as active if it has a merged fix. Rejected: the panel paid from the cover, the stake to the solver. A receipt challenge (`challenge`) is unchanged.
+- **The appeal (D24, `RaceV3.appeal(id, test)`).** Once, by the rejected fix's solver, while its bounty is open, within `APPEAL_WINDOW` (72 h, a new field of `Windows`; minutes in `inMinutes()`) of its counted panel's reveal deadline, with the test's hash and **no stake** (owner, 2026-11-19: the stake first built, the larger of $5 and 10 % lost to the pool, was dropped): a new submission with its own deposit (the appeal fee, 0 on Sepolia) drawn fresh from the seated families. `close(id)` only closes a decided check's claim.
+- **Reputation and claims (D29, `SolverBook`).** RaceV3 deploys a `SolverBook` (its only writer; readable by anyone, `RaceV3.solverBook()`): each commitment registers its claim (the bounty it's judged at) against `REP_BASE` $50 + `REP_MULT` 1 × reputation, or the commit reverts with `OverCap` and costs nothing; the merge adds the bounty to the reputation; a reversed pass takes 2 × its bounty off, not below zero, once (at the race's `sync` or the dispute's settlement, and at `close`/`finish` if nobody had); claims close at finality (`finish`, `close`, the merge, `mergeExpired`) or when a check ends unjudged.
+- **The judges' fee (D30, `Config.judgeFee`), two modes.** **0, the pure taxi fare (Sepolia's, owner 2026-11-19):** a fix posts FeesV3's worst-case deposit for K_MAX judges, its counted judges, audits and challenge panels are paid by the meter (the pool beyond the deposit), and whatever is left returns to the solver at `finish`, a withdrawal, a time-out or a release, pass or fail; the pool keeps no fee. **Above 0, the flat fee (for a mainnet decision):** every fix's submission pays it in place of the deposit, its judges are paid from it at market prices (the pool beyond it), and its rest goes to the sponsors' pool at `finish` or a withdrawal, never back except when the network never judged it (timed out, released, L19). Registration checks keep FeesV3's deposit in both. A constructor argument, so the deployment record lists it (`mode: taxi`, `judgeFee` 0). The Sepolia deploy script also sets the attempt, evaluation and appeal fees to 0 (a solver pays only the metered validation); a late commit with an evaluation fee of 0 now charges nothing instead of reverting on a zero transfer.
+- **Active solvers and the pledge gate (L6, task 3.3).** An identity is active for `ACTIVE_WINDOW` (26 weeks, a new field of `Windows`) after its fix is merged, or after its failing-test dispute is upheld if it already has a merged fix. `pledge` reverts with `TooFewActiveSolvers(count)` while fewer than 3 are active; unfunded bounties are raced, and funded ones continue, whatever the count. The book keeps identities in order of their last activity, so the gate reads at most three and the count stops at the first one past the window. **Judgement call:** activity is recorded at the merge (the fix is in the repository) and at the dispute's settlement, not at the verdict's finality time.
+- **The split.** RaceV3 had 916 bytes left. `report` moved to the endings (the race keeps a delegating entry), and so did `register`, `openBounty`, `payShadow`, `signal` and `finish` from the annex. The endings are now deployed first, on their own, and passed to the annex's constructor, which checks their fingerprint: with them inside, the annex's initcode reached 48,277 of EIP-3860's 49,152. **Constructor changes:** `RaceV3Annex(config, bountyCap, totalCap, panels, pool, start, endings)`; `RaceV3Endings(config, bountyCap, totalCap, panels, pool, start)` deployed by the deployer; `RaceV3Base.Config` gains `judgeFee` (last field), so RaceV3's, the annex's and the endings' `config` tuples change; `Windows` gains `appeal` and `active` (last fields), so Validators' genesis and Panels' constructor tuples change. `SolverBook(activeWindow)` is created by RaceV3's constructor (no new argument).
+
+Sizes (runtime bytes, `scripts/contracts.sh sizes` and the artifacts for the linked libraries):
+
+| Contract | Runtime | Margin under 24,576 | Batch 2 |
+|---|---|---|---|
+| `Panels` | 17,242 | 7,334 | 16,785 |
+| `PanelsVerdict` (linked library) | 22,355 | 2,221 | 21,789 |
+| `PanelsJudge` (linked library) | 15,253 | 9,323 | 15,080 |
+| `PanelsDraw` (linked library) | 9,777 | 14,799 | 9,716 |
+| `PanelScores` | 5,869 | 18,707 | 3,797 |
+| `Validators` | 22,435 | **2,141** | 22,435 |
+| `FeesV3` | 18,026 | 6,550 | 18,026 |
+| `RaceV3` (initcode 32,047, with Heads' and SolverBook's) | 22,570 | **2,006** | 23,660 |
+| `RaceV3Annex` (initcode 24,528: no longer holds the endings) | 21,731 | **2,845** | 22,730 |
+| `RaceV3Endings` (deployed on its own) | 21,814 | 2,762 | 12,831 |
+| `SolverBook` (new; created by RaceV3) | 3,707 | 20,869 | – |
+| `PoolV3` | 1,927 | 22,649 | 1,927 |
+
+Gas (call frame; `test_gasPerStep`, `PanelsV3Test.test_gas`, `test_gasLiveness`, `SolversV3Test.test_gasSolvers`, `SeatsV3Test.test_gasSeats`):
+
+| Call | Batch 2 | Batch 3 |
+|---|---|---|
+| `RaceV3.register` | 767,000 | 770,600 |
+| `openBounty` | 194,800 | 198,400 |
+| `pledge` (the gate read: three active solvers) | – | 225,600 (211,500 with the gate's view mocked) |
+| `commit` (the judges' fee, the claim against the cap) | 648,100 | **539,000** (no worst-case quote to compute) |
+| `report` (now in the endings: two DELEGATECALLs) | – | 160,400 |
+| `signal` (3 drawn) | 143,200 | 146,800 |
+| `result` (k = 3) | 569,100 | 569,700 |
+| `claim` | 247,100 | 247,300 |
+| `merge` (the head, the reputation, the activity list) | 209,400 | **266,800–310,100** |
+| `claimInstalments` / `settle` (paid) | 232,500 / 235,400 | 232,600 / 235,500 |
+| `finish` (the fee's rest to the pool, the claim closed) | – | 242,700 |
+| `challenge` | 533,000 | 535,400 |
+| `settleChallenge` (a receipt challenge upheld, k = 5) | 696,500 | **759,600** (the reversal charged to the reputation) |
+| `dispute` (stake and cover held) | – | 618,900 |
+| `settleChallenge` (a test dispute upheld: reward, reputation, activity) | – | 877,900 |
+| `appeal` (no stake: fees, a new submission and claim) | – | 591,500 |
+| `close` (a failed appeal's claim closed at finality) | – | 117,900 |
+| `RaceV3.release` | 184,900 | 208,500 |
+| `Panels.draw` k = 1 / 3 / 5 / 7 | 428,200 / 735,000 / 1,049,100 / 1,351,000 | 438,300 / 749,800 / 1,068,600 / 1,373,200 |
+| `drawChallenge` (k = 7, fresh) | 1,429,300 | 1,447,400 |
+| `advance` (one silent seat replaced, k = 7) | 657,600 | 663,300 |
+| `finalize` (k = 7, the first verdict of seven families) | 466,700 | **857,500** (each family registered once, about 45,000, and re-ranked) |
+| `finalize` (k = 7, three Scored families already known) | – | 316,600 |
+| `PanelScores.recordCounted` (a Scored family, three known) | – | 79,700 |
+
+What moved and why: a draw reads one more view a member (its family's seat, in place of the barred check) and the cap's switch once (+0.5 to +2 %); `finalize` re-ranks the known families at each counted verdict, and the first verdict of a family registers it; `commit` no longer computes FeesV3's worst-case deposit; `merge` writes the reputation and moves the identity to the head of the activity list; a settled challenge checks whether it reversed a pass to charge the reputation.
+
+Tests: `test/v3/SeatsV3.t.sol` (12: the judge-scores and judge-panels seat and second-draw scenarios by name, the snapshot, the lone verdict, gas), `test/v3/SolversV3.t.sol` (26 + 2: the launch's bounty-market and reputation scenarios, #132's dispute and appeal scenarios, no deposit path, a challenge among one family closed by its second draw, gas; and `SolversGateInvariantTest`: no pledge lands while fewer than three solvers are active, and the book's count equals the identities active within the window), `test/v3/ReplaySolversV3.t.sol` (2: the replay below). The suites written before the gate see three active solvers through a mocked view of the book (`RaceV3Setup._openGate`), and solvers that claim more than $50 at once get reputation first (`_reputation`). `scripts/contracts.sh test`: 666 passed with production windows and 666 with `POF_TEST_WINDOWS=minutes` (604 before batch 3; 646 before the taxi fare added `TaxiV3.t.sol` and the taxi runs of the race invariant and the liveness suite).
+
+**The devnet.** `tests/integration/suite_v3.py` gains step 2b: a pledge refused with no active solver, three solvers' unfunded fixes merged (three active), then a funded fix each for the two solvers whose fixes claim more than $50 (reputation $43.77 each). The devnet deploys Sepolia's fees (`NodeV3Local`: the taxi fare, no attempt, evaluation or appeal fee). `DEVNET_V3_WINDOWS=minutes scripts/time-to-heal.sh` passed: 198 panels, 105.3 h of chain time in 260 s; the wrong k = 1 verdict was reversed after 53.9 h and the bad fix after 100.8 h of chain time (batch 2: 53.1 h and 102.6 h), and the good fix merged 0.4 h after its claim. With the flat $40 the same story ran 305 panels and 199.6 h (reversals after 78.0 h and 195.5 h).
+
+**The replay against the simulation.** `pof/sim/openval/bookreplay.py` runs report v5's R(minus)+F rows in `nodeposit.NDNet` and records what the book must see, in order (every claim and whether the cap let it in, every final pass, reversal, fail and withdrawal with the reputation after it, every activity and the count of active solvers at every issue listed), in micro-coins and seconds, mirrored in integers by the contract's rules (a run whose float cap decision differs is refused). `ReplaySolversV3.t.sol` drives a `SolverBook` with those calls at those times and checks every acceptance, reputation and count: the long con (Opus 5.5 alone, 3 honest solvers, seed 1: 229 claims, 93 passes, 17 reversals) and the sybil of three with free identities under the gate (26 weeks, 1 honest solver, seed 1: 262 claims, 1,566 gate checks, locked then unlocked). On those runs the contract's narrower count (an upheld test counts only for an identity with a merged fix) decided every gate as the simulation did. Seats and disputes aren't replayed: the existing harness scripts Panels' draws, and the simulation ranks families on known answers the chain doesn't have.
+
+**Where the spec was open or the code chose:**
+- *The checker image's run* of a dispute's or an appeal's test is off-chain: the panel decides. "A test that passes: the dispute falls with no panel" is, on-chain, a panel rejecting the dispute (the stake to the solver); an appeal with a test that passes on the base code is a panel rejecting the appeal (it costs the appellant that panel's metered checks; there is no appeal stake). A test of no hash is refused before anything moves.
+- *The dispute's reward* comes from the pot only when the reversed fix had won the bounty; a later pass that never won is reversed with no reward (no pot owes it, and paying it could take from an award in progress).
+- *The fee modes:* the contract tests of batch 3 run the flat $40 (`RaceV3Setup._judgeFee`), and `test/v3/TaxiV3.t.sol`, `RaceV3InvariantTaxiTest` and `PanelLivenessV3TaxiTest` run the taxi fare (Sepolia's): each refund, the judges beyond the deposit paid by the pool, and the attempt, evaluation and appeal fees at 0. Accepted risk (owner, 2026-11-19): spam can block validation on the testnet, bounded by the nodes' spending caps; `reports/faucet-spam-v1.md` simulated a flat fee, not the taxi fare.
+- *The appeal window* runs from the counted panel's reveal deadline, the latest the count can come; a fail produced later by a reversal can't be appealed then.
+- *Families* are known from their first scored verdict: until three are, the cap is off and challenges get second draws, even if more families have validators; a family whose validators all left counts as seated until its score changes (open problems 7.5).
+- *The fee on a time-out and a release* returns to the solver (the network never judged it: L19's "reputation and stake unchanged"); on a withdrawal it doesn't (the spec's scenario).
+- *The winner's checks* (S6: refunded from what the pot holds once the award is paid) are kept: the funders' surplus pays them, not the fee.
+- *Not built:* sponsorship (D25) and known answers (D26), deferred; D23's re-scoring of judges by final outcomes (an upheld appeal or dispute doesn't change the original judges' scores on-chain); the period's re-measurement of the fee (#132 12.6, later networks).
+
 ## #251, contract batch 2: the head at finality, stuck rounds released, capacity (tasks 3.5, 3.13, 3.14)
 Batch 2 of the testnet launch (`openspec/changes/proof-of-fix-251-testnet-launch`, design L9, L16, L19; #253's on-chain pause):
 - **The head moves at finality (L9, 3.5).** `claim` opens the commitment and starts the award; it no longer moves `Heads` (it records `fix` and `base` on the submission). `RaceV3.merge(b)`, anyone, once, moves the head when the claimed fix's verdict is `Final` and still a pass, from its committed `base`: a stale base reverts whole (`Heads.StaleVerdict`) and the winner keeps its place until `mergeDays` after the finality, when `mergeExpired` closes the award with nothing earned and reopens the bounty. `Award.merged` records the move; instalments still count from finality, but are paid only once merged (Solved = merged); `paid(fix)` is set at the merge. Final verdicts can't be challenged, so the head never names a reversed fix (`invariant_headNeverNamesAReversedFix`). **Batch 1's note, now:** two fixes from one base are both claimed; the first merged moves the head, and the second is refused at its merge, keeping its place until its merge deadline, after which its solver commits the fix rebased on the new head (`test_twoFixesFinalInTheSameWindow`).

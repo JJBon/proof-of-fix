@@ -12,6 +12,7 @@ import {PanelScores} from "../../src/v3/PanelScores.sol";
 import {PoolV3} from "../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
 import {Windows, WindowsLib} from "../../src/v3/Windows.sol";
 import {LaunchChain} from "../../src/v3/LaunchChain.sol";
@@ -53,7 +54,7 @@ contract LaunchBindingV3Test is RaceV3Setup {
 
     /// Scenario "No repository given": a zero repository id or a zero genesis head, and nothing is deployed.
     function test_noRepositoryGiven() public {
-        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
         vm.expectRevert(Heads.BadParams.selector); // Heads refuses a zero repository or head first
         this.deployRace(bytes32(0), TEST_GENESIS_HEAD, ax);
         vm.expectRevert(Heads.BadParams.selector);
@@ -68,7 +69,7 @@ contract LaunchBindingV3Test is RaceV3Setup {
     }
 
     function deployAnnex() external returns (RaceV3Annex) {
-        return new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
+        return new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
     }
 
     function deployFees(FeesV3.Genesis memory g) external returns (FeesV3) {
@@ -100,7 +101,7 @@ contract LaunchBindingV3Test is RaceV3Setup {
         g.repo = bytes32(0);
         vm.expectRevert(FeesV3.BadParams.selector);
         this.deployFees(g);
-        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
         vm.expectRevert(RaceV3Base.BadParams.selector);
         this.deployRace(keccak256("rad:another"), TEST_GENESIS_HEAD, ax);
     }
@@ -202,7 +203,7 @@ contract LaunchBindingV3Test is RaceV3Setup {
         }
         assertEq(checked, ids.length); // every chain checked, to the last constructor
         vm.chainId(31_337);
-        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
         vm.chainId(1);
         vm.expectRevert(abi.encodeWithSelector(LaunchChain.WrongChain.selector, 1));
         this.deployRace(TEST_REPO, TEST_GENESIS_HEAD, ax);
@@ -342,7 +343,13 @@ contract LaunchBindingV3Test is RaceV3Setup {
         w = WindowsLib.production();
         w.maxRedraws = 256;
         _expectBadWindows(w);
-        assertEq(badWindowCases, 13); // every case ran to its end
+        w = WindowsLib.production();
+        w.appeal = 0; // the solver-side windows nonzero too (#251 batch 3)
+        _expectBadWindows(w);
+        w = WindowsLib.production();
+        w.active = 0;
+        _expectBadWindows(w);
+        assertEq(badWindowCases, 15); // every case ran to its end
     }
 
     uint256 internal badWindowCases;
@@ -382,6 +389,8 @@ contract LaunchBindingV3Test is RaceV3Setup {
         w.retryDelay = bound(x[1], 1, 7 days);
         w.maxRedraws = bound(x[2], 1, 255);
         w.capWindow = bound(x[3], 1, 1 days);
+        w.appeal = bound(x[4], 1, 30 days);
+        w.active = bound(x[5], 1, 52 weeks);
         for (uint256 l; l < 3; ++l) {
             for (uint256 i; i < 4; ++i) {
                 uint256 lo = l > 0 ? w.challenge[l - 1][i] : 1;

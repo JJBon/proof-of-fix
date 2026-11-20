@@ -96,3 +96,29 @@ The Sepolia deploy script SHALL deploy only contracts whose bytecode hashes matc
 #### Scenario: No passing record
 - **WHEN** the deploy script finds no release-candidate record for the commit, or one whose run failed
 - **THEN** it refuses before signing anything
+
+### Requirement: The fee coin is a test coin with no key
+On Sepolia the fee coin SHALL be the project's own test coin (design L17, owner 2026-11-20): an ERC-20 with 6 decimals whose name and symbol never say "USD" or "USDC". Its supply SHALL come only from one genesis mint at construction, named in the deployment record, and from its faucet, its only minter. It SHALL have no owner, admin, pause, setter or upgrade, and SHALL be constructed only on Sepolia and the local test ids.
+
+#### Scenario: Anyone else mints
+- **WHEN** any address but the faucet, the deployer included, calls the token's mint
+- **THEN** the call reverts, and the supply is unchanged
+
+#### Scenario: The genesis mint
+- **WHEN** the deployment is constructed with a genesis mint of 5,000 coins
+- **THEN** the genesis validator's bond is in the registry, the rest is held by the recipient named at deploy, the supply is 5,000 coins, and the deployment record names both and the faucet's rule
+
+#### Scenario: Deploying the coin on mainnet
+- **WHEN** the token or the faucet is deployed on Ethereum mainnet or any chain but Sepolia and the local test ids
+- **THEN** the constructor reverts
+
+### Requirement: The faucet's rule is fixed
+The faucet SHALL mint a fixed amount (20 coins) to the address that claims, at most once per address every fixed interval (2 hours); anyone MAY claim for itself. The amount and the interval SHALL be constants, and the faucet SHALL have no owner, admin, pause, setter or upgrade.
+
+#### Scenario: A first claim
+- **WHEN** an address that has never claimed calls the faucet's claim
+- **THEN** it receives 20 coins and can read the time of its next claim, 2 hours later
+
+#### Scenario: A claim too soon
+- **WHEN** the same address claims again before 2 hours have passed
+- **THEN** the call reverts with the time of its next claim, and no coin is minted

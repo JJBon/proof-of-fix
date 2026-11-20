@@ -12,7 +12,7 @@
 # makes at its finality, and checks the reversed fix never reached the head.
 #
 # What it doesn't measure: detection (the watcher here challenges at once; its judge is the fake one), the
-# test-backed dispute, the solver's deposit and the appeal of D21-D23 (task 10.4: not built), and short test windows
+# test-backed dispute and the appeal (D21, D24: in the contracts since #251's batch 3, not yet in the node), and short test windows
 # (the devnet deploys the production windows by default, so these are the real windows' times on a clock the run
 # moves; DEVNET_V3_WINDOWS=minutes deploys every hour as a minute, #251 L4, which task 3.12 measures).
 #

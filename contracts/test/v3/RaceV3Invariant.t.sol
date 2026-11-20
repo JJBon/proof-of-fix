@@ -9,7 +9,9 @@ import {Status, Kind, Submission} from "../../src/v3/PanelsBase.sol";
 import {PoolV3} from "../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
+import {SolverBook} from "../../src/v3/SolverBook.sol";
 import {MockCoin} from "../mocks/MockCoin.sol";
 import {Heads} from "../../src/v2/Heads.sol";
 import {MockScores} from "./helpers/FeesV3Mocks.sol";
@@ -411,14 +413,35 @@ contract RaceV3InvariantTest is Test {
         c.mergeDays = 14;
         c.releaseEveryDays = 7;
         c.instalments = 4;
+        c.judgeFee = _judgeFee();
         Panels p = Panels(address(pn));
-        RaceV3Annex ax = new RaceV3Annex(c, 625, 1e9, p, pool, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(c, 625, 1e9, p, pool, block.timestamp, new RaceV3Endings(c, 625, 1e9, p, pool, block.timestamp));
         rc = new RaceV3(c, 625, 1e9, p, pool, block.timestamp, TEST_REPO, TEST_GENESIS_HEAD, "c", ax);
+        // random races predate the minimum of active solvers (#251 task 3.3; its own invariant is in SolversV3.t.sol)
+        vm.mockCall(
+            address(rc.solverBook()), abi.encodeWithSelector(SolverBook.activeAtLeast.selector), abi.encode(uint256(3))
+        );
         usd.mint(address(this), 1e12);
         usd.approve(address(pool), type(uint256).max);
         pool.fund(address(usd), 1e12);
         handler = new RaceV3Handler(rc, pn, fees, usd, reg);
+        // its actors claim several bounties at once: each starts with reputation enough for any (#132 D29's cap is
+        // SolversV3.t.sol's)
+        SolverBook book = rc.solverBook();
+        for (uint256 i;; ++i) {
+            try handler.actors(i) returns (address a) {
+                vm.prank(address(rc));
+                book.paid(type(uint128).max + i, a, 1e12);
+            } catch {
+                break;
+            }
+        }
         targetContract(address(handler));
+    }
+
+    /// The flat $40 judges' fee; `RaceV3InvariantTaxiTest` runs the same races under the taxi fare (0).
+    function _judgeFee() internal pure virtual returns (uint256) {
+        return 40e6;
     }
 
     function invariant_booksExact() public view {
@@ -554,5 +577,13 @@ contract RaceV3InvariantTest is Test {
         }
         assertTrue(found, "a merged award of its bounty");
         assertEq(uint256(rc.submission(hd.submission).outcome), uint256(RaceV3Base.Outcome.Pass), "the race's pass");
+    }
+}
+
+/// The same random races under the pure taxi fare (`judgeFee` 0, the Sepolia launch's): every check posts FeesV3's
+/// worst-case deposit and its rest returns to its solver.
+contract RaceV3InvariantTaxiTest is RaceV3InvariantTest {
+    function _judgeFee() internal pure override returns (uint256) {
+        return 0;
     }
 }

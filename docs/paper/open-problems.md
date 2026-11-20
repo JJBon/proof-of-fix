@@ -71,9 +71,21 @@ run shown.
   the panel, the slot and the validator's key, so one seat's receipt can't be posted for another.
 - The zkTLS prover is a stub; the `simulated` proof type stands in for it.
 - The relay does not speak the v3 messages. `RaceV3` cannot open constitution changes or escalated fixes.
-- The rules decided after the judge measurement (seats by rank, the test-backed dispute, the solver's deposit, the
-  appeal) are in the specification and the simulation, not yet in the contracts. Until they are, a network whose
-  validators all run one family stalls under the family cap.
+- The rules decided after the judge measurement (ADR 0007) are in the contracts since the launch's contract batch 3
+  (#251): seats by rank with the family cap only from three seated families, the test-backed dispute, the appeal with
+  a test, the second draw among few families, the reputation cap, the flat judges' fee and the minimum of three
+  active solvers before pledges. There is no solver's deposit. What the contracts can't see stays off-chain: the
+  checker image's run of a dispute's or an appeal's test is the judges' (a test that passes on the fixed code is
+  rejected by the panel, not refused before it), and the node's side of disputes and appeals isn't built (#132 tasks
+  10.5 and 11.5). Their two assumed rates each are named trust points (ADR 0007).
+- On Sepolia a solver pays only the metered validation (owner, 2026-11-19): the judges' fee is the pure taxi fare (a
+  check deposit whose unused part returns), with no attempt, evaluation or appeal fee and no appeal stake. Spam, junk
+  fixes or an appeal of every rejection, can then fill the validators' capacity and hold honest fixes in the queue;
+  the nodes' spending caps bound the model cost, not the queue. The faucet spam study simulated a flat fee, not this,
+  and report v5's protection rests on the cap and a fee together (ADR 0007, trust points 6 and 7).
+- PanelScores knows a family from its first scored verdict: until three families have one, the family cap doesn't
+  apply and a challenge that can't draw its larger panel gets a second draw, even if more families have validators.
+  A family whose validators all left still counts as seated until its score changes.
 
 ## 7.6 Self-healing is argued, not yet timed
 

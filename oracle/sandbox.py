@@ -14,7 +14,13 @@ cgroups accepts them silently and enforces none) and a container the daemon crea
 
 `default_runner()` picks the CLI when there is one, else the socket (ORACLE_SANDBOX=cli|api overrides). A sibling
 container's bind mount is resolved by the host's Docker, so the fixes' checkouts must sit at the same path inside the
-node's container as on the host (the kit mounts /var/lib/pof-node at /var/lib/pof-node)."""
+node's container as on the host (the kit mounts /var/lib/pof-node at /var/lib/pof-node). The run trees of protected
+tests (oracle/runtree.py, #251 L20) are made under the same root for the same reason.
+
+Two runs (#251 L22): `run_tests` runs the command twice on the same tree, each in a fresh container, one after the
+other, and both always run. Each gets half the check's time limit (the profile's `timeoutSeconds`), so FeesV3's
+worst-case deposit stays a true bound. The tests pass only if both exit 0; the receipt's `tests` records each run
+(`runs`) and `flaky` when they disagree, and the time the node meters is the runs' sum."""
 
 from __future__ import annotations
 
@@ -25,6 +31,7 @@ import os
 import shutil
 import socket
 import subprocess
+import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,23 +43,83 @@ TEST_IMAGE = "python@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001b
 COMMAND = ("python", "-m", "unittest", "-q")
 LIMITS = {"memory": "256m", "pids": "64", "cpus": "1", "tmp": "64m", "timeout_s": 300}
 TIMED_OUT = 124  # the exit code of a run the outer time limit stopped, as coreutils' timeout reports it
+RUNS = 2  # each check runs the tests this many times, each in a fresh container (#251 L22)
+
+
+def _sha256_json(doc) -> str:
+    return hashlib.sha256(json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+@dataclass(frozen=True)
+class Run:
+    """One container's run of the tests."""
+    exit_code: int
+    results_sha256: str  # sha256 of this run's results record (its exit code, the image, the command)
+    logs_sha256: str  # sha256 of its stdout and stderr
+    seconds: float = 0.0  # how long it ran, as the node measured it (metered, not recorded)
+
+    def record(self) -> dict:
+        return {"exit_code": self.exit_code, "results_sha256": self.results_sha256, "logs_sha256": self.logs_sha256}
 
 
 @dataclass(frozen=True)
 class TestRun:
+    """A check's test runs: the same command on the same tree, `runs` times (#251 L22). With protected paths (L20),
+    the run tree's hash and the list; for a tests-only fix, `own` holds the runs of its own protected tests."""
     image: str
     command: tuple[str, ...]
-    exit_code: int
-    results_sha256: str  # sha256 of the canonical results record
-    logs_sha256: str  # sha256 of stdout and stderr
+    exit_code: int  # 0 when every run passed; else the first failing run's exit code
+    results_sha256: str  # sha256 of the canonical results record (the runs', and the run tree's)
+    logs_sha256: str  # sha256 of the runs' logs hashes
+    runs: tuple = ()
+    protected: tuple = ()  # the repository's protected paths, when it declares any (L20)
+    run_tree: str = ""  # the git tree hash of the tree the tests ran on, with the base's protected paths
+    not_run: int = 0  # how many of the fix's changed files were under protected paths, so not run
+    own: Optional["TestRun"] = None  # a tests-only fix: its own protected tests' runs, which must pass too
 
     @property
     def passed(self) -> bool:
         return self.exit_code == 0
 
+    @property
+    def flaky(self) -> bool:
+        """The runs on one tree disagreed: some passed, some didn't."""
+        mine = len({r.exit_code == 0 for r in self.runs}) > 1
+        return mine or (self.own is not None and self.own.flaky)
+
+    @property
+    def seconds(self) -> float:
+        """The runs' time, summed: what the node meters (#251 L22)."""
+        return sum(r.seconds for r in self.runs) + (self.own.seconds if self.own is not None else 0.0)
+
     def record(self) -> dict:
-        return {"image": self.image, "command": list(self.command), "exit_code": self.exit_code,
-                "results_sha256": self.results_sha256, "logs_sha256": self.logs_sha256}
+        out = {"image": self.image, "command": list(self.command), "exit_code": self.exit_code,
+               "results_sha256": self.results_sha256, "logs_sha256": self.logs_sha256}
+        if self.runs:
+            out["runs"] = [r.record() for r in self.runs]
+        if self.flaky:
+            out["flaky"] = True
+        if self.protected:
+            out["protected"] = list(self.protected)
+            out["run_tree"] = self.run_tree
+            out["not_run"] = self.not_run
+        if self.own is not None:
+            out["tests_only"] = self.own.record()
+        return out
+
+    def with_tree(self, protected: tuple, run_tree: str, not_run: int = 0,
+                  own: Optional["TestRun"] = None) -> "TestRun":
+        """These runs, made on a run tree of protected paths (#251 L20): its list and hash, and for a tests-only fix
+        its own tests' runs. The results hash then binds the tree, and both sets must pass."""
+        exit_code = self.exit_code or (own.exit_code if own is not None else 0)
+        results = _sha256_json({"exit_code": exit_code, "image": self.image, "command": list(self.command),
+                                "runs": [r.results_sha256 for r in self.runs], "protected": list(protected),
+                                "run_tree": run_tree, "tests_only": own.results_sha256 if own is not None else ""})
+        logs = self.logs_sha256
+        if own is not None:
+            logs = hashlib.sha256(f"{self.logs_sha256}\n{own.logs_sha256}".encode()).hexdigest()
+        return TestRun(self.image, self.command, exit_code, results, logs, self.runs, tuple(protected), run_tree,
+                       not_run, own)
 
 
 @dataclass(frozen=True)
@@ -88,13 +155,24 @@ class Spec:
 Runner = Callable[[list], Tuple[int, str, str]]
 
 
+def _inner_limit(argv: list) -> int:
+    """The run's own time limit, from a Spec's argv (`-w /src <image> timeout <seconds> ...`); LIMITS' otherwise."""
+    try:
+        i = argv.index("-w")
+        if argv[i + 1] == "/src" and argv[i + 3] == "timeout":
+            return int(argv[i + 4])
+    except (ValueError, IndexError):
+        pass
+    return int(LIMITS["timeout_s"])
+
+
 def docker_runner(argv: list) -> Tuple[int, str, str]:
     name = ""
     if argv[:2] == ["docker", "run"]:  # named, so the outer limit can kill the container, not just the CLI
         name = f"pof-sandbox-{uuid.uuid4().hex[:12]}"
         argv = argv[:2] + ["--name", name] + argv[2:]
-    try:
-        out = subprocess.run(argv, capture_output=True, text=True, timeout=LIMITS["timeout_s"] + 30)
+    try:  # the outer limit: the run's own and a margin, as DockerApi's wait (a run has half the check's, #251 L22)
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=_inner_limit(argv) + 30)
     except subprocess.TimeoutExpired:  # the outer limit; --rm removes the container once it's killed
         if name:
             subprocess.run(["docker", "kill", name], capture_output=True, timeout=60)
@@ -251,14 +329,36 @@ def spec_for(src: Path, image: str = TEST_IMAGE, command: tuple = COMMAND, timeo
                 user=env.get("ORACLE_SANDBOX_USER", ""))
 
 
-def run_tests(src: Path, image: str = TEST_IMAGE, command: tuple = COMMAND, runner=None,
-              timeout_s: Optional[int] = None) -> TestRun:
-    """Runs the fix's tests at `src` in the sandbox. `runner` is a CLI-style callable (argv → exit, stdout, stderr)
-    or anything with run_spec (DockerApi); by default the CLI if installed, else the Docker socket."""
-    spec = spec_for(src, image, command, timeout_s)
-    runner = runner or default_runner()
+def nothing_ran() -> TestRun:
+    """A check whose tests never ran (no fix to test, or one the node refused before running it)."""
+    empty = hashlib.sha256(b"").hexdigest()
+    return TestRun("none", (), 125, empty, empty)
+
+
+def run_once(spec: Spec, runner, clock=None) -> Run:
+    """One run of `spec` in a fresh container, by either runner. `clock`: time.monotonic by default."""
+    clock = clock or time.monotonic
+    started = clock()
     code, stdout, stderr = runner.run_spec(spec) if hasattr(runner, "run_spec") else runner(spec.argv())
+    seconds = clock() - started
     logs = hashlib.sha256((stdout + "\n--stderr--\n" + stderr).encode()).hexdigest()
-    results = hashlib.sha256(json.dumps({"exit_code": code, "image": image, "command": list(command)},
-                                        sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return TestRun(image, tuple(command), code, results, logs)
+    results = _sha256_json({"exit_code": code, "image": spec.image, "command": list(spec.command)})
+    return Run(code, results, logs, seconds)
+
+
+def run_tests(src: Path, image: str = TEST_IMAGE, command: tuple = COMMAND, runner=None,
+              timeout_s: Optional[int] = None, runs: int = RUNS, clock=None) -> TestRun:
+    """Runs the fix's tests at `src` in the sandbox `runs` times (#251 L22), each in a fresh container, every one of
+    them always, each with an equal share of `timeout_s`: the check's limit, the profile's `timeoutSeconds` (LIMITS'
+    by default). They pass only if every run exits 0. `runner` is a CLI-style callable (argv → exit, stdout, stderr)
+    or anything with run_spec (DockerApi); by default the CLI if installed, else the Docker socket."""
+    runs = max(1, int(runs))
+    total = int(timeout_s or LIMITS["timeout_s"])
+    spec = spec_for(src, image, command, max(1, total // runs))
+    runner = runner or default_runner()
+    done = tuple(run_once(spec, runner, clock) for _ in range(runs))
+    code = next((r.exit_code for r in done if r.exit_code != 0), 0)
+    results = _sha256_json({"exit_code": code, "image": image, "command": list(command),
+                            "runs": [r.results_sha256 for r in done]})
+    logs = hashlib.sha256("\n".join(r.logs_sha256 for r in done).encode()).hexdigest()
+    return TestRun(image, tuple(command), code, results, logs, done)

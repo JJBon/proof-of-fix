@@ -19,6 +19,7 @@ library PanelsVerdict {
     event Audited(uint256 indexed id, uint256 indexed pid, address indexed auditor, bool agrees);
     event ChallengeOpened(uint256 indexed id, address indexed challenger, bytes32 evidence);
     event ChallengeWaits(uint256 indexed id);
+    event SecondDraw(uint256 indexed id, uint256 indexed pid);
     event ChallengeResolved(uint256 indexed id, uint256 indexed pid, bool upheld, bool pass, bool falseReceipt);
     event Final(uint256 indexed id, bool pass);
 
@@ -147,14 +148,31 @@ library PanelsVerdict {
         uint256 kc;
         (c, kc,) = PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
         if (c.unpriced != address(0)) PanelsBase.announce(e, c.unpriced);
+        uint256 ex = s.pid;
         if (kc == 0) {
             if (c.full) return; // busy validators: retried from the same seed once they have room (L16)
-            s.challengeEpoch = uint64(e.reg.epoch() + 1);
-            emit ChallengeWaits(id);
-            return;
+            if (!c.famCap && k > 1) {
+                // #132 D27 (`SECOND_PANEL` "few families"): while fewer than CAP_MIN_FAMILIES families can judge (at
+                // the snapshot), a challenge that can't draw its larger fresh panel is judged by a second draw of the
+                // original panel's size, the original judges not excluded. It ends the wait; it corrects nothing. Not
+                // for k = 1: a second draw of one could seat the lone judge on its own verdict, and the k = 1 hold
+                // already waits for CHALLENGE_K[1] challengers (D4).
+                c = PanelsBase.ctx(st, e, id, s.bounty, seed, s.challengeSnap, st.panelCount + 1, 0);
+                c.kTop = k;
+                c.kMin = k;
+                (c, kc,) = PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
+                if (kc == 0 && c.full) return;
+                ex = 0;
+                if (kc != 0) emit SecondDraw(id, st.panelCount + 1);
+            }
+            if (kc == 0) {
+                s.challengeEpoch = uint64(e.reg.epoch() + 1);
+                emit ChallengeWaits(id);
+                return;
+            }
         }
         (uint256 cpid, Panel storage cp) =
-            PanelsBase.newPanel(st, e, id, Kind.Challenge, seed, kc, s.pid, s.challengeSnap, c.counter);
+            PanelsBase.newPanel(st, e, id, Kind.Challenge, seed, kc, ex, s.challengeSnap, c.counter);
         for (uint256 i; i < kc; ++i) {
             PanelsBase.seat(st, e, cpid, cp, i, c.members[i].key, c.members[i].level);
         }

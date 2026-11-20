@@ -18,29 +18,34 @@ import {Status, Kind} from "./PanelsBase.sol";
 /// storage holds nothing. Each is described on RaceV3.
 ///
 /// **A second companion (#251, contract batch 2).** The endings (withdrawals, time-outs, expired merges and L19's
-/// release) run in RaceV3Endings, which this annex deploys from its constructor with the same parameters, so the race
-/// and its deployers still name one companion. A call this annex doesn't have goes on to it (`fallback`, one more
-/// DELEGATECALL, still in the race's storage).
+/// release) run in RaceV3Endings. A call this annex doesn't have goes on to it (`fallback`, one more DELEGATECALL,
+/// still in the race's storage). Since contract batch 3 the endings are deployed first, on their own (EIP-3860: this
+/// annex's initcode can't hold them any more), and passed to this annex's constructor, which checks their
+/// fingerprint; they also run registration, the opening of a bounty, the judges' reports, shadows' pay, FeesV3's
+/// signals and the deposit's return.
 contract RaceV3Annex is RaceV3Base {
     /// This contract's own address: called directly (not through a race's DELEGATECALL), its actions refuse.
     address internal immutable self;
     /// The endings' companion, deployed here.
     address public immutable endings;
 
-    /// Deployed before its RaceV3 with the same parameters (`start_` nonzero); the race checks `fingerprint`.
+    /// Deployed before its RaceV3 with the same parameters (`start_` nonzero), after its endings (`endings_`, built
+    /// with the same parameters: its fingerprint must be this annex's); the race checks `fingerprint`.
     constructor(
         Config memory config_,
         uint256 bountyCap_,
         uint256 totalCap_,
         Panels panels_,
         PoolV3 pool_,
-        uint256 start_
+        uint256 start_,
+        RaceV3Endings endings_
     )
         RaceV3Base(config_, bountyCap_, totalCap_, panels_, pool_, Heads(address(0)), start_)
     {
         if (start_ == 0) revert BadParams();
+        if (address(endings_).code.length == 0 || endings_.fingerprint() != _fingerprint()) revert BadParams();
         self = address(this);
-        endings = address(new RaceV3Endings(config_, bountyCap_, totalCap_, panels_, pool_, start_));
+        endings = address(endings_);
     }
 
     /// The endings' calls (RaceV3Endings), run in the race's storage like this annex's own.
@@ -66,68 +71,42 @@ contract RaceV3Annex is RaceV3Base {
         return _fingerprint();
     }
 
-    // ---------- issues ----------
-
-    /// Once an issue's registration check is final in Panels: a pass opens its bounty at once (no target, D12), a fail
-    /// forfeits its stake to insurance. Anyone.
-    function openBounty(uint256 issueId) external delegated nonReentrant returns (uint256 b) {
-        Issue storage i = _issues[issueId];
-        if (i.state != IssueState.Posted || i.bounty != 0) revert Refused();
-        (Status st, bool pass,) = _verdict(i.check);
-        if (st != Status.Final) revert NotYet();
-        Submission storage s = _submissions[i.check];
-        if (s.outcome == Outcome.None) {
-            s.outcome = pass ? Outcome.Pass : Outcome.Fail;
-            emit Decided(i.check, s.outcome);
-        }
-        if (!pass) {
-            _closeIssue(issueId, IssueState.Forfeited, config.insurance);
-            return 0;
-        }
-        b = _bounties.length;
-        _bounties.push();
-        _bounties[b].issue = issueId;
-        i.bounty = b;
-        emit BountyOpened(b, issueId);
-        Bounty storage bt = _bounties[b];
-        bt.offerFrom = _day();
-        bt.idleSince = _day();
-        _setState(b, State.Open);
-    }
-
-    /// Anyone registers an issue in `repo`, which must be the deployment's one repository (#251, L1: the head registry
-    /// holds only it; another id or zero is refused, so no bounty is won without moving the head): the registration
-    /// fee, the issue stake and its registration check's deposit. Panels judges the check; its final pass opens the
-    /// bounty and its final fail forfeits the stake (`openBounty`).
-    function register(bytes32 repo, bool hidden) external delegated nonReentrant returns (uint256 id) {
-        if (repo == bytes32(0) || !heads.isRepo(repo)) revert Refused();
-        uint256 fee = _units(config.registrationFee);
-        uint256 stake = _units(config.issueStake);
-        if (fee != 0) _collect(coin, msg.sender, fee, config.infrastructure);
-        if (stake != 0) _hold(coin, msg.sender, stake);
-        id = _issues.length;
-        _issues.push(Issue(repo, msg.sender, fee, stake, 0, 0, IssueState.Posted, hidden));
-        bytes32 commitment = keccak256(abi.encode("issue", id, msg.sender, repo, hidden));
-        uint256 check = _newCheck(0, id, msg.sender, commitment, CHECK_BOUNTY);
-        _issues[id].check = check;
-        emit Registered(id, msg.sender, check);
-    }
-
     // ---------- submissions ----------
 
-    /// The author of a failed submission appeals once, while the bounty is open: the appeal fee, and the same
-    /// commitment judged again by a fresh panel, as a new submission with a new deposit.
-    function appeal(uint256 id) external delegated nonReentrant returns (uint256 newId) {
+    /// The author of a rejected fix appeals once (#132 D24), while the bounty is open and within APPEAL_WINDOW of its
+    /// counted panel's reveal deadline, with `test` (the hash of a test that fails on the base code and passes with the
+    /// fix: the appeal panel's judges run it, and the checker image's run decides nothing on-chain). No stake (owner,
+    /// 2026-11-19): the appeal fee (0 on Sepolia), and the same commitment judged again as a new submission with its
+    /// own deposit or flat fee, so the appellant pays the appeal panel's metered checks (the rest refunded under the
+    /// taxi fare); drawn fresh from the seated families with the original judges not excluded. Its claim replaces the
+    /// rejected one's under the cap.
+    function appeal(uint256 id, bytes32 test) external delegated nonReentrant returns (uint256 newId) {
         Submission storage s = _submissions[id];
         uint256 b = s.bounty;
-        if (b == 0 || s.solver != msg.sender || s.outcome != Outcome.Fail || s.appealed) revert Refused();
+        if (b == 0 || test == 0 || s.solver != msg.sender || s.outcome != Outcome.Fail || s.appealed) revert Refused();
         Bounty storage bt = _bounties[b];
         if (bt.state != State.Open) revert WrongState(b, bt.state);
+        if (block.timestamp > _w(_pan(_w(_sub(id), S_PID)), P_REVEAL_BY) + panels.APPEAL_WINDOW()) revert AppealClosed();
         s.appealed = true;
         uint256 fee = _units(config.appealFee);
         if (fee != 0) _collect(coin, msg.sender, fee, config.infrastructure);
+        book.closeClaim(id);
         newId = _submit(b, msg.sender, s.commitment);
         _submissions[newId].appealed = true;
+        emit Appealed(id, newId, test);
+    }
+
+    /// Once check `id`'s verdict is final, or it ended unjudged: its open claim closes, and a reversed pass is charged to
+    /// its solver's reputation if nobody had it recorded. Anyone; `finish`, the merge and the endings close claims too.
+    function close(uint256 id) external delegated nonReentrant {
+        Submission storage s = _submissions[id];
+        if (s.bounty == 0) revert Refused();
+        Outcome o = s.outcome;
+        (Status st,,) = _verdict(id);
+        bool ended = o == Outcome.Withdrawn || o == Outcome.TimedOut || o == Outcome.Released || o == Outcome.Duplicate;
+        if ((st != Status.Final && !ended) || book.claimOf(id).solver == address(0)) revert NotYet();
+        _penalize(id);
+        book.closeClaim(id);
     }
 
     // ---------- challenges and reversals ----------
@@ -136,15 +115,19 @@ contract RaceV3Annex is RaceV3Base {
     /// published stake and its panel's worst-case cost (FeesV3's deposit for K_MAX judges at the check's prices), held
     /// here; Panels draws a larger, fresh panel. One at a time.
     function challenge(uint256 id, bytes32 evidence) external delegated nonReentrant {
-        Submission storage s = _submissions[id];
-        if (s.solver == address(0) || challenges[id].challenger != address(0)) revert Refused();
-        uint256 stake = _units(config.challengeStake);
-        uint256 cover = _units(fees.depositFor(id, _repoOf(s), K_MAX));
+        _file(id, evidence, _units(config.challengeStake), false);
+    }
+
+    /// A failing-test dispute (#132 D21) of check `id`'s pass in its window (or held): `test` is the hash of a test that
+    /// fails on the fixed code (the challenge panel's judges run it and decide whether it states what the issue asks
+    /// for). The stake is the larger of $5 and 10 % of the bounty, beside its panel's worst-case cost. Upheld (the panel
+    /// fails the fix), the disputer gets both back and EVIDENCE_REWARD_BPS of the bounty from its pot, and counts as an
+    /// active solver if it has a merged fix; rejected, its stake goes to the solver. Fixes only; one challenge at a time.
+    function dispute(uint256 id, bytes32 test) external delegated nonReentrant {
         (, bool pass,) = _verdict(id);
-        if (stake + cover != 0) _hold(coin, msg.sender, stake + cover);
-        challenges[id] = Challenge(msg.sender, stake, cover, pass, panels.panelCount());
-        panels.challenge(id, msg.sender, evidence);
-        emit ChallengeFiled(id, msg.sender);
+        if (_submissions[id].bounty == 0 || test == 0 || !pass) revert Refused();
+        _file(id, test, _stakeOf(id), true);
+        emit Disputed(id, msg.sender, test, challenges[id].stake);
     }
 
     /// A filed challenge's panel `cpid` has counted, with its reports in. Upheld (the fix decided the other way, or a
@@ -167,7 +150,7 @@ contract RaceV3Annex is RaceV3Base {
         uint256[] memory micro = fees.checkCost(id, _repoOf(s), rs);
         bytes memory ps = _sub(id);
         uint256 kc = _w(p, P_K);
-        bool upheld = (2 * _w(p, P_PASSES) > kc) != c.wasPass || _falseReceipt(cpid, kc, _w(ps, S_K));
+        bool upheld = (2 * _w(p, P_PASSES) > kc) != c.wasPass || (!c.test && _falseReceipt(cpid, kc, _w(ps, S_K)));
         if (upheld) {
             _release(coin, c.stake + c.cover, c.challenger);
             _payPanel(id, cpid, rs, micro);
@@ -180,10 +163,14 @@ contract RaceV3Annex is RaceV3Base {
                 _release(coin, a, rs[i].payee);
             }
             _release(coin, left, c.challenger);
-            _shareStake(_w(ps, S_PID), c.stake);
+            if (c.test) _release(coin, c.stake, s.solver); // a rejected test dispute's stake pays the solver's delay
+            else _shareStake(_w(ps, S_PID), c.stake);
         }
         emit ChallengeSettled(id, cpid, upheld);
+        Bounty storage bt = _bounties[s.bounty];
+        bool won = s.bounty != 0 && bt.winner == id && (bt.state == State.Won || bt.state == State.Merged);
         _sync(id);
+        if (upheld && c.test) _reward(id, c.challenger, won);
     }
 
     /// The race follows the verdict Panels holds now, after a challenge (filed here, or opened by an auditor) reversed
@@ -215,59 +202,38 @@ contract RaceV3Annex is RaceV3Base {
         if (kind == Kind.Challenge) _sync(id);
     }
 
-    /// A shadow seat that revealed with its receipt and reported its usage: its capped usage at the check's prices
-    /// (FeesV3's `shadowCost`, no service fee) from the sponsors' pool, as far as the pool holds. Once a seat; a family
-    /// priced after the check opened is paid nothing (FeesV3 has no price for it at the check's epoch). Anyone.
-    function payShadow(uint256 spid, uint256 slot) external delegated nonReentrant {
-        bytes memory p = _pan(spid);
-        bytes memory x = _seat(spid, slot);
-        uint256 bit = 1 << slot;
-        if (Kind(_w(p, P_KIND)) != Kind.Shadow || slot >= _w(p, P_K) || shadowsPaid[spid] & bit != 0) revert Refused();
-        address key = address(uint160(_w(x, X_KEY)));
-        if (_w(x, X_REVEALED) == 0 || _w(x, X_RECEIPTED) == 0 || reportedBy[spid][slot] != key) revert Refused();
-        shadowsPaid[spid] |= bit;
-        bytes memory v = _val(key);
-        uint256 id = _w(p, P_ID);
-        try fees.shadowCost(id, _repoOf(_submissions[id]), bytes32(_w(v, V_FAMILY)), _usage[spid][slot]) returns (
-            uint256 c
-        ) {
-            pool.spend(coin, address(uint160(_w(v, V_OPERATOR))), _units(c));
-        } catch {}
-    }
-
-    // ---------- FeesV3's queue signals, and the deposit's return ----------
-
-    /// From Panels' status now: a waiting submission counts once as waited, a counted panel with an empty seat once as
-    /// stalled, and every validator seated on its counted panel as drawn this period (FeesV3 counts each once a
-    /// period). Anyone, any time; a keeper calls it after each draw and each replacement.
-    function signal(uint256 id) external delegated nonReentrant {
-        if (_submissions[id].solver == address(0)) revert Refused();
-        bytes memory ps = _sub(id);
-        if (Status(_w(ps, S_STATUS)) == Status.Waiting) {
-            fees.waited(id);
-            return;
-        }
-        uint256 pid = _w(ps, S_PID);
-        if (pid == 0) return;
-        bytes memory p = _pan(pid);
-        if (_w(p, P_COUNTED) == 0 && _w(p, P_SEATS) < _w(p, P_K)) fees.stalled(id);
-        fees.drawn(_seated(panels.judges(pid)));
-    }
-
-    /// The deposit's rest back to the solver (or reporter), once its counted judges were paid and its verdict has
-    /// been final for REPORT_WINDOW (its audits' and challenge panels' reports are in by then; any paid later come
-    /// from the pool). Anyone.
-    function finish(uint256 id) external delegated nonReentrant {
-        Submission storage s = _submissions[id];
-        (Status st,, uint256 finalAt) = _verdict(id);
-        if (s.done || !s.paid || st != Status.Final || block.timestamp <= finalAt + REPORT_WINDOW) revert NotYet();
-        s.done = true;
-        uint256 left = s.deposit;
-        s.deposit = 0;
-        _release(coin, left, s.solver);
-    }
-
     // ---------- internals ----------
+
+    /// A challenge (`test`: a failing-test dispute) filed by the caller with `stake` and its panel's cover, held here.
+    function _file(uint256 id, bytes32 evidence, uint256 stake, bool test) internal {
+        Submission storage s = _submissions[id];
+        if (s.solver == address(0) || challenges[id].challenger != address(0)) revert Refused();
+        uint256 cover = _units(fees.depositFor(id, _repoOf(s), K_MAX));
+        (, bool pass,) = _verdict(id);
+        if (stake + cover != 0) _hold(coin, msg.sender, stake + cover);
+        challenges[id] = Challenge(msg.sender, stake, cover, pass, panels.panelCount(), test);
+        panels.challenge(id, msg.sender, evidence);
+        emit ChallengeFiled(id, msg.sender);
+    }
+
+    /// An upheld test dispute's reward (D21): EVIDENCE_REWARD_BPS of the bounty the fix was judged at, from the
+    /// bounty's pot when the reversed fix had won it (the pot then pays no award), never from the solver; and the
+    /// disputer is active if it has a merged fix in the repository (launch L6).
+    function _reward(uint256 id, address to, bool won) internal {
+        book.disputeUpheld(to);
+        uint256 b = _submissions[id].bounty;
+        uint256 r;
+        if (won) {
+            r = _units(_submissions[id].judged * EVIDENCE_REWARD_BPS / BPS);
+            uint256 h = held(b, coin);
+            if (r > h) r = h;
+            if (r != 0) {
+                _touch(b, coin);
+                _pay(b, coin, to, r);
+            }
+        }
+        emit DisputeRewarded(id, to, r);
+    }
 
     function _payPanel(uint256 id, uint256 pid, IFeesV3.Report[] memory rs, uint256[] memory micro) internal {
         Submission storage s = _submissions[id];
@@ -311,6 +277,7 @@ contract RaceV3Annex is RaceV3Base {
     }
 
     function _sync(uint256 id) internal {
+        _penalize(id); // a reversed pass costs its solver's reputation (D29)
         Submission storage s = _submissions[id];
         Outcome o = s.outcome;
         if (o != Outcome.Pass && o != Outcome.Fail) return;

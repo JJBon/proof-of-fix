@@ -176,7 +176,7 @@ Within a passing verdict's window, anyone MAY dispute it with a test and the pub
 
 #### Scenario: A contender's test
 - **WHEN** a panel passes a fix, and a validator of an unseated family posts a test that fails on the fixed code and that the challenge panel finds states the issue's requirement
-- **THEN** the fix isn't paid, the disputer gets its stake, the solver's deposit and the reward, and the judges that passed it lose score only
+- **THEN** the fix isn't paid, the disputer gets its stake back and the reward, and the judges that passed it lose score only
 
 #### Scenario: A test that passes
 - **WHEN** the posted test passes on the fixed code
@@ -187,7 +187,7 @@ Within a passing verdict's window, anyone MAY dispute it with a test and the pub
 - **THEN** the verdict stands, its window resumes, and the stake goes to the solver
 
 ### Requirement: What a test dispute pays and costs
-An upheld dispute backed by a test SHALL return the disputer's stake and pay it the solver's deposit and the published share of the bounty. A rejected one SHALL pay the stake to the solver. The judges that passed the fix SHALL NOT be slashed: they lose score only.
+An upheld dispute backed by a test SHALL return the disputer's stake and pay it the published share of the bounty (1,000 basis points; ADR 0007); there is no solver's deposit to pay it. A rejected one SHALL pay the stake to the solver. The judges that passed the fix SHALL NOT be slashed: they lose score only.
 
 #### Scenario: A disputer without evidence
 - **WHEN** a party disputes ten passes with tests that pass on the fixed code
@@ -198,7 +198,7 @@ The solver of a rejected fix MAY appeal once, within the published period. The a
 
 #### Scenario: A good fix wrongly rejected
 - **WHEN** a panel of the one seated family rejects a fix, its solver appeals with a test, and a fresh draw of that family passes it
-- **THEN** the fix's window runs as for any pass, and if no dispute is upheld it is paid and its deposit returned
+- **THEN** the fix's window runs as for any pass, and if no dispute is upheld it is paid
 
 #### Scenario: A contender on the appeal
 - **WHEN** an appeal panel is drawn while four families are contenders
@@ -208,26 +208,26 @@ The solver of a rejected fix MAY appeal once, within the published period. The a
 - **WHEN** an appeal fails and the solver appeals again
 - **THEN** the appeal is refused
 
-### Requirement: An appeal needs a test and a stake (proposed)
-An appeal SHALL carry new evidence: a test, and the published stake. The official checker image SHALL run the test; the appeal SHALL be judged only if the test fails on the base code, passes on the fixed code, both twice, and changes nothing but test files. The appeal panel SHALL see the test and its results. A rejection SHALL stand unless the panel passes the fix.
+### Requirement: An appeal needs a test
+An appeal SHALL carry new evidence: a test. The official checker image SHALL run the test; the appeal SHALL be judged only if the test fails on the base code, passes on the fixed code, both twice, and changes nothing but test files. The appeal panel SHALL see the test and its results. A rejection SHALL stand unless the panel passes the fix. No stake SHALL be taken (owner, 2026-11-19).
 
 #### Scenario: An appeal with no evidence
-- **WHEN** a solver appeals a rejection and posts no test, or a test that passes on the base code
-- **THEN** the appeal is refused with no panel, and the stake is returned
+- **WHEN** a solver appeals a rejection and posts no test
+- **THEN** the appeal is refused with no panel, and nothing is charged
 
 #### Scenario: A test that proves nothing
 - **WHEN** a solver of a bad fix appeals with a test it wrote that passes with its fix, and the panel still finds the fix wrong
-- **THEN** the rejection is final and the stake is lost
+- **THEN** the rejection is final, and the solver has paid the appeal panel's checks
 
-### Requirement: What an appeal stakes (proposed)
-The appeal stake SHALL be separate from the solver's deposit: the larger of the published amount and the published share of the bounty. It SHALL be returned to whoever posted it when the appeal passes the fix or finds no panel. When the appeal fails it SHALL go to the sponsors' pool, never to a judge, the funder or the reporter. The appellant SHALL pay the appeal panel's checks.
+### Requirement: What an appeal costs
+An appeal SHALL pay only its fresh panel's metered validation, as a submission does: on the launch, the fee meter's deposit, its rest refunded whatever the outcome. Nothing SHALL go to the sponsors' pool, a judge, the funder or the reporter when it fails (owner, 2026-11-19: the appeal stake is dropped). A solver may appeal every rejection, paying each panel's meter: the same spam risk accepted for submissions.
 
 #### Scenario: A failed appeal on a $200 bounty
-- **WHEN** the stake is the larger of $5 and 10 % of the bounty, and the appeal of a fix to a $200 bounty fails
-- **THEN** the $20 stake goes to the sponsors' pool, and the fix's deposit goes to the issue's bounty
+- **WHEN** the appeal of a fix to a $200 bounty fails
+- **THEN** the rejection is final, the solver has paid the appeal panel's metered checks, and the rest of its deposit returns to it
 
 ### Requirement: A contender may sponsor an appeal (proposed)
-A validator of an unseated family MAY appeal in the solver's place, posting the test and the stake and paying the appeal panel's checks. A fix SHALL still have one appeal. When a sponsored appeal passes and the fix is paid, the sponsor SHALL get its stake back and the published share of the bounty, taken from the bounty. A sponsor SHALL NOT sit on the panel.
+A validator of an unseated family MAY appeal in the solver's place, posting the test and paying the appeal panel's checks. A fix SHALL still have one appeal. When a sponsored appeal passes and the fix is paid, the sponsor SHALL get its stake back and the published share of the bounty, taken from the bounty. A sponsor SHALL NOT sit on the panel.
 
 #### Scenario: A stricter panel than it should be
 - **WHEN** the seated family rejects a good fix, its solver doesn't appeal, and a contender whose model passed it sponsors the appeal, which passes
@@ -237,7 +237,7 @@ A validator of an unseated family MAY appeal in the solver's place, posting the 
 - **WHEN** a contender sponsors ten rejections of bad fixes with tests that pass, and the panel passes none
 - **THEN** it loses ten stakes to the sponsors' pool and pays ten panels' checks
 
-### Requirement: A challenge among few families gets a second draw (proposed)
+### Requirement: A challenge among few families gets a second draw
 While fewer than the published number of families (3) can judge a fix, a challenge or appeal that can't draw the larger fresh panel SHALL be judged by a second draw of the original panel's size from those families, the original judges not excluded. It SHALL NOT wait for a family that isn't seated. The operator, host and TEE-type caps SHALL apply.
 
 #### Scenario: One family holds every seat

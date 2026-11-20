@@ -131,8 +131,10 @@ class Encodings(unittest.TestCase):
                     "function reveal(uint256 pid, address key, bool vote, uint8 mask, bytes32 salt, bytes calldata sig)",
                     "function receipt(uint256 pid, address key, bytes32 receiptHash, bytes calldata sig)"):
             self.assertIn(sig, panels)
+        # the race's `report` runs in its endings since #251's contract batch 3 (the race's own entry delegates)
+        self.assertIn("function report(uint256, address, IFeesV3.Usage calldata, bytes calldata)", _text("RaceV3.sol"))
         self.assertIn("function report(uint256 pid, address key, IFeesV3.Usage calldata u, bytes calldata sig)",
-                      _text("RaceV3.sol"))
+                      _text("RaceV3Endings.sol"))
         self.assertIn("function post(uint256[4] calldata shared, bytes32[] calldata families, uint256[3][] calldata "
                       "tokens)", _text("FeesV3.sol"))
 
@@ -782,6 +784,63 @@ class Judging(unittest.TestCase):
         net.keys.append(stranger)
         with self.assertRaises(SetupError):
             net.node(5).tick(0)  # not registered
+
+
+class TwoRunsInTheNode(unittest.TestCase):
+    """#251 L22 in the v3 node: two runs per check within the profile's one time limit, the receipt's `runs` and
+    `flaky`, and the metered vCPU- and GB-seconds the two runs' sum."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name)
+
+    def judged(self, *codes, seconds=(1.0, 1.0)):
+        from unittest import mock
+
+        from oracle import sandbox
+
+        net = Net(self.tmp / "-".join(map(str, codes)))
+        c = net.chain
+        c.profile = lambda repo: {"milliVcpus": 2000, "memoryMb": 4096, "timeoutSeconds": 1200}
+        node = net.nodes[0]
+        seen = []
+
+        def runner(argv):
+            seen.append(argv[argv.index("timeout") + 1])
+            return codes[len(seen) - 1], "ok", ""
+        node.runner = runner
+        ticks = iter(t for s in seconds for t in (0.0, s))  # each run: started at 0, ended after its seconds
+        fake_time = mock.Mock(monotonic=lambda: next(ticks))
+        counted = c.add_panel(1, v3.COUNTED, net.addresses(0))
+        with mock.patch.object(sandbox, "time", fake_time):
+            net.judge_through([node])
+        doc = node.receipts3.get(c.seat(counted, 0)["receipt"])
+        return c.seat(counted, 0)["vote"], doc["receipt"]["tests"], c.usage[(counted, 0)], seen
+
+    def test_two_passes_pass(self):
+        vote, tests, _, seen = self.judged(0, 0)
+        self.assertTrue(vote)
+        self.assertEqual(([r["exit_code"] for r in tests["runs"]], tests["exit_code"]), ([0, 0], 0))
+        self.assertNotIn("flaky", tests)
+        self.assertEqual(seen, ["600", "600"])  # half the profile's 1,200 s each
+
+    def test_a_pass_and_a_fail_fail_and_set_flaky(self):
+        vote, tests, _, seen = self.judged(0, 1)
+        self.assertFalse(vote)
+        self.assertEqual(len(seen), 2)
+        self.assertIs(tests["flaky"], True)
+        self.assertEqual([r["exit_code"] for r in tests["runs"]], [0, 1])
+
+    def test_two_fails_fail(self):
+        vote, tests, _, _ = self.judged(1, 1)
+        self.assertFalse(vote)
+        self.assertNotIn("flaky", tests)
+
+    def test_the_usage_is_the_two_runs_sum(self):
+        _, _, usage, _ = self.judged(0, 0, seconds=(10.0, 12.0))
+        # 22 s at the profile's 2 vCPUs and 4 GB
+        self.assertEqual((usage.vcpu_seconds, usage.gb_seconds), (44, 88))
 
 
 class KeeperTableChallenge(unittest.TestCase):

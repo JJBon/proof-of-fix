@@ -187,6 +187,7 @@ contract PanelsV3BTest is PanelsSetup {
     /// Scenario "A challenge with too few validators": against a panel of 3 with only 3 others eligible, the challenge
     /// waits for a panel of 5, the verdict isn't final and its window doesn't run out; two more validators let it draw.
     function test_aChallengeWithTooFewValidators() public {
+        _knowFamilies(7); // three or more families seated: no second draw (#132 D27), the challenge waits
         _network(2, 3, 3);
         uint256 id = _id();
         uint256 pid = _openAndDraw(id, 100e6);
@@ -300,6 +301,7 @@ contract PanelsV3BTest is PanelsSetup {
     /// Scenario "Validators qualify after the genesis": each held verdict is audited by the second and then by the
     /// third validator; a mismatch opens a challenge that waits for a fresh panel of 3.
     function test_validatorsQualifyAfterTheGenesis() public {
+        _knowFamilies(7); // three or more families seated: no second draw (#132 D27), the challenge waits
         (uint256 id,) = _heldLoneVerdict(true, 0);
         assertEq(pn.submission(id).auditsDue, 2);
         _drawAudits(id);

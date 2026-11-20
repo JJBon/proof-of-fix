@@ -28,6 +28,7 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 || { echo "devnet-v3
 cleanup() {
   [[ "${POF_V3_E2E_KEEP:-}" == 1 ]] && { echo "kept the devnet on 127.0.0.1:$DEVNET_PORT"; return; }
   scripts/devnet.sh reset >/dev/null 2>&1 || true
+  chmod -R u+w "$WORK" 2>/dev/null || true  # step 10's fetched checkouts are read-only (#115)
   rm -rf "$WORK" "$RECORDS"
 }
 trap cleanup EXIT

@@ -47,6 +47,8 @@ contract ReplayRegistry {
 /// judges (each revealed with a receipt), and its submission's status. RaceV3 and FeesV3 are the real contracts.
 contract ReplayPanels {
     uint256 public constant BOUNTY_MAX = 625e6;
+    uint256 public constant APPEAL_WINDOW = 72 hours; // the production windows' (#251 batch 3)
+    uint256 public constant ACTIVE_WINDOW = 26 weeks;
     address public immutable fees;
     address public immutable coin;
     address public immutable pool;

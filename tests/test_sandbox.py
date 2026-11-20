@@ -82,7 +82,8 @@ class FakeDocker:
                     return self.reply(200, json.dumps({"Id": "c1", "HostConfig": host}).encode())
                 if p.endswith("/wait"):
                     fake.release.wait(fake.wait_s)
-                    return self.reply(200, json.dumps({"StatusCode": fake.exit_code}).encode())
+                    code = fake.exit_code.pop(0) if isinstance(fake.exit_code, list) else fake.exit_code
+                    return self.reply(200, json.dumps({"StatusCode": code}).encode())
                 if p.startswith("containers/c1/logs"):
                     return self.reply(200, frames((1, "Ran 1 test\n"), (2, "OK\n"), (1, "done\n")))
                 return self.reply(204)
@@ -120,11 +121,12 @@ class DockerApiRunner(unittest.TestCase):
         fake = self.fake()
         run = run_tests(Path("."), runner=DockerApi(fake.path))
         self.assertTrue(run.passed)
-        self.assertEqual(fake.paths(), [("GET", "/v1.41/info"), ("GET", f"/v1.41/images/{TEST_IMAGE.replace(':', '%3A').replace('@', '%40')}/json"),
-                                        ("POST", "/v1.41/containers/create"), ("GET", "/v1.41/containers/c1/json"),
-                                        ("POST", "/v1.41/containers/c1/start"),
-                                        ("POST", "/v1.41/containers/c1/wait"), ("GET", "/v1.41/containers/c1/logs"),
-                                        ("DELETE", "/v1.41/containers/c1")])
+        one = [("GET", f"/v1.41/images/{TEST_IMAGE.replace(':', '%3A').replace('@', '%40')}/json"),
+               ("POST", "/v1.41/containers/create"), ("GET", "/v1.41/containers/c1/json"),
+               ("POST", "/v1.41/containers/c1/start"),
+               ("POST", "/v1.41/containers/c1/wait"), ("GET", "/v1.41/containers/c1/logs"),
+               ("DELETE", "/v1.41/containers/c1")]
+        self.assertEqual(fake.paths(), [("GET", "/v1.41/info")] + one + one)  # two runs, each in a fresh container
         body = fake.created
         host = body["HostConfig"]
         self.assertEqual(body["Image"], TEST_IMAGE)
@@ -141,7 +143,7 @@ class DockerApiRunner(unittest.TestCase):
         self.assertTrue(host["Init"])  # so the inner time limit's SIGTERM reaches the tests
         self.assertNotIn("Privileged", host)
         self.assertNotIn("User", body)
-        self.assertEqual(body["Cmd"], ["timeout", "300", "python", "-m", "unittest", "-q"])
+        self.assertEqual(body["Cmd"], ["timeout", "150", "python", "-m", "unittest", "-q"])  # half the check's 300 s
         # The receipt's hashes don't depend on the runner: the CLI with the same output hashes the same.
         cli = run_tests(Path("."), runner=lambda argv: (0, "Ran 1 test\ndone\n", "OK\n"))
         self.assertEqual(run.record(), cli.record())
@@ -214,6 +216,99 @@ class DockerApiRunner(unittest.TestCase):
     def test_it_runs_specs_not_cli_argvs(self):
         with self.assertRaises(TypeError):
             DockerApi()(["docker", "run"])
+
+
+class TwoRuns(unittest.TestCase):
+    """#251 L22: the command twice on the same tree, each in a fresh container, both always, each with half the
+    check's time limit; the tests pass only if both exit 0, and the receipt shows each run and `flaky`."""
+
+    def runner(self, *codes):
+        calls = []
+
+        def run(argv):
+            calls.append(argv)
+            return codes[len(calls) - 1], f"run {len(calls)}", ""
+        return run, calls
+
+    def test_two_passes_pass(self):
+        run, calls = self.runner(0, 0)
+        tests = run_tests(Path("."), runner=run)
+        self.assertTrue(tests.passed)
+        self.assertFalse(tests.flaky)
+        self.assertEqual(len(calls), 2)
+        rec = tests.record()
+        self.assertEqual([r["exit_code"] for r in rec["runs"]], [0, 0])
+        self.assertNotIn("flaky", rec)
+        self.assertEqual(rec["runs"][0]["results_sha256"], rec["runs"][1]["results_sha256"])
+        self.assertNotEqual(rec["runs"][0]["logs_sha256"], rec["runs"][1]["logs_sha256"])  # each run's own logs
+
+    def test_a_pass_and_a_fail_fail_and_are_flaky(self):
+        for codes in ((0, 1), (1, 0)):
+            run, calls = self.runner(*codes)
+            tests = run_tests(Path("."), runner=run)
+            self.assertEqual(len(calls), 2)  # both always run, the first failing or not
+            self.assertFalse(tests.passed)
+            self.assertEqual(tests.exit_code, 1)
+            self.assertTrue(tests.flaky)
+            self.assertIs(tests.record()["flaky"], True)
+            self.assertEqual([r["exit_code"] for r in tests.record()["runs"]], list(codes))
+
+    def test_two_fails_fail_and_aren_t_flaky(self):
+        run, _ = self.runner(2, 1)
+        tests = run_tests(Path("."), runner=run)
+        self.assertEqual((tests.passed, tests.exit_code, tests.flaky), (False, 2, False))
+        self.assertNotIn("flaky", tests.record())
+
+    def test_the_results_hash_names_both_runs(self):
+        hashes = {codes: run_tests(Path("."), runner=self.runner(*codes)[0]).results_sha256
+                  for codes in ((0, 0), (0, 1), (1, 0), (1, 1))}
+        self.assertEqual(len(set(hashes.values())), 4)
+        self.assertEqual(hashes[(0, 0)], run_tests(Path("."), runner=self.runner(0, 0)[0]).results_sha256)
+
+    def test_the_time_limit_is_split(self):
+        run, calls = self.runner(0, 0)
+        run_tests(Path("."), runner=run, timeout_s=1200)
+        self.assertEqual([a[a.index("timeout") + 1] for a in calls], ["600", "600"])
+        self.assertEqual(sandbox._inner_limit(calls[0]), 600)  # the CLI's outer limit follows it
+        self.assertEqual(sandbox._inner_limit(["python", "-c", "x"]), sandbox.LIMITS["timeout_s"])
+        run, calls = self.runner(0, 0)
+        run_tests(Path("."), runner=run)
+        self.assertEqual(calls[0][calls[0].index("timeout") + 1], "150")  # LIMITS' 300 s for the check
+
+    def test_the_seconds_are_summed(self):
+        ticks = iter([100.0, 110.0, 200.0, 212.5])
+        tests = run_tests(Path("."), runner=self.runner(0, 0)[0], clock=lambda: next(ticks))
+        self.assertEqual([r.seconds for r in tests.runs], [10.0, 12.5])
+        self.assertEqual(tests.seconds, 22.5)
+        self.assertNotIn("seconds", json.dumps(tests.record()))  # metered, not in the receipt
+
+    def test_the_api_runner_gives_each_run_a_fresh_container_with_the_same_limits(self):
+        fake = FakeDocker(exit_code=[0, 1])
+        self.addCleanup(fake.close)
+        tests = run_tests(Path("."), runner=DockerApi(fake.path), timeout_s=1200)
+        self.assertTrue(tests.flaky)
+        paths = fake.paths()
+        self.assertEqual(paths.count(("POST", "/v1.41/containers/create")), 2)
+        self.assertEqual(paths.count(("DELETE", "/v1.41/containers/c1")), 2)
+        self.assertEqual(fake.created["Cmd"][:2], ["timeout", "600"])
+        creates = [b for m, p, b in fake.calls if p.endswith("/containers/create")]
+        self.assertEqual(creates[0], creates[1])
+        self.assertEqual(creates[0]["HostConfig"]["NetworkMode"], "none")
+        cli = run_tests(Path("."), runner=lambda argv: (0, "Ran 1 test\ndone\n", "OK\n"))
+        self.assertEqual([r["exit_code"] for r in tests.record()["runs"]], [0, 1])
+        self.assertEqual(tests.record()["runs"][0]["logs_sha256"], cli.record()["runs"][0]["logs_sha256"])
+
+    def test_the_judge_s_line_says_when_the_runs_disagreed(self):
+        from oracle.judge import test_line
+
+        same = test_line(run_tests(Path("."), runner=self.runner(0, 0)[0]))
+        self.assertIn("passed in a sandbox", same)
+        self.assertIn("ran them 2 times, each in a fresh container (exit codes 0, 0): the runs on each tree agreed",
+                      same)
+        flaky = test_line(run_tests(Path("."), runner=self.runner(0, 1)[0]))
+        self.assertIn("failed (exit code 1) in a sandbox", flaky)
+        self.assertIn("(exit codes 0, 1): the runs disagreed, a flaky result, which counts as failed", flaky)
+        self.assertNotIn("protects", flaky)
 
 
 class CliRunner(unittest.TestCase):

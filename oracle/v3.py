@@ -84,10 +84,10 @@ RACE_AWARD_FIELDS = ["winner", "fix", "sub", "closed", "earned", "merged"]
 RACE_STATES = ["None", "Open", "Won", "Merged", "Paid", "Refunded", "Unsolved"]
 OPEN, WON, CLAIMED, PAID, REFUNDED, UNSOLVED = 1, 2, 3, 4, 5, 6
 RACE_OUTCOMES = ["None", "Pass", "Fail", "Duplicate", "Withdrawn", "TimedOut", "Released"]
-RACE_CONFIG = "(address,address," + ",".join(["uint256"] * 14) + ")"
+RACE_CONFIG = "(address,address," + ",".join(["uint256"] * 15) + ")"
 RACE_CONFIG_FIELDS = ["infrastructure", "insurance", "registrationFee", "issueStake", "attemptFee", "evaluationFee",
                       "appealFee", "challengeStake", "startPriceBps", "riseBpsPerDay", "finderFeeBps", "idleDays",
-                      "resultDays", "mergeDays", "releaseEveryDays", "instalments"]
+                      "resultDays", "mergeDays", "releaseEveryDays", "instalments", "judgeFee"]
 USAGE = "(bytes32,uint64,uint64,uint64,uint64,uint64,uint64)"
 PROFILE = "(bytes32,uint32,uint32,uint32)"
 HEAD = "(bytes32,bytes32,uint256,uint256,uint256,bytes32)"  # v2's Heads.Head

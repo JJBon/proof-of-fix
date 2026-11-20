@@ -12,10 +12,12 @@ import {PanelScores} from "../../../src/v3/PanelScores.sol";
 import {PoolV3} from "../../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../../../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../../../src/v3/RaceV3Base.sol";
 import {MockCoin} from "../../mocks/MockCoin.sol";
 import {PanelsSetup} from "./PanelsSetup.sol";
 import {Heads} from "../../../src/v2/Heads.sol";
+import {SolverBook} from "../../../src/v3/SolverBook.sol";
 import {TEST_REPO, TEST_GENESIS_HEAD} from "./SuiteWindows.sol";
 
 /// The whole v3 version for the race's tests (task 3.5): the registry with one genesis validator (level A, TDX,
@@ -26,8 +28,12 @@ abstract contract RaceV3Setup is PanelsSetup {
     uint256 internal constant C = 1e6; // one coin (6 decimals)
     uint256 internal constant FINDER = 1_765;
     bytes32 internal constant USAGE_TAG = keccak256("proof-of-fix v3 usage");
+    /// A test's hash, as a dispute or an appeal posts it (#132 D21, D24).
+    bytes32 internal constant TEST = keccak256("a test that fails on the fixed code");
 
     RaceV3 internal rc;
+    SolverBook internal book;
+    bool internal gateOpen = true; // see `_openGate`
     PoolV3 internal pool3;
     address internal infra = makeAddr("infra");
     address internal insurance = makeAddr("insurance");
@@ -39,7 +45,7 @@ abstract contract RaceV3Setup is PanelsSetup {
     address internal relayer = makeAddr("relayer");
 
     /// v2's race configuration (RaceV2.t.sol), with v3's challenge stake.
-    function _config() internal view returns (RaceV3Base.Config memory c) {
+    function _config() internal view virtual returns (RaceV3Base.Config memory c) {
         c.infrastructure = infra;
         c.insurance = insurance;
         c.registrationFee = 2e6;
@@ -56,6 +62,14 @@ abstract contract RaceV3Setup is PanelsSetup {
         c.mergeDays = 14;
         c.releaseEveryDays = 7;
         c.instalments = 4;
+        c.judgeFee = _judgeFee();
+    }
+
+    /// The judges' fee mode these suites deploy (#132 D30): the flat $40 (kept for a later mainnet decision), which the
+    /// suites written with contract batch 3 assert; `TaxiV3.t.sol` and the taxi variants override it with 0, the pure
+    /// taxi fare the Sepolia launch deploys (owner, 2026-11-19).
+    function _judgeFee() internal view virtual returns (uint256) {
+        return 40e6;
     }
 
     /// The version, with `n` spread validators besides the genesis one (each its own host, family and full bond).
@@ -80,9 +94,26 @@ abstract contract RaceV3Setup is PanelsSetup {
         pn = new Panels(
             IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows
         );
-        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
         rc = new RaceV3(_config(), 625, 100_000, pn, pool3, block.timestamp, repo, head, keccak256("c"), ax);
+        book = rc.solverBook();
+        if (gateOpen) _openGate();
         _network(n, FAMILIES, 3);
+    }
+
+    /// The suites written before the minimum of active solvers (#251 task 3.3) fund bounties at once: for them the
+    /// book reports ACTIVE_SOLVERS_MIN active solvers (a mocked view; nothing else of the book is mocked). The launch's
+    /// own tests (`SolversV3.t.sol`) set `gateOpen` false and reach the minimum by merged fixes.
+    function _openGate() internal {
+        vm.mockCall(address(book), abi.encodeWithSelector(SolverBook.activeAtLeast.selector), abi.encode(uint256(3)));
+    }
+
+    /// `who` gets `amount` of reputation (#132 D29), as a merged fix of that bounty would give it: for the suites written
+    /// before the reputation cap whose solvers claim more than REP_BASE at once. A made-up submission id, never a real
+    /// one.
+    function _reputation(address who, uint256 amount) internal {
+        vm.prank(address(rc));
+        book.paid(type(uint128).max + uint256(uint160(who)), who, amount);
     }
 
     // ---------- money ----------

@@ -23,6 +23,12 @@ So proof-of-fix publishes its own code on Radicle, under the owner's real name, 
 - No pledges are taken while proof-of-fix has fewer than 3 active solvers, with "active" defined on-chain (design L6).
 - `Heads` and the merge wired into v3: the head moves only when the winning verdict is final, so a verdict reversed in its window never reaches the canonical head.
 
+**How validators run a fix's tests** (design L20–L22; tracked by the owner on 2026-11-19; no contract change):
+- A fix can't weaken the tests that judge it: the repository declares protected test paths in `.pof/check.json` at the base, and the node runs the base's copies of them over the fix's tree.
+- The attestation covers what the node runs after boot: the Docker engine, the node image and the allowed test images sit on one measured, read-only disk, and the node refuses any other image.
+- Each validator runs the tests twice; both runs must pass, and both are in the receipt.
+- The first two hold before the Sepolia deploy; the third is recommended.
+
 **Code on Radicle** (new: `radicle-hosting`):
 - The public repository starts from the scrubbed snapshot, never Forgejo's history.
 - Funding refers to a Radicle issue; a fix is a Radicle patch; the validator fetches the patch's commit from Radicle; issues are funded straight from `pofctl` (a bot adapter is optional).
@@ -69,6 +75,6 @@ So proof-of-fix publishes its own code on Radicle, under the owner's real name, 
 
 ## Impact
 - **Contracts:** `RaceV3`, `RaceV3Annex`, `RaceV3Base`, `Panels*`, `Validators`, `FeesV3`, `Heads` (v2's, reused or a v3 copy), a new Sepolia deploy script. v2 is untouched.
-- **Node and tools:** `oracle/radicle.py` and `oracle/node_v3.py` (a v3 Radicle adapter), `pofctl` (v3 and Radicle; it speaks only v2 today), `scripts/github_snapshot.py` (a Radicle target), `scripts/radicle-spike.sh` (the v3 spike), the integration suite's `--radicle` run on v3.
+- **Node and tools:** `oracle/radicle.py` and `oracle/node_v3.py` (a v3 Radicle adapter), `oracle/checkconfig.py` and `oracle/sandbox.py` (protected tests, attested images, two runs), the SEV-SNP kit's measured checker image (#253), `pofctl` (v3 and Radicle; it speaks only v2 today), `scripts/github_snapshot.py` (a Radicle target), `scripts/radicle-spike.sh` (the v3 spike), the integration suite's `--radicle` run on v3.
 - **Docs:** README (intended use, proposed), the paper, `docs/participate.md`, three onboarding guides, a deployment record under `contracts/deployments/`.
 - **External, each behind the owner's go:** a Radicle repository and a seed; a Sepolia deployment from a fresh wallet funded by a faucet.

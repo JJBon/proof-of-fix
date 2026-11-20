@@ -120,6 +120,8 @@ It affects solvers (a deposit), validators of weaker models (contenders, not jud
 
 It adds two attackers to the simulation: a contender that sponsors every rejection, and a solver that tries an issue again while its deposit is held.
 
+**Amendment 2026-11-19 (#251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** the owner accepted every recommended value. Seats by rank (D20), the test dispute (D21), the appeal on evidence (D24), the second draw among few families (D27), the reputation cap (D29) and the judges' fee (D30) are decided. **There is no solver's deposit** (D22, D28 void), so the two bullets above about a deposit no longer apply. Sponsorship (D25) and known answers (D26) are left out of the testnet launch.
+
 **Out of scope:**
 - token rewards (the token is parked); the validators' token slice is #142, related;
 - a public deployment (after D1; rule 1);
@@ -136,7 +138,7 @@ It adds two attackers to the simulation: a contender that sponsors every rejecti
 - `judge-panels`: how each check's judges are chosen and when their verdict is final: the odd k from eligible validators and the bounty, the draw and its seed, replacement of silent judges, the proof a counted verdict must carry, challenge windows by panel size, the hold on a lone judge's verdict, audits, and the constitution tier's fixed size.
 
 ### Modified Capabilities
-- `bounty-market`: in v3, a solver's deposit, lost on rejection and added to the issue's bounty (#236), held until the appeal period closes (proposed, 2026-11-15).
+- `bounty-market`: in v3, no solver's deposit (owner, 2026-11-19; it replaces the deposit of #236 and its hold around an appeal).
 - `incentive-simulation`: adds open-validator scenarios (one party running many nodes, few validators, k = 1, window and bond sizes), market pricing and its attackers (fake shortage, fake demand, inflated costs), zkTLS validators, #141's two re-runs with their rules beside their alternatives, and the acceptance criteria, each with a published threshold, to meet before any contract code.
 
 ## Impact

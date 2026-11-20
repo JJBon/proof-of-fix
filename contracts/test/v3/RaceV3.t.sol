@@ -10,6 +10,7 @@ import {Status, Kind, Submission, Panel, Seat} from "../../src/v3/PanelsBase.sol
 import {PoolV3} from "../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
 import {Heads} from "../../src/v2/Heads.sol";
 import {RaceV3Setup} from "./helpers/RaceV3Setup.sol";
@@ -149,8 +150,8 @@ contract RaceV3Test is RaceV3Setup {
 
     // ---------- the judges' pay ----------
 
-    /// The counted judges are paid FeesV3's settlement from the deposit at the result; the rest returns after
-    /// finality.
+    /// The counted judges are paid FeesV3's settlement from the fix's flat judges' fee at the result (#132 D30: in
+    /// place of a deposit sized to the quote); its rest goes to the sponsors' pool after finality, never back.
     function test_depositPaysTheChecksAndTheRestReturns() public {
         uint256 b = _openBounty();
         uint256 id = _commit(solver1, b, FIX);
@@ -181,8 +182,11 @@ contract RaceV3Test is RaceV3Setup {
         vm.warp(block.timestamp + 1 days + 1);
         uint256 before = _owed(solver1);
         uint256 left = rc.submission(id).deposit;
+        uint256 pooled = pool3.held(address(usd));
+        assertEq(deposit, 40 * C); // JUDGE_FEE
         rc.finish(id);
-        assertEq(_owed(solver1), before + left);
+        assertEq(_owed(solver1), before); // the fee isn't refunded
+        assertEq(pool3.held(address(usd)), pooled + left);
         _assertBooks();
     }
 
@@ -226,7 +230,7 @@ contract RaceV3Test is RaceV3Setup {
         bytes32 subject = keccak256(abi.encode(USAGE_TAG, address(rc), pid, js[0]));
         bytes memory sig = _statementSig(js[0], subject, keccak256(abi.encode(u)));
         bytes memory other = _statementSig(js[1], subject, keccak256(abi.encode(u)));
-        vm.expectRevert(RaceV3.BadSignature.selector); // signed by another key
+        vm.expectRevert(RaceV3Base.BadSignature.selector); // signed by another key
         rc.report(pid, js[0], u, other);
         IFeesV3.Usage memory wrong = _usage(pid, js[0]);
         wrong.receipt = keccak256("another receipt");
@@ -614,6 +618,7 @@ contract RaceV3Test is RaceV3Setup {
     /// A submission above k = 1's limit while only one validator isn't a party waits: it counts once as waited.
     /// A drawn panel's validators count as drawn.
     function test_signalsForwardedFromPanelsStatus() public {
+        _reputation(solver1, 200 * C); // its claim is above REP_BASE (#132 D29)
         uint256 b = _openBounty();
         _fundersAreValidators(b);
         _pledge(bob, b, 100 * C); // the price is now above $50, k = 1's limit
@@ -640,22 +645,28 @@ contract RaceV3Test is RaceV3Setup {
 
     // ---------- withdrawals, time-outs and the sunset ----------
 
+    /// Scenario "A withdrawn submission" (bounty-market, #132 D30): the fee isn't returned (it goes to the sponsors'
+    /// pool whole), and no per-check charge is made.
     function test_withdrawReturnsTheWholeDeposit() public {
         uint256 b = _openBounty();
         uint256 id = _commit(solver1, b, FIX);
         uint256 deposit = rc.submission(id).deposit;
         uint256 bal = _owed(solver1);
+        uint256 pooled = pool3.held(address(usd));
         vm.prank(solver2);
         vm.expectRevert(RaceV3Base.Refused.selector);
         rc.withdraw(id);
         vm.prank(solver1);
         rc.withdraw(id);
-        assertEq(_owed(solver1), bal + deposit);
+        assertEq(_owed(solver1), bal);
+        assertEq(rc.submission(id).charged, 0);
+        assertEq(pool3.held(address(usd)), pooled + deposit);
         assertEq(uint256(pn.submission(id).status), uint256(Status.Withdrawn));
         _assertBooks();
     }
 
     function test_aSubmissionNoPanelTookTimesOut() public {
+        _reputation(solver1, 200 * C); // its claim is above REP_BASE (#132 D29)
         uint256 b = _openBounty();
         _fundersAreValidators(b);
         _pledge(bob, b, 100 * C);
@@ -728,17 +739,17 @@ contract RaceV3Test is RaceV3Setup {
         _judgeCheck(id, false);
         vm.prank(solver2);
         vm.expectRevert(RaceV3Base.Refused.selector);
-        rc.appeal(id);
+        rc.appeal(id, TEST);
         vm.prank(solver1);
-        uint256 again = rc.appeal(id);
+        uint256 again = rc.appeal(id, TEST);
         assertEq(rc.submission(again).commitment, rc.submission(id).commitment);
         assertTrue(rc.submission(again).appealed);
         vm.prank(solver1);
         vm.expectRevert(RaceV3Base.Refused.selector);
-        rc.appeal(id);
+        rc.appeal(id, TEST);
         vm.prank(solver1);
         vm.expectRevert(RaceV3Base.Refused.selector); // an appeal isn't appealed
-        rc.appeal(again);
+        rc.appeal(again, TEST);
         _judgeCheck(again, true);
         assertEq(rc.bounty(b).winner, again);
     }
@@ -894,10 +905,10 @@ contract RaceV3Test is RaceV3Setup {
     /// No owner, admin, setter or pause: every state-changing function is a race action anyone may call.
     function test_noPrivilegedCall() public view {
         string memory json = vm.readFile("out/RaceV3.sol/RaceV3.json");
-        string[28] memory writers = [
+        string[30] memory writers = [
             "register", "withdrawIssue", "openBounty", "pledge", "sunset", "attempt", "stop", "commit", "report",
             "result", "claim", "merge", "release", "claimInstalments", "settle", "appeal", "withdraw", "timeOut",
-            "mergeExpired",
+            "mergeExpired", "dispute", "close",
             "challenge", "settleChallenge", "sync", "payPanel", "payShadow", "signal", "finish",
             // Baskets: refunds, credits and swaps
             "claimRefund", "check"
@@ -923,7 +934,7 @@ contract RaceV3Test is RaceV3Setup {
             assertTrue(ok, string.concat("unexpected state-changing function: ", name));
             ++n;
         }
-        assertEq(n, 32); // two named withdraw: the race's and Baskets' credit withdrawal
+        assertEq(n, 34); // two named withdraw: the race's and Baskets' credit withdrawal
     }
 
     /// The annex's actions run only in a race's storage, through its DELEGATECALL; and a race refuses an annex built
@@ -932,15 +943,16 @@ contract RaceV3Test is RaceV3Setup {
         RaceV3Annex ax = RaceV3Annex(rc.annex());
         vm.expectRevert(RaceV3Base.Refused.selector);
         ax.sync(1);
+        RaceV3Endings en = RaceV3Endings(ax.endings());
         vm.expectRevert(RaceV3Base.Refused.selector);
-        ax.register(TEST_REPO, false);
-        RaceV3Annex other = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp + 0);
+        en.register(TEST_REPO, false);
+        RaceV3Annex other = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp + 0, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp + 0));
         (,,,,,, uint256 st) = rc.contracts();
         if (st != block.timestamp) {
             vm.expectRevert(RaceV3Base.BadParams.selector);
             this.deployRace(_config(), 625, st, other);
         }
-        RaceV3Annex wrongCap = new RaceV3Annex(_config(), 600, 100_000, pn, pool3, st);
+        RaceV3Annex wrongCap = new RaceV3Annex(_config(), 600, 100_000, pn, pool3, st, new RaceV3Endings(_config(), 600, 100_000, pn, pool3, st));
         vm.expectRevert(RaceV3Base.BadParams.selector);
         this.deployRace(_config(), 625, st, wrongCap);
     }
@@ -953,7 +965,7 @@ contract RaceV3Test is RaceV3Setup {
     }
 
     function deployAnnex(RaceV3Base.Config memory c, uint256 cap, uint256 st) external returns (RaceV3Annex) {
-        return new RaceV3Annex(c, cap, 100_000, pn, pool3, st);
+        return new RaceV3Annex(c, cap, 100_000, pn, pool3, st, new RaceV3Endings(c, cap, 100_000, pn, pool3, st));
     }
 
     /// Panels judges bounties up to BOUNTY_MAX ($625): a race whose pots could hold more is refused.

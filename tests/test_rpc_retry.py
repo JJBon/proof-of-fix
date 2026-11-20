@@ -281,7 +281,7 @@ class TheRun(unittest.TestCase):
         self.assertEqual((c.outcome, c.usage, called), (0, None, []))  # the tests didn't run: nothing was spent
         self.chain.profile = real
         self.node.tick(0)
-        self.assertEqual((c.outcome, len(called)), (v2.PASS, 1))
+        self.assertEqual((c.outcome, len(called)), (v2.PASS, 2))  # one check: its two runs (#251 L22)
         self.assertIsNotNone(c.usage)
 
     def test_a_report_that_didnt_go_through_is_sent_again_on_the_next_pass(self):

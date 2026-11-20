@@ -7,7 +7,7 @@ registration check, and a submission's verdict signed by whichever of them are d
 
 - **Standard library only:** it talks JSON-RPC to the chain and signs transactions itself, with the oracle node's
   vendored, pinned secp256k1 and keccak (`oracle/vendor`). No cast, forge or Docker is needed to use it.
-- **v2 by default** (`RaceV2`, coin only), and v1 with `--v1`.
+- **v2 by default** (`RaceV2`, coin only), v1 with `--v1`, and **v3 on Radicle** with `--v3` (#251 task 4.4, below).
 - **Money is the devnet's test coin.** v2 makes no token calls, so POF appears nowhere here. v3's design includes it, simulated only until #126's legal review.
 
 ## Setup
@@ -176,11 +176,14 @@ It acts only for the submissions its seat is drawn for, and earns its fee for ea
 ```bash
 scripts/pofctl verify-head --rid rad:z… --rad-exec "docker exec -i <node>"   # canonical main on Radicle, via its node
 scripts/pofctl verify-head --repo registry --commit <sha>                    # any mirror's main, given by hand
+scripts/pofctl verify-head --rid rad:z… --commit <sha> --rad-exec "…"       # before a deployment: main is <sha>
 ```
 Heads keeps each registered repository's head (a Radicle repository's id is `keccak256(RID)`). `verify-head` reads
 the canonical `main` the way the node's Radicle adapter does (`oracle/radicle.py`: Radicle's own ref, and the
 delegates' signed branches counted against the threshold, which must agree) and compares it with `Heads.head(repo)`.
-A mismatch is refused (exit 1) with both commits. `scripts/integration.sh --radicle` runs it in scenario 8.
+A mismatch is refused (exit 1) with both commits. `scripts/integration.sh --radicle` runs it in scenario 8. With
+`--rid` and `--commit` together it reads no chain and no record: the repository must exist and its canonical `main`
+must be that commit, the genesis head a deployment is about to take (`scripts/deploy-sepolia.sh`, #251 task 3.9).
 
 ## Run the whole story automatically
 
@@ -202,6 +205,59 @@ Bounties repeat until the engineer's seat has been drawn. Every validator then w
 meter charged = what the judges and the relayer were credited; each withdrawal = the credit; everything charged was
 withdrawn; 3 usage reports per check.
 
+## v3 on Radicle (#251 task 4.4)
+
+The launch's race (`RaceV3`, one Radicle repository, the project's own test coin `POFTEST` as the fee coin, no value)
+for the reporter, the funder and the solver. `--v3` selects it, as does a v3 deployment record (`"version": 3`) or any
+command only v3 has (`issue`, `pledge`, `submit`, `claim`, `merge`, `checkout`, `faucet`). The default record is `contracts/deployments/devnet-v3.json`
+(`scripts/devnet.sh deploy-v3`); on Sepolia, pass the deployment's record with `--record`.
+
+```bash
+scripts/pofctl faucet                                      # 20 test coins for your key from the deployment's keyless
+                                                           # faucet, one claim every 2 hours; prints the next claim
+                                                           # time (before it: refused, nothing sent). --when only shows it
+scripts/pofctl --v3 status                                 # your cap (REP_BASE $50 + reputation), open claims, the
+                                                           # deposit a fix posts (FeesV3's maxDeposit; the rest is
+                                                           # refunded), active solvers, wallet and credit
+scripts/pofctl --v3 issue register --rad-issue <id> --comment --rad-exec "docker exec -i <node>"
+                                                           # the fee, the stake and its check's deposit; the claim
+                                                           # (Registration: N, Reporter wallet: 0x…) commented on the
+                                                           # Radicle issue (without --comment: printed, with the command)
+scripts/pofctl --v3 issue open --issue <n>                 # anyone, once its registration check is final
+scripts/pofctl --v3 pledge --bounty <b> --amount 20        # refused, with the count, while fewer than 3 solvers are
+                                                           # active (L6): nothing is sent, not even an approval
+scripts/pofctl --v3 submit --bounty <b> --patch <commit>   # seals the fix on Heads.head; prints the `git push rad
+                                                           # <commit>:refs/patches -o patch.message=…` that opens the
+                                                           # patch with the claim in its description, one line each
+scripts/pofctl --v3 claim --bounty <b> --patch <commit> --base <head> --salt 0x…   # the winner opens its seal
+scripts/pofctl --v3 merge --bounty <b>                     # anyone, at the verdict's finality: Heads moves (L9);
+                                                           # before it, refused with the time left
+scripts/pofctl --v3 withdraw --role solver                 # the refunded deposits' rest, and other credit
+scripts/pofctl --v3 verify-head --rad-exec "docker exec -i <node>"   # Radicle's canonical main is Heads.head
+scripts/pofctl --v3 checkout --rad-exec "…" --dir <new dir>          # the commit Heads.head names, from any namespace
+```
+
+- **The fee coin needs an allowance.** Before a registration, a pledge or a commit, pofctl checks your balance (too
+  little: refused, nothing sent, pointing to `pofctl faucet`) and RaceV3's allowance. If it's short, pofctl
+  approves the race, unlimited, as the v2 commands do, and says so in its output, with how to revoke it.
+- **The test coin and its faucet (launch design L17, 2026-11-20):** "proof-of-fix test coin", `POFTEST`, 6 decimals.
+  After its genesis mint, the faucet (`CoinFaucet`, the coin's only minter, no key) is the only way coins come into
+  existence: 20 coins a claim, per address, every 2 hours. pofctl reads the coin from RaceV3 and the faucet from the
+  deployment record (`addresses.faucet`), checked against the coin's `faucet()`. A devnet's mock coin has none
+  (`pofctl coin mint` there).
+- **The taxi fare (ADR 0007's amendment):** a fix posts FeesV3's worst-case deposit for 7 judges; its judges are paid
+  by the meter and the rest becomes your credit after the verdict, pass or fail (`withdraw`). No attempt, evaluation or
+  appeal fee.
+- **The claim's format** is the bot's pull request body (bot/logic.py): `Fixes #<n>`, `Bounty:`, `Submission:`,
+  `Salt:`, `Solver wallet:`. The validators' nodes read it from the patches on their own Radicle node (task 4.2), and
+  take only a revision whose head is the sealed commit and whose base is `Heads.head`.
+- **A public chain's key is a keystore file** (`--keystore FILE`, `POFCTL_KEYSTORE`, or `keystore` in the config): the
+  Ethereum keystore format (`cast wallet new`, geth), scrypt or PBKDF2, decrypted with a password asked for at the
+  terminal (`POFCTL_KEYSTORE_PASSWORD_FILE` names a file holding it, for unattended runs). The key plays every role of
+  the command, is never printed or logged, and no option takes it.
+- `scripts/pofctl-e2e.sh --version 3` runs it all against the real v3 contracts on anvil, with validators that qualify
+  to panels of 3 and a stand-in Radicle node (tests/e2e_pofctl_v3.py).
+
 ## What's not here yet
 
 | Comes with | What changes in pofctl |
@@ -211,5 +267,7 @@ withdrawn; 3 usage reports per check.
 
 **Safety:**
 - The stub quorum and `devnet warp` refuse any chain but the devnet's (7193) and anvil's (31337).
-- Keys are devnet keys: never use one on a public chain (rule 1).
+- Devnet keys (OpenBao's devnet path, anvil's public mnemonic, `POFCTL_KEY_<ROLE>`) sign on chains 31337 and 7193
+  only: on any other chain, Sepolia included, pofctl refuses them before reading them. There, sign with a keystore
+  file (`--keystore`).
 - pofctl never prints a key.

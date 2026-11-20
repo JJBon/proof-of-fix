@@ -1,6 +1,9 @@
 """pofctl: play every role of proof-of-fix against a devnet (proof-of-fix#104). See pofctl/README.md.
 
-    pofctl [--json] [--config FILE] [--v1] [--as ROLE] <command> ...
+    pofctl [--json] [--config FILE] [--v1 | --v3] [--as ROLE] [--keystore FILE] <command> ...
+
+v3 on Radicle (#251 task 4.4): `issue register --rad-issue`, `pledge`, `submit --patch`, `claim`, `merge`, `status`,
+`verify-head` and `checkout`; see pofctl/v3cli.py. Those only v3 has select it by themselves, as a v3 record does.
 
 Roles and their default keys (devnet-keys.sh's roles; --as picks another, e.g. --as solver-b, or --as engineer with
 POFCTL_KEY_ENGINEER set to an engineer's own key):
@@ -9,6 +12,11 @@ POFCTL_KEY_ENGINEER set to an engineer's own key):
 The chain's API key (#104's chain on AWS): POFCTL_RPC_TOKEN, sent as POFCTL_RPC_AUTH says: "Authorization" (Bearer,
 the default), "Basic" (a "<handle>:<key>" token) or another header name; or put it in the URL
 (https://<handle>:<key>@host, sent as HTTP Basic). Never in the config file.
+
+Keys: devnet keys (OpenBao's devnet path, anvil's public mnemonic, POFCTL_KEY_<ROLE>) sign on the local chains only
+(31337 and 7193). On any other chain pofctl signs only with a keystore file (--keystore, POFCTL_KEYSTORE or `keystore`
+in the config), whose password is asked for at the terminal (POFCTL_KEYSTORE_PASSWORD_FILE for an unattended run). No
+key is ever printed (pofctl/keystore.py).
 """
 
 from __future__ import annotations
@@ -29,7 +37,7 @@ from bot.forge import load_config as load_repos
 from bot.forge import repo_for
 
 from . import keys as keysrc
-from . import leaderboard
+from . import keystore, leaderboard, v3cli
 from .race import C, FAIL, PASS, Race, Signers, commitment, fix_of, fmt, load_record
 from .rpc import Reverted, Rpc, RpcError, Wallet, auth_headers
 
@@ -39,8 +47,7 @@ DEFAULT_ROLE = {"funder": "funder", "reporter": "reporter", "solver": "solver-a"
 REGISTERED, AT_MERGE = 120 * C, 100 * C  # the stub quorum's two importance estimates (as the loop's)
 
 
-class Fail(Exception):
-    pass
+Fail = v3cli.Fail  # one failure type for every command, v2's and v3's
 
 
 # ---------- context ----------
@@ -55,10 +62,20 @@ class Ctx:
         headers.update(auth_headers(os.environ.get("POFCTL_RPC_TOKEN"),
                                     os.environ.get("POFCTL_RPC_AUTH") or "Authorization"))
         self.rpc = Rpc(url, headers)
-        self.version = 1 if args.v1 else 2
+        v3_wanted = getattr(args, "v3", False) or getattr(args, "command", "") in v3cli.V3_ONLY \
+            or self.config.get("version") == 3
+        if args.v1 and v3_wanted:
+            raise Fail("--v1 and a v3 command (or --v3) together")
+        self.version = 1 if args.v1 else 3 if v3_wanted else 2
         self.record = load_record(self.version, args.record or self.config.get("record"))
-        self.race = Race(self.rpc, self.record, self.version)
+        if self.version == 2 and self.record.get("version") == 3:
+            self.version = 3  # a v3 deployment's record (contracts/script/NodeV3Local.s.sol, DeploySepolia.s.sol)
+        self.race = None if self.version == 3 else Race(self.rpc, self.record, self.version)
+        self.v3 = v3cli.RaceV3(self.rpc, self.record) if self.version == 3 else None
         self.src = keysrc.source(self.config.get("keys"))
+        self.keystore = getattr(args, "keystore", None) or os.environ.get("POFCTL_KEYSTORE") \
+            or self.config.get("keystore")
+        self._keystore_secret = None
         self.profiles = {**DEFAULT_ROLE, **(self.config.get("profiles") or {})}
         self._wallets: dict = {}
 
@@ -68,21 +85,47 @@ class Ctx:
         return json.loads(Path(p).read_text(encoding="utf-8")) if Path(p).exists() else {}
 
     def key_role(self, role: str) -> str:
+        if self.keystore:
+            return "keystore"  # one identity: the keystore's key plays every role this command needs
         return self.args.as_role or self.profiles.get(role, role)
+
+    def chain_id(self) -> int:
+        return self.race.chain_id() if self.race is not None else self.v3.chain_id()
+
+    def secret(self, key_role: str) -> int:
+        """The key that signs as `key_role`: the keystore's when one is given (asked for once, never printed), else a
+        devnet key, which only the local chains take (rule 1)."""
+        if self.keystore:
+            if self._keystore_secret is None:
+                self._keystore_secret = keystore.load(self.keystore)
+            return self._keystore_secret
+        self.devnet_keys_here()
+        return keysrc.key(key_role, self.src)
+
+    def devnet_keys_here(self) -> None:
+        """Devnet keys sign on 31337 and 7193 only: on any other chain (Sepolia, mainnet) they're refused before
+        anything is read from their source or signed."""
+        cid = self.chain_id()
+        if cid not in DEVNET_CHAINS:
+            raise Fail(f"devnet keys (source {self.src}) are refused on chain {cid}: they sign on the local chains "
+                       f"{DEVNET_CHAINS[1]} and {DEVNET_CHAINS[0]} only (rule 1). On a public chain sign with your "
+                       f"own keystore file: --keystore FILE (the password is asked for; the key is never printed)")
 
     def wallet(self, role: str) -> Wallet:
         kr = self.key_role(role)
         if kr not in self._wallets:
-            self._wallets[kr] = Wallet(self.rpc, keysrc.key(kr, self.src), kr)
+            self._wallets[kr] = Wallet(self.rpc, self.secret(kr), kr)
         return self._wallets[kr]
 
     def address(self, key_role: str) -> str:
+        if self.keystore:
+            return self.wallet(key_role).address
         if key_role not in self._wallets:
-            self._wallets[key_role] = Wallet(self.rpc, keysrc.key(key_role, self.src), key_role)
+            self._wallets[key_role] = Wallet(self.rpc, self.secret(key_role), key_role)
         return self._wallets[key_role].address
 
     def devnet_only(self, what: str) -> None:
-        cid = self.race.chain_id()
+        cid = self.race.chain_id() if self.race is not None else self.v3.chain_id()
         if cid not in DEVNET_CHAINS:
             raise Fail(f"{what} runs on a devnet only (chain {cid} isn't one of {DEVNET_CHAINS})")
 
@@ -434,7 +477,7 @@ def cmd_claim(ctx: Ctx, a) -> tuple:
 
 
 def cmd_withdraw(ctx: Ctx, a) -> tuple:
-    w = Wallet(ctx.rpc, keysrc.key(a.role, ctx.src), a.role)
+    w = Wallet(ctx.rpc, ctx.secret(a.role), a.role)
     owed = ctx.race.owed(w.address)
     if owed:
         ctx.race.withdraw(w)
@@ -610,6 +653,29 @@ def cmd_verify_head(ctx: Ctx, a) -> tuple:
             [f"repository 0x{repo.hex()[:12]}: {d.reason}"])
 
 
+def verify_genesis(a) -> tuple:
+    """#251 task 3.9 (design L3): before a deployment, with --rid and --commit together, the Radicle repository exists
+    and its canonical main (read as `cmd_verify_head` reads it) is the genesis head given. No chain and no record are
+    read: there's no deployment yet. scripts/deploy-sepolia.sh runs it before anything is signed."""
+    from oracle import radicle
+
+    commit = a.commit.strip().lower()
+    if not radicle.SHA_RE.match(commit):
+        raise Fail(f"verify-head: --commit must be a 40-character SHA-1, not {a.commit!r}")
+    try:
+        snap = radicle.Radicle(a.rid, shlex.split(a.rad_exec or ""), a.repo_dir or "").snapshot()
+    except radicle.Unavailable as e:
+        raise Fail(f"verify-head: the repository {a.rid} can't be read ({e})") from None
+    d = radicle.verify_head(commit, snap)
+    if d.action != radicle.SIGN:
+        reason = d.reason.replace("Heads' head", "the genesis head")
+        raise Fail(f"verify-head refused: {reason}")
+    repo = radicle.repo_id(a.rid)
+    return ({"repo": "0x" + repo.hex(), "rid": a.rid, "head": commit, "canonical": commit, "match": True,
+             "genesis": True},
+            [f"repository 0x{repo.hex()[:12]} ({a.rid}): canonical main {commit} is the genesis head given"])
+
+
 def cmd_warp(ctx: Ctx, a) -> tuple:
     ctx.devnet_only("warping time")
     ctx.rpc.call("evm_increaseTime", [a.days * 86_400])
@@ -626,10 +692,71 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--rpc", help="the chain's RPC URL (default http://127.0.0.1:8546, the devnet)")
     p.add_argument("--record", help="the deployment record (default contracts/deployments/devnet-v2.json)")
     p.add_argument("--v1", action="store_true", help="drive v1 (Race) instead of v2 (RaceV2)")
+    p.add_argument("--v3", action="store_true", help="drive v3 (RaceV3, its one Radicle repository; default record "
+                                                     "contracts/deployments/devnet-v3.json); a v3 record selects it too")
     p.add_argument("--as", dest="as_role", help="use this role's key (e.g. solver-b) instead of the default")
+    p.add_argument("--keystore", help="sign with the key in this keystore file (the only key a public chain takes; "
+                                      "the password is asked for, the key never printed); also POFCTL_KEYSTORE")
     sub = p.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("status", help="the chain, the deployment and the oracle set").set_defaults(fn=cmd_status)
+    st = sub.add_parser("status", help="the chain, the deployment and the oracle set; v3: the solver's cap, open "
+                                       "claims and the deposit a fix posts")
+    st.add_argument("--address", help="v3: the solver to show (default: the solver role's key, or the keystore's)")
+    st.set_defaults(fn=cmd_status, fn3=v3cli.cmd_status)
+
+    iss = sub.add_parser("issue", help="v3: a Radicle issue on-chain").add_subparsers(dest="action", required=True)
+    i = iss.add_parser("register", help="register a Radicle issue: the fee, the stake and its check's deposit; prints "
+                                        "(or with --comment posts) the claim the check reads on the issue")
+    i.add_argument("--rad-issue", required=True, help="the Radicle issue's id (as `rad issue list` shows it)")
+    i.add_argument("--rid", help="the repository's RID (default: the record's)")
+    i.add_argument("--comment", action="store_true", help="comment the claim on the Radicle issue with `rad issue "
+                                                          "comment`, through --rad-exec")
+    i.add_argument("--rad-exec", help="a command prefix that reaches your Radicle node (e.g. 'docker exec -i <name>')")
+    i.add_argument("--hidden", action="store_true", help="hidden tests: only TEE judges take its checks")
+    i.set_defaults(fn=v3cli.cmd_register, fn3=v3cli.cmd_register)
+    i = iss.add_parser("open", help="open the bounty of an issue whose registration check passed and is final")
+    i.add_argument("--issue", type=int, required=True, help="the on-chain issue")
+    i.set_defaults(fn=v3cli.cmd_open, fn3=v3cli.cmd_open)
+
+    pl = sub.add_parser("pledge", help="v3: fund a bounty; refused while fewer than 3 solvers are active")
+    pl.add_argument("--bounty", type=int, required=True)
+    pl.add_argument("--amount", type=float, required=True, help="coins (the test coin POFTEST on Sepolia, 6 decimals)")
+    pl.set_defaults(fn=v3cli.cmd_pledge, fn3=v3cli.cmd_pledge)
+
+    sb = sub.add_parser("submit", help="v3: seal a fix with its deposit; prints how to open its Radicle patch")
+    sb.add_argument("--bounty", type=int, required=True)
+    sb.add_argument("--patch", required=True, help="the fix: the patch revision's head commit")
+    sb.add_argument("--base", help="its base (default and only accepted: Heads.head now)")
+    sb.add_argument("--salt", help="0x + 64 hex (default: random)")
+    sb.add_argument("--issue", type=int, help="the issue number for the claim's `Fixes` line (default: the on-chain "
+                                              "issue)")
+    sb.add_argument("--title", help="the patch's title")
+    sb.set_defaults(fn=v3cli.cmd_submit, fn3=v3cli.cmd_submit)
+
+    cl = sub.add_parser("claim", help="v3: open the winning seal of a won bounty (its award starts)")
+    cl.add_argument("--bounty", type=int, required=True)
+    cl.add_argument("--patch", required=True, help="the fix's commit")
+    cl.add_argument("--base", required=True, help="the base it was sealed on")
+    cl.add_argument("--salt", required=True)
+    cl.set_defaults(fn=v3cli.cmd_claim, fn3=v3cli.cmd_claim)
+
+    mg = sub.add_parser("merge", help="v3: at the verdict's finality, move Heads to the claimed fix (anyone)")
+    mg.add_argument("--bounty", type=int, required=True)
+    mg.set_defaults(fn=v3cli.cmd_merge, fn3=v3cli.cmd_merge)
+
+    co = sub.add_parser("checkout", help="v3: check out the commit Heads.head names, from any namespace of a Radicle "
+                                         "node's copy")
+    co.add_argument("--rid", help="the repository's RID (default: the record's)")
+    co.add_argument("--rad-exec", help="a command prefix that reaches the Radicle node (default: this machine)")
+    co.add_argument("--dir", help="a new directory for the checkout, on that node (default pof-checkout-<head>)")
+    co.set_defaults(fn=v3cli.cmd_checkout, fn3=v3cli.cmd_checkout)
+
+    fc = sub.add_parser("faucet", help="v3: claim 20 test coins for your key from the deployment's keyless faucet (one "
+                                       "claim per address every 2 hours); prints the next claim time")
+    fc.add_argument("--when", action="store_true", help="only show when this key may claim next; send nothing")
+    fc.add_argument("--role", default="solver", help="the key that claims (default the solver's; with --keystore, "
+                                                    "the keystore's)")
+    fc.set_defaults(fn=v3cli.cmd_faucet, fn3=v3cli.cmd_faucet)
 
     coin = sub.add_parser("coin", help="the devnet's test coin").add_subparsers(dest="action", required=True)
     m = coin.add_parser("mint", help="mint test coins to a role (devnet only)")
@@ -744,7 +871,7 @@ def parser() -> argparse.ArgumentParser:
 
     w = sub.add_parser("withdraw", help="pay a role's credit in the contract to its wallet")
     w.add_argument("--role", required=True)
-    w.set_defaults(fn=cmd_withdraw)
+    w.set_defaults(fn=cmd_withdraw, fn3=v3cli.cmd_withdraw)
 
     bal = sub.add_parser("balances", help="wallet and credit of the roles, infrastructure and the oracles")
     bal.add_argument("--roles", default="reporter,funder,solver-a,solver-b")
@@ -770,10 +897,11 @@ def parser() -> argparse.ArgumentParser:
     vh.add_argument("--rid", help="the Radicle repository (its id in Heads: keccak256 of the RID)")
     vh.add_argument("--rad-exec", help="a command prefix that reaches its Radicle node (e.g. 'docker exec -i <name>')")
     vh.add_argument("--repo-dir", help="the working copy on that node (default ~/repo)")
-    vh.add_argument("--commit", help="instead of --rid: a mirror's main to compare")
+    vh.add_argument("--commit", help="instead of --rid: a mirror's main to compare; with --rid: the genesis head, "
+                                     "checked before a deployment (no chain read)")
     vh.add_argument("--repo", help="the repository's id: 'registry' or a 0x bytes32 (default: from --rid, else the "
                                    "record's)")
-    vh.set_defaults(fn=cmd_verify_head)
+    vh.set_defaults(fn=cmd_verify_head, fn3=v3cli.cmd_verify_head)
 
     dev = sub.add_parser("devnet").add_subparsers(dest="action", required=True)
     d = dev.add_parser("warp", help="move the devnet's clock (devnet only)")
@@ -792,7 +920,18 @@ def cmd_watch(a) -> int:
 def run(argv: list) -> tuple:
     """Parses and runs one command; returns (data, lines). Raises on failure (main() prints it)."""
     a = parser().parse_args(argv)
-    return a.fn(Ctx(a), a)
+    if a.command == "verify-head" and a.rid and a.commit:
+        return verify_genesis(a)  # before a deployment: no chain, no record
+    ctx = Ctx(a)
+    if ctx.version == 3:
+        fn = getattr(a, "fn3", None)
+        if fn is None:
+            raise Fail(f"`{a.command}` is v2's; on v3: status, issue register|open, pledge, submit, claim, merge, "
+                       f"withdraw, faucet, verify-head and checkout")
+        return fn(ctx, a)
+    if a.command in v3cli.V3_ONLY:
+        raise Fail(f"`{a.command}` is v3's (--v3)")
+    return a.fn(ctx, a)
 
 
 def main(argv: list | None = None) -> int:
@@ -803,7 +942,7 @@ def main(argv: list | None = None) -> int:
         return a.fn(a)
     try:
         data, lines = run(argv)
-    except (Fail, RpcError, keysrc.KeyError_, FileNotFoundError, ValueError) as e:
+    except (Fail, RpcError, keysrc.KeyError_, keystore.KeystoreError, FileNotFoundError, ValueError) as e:
         msg = e.reason if isinstance(e, Reverted) else str(e)
         print(json.dumps({"error": msg}) if as_json else f"pofctl: {msg}", file=sys.stderr)
         return 1

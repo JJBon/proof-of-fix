@@ -14,7 +14,7 @@ jobs:
     # Branches of this repository only: a fork's code never runs on the CI host.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: test
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: checkout
         env:

@@ -14,28 +14,11 @@ import {PanelScores} from "../src/v3/PanelScores.sol";
 import {PoolV3} from "../src/v3/PoolV3.sol";
 import {RaceV3} from "../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../src/v3/RaceV3Base.sol";
 import {Windows, WindowsLib} from "../src/v3/Windows.sol";
 import {MockCoin} from "../test/mocks/MockCoin.sol";
-
-/// Creates the registry from an address known before it exists: the genesis validator signs its registration for the
-/// registry's address, and the registry pulls the genesis bond from its creator. A contract's first creation is at
-/// its nonce 1, whatever the deployer's own nonce is.
-contract RegistryMaker {
-    function make(IERC20 coin, uint256 bond, bytes calldata initcode) external returns (address made) {
-        coin.approve(next(), bond);
-        bytes memory code = initcode;
-        assembly {
-            made := create(0, add(code, 0x20), mload(code))
-        }
-        require(made != address(0), "the registry's constructor reverted");
-    }
-
-    function next() public view returns (address) {
-        // keccak256(rlp([this, 1]))
-        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), address(this), bytes1(0x01))))));
-    }
-}
+import {RegistryMaker} from "./RegistryMaker.sol";
 
 /// v3 on a throwaway local chain, for the oracle node's own test (proof-of-fix#139, task 4.1 of #132;
 /// scripts/node-v3-e2e.sh): a test coin, PoolV3, Validators with one genesis validator of the `simulated` proof type
@@ -133,7 +116,9 @@ contract NodeV3LocalScript is Script {
             IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, w
         );
         uint256 start = block.timestamp;
-        RaceV3Annex annex = new RaceV3Annex(_config(), 625, 100_000, panels, pool, start);
+        // the endings first, then the annex that checks them (#251 contract batch 3: EIP-3860)
+        RaceV3Endings endings = new RaceV3Endings(_config(), 625, 100_000, panels, pool, start);
+        RaceV3Annex annex = new RaceV3Annex(_config(), 625, 100_000, panels, pool, start, endings);
         RaceV3 race = new RaceV3(_config(), 625, 100_000, panels, pool, start, repo, head, keccak256("local"), annex);
         vm.stopBroadcast();
         _record(race, usd, reg, panels, fees, pool, key, rid, repo, head, which, w);
@@ -188,7 +173,11 @@ contract NodeV3LocalScript is Script {
             vm.toString(address(fees)),
             '", "pool": "',
             vm.toString(address(pool)),
-            '", "genesis": "',
+            '", "solverBook": "',
+            vm.toString(address(race.solverBook())),
+            '", "judgeFee": ',
+            vm.toString(race.getConfig().judgeFee),
+            ', "genesis": "',
             vm.toString(key),
             '"',
             binding,
@@ -224,6 +213,10 @@ contract NodeV3LocalScript is Script {
             vm.toString(w.maxRedraws),
             ', "capWindow": ',
             vm.toString(w.capWindow),
+            ', "appeal": ',
+            vm.toString(w.appeal),
+            ', "active": ',
+            vm.toString(w.active),
             "}"
         );
     }
@@ -277,15 +270,16 @@ contract NodeV3LocalScript is Script {
         g.profile = IFeesV3.Profile(keccak256("image"), 2_000, 4_096, 1_200);
     }
 
-    /// The contract tests' race configuration (test/v3/helpers/RaceV3Setup.sol).
+    /// The contract tests' race configuration (test/v3/helpers/RaceV3Setup.sol), with Sepolia's fees (owner,
+    /// 2026-11-19): the pure taxi fare (`judgeFee` 0) and no attempt, evaluation or appeal fee.
     function _config() internal pure returns (RaceV3Base.Config memory c) {
         c.infrastructure = address(0x1F);
         c.insurance = address(0x15);
         c.registrationFee = 2e6;
         c.issueStake = 5e6;
-        c.attemptFee = 0.5e6;
-        c.evaluationFee = 2e6;
-        c.appealFee = 2e6;
+        c.attemptFee = 0;
+        c.evaluationFee = 0;
+        c.appealFee = 0;
         c.challengeStake = 10e6;
         c.startPriceBps = 5_000;
         c.riseBpsPerDay = 1_000;
@@ -295,5 +289,6 @@ contract NodeV3LocalScript is Script {
         c.mergeDays = 14;
         c.releaseEveryDays = 7;
         c.instalments = 4;
+        c.judgeFee = 0; // the taxi fare: a fix's deposit's rest returns to its solver
     }
 }

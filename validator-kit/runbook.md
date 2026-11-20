@@ -299,7 +299,7 @@ tests by itself** (exit 5, a failure). Merged, the fix's commit is main's head (
 and the head on-chain moves to it, so a later bounty's verdict isn't stale. Pull requests also start `pof / check` on the
 `test` runner (`.forgejo/workflows/check.yml`).
 
-**The repository's own tests (#166).** A repository names them in `.pof/check.json`, an object with one key, `commands`:
+**The repository's own tests (#166).** A repository names them in `.pof/check.json`, an object with the key `commands`:
 a list of argument lists, run in turn in the sandbox before the acceptance test, which always runs last. The node reads
 the file at the pull request's **base**, never from the fix, so a fix can't weaken its own check, and the head on-chain
 only moves on a verdict checked on that head. For `pof-sandbox`:
@@ -311,6 +311,16 @@ only moves on a verdict checked on that head. For `pof-sandbox`:
 Without the file a check runs only the root, as above. With an invalid file every check fails closed with no model
 call. `pof-sandbox`'s main must stay at the head on-chain, so the file arrives as part of a bounty's fix and takes effect
 from the next bounty.
+
+**Protected tests (#251 L20).** The file may also name `protected` paths, files or folders (at most 32, relative, no
+`..`), as proof-of-fix's own does: `{"commands": [...], "protected": ["tests/"]}`. The node then runs the tests on a
+fresh run tree, the fix's tree with each protected path as it is at the base (from its own fetch of the base), so a fix
+can't weaken the tests that judge it; the receipt records the list and the run tree's git tree hash, and the judge is
+told how many of the fix's changed files were protected and not run. A protected path under a symlink (or a file) in
+the fix's tree fails the check. A **tests-only fix**, one that changes protected paths only, runs both the base's
+protected tests and its own on its code (the repository's commands, without the root acceptance test); both must pass.
+Every check runs the tests **twice** (#251 L22), each in a fresh container with half the profile's time limit: they
+pass only if both runs pass, and a disagreement shows as `flaky` in the receipt and in the judge's test-run line.
 
 **Which judges are real.** One: seat 6, the owner's. The 6 role seats run the **fake judge**: free, deterministic, following
 the sandbox's test result. The contracts can't tell the difference: the verdict and the usage report are the same bytes, a

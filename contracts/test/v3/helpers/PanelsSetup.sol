@@ -163,6 +163,17 @@ abstract contract PanelsSetup is ValidatorsSetup {
         }
     }
 
+    /// Makes families 0..count-1 known to PanelScores (one agreeing counted verdict each, still Neutral and seated), so
+    /// that the family cap applies once three are (#132 D20: the cap applies while at least CAP_MIN_FAMILIES families
+    /// are seated, and PanelScores knows a family from its first counted verdict).
+    function _knowFamilies(uint256 count) internal {
+        vm.startPrank(address(pn));
+        for (uint256 i; i < count; ++i) {
+            scores.recordCounted(_family(i), true, true);
+        }
+        vm.stopPrank();
+    }
+
     function _qualifyV(address key) internal {
         vm.startPrank(address(pn));
         for (uint256 i; i < 20; ++i) {

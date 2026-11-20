@@ -54,12 +54,33 @@ def case_for(repo: str, issue: str, commit: str, diff: str, check_id: str | None
             "diff": diff, "context": [], "notes": tuple(notes)}
 
 
+def test_line(tests: TestRun) -> str:
+    """The node's test-run line, in its own words: numbers, hashes and the image, never anything a fix wrote. It says
+    how many runs there were and whether they disagreed (#251 L22), and how many of the fix's changed files were under
+    the repository's protected paths, so not run (L20)."""
+    result = "passed" if tests.passed else f"failed (exit code {tests.exit_code})"
+    parts = [f"Test runs: the project's tests and the issue's acceptance test {result} in a sandbox with no network "
+             f"(image {tests.image}, results sha256 {tests.results_sha256})."]
+    own, protected = getattr(tests, "own", None), getattr(tests, "protected", ())  # a stand-in may have neither
+    runs = list(getattr(tests, "runs", ())) + (list(own.runs) if own is not None else [])
+    if len(runs) > 1:
+        codes = ", ".join(str(r.exit_code) for r in runs)
+        parts.append(f"The node ran them {len(runs)} times, each in a fresh container (exit codes {codes}): "
+                     + ("the runs disagreed, a flaky result, which counts as failed." if tests.flaky
+                        else "the runs on each tree agreed."))
+    if protected:
+        parts.append(f"The repository protects {len(protected)} path(s), so the base's copies of them ran: "
+                     f"{tests.not_run} of the fix's changed file(s) were under them and were not run.")
+    if own is not None:
+        parts.append("The fix changes only protected paths: the base's protected tests and the fix's own ran on its "
+                     "code, and both had to pass.")
+    parts.append("Decide from the issue, the diff, the code and this result.")
+    return " ".join(parts)
+
+
 def build_prompt(case: dict, tests: TestRun) -> tuple[str, str]:
     system, user = P.messages(case)
-    result = "passed" if tests.passed else f"failed (exit code {tests.exit_code})"
-    line = (f"Test runs: the project's tests and the issue's acceptance test {result} in a sandbox with no network "
-            f"(image {tests.image}, results sha256 {tests.results_sha256}). Decide from the issue, the diff, the code "
-            f"and this result.")
+    line = test_line(tests)
     head, found, tail = user.rpartition(NO_TESTS)  # the template's closing line, never a copy of it in quoted text
     if not found:
         raise RuntimeError("pof.judges' prompt changed: update the node's test-run line")

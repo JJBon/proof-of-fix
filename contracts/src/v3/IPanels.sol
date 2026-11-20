@@ -40,6 +40,13 @@ interface IPanelScores {
     function isBarred(bytes32 family) external view returns (bool);
     function isBarredSince(bytes32 family, uint256 snapshot) external view returns (bool);
     function barredCount() external view returns (uint256);
+    /// Seats by rank (D20, D27): seated now and at the snapshot; the family cap at the snapshot; few families now;
+    /// barred families and contenders.
+    function isSeated(bytes32 family) external view returns (bool);
+    function isSeatedSince(bytes32 family, uint256 snapshot) external view returns (bool);
+    function capApplies(uint256 snapshot) external view returns (bool);
+    function fewFamilies() external view returns (bool);
+    function unseatedCount() external view returns (uint256);
 }
 
 /// The sponsors' pool's funding call (v2's `Pool.fund`): a rejected ADR's deposit goes there.

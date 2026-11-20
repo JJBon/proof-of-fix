@@ -45,7 +45,7 @@ from .judge import FakeJudge, case_for, refused
 from .models import ModelError
 from .node_v2 import CHECKER_IMAGE, NodeV2, same
 from .rpc import Reverted, Unavailable
-from .sandbox import TestRun, run_tests
+from .sandbox import TestRun, nothing_ran
 
 RECEIPT_VERSION = "pof-receipt-v3-1"
 EVIDENCE_VERSION = "pof-challenge-evidence-1"
@@ -424,10 +424,14 @@ class NodeV3(NodeV2):
         if sub["bounty"] == 0:
             answer, tests, fix_tree, seconds = self._registration(issue_id, onchain, late)
         else:
-            answer, tests, fix_tree, seconds = self._fix(s, sub, issue_id, onchain, late)
+            answer, tests, fix_tree, seconds = self._fix(s, sub, issue_id, onchain, late,
+                                                         timeout_s=profile.get("timeoutSeconds"))
         return self._receipt(s, sub, p, answer, tests, fix_tree, seconds, profile, seat)
 
-    def _fix(self, s: int, sub: dict, issue_id: int, onchain: dict, late: bool) -> tuple:
+    def _fix(self, s: int, sub: dict, issue_id: int, onchain: dict, late: bool, timeout_s: int | None = None) -> tuple:
+        """(the answer, the test runs, the fix's commit, the runs' seconds summed). The tests run on the fix's tree, or
+        with protected paths on a run tree with the base's copies (#251 L20), twice each, within the profile's one time
+        limit `timeout_s` (L22)."""
         pull = self._find_pull(s, sub)
         if pull is None:
             if not late:
@@ -437,13 +441,10 @@ class NodeV3(NodeV2):
             return refused(case_for(self.repo_name, "", "", ""), _no_run(), why), _no_run(), "", 0.0
         c = SimpleNamespace(pull=pull, bounty=sub["bounty"], submission=s)
         case, refusal = self._case(c, onchain, issue_id)
-        command, why = self._test_command(pull)
-        refusal = refusal or why
-        src = self.src_root / pull["head_sha"]
-        started = time.monotonic()
-        tests = (run_tests(src, command=command, runner=self.runner) if self.runner
-                 else run_tests(src, command=command))
-        seconds = time.monotonic() - started
+        project, protected, why = self._test_config(pull)
+        tests, unsafe = self._run_check(pull, project, protected, timeout_s)
+        refusal = refusal or why or unsafe
+        seconds = tests.seconds  # the runs' time, summed (L22)
         if refusal:
             self.log(f"submission {s}: not sent to the model, and not passed: {refusal}")
         answer = refused(case, tests, refusal) if refusal else self.judge.judge(case, tests)
@@ -759,8 +760,7 @@ class NodeV3(NodeV2):
 
 def _no_run() -> TestRun:
     """A check with no fix to test: nothing ran."""
-    empty = hashlib.sha256(b"").hexdigest()
-    return TestRun("none", (), 125, empty, empty)
+    return nothing_ran()
 
 
 def _quote_hint(proof: bytes, kind: str) -> str:

@@ -190,6 +190,9 @@ Numbered as in report v3's "Spec findings".
 
 **What the stored verdicts cannot say:** how a judge reacts to a passing test. Both rates of D24 are assumed and swept, and every number that depends on them is conditional.
 
+## Revision 2026-11-19 (#251): the values decided
+**Status: decided by the owner, every part as recommended** ([ADR 0007](../../../docs/adr/0007-solver-side-parameters.md), which replaces ADR 0004's solver-side values; tasks 10.2, 11.2 and 12.2). D20, D21, D24, D27, D29 and D30 are accepted with the values of reports measured-v3 to -v5. **There is no solver's deposit** (D22 and D28 are void), not even while a repository has fewer than three active solvers. D25 and D26 are left out of the testnet launch. The paid runs (tasks 10.3 and 11.3) are not decided, so D21's and D24's safety rests on assumed rates. The bonds and windows are not re-derived yet. The list is in "Open Questions", at the top; the D-sections carry a "Decided" line, and their earlier text is kept as history.
+
 ## Goals / Non-Goals
 **Goals:**
 - A registry that anyone can join under rules alone.
@@ -704,7 +707,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
 | `SILENCE_SLASH_BPS`, `SEALED_NO_REVEAL_SLASH_BPS` | none (a flat $5) | a switch: max($5, x % of the bounty), x = 0 until ADR 0004 | the 10 % bribe: +$311 ± 21 at $5 |
 | An upheld receipt challenge (judge-panels) | the spec: the verdict "doesn't count"; the code: the challenge panel decides | the code's reading, now in the spec | report v3's finding 4 |
 
-### D20. Seats go to the best-scoring families; the family cap applies only among near-equals (owner, 2026-11-14; values proposed)
+### D20. Seats go to the best-scoring families; the family cap applies only among near-equals (owner, 2026-11-14; values decided 2026-11-19)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** `SEAT_MARGIN` 5 points and `CAP_MIN_FAMILIES` 3, report measured-v3's values. The "proposed" marks below are history.
 - **The rule:** a counted panel is drawn from the **seated** families: those whose score is at least `SCORE_MIN` and within `SEAT_MARGIN` (5 points) of the best-scoring family. Every other family is a **contender** (D21, D23).
 - **The family cap** ((k − 1) / 2 per panel, D6) applies only while at least `CAP_MIN_FAMILIES` (3) families are seated. With fewer, a panel may be one family's. The operator, host and TEE-type caps are unchanged.
 - **Why:** measured, a panel of the best family merges 6.0 bad fixes per 100 paid; adding the next two families under the cap gives 13.6, and v3 as designed 17.8. With one family qualifying and the cap kept, 82 % of submissions wait. A weaker model on a panel only outvotes a better one.
@@ -716,7 +720,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
   - **every judge must pass:** the top two families together merge 5.6 per 100 paid but reject 30 % of good fixes;
   - **votes weighted by score:** rejected in D14 and still rejected; a wrong score would change verdicts directly.
 
-### D21. A failing test reverses a pass (#236; values proposed, two rates to measure)
+### D21. A failing test reverses a pass (#236; values decided 2026-11-19, two rates still to measure)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** `EVIDENCE_STAKE` the larger of $5 and 10 % of the bounty, `EVIDENCE_REWARD_BPS` 1,000 (report measured-v3). With no solver's deposit (D22), the reward is the disputer's only pay besides its stake back; report v4 finds that at 1,000 a rival's search of a pass doesn't pay with per-issue bounties. The two rates below are still assumed (task 10.3, not decided): a named trust point at the launch.
 - **The rule:** within a passing verdict's window, anyone may post a test and the published stake (`EVIDENCE_STAKE`). The official checker image runs it in the sandbox against the fixed code.
   - **The machine's part:** the test fails on the fixed code, twice, and touches nothing but test files.
   - **The judged part:** a challenge panel (D4's sizes) answers one narrow question: does this test state what the issue asks for? It doesn't re-judge the fix.
@@ -729,7 +734,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **The existing challenge** (re-run the check, D4 and D13) stays for fabricated receipts, where a re-run does prove the fault.
 - **Assumed, to be measured before any contract (task 10.3):** how often a contender finds a failing test for a bad fix, and how often the panel accepts a test that states the wrong requirement. Accepted 1 time in 20, wrong tests reject another 3 % of good fixes.
 
-### D22. A solver's deposit, lost on rejection, to the issue's bounty (owner, 2026-11-14; share proposed; **on hold, owner 2026-11-15**)
+### D22. A solver's deposit, lost on rejection, to the issue's bounty (owner, 2026-11-14; share proposed; on hold, owner 2026-11-15; **no deposit, owner 2026-11-19**)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)): there is no solver's deposit.** `SOLVER_DEPOSIT_BPS` is 0 and absent from the contracts, and there is no deposit "only while fewer than three solvers are active" either. The one-solver gap (D29) is reported as a named trust point, not closed. Everything below is superseded and kept as history.
 - **On hold (owner, 2026-11-15):** the owner is against a solver's deposit and wants the market's incentives to stop bad fixes. Nothing below is decided until he rules; D28 has what the simulation says with and without it.
 - **The rule:** a submission posts `SOLVER_DEPOSIT_BPS` (2,500: a quarter of the bounty) beside its check deposit. It is returned when the fix is paid.
   - **Rejected by the panel:** the deposit is added to the issue's bounty, so the next solver is paid more for the same issue. It never goes to the judges, who would then earn by rejecting, nor to the funder or reporter, who could be the attacker (as D7's ADR deposit).
@@ -756,7 +762,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **Not simulated yet (task 10.1):** the appeal and its cost to honest solvers.
 - **Canaries (#136)** remain the cleaner source of known answers on both sides, and remain a research item.
 
-### D24. The seated families decide an appeal, on new evidence (owner, 2026-11-15: the seated judges decide; the evidence and the stake are proposed)
+### D24. The seated families decide an appeal, on new evidence (owner, 2026-11-15: the seated judges decide; the evidence and the stake accepted 2026-11-19)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** an appeal needs the test; the seated families decide; `APPEAL_WINDOW` 72 h (the simulation's value; no result depends on it). **No stake (owner, later the same day):** an appeal pays only its fresh panel's metered validation, as a submission does (the taxi deposit, its rest refunded), and nothing goes to the sponsors' pool when it fails; the stake first decided (the larger of $5 and 10 % of the bounty, lost to the pool) is dropped. Accepted risk: a solver may appeal every rejection, paying each panel's meter, the same spam risk the owner accepted for submissions. With no deposit, "separate from any deposit" below has nothing to be separate from. The two rates stay assumed (task 11.3, not decided): a named trust point at the launch.
 - **Decided:** a rejected fix's one appeal is judged by the seated families. No contender sits on it.
 - **Proposed: the appeal needs new evidence.** A test that fails on the base code and passes with the fix, run twice each way by the official checker image, touching test files only (D21's machine, pointed the other way), and a stake.
   - **The panel:** a fresh draw of the seated families, of D4's size where it can be drawn outside the original panel; otherwise a fresh draw of the original size in which the original judges may sit again. It is a new judgment on new evidence, not a second opinion. Without this, 380 of 383 appeals a year found no panel with one family seated (10.1).
@@ -773,7 +780,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **Alternatives rejected:** D23's panel of other families (81 % of correct rejections overturned); every appeal judge must pass (31–39 %); the seated families with no evidence (restores nothing).
 - **To measure before any contract (task 11.3):** both rates, on labelled fixes.
 
-### D25. A contender may sponsor an appeal (proposed)
+### D25. A contender may sponsor an appeal (proposed; deferred past the testnet launch, owner 2026-11-19)
+- **Deferred (owner, 2026-11-19, #251):** left out of the testnet launch, not decided. It can follow after the launch.
 - **The rule:** a validator of an unseated family may appeal in the solver's place for a fix its model passed: it posts the test and the stake and pays the panel's checks. Still one appeal a fix; the solver's own appeal comes first. When the fix is paid the sponsor gets `SPONSOR_REWARD_BPS` (1,000) of the bounty, out of the bounty.
 - **How it earns rank:** as a successful D21 dispute does, through the final outcome. An upheld appeal makes the outcome a pass, so the sponsor's family is right on its shadow verdict and the seated family is wrong on its counted ones. Nothing else is added to its score.
 - **What the simulation says (report v4, section 4):**
@@ -782,7 +790,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
   - **a sponsor of every rejection loses in every row** (−$3,487 ± 84 to −$101 ± 88), but while it loses it gets 6 to 78 more bad fixes paid a year.
 - **Recommendation:** allow it; it costs the network nothing when the panel judges tests well. Do not rely on it to seat a better family: D26 does that.
 
-### D26. Known-answer issues score every family, seated or not (proposed)
+### D26. Known-answer issues score every family, seated or not (proposed; deferred past the testnet launch, owner 2026-11-19)
+- **Deferred (owner, 2026-11-19, #251):** left out of the testnet launch, not decided. It waits for #136's keyless known-answer design (task 11.6).
 - **The rule:** at `KNOWN_RATE`, an issue whose outcome is already known is judged beside a live submission by one validator of every registered family, drawn by the seed. Each verdict is recorded against the known outcome. Once a family holds `KNOWN_MIN` (50) of them, the seat rule (D20) reads its balanced agreement with the known outcomes over its last `KNOWN_WINDOW` (200), in place of its agreement with the network's own outcomes or its shadow block.
 - **Is it D13's audit?** No, though it reuses its machinery. An audit re-runs a live submission whose truth is unknown, by one validator. This takes D13's draw by the seed and its funding from the fees, and adds what an audit lacks: a known answer and every family.
 - **What the simulation says (report v4, section 5):**
@@ -793,14 +802,16 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **Assumed, and the whole difficulty:** that known answers exist with correct labels, and that a judge cannot tell a known-answer issue from a live one. D14 named the problem: someone who writes them holds a privileged role. Keyless known answers (#136) are a research item with no design. **This rule cannot be adopted before task 11.6.**
 - **Recommendation:** adopt at 10 % once 11.6 names a source. It is the only rule here that reliably seats a better newcomer.
 
-### D27. Among few families, a second draw decides a challenge (proposed)
+### D27. Among few families, a second draw decides a challenge (accepted 2026-11-19)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** accepted, with `SECOND_PANEL` "few families": the second draw applies only while fewer than `CAP_MIN_FAMILIES` families can judge. Not "always".
 - **The rule:** while fewer than `CAP_MIN_FAMILIES` (3) families can judge a fix, a challenge that cannot draw D4's larger fresh panel is judged by a second draw of the original panel's size from those families, the original judges not excluded. The operator, host and TEE-type caps apply.
 - **Why:** D4 asks for a fresh panel larger than the original. With one family on seven seats there are rarely seven more, and the challenge waits for good.
 - **What the simulation says (report v4, section 6):** verdicts never final fall from 23.6 % ± 2.5 and 23.0 % ± 2.4 to 0.1 % and 0.0 % under v3's seats, and from 2.7 % ± 0.2 to 0.0 % under seats by rank with one family. With three families seated the rule does not apply and 0.3 % ± 0.1 stay open; the second draw whenever the larger panel cannot be drawn closes those too (the alternative, `SECOND_PANEL` "always").
 - **What it is not:** a check. The same family repeats its verdict, so the second draw confirms it. It ends the wait; it corrects nothing. Wrong verdicts are corrected by tests (D21, D24).
 - **Recommendation:** adopt; consider "always".
 
-### D28. The solver's deposit around an appeal, and its size (proposed; D22 on hold, owner 2026-11-15)
+### D28. The solver's deposit around an appeal, and its size (proposed; D22 on hold, owner 2026-11-15; **void: no deposit, owner 2026-11-19**)
+- **Void (owner, 2026-11-19, #251):** there is no deposit (D22), so there is nothing to hold. An appeal's stake (D24) is the only money an appeal puts at risk. The rest is kept as history.
 - **Proposed, if the deposit stays:**
   1. a rejected fix's deposit is held, not paid to the issue's bounty, until the appeal period closes;
   2. no appeal in the period: it goes to the issue's bounty, as D22 says;
@@ -816,7 +827,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
   - trying the same issue again is the hole only a cost per attempt closes. Report v4 names the non-money limits and says which the simulation supports.
 - **A shared pot split by standing fixes** (the owner's idea, 2026-11-15) pays the disputer from the reversed fix's share with no deposit. Report v4, section 10, tests it as a hypothesis on expected values only; it is not part of this change.
 
-### D29. Reputation before large claims (PROPOSED, report measured-v5; no deposit)
+### D29. Reputation before large claims (report measured-v5; no deposit; accepted 2026-11-19)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** `REP_BASE` $50, `REP_MULT` 1, `REP_ON_REVERSAL` "minus" (subtract, not reset), `REP_LOSS_X` 2.
 - **The rule:** an identity's open claims (the bounties of its fixes not yet final) add up to at most `REP_BASE` + `REP_MULT` × its reputation. Reputation is the sum of the bounties of its fixes paid and never reversed. A claim over the cap is refused before it is judged and costs nothing. A pass reversed by a test takes `REP_LOSS_X` × its bounty off the reputation.
 - **Proposed values:** `REP_BASE` $50, `REP_MULT` 1, `REP_LOSS_X` 2 (`REP_ON_REVERSAL` "minus").
   - The rule fixed before the runs reset reputation to 0 on a reversal. The sweep showed the reset costs honest solvers $637–773 a year (Opus 5.5) through their own reversed mistakes, and "minus 2×" costs $58–112 with attackers unchanged. That choice is post hoc (report v5, sections 2 and 6).
@@ -829,7 +841,8 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **Not to raise:** at a base of $100, free identities gain again (+$670 to +$2,075 a year).
 - **What it needs that the simulation does not have:** identities on chain with their reputation; the claim registered before judging; reversals by test recorded against the identity. A pot share must not be capped by it: capping a window's share at the window's close confiscated $18,000–20,000 a year from honest solvers (report v5, section 4).
 
-### D30. A fee that covers the judges' cost (PROPOSED, report measured-v5)
+### D30. A fee that covers the judges' cost (report measured-v5; accepted 2026-11-19)
+- **Decided (owner, 2026-11-19, #251; [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md)):** one flat `JUDGE_FEE` per submission, in place of per-check charges, re-measured each period from the validators' posted costs. **For the Sepolia launch, D30 is the pure taxi fare (`judgeFee` 0; owner, later the same day):** a fix posts the fee meter's worst-case deposit, its judges are paid by the meter, and whatever is left returns to the solver, pass or fail; a solver pays only the metered validation (no attempt, evaluation or appeal fee). The flat fee and its value (first $40 in test USDC, the launch's L17) are deferred to a mainnet decision. Accepted risk: spam can block validation on the testnet, bounded by the nodes' spending caps (report faucet-spam-v1 simulated a flat fee, not the taxi fare).
 - **The rule:** every submission pays `JUDGE_FEE` on arrival, never refunded and never more on rejection, in place of its panels' per-check charges. It is set to the measured cost of judging: every check the network paid for in a period (counted panels, audits, challenge and test panels), at the break-even service fee plus usage, over the submissions.
 - **Proposed value:** re-measured each period. On report v5's base network: $5.03 a submission (7.6 checks at $0.53 + $0.13), against $0.96–1.55 charged now at the fee's floor.
 - **Why:** it is the price of judging, not a defence. Alone it stops no attacker with one active honest solver; stopping the solver of bad fixes by fee alone would take $8.71–62.54, which is a deposit honest solvers pay on every fix. With D29 it bounds each attempt's margin, which is what makes the cap hold from 3 solvers.
@@ -923,20 +936,32 @@ All are fixed per version (entrenched). The starting values are proposals for th
 - **Rollback:** a new version, as D15 says. There's no switch, by design.
 
 ## Open Questions
+- **Decided 2026-11-19 (#251), every value as recommended; recorded in [ADR 0007](../../../docs/adr/0007-solver-side-parameters.md):**
+  - D20: `SEAT_MARGIN` 5 points, `CAP_MIN_FAMILIES` 3 (report measured-v3);
+  - D21: `EVIDENCE_STAKE` the larger of $5 and 10 % of the bounty, `EVIDENCE_REWARD_BPS` 1,000 (report measured-v3). With no deposit, the reward is the disputer's only pay besides its stake back;
+  - D24: accepted. An appeal needs a test and a stake of the larger of $5 and 10 % of the bounty; a lost stake goes to the sponsors' pool; the seated families decide. `APPEAL_WINDOW` 72 h (reports measured-v3 and -v4; no result depends on it);
+  - D27: accepted, with `SECOND_PANEL` "few families" (only while fewer than `CAP_MIN_FAMILIES` families can judge);
+  - D29: `REP_BASE` $50, `REP_MULT` 1, a reversal subtracts 2 × its bounty (`REP_ON_REVERSAL` "minus", `REP_LOSS_X` 2), not a reset;
+  - D30: a flat `JUDGE_FEE` per submission in place of per-check charges: $40 on Sepolia (the launch's L17), re-measured each period from the validators' posted costs on later networks;
+  - D22 and D28: **no solver's deposit**, and no deposit only while fewer than three solvers are active. The one-solver gap is a named trust point, reported, not closed;
+  - the launch's minimum of 3 active solvers is kept, with `ACTIVE_WINDOW` 26 weeks, counting only the repository's own solvers (report active-solvers-v1); the sybil of three is a named trust point, bounded by D29's cap;
+  - D25 and D26: **left out of the testnet launch** (deferred, not decided). D26 waits for #136; D25 can follow after the launch;
+  - the paid runs (tasks 10.3 and 11.3): **not decided.** D21's and D24's safety at the launch rests on assumed rates, a named trust point;
+  - still open: re-deriving the bonds and windows from the measured judges. Until then they stay as ADR 0004 and the launch's L17 set them.
 - **Decided 2026-11-15 (#236):** D23's appeal panel is dropped; the seated judges decide an appeal (D24). The solver's deposit (D22) is on hold.
-- **For the owner, after task 11.1 (#236), each to accept, change or reject:**
+- **For the owner, after task 11.1 (#236), each to accept, change or reject** (answered 2026-11-19, above; kept as history):
   - D24: that an appeal needs a test and a stake, the stake's size (the larger of $5 and 10 % of the bounty) and where a lost stake goes (the sponsors' pool);
   - D25: sponsorship, and `SPONSOR_REWARD_BPS` (1,000 does not pay an honest sponsor; 2,500 does when its model is better);
   - D26: known-answer issues, `KNOWN_RATE` (10 % proposed), and whether to wait for #136;
   - D27: the second draw, and whether it applies only among few families or always;
   - D28 and D22: whether there is a deposit at all; if so its share and the hold; if not, which limit stands in for it;
   - whether to spend a paid run on D24's two rates (task 11.3), without which D24's safety is an assumption.
-- **For the owner, after task 12.1 (#236, report measured-v5), each to accept, change or reject:**
+- **For the owner, after task 12.1 (#236, report measured-v5), each to accept, change or reject** (answered 2026-11-19, above; kept as history):
   - D29: the reputation cap, its base ($50), its multiplier (×1) and what a reversal costs (2 × its bounty, not a reset);
   - D30: the judges' fee at measured cost ($5.03 a submission on the base network), in place of per-check charges;
   - the pot by impact: not proposed until #247 is measured;
   - D22 again, on a narrower question: R+F needs no deposit with 3 or more active honest solvers finding a test 1 time in 4 (assumed); with one, gains of $237–3,870 a year remain and only about 2,500 closed them. Whether to accept that, keep a deposit, or keep one only while a repository has fewer than three active solvers (not simulated).
-- **For the owner, after task 10.1 (#236):** `EVIDENCE_REWARD_BPS`, `EVIDENCE_STAKE`, `SEAT_MARGIN`, `CAP_MIN_FAMILIES` and `APPEAL_WINDOW`. `SOLVER_DEPOSIT_BPS` is on hold (2026-11-15), and the appeal panel was answered on 2026-11-15 (D24).
+- **For the owner, after task 10.1 (#236)** (answered 2026-11-19, above; kept as history): `EVIDENCE_REWARD_BPS`, `EVIDENCE_STAKE`, `SEAT_MARGIN`, `CAP_MIN_FAMILIES` and `APPEAL_WINDOW`. `SOLVER_DEPOSIT_BPS` is on hold (2026-11-15), and the appeal panel was answered on 2026-11-15 (D24).
 - **Decided 2026-11-14 (#236):**
   - one family may hold every seat while it is more than `SEAT_MARGIN` ahead (D20), with the blind-spot trust point named;
   - a rejected fix's deposit goes to the issue's bounty (D22), not to the sponsors' pool (the deposit itself: on hold since 2026-11-15);

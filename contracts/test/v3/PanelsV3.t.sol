@@ -758,6 +758,7 @@ contract PanelsV3Test is PanelsSetup {
                 keccak256(abi.encode("h", i % hosts)), _family(i % families), _tee(i % 3), 1, i % 4 == 0 ? 100e6 : FULL_BOND
             );
         }
+        _knowFamilies(families); // the family cap applies from three seated families (D20)
         uint256 id = _id();
         _open(id, bounty);
         uint256 sb = pn.submission(id).seedBlock;
@@ -826,7 +827,9 @@ contract PanelsV3Test is PanelsSetup {
                 "CONSTITUTION_MIN_ELIGIBLE,REMOVAL_MIN_ELIGIBLE,ADR_DEPOSIT,ADR_WINDOW,REMOVAL_WINDOW,K1_WINDOW_MIN,",
                 "SEAL_TAG,REVEAL_TAG,RECEIPT_TAG,",
                 // and the deployment's liveness values (immutables) and capacity's constants
-                "STUCK_GRACE,RETRY_DELAY,MAX_REDRAWS,CAP_WINDOW,CHECKS_DEFAULT,CHECKS_CEILING,CAP_DELAY,REPO_CHECKS_PER_HOUR"
+                "STUCK_GRACE,RETRY_DELAY,MAX_REDRAWS,CAP_WINDOW,CHECKS_DEFAULT,CHECKS_CEILING,CAP_DELAY,REPO_CHECKS_PER_HOUR,",
+                // and the solver-side windows (#251 batch 3): read by the race and its SolverBook
+                "APPEAL_WINDOW,ACTIVE_WINDOW"
             ),
             ","
         );
@@ -960,7 +963,8 @@ contract PanelsV3Test is PanelsSetup {
             }
             if (k >= 3) {
                 assertLe(hosts + 1, cap);
-                assertLe(fams + 1, cap);
+                // the family cap only while three families are seated (#132 D20)
+                if (scores.capApplies(pn.panel(pid).snap.blockNo)) assertLe(fams + 1, cap);
             }
             if (k >= pn.teeCapFrom() && a.teeType != 0) assertLe(tees + 1, cap);
         }

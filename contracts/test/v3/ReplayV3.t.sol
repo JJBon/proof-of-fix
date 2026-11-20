@@ -9,7 +9,9 @@ import {Status, Kind} from "../../src/v3/PanelsBase.sol";
 import {PoolV3} from "../../src/v3/PoolV3.sol";
 import {RaceV3} from "../../src/v3/RaceV3.sol";
 import {RaceV3Annex} from "../../src/v3/RaceV3Annex.sol";
+import {RaceV3Endings} from "../../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../../src/v3/RaceV3Base.sol";
+import {SolverBook} from "../../src/v3/SolverBook.sol";
 import {MockCoin} from "../mocks/MockCoin.sol";
 import {MockScores} from "./helpers/FeesV3Mocks.sol";
 import {ReplayRegistry, ReplayPanels} from "./helpers/ReplayStubs.sol";
@@ -51,7 +53,6 @@ contract ReplayV3Test is Test {
     FeesV3 fees;
     ReplayPanels pn;
     RaceV3 rc;
-    address solver = makeAddr("solver");
     address reporter = makeAddr("reporter");
 
     string json;
@@ -175,9 +176,16 @@ contract ReplayV3Test is Test {
         c.mergeDays = 14;
         c.releaseEveryDays = 7;
         c.instalments = 4;
+        // JUDGE_FEE (#132 D30), set above any worst-case quote here: the replay checks FeesV3's per-check pay, now drawn
+        // from the flat fee instead of a deposit sized to the quote
+        c.judgeFee = 1_000e6;
         Panels p = Panels(address(pn));
-        RaceV3Annex ax = new RaceV3Annex(c, 625, 1e12, p, pool, block.timestamp);
+        RaceV3Annex ax = new RaceV3Annex(c, 625, 1e12, p, pool, block.timestamp, new RaceV3Endings(c, 625, 1e12, p, pool, block.timestamp));
         rc = new RaceV3(c, 625, 1e12, p, pool, block.timestamp, TEST_REPO, TEST_GENESIS_HEAD, "c", ax);
+        // the market predates the minimum of active solvers (#251 task 3.3): its pledges go through as if it was met
+        vm.mockCall(
+            address(rc.solverBook()), abi.encodeWithSelector(SolverBook.activeAtLeast.selector), abi.encode(uint256(3))
+        );
         uint256[] memory vids = vm.parseJsonUintArray(json, ".vids");
         uint256[] memory vf = vm.parseJsonUintArray(json, ".vidFamily");
         for (uint256 i; i < vids.length; ++i) {
@@ -190,7 +198,6 @@ contract ReplayV3Test is Test {
         usd.mint(address(this), 1e15);
         usd.approve(address(pool), type(uint256).max);
         pool.fund(address(usd), 1e12);
-        _fund(solver);
         _fund(reporter);
         uint256 n = vm.parseJsonUint(json, ".subs");
         for (uint256 i; i <= n; ++i) {
@@ -217,6 +224,9 @@ contract ReplayV3Test is Test {
 
     function _commit(uint256 sid) internal {
         uint256 b = bounties[nextBounty++];
+        // each submission from its own identity: one identity's open claims are capped (D29), and this market has none
+        address solver = makeAddr(string.concat("solver ", vm.toString(sid)));
+        _fund(solver);
         vm.prank(solver);
         uint256 id = rc.commit(b, keccak256(abi.encode("sim submission", sid)));
         idOf[sid] = id;

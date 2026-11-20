@@ -31,6 +31,13 @@ judged by the same race but not claimed there (B isn't the race's repository), s
 `Heads`, moved by one account standing in for `merge` only once B's winning verdict is final (`merge_at_finality`).
 Every registration names A, the race's repository.
 
+L6 (#251 contract batch 3): RaceV3 refuses every pledge (`TooFewActiveSolvers`) until three solvers are active, each
+for 26 weeks after a fix of it was merged (the SolverBook). So the setup does what the devnet suite does (#270): three
+solvers' fixes to A, raced unfunded and merged at finality, then a funded fix of about $44 (under D29's $50 for a new
+identity) for the run's solver, whose $200 bounties' claims need that reputation. A's head has moved four times
+before a1; the owner's node, A's one delegate until then, pushes it through its gate. The fixes pay the taxi fare
+(`judgeFee` 0: FeesV3's worst-case deposit, the rest back after finality; no attempt, evaluation or appeal fee).
+
 L12's fix source: a fix is a Radicle patch whose description carries the claim (bounty, submission, salt, solver: the
 bot's pull request format). Each validator lists the patches on its own Radicle node, refuses a revision whose base
 isn't `Heads.head`, takes the commit from its own node's storage, and runs the repository's tests (`test.sh`) inside
@@ -91,6 +98,8 @@ RECORD_DIR = ROOT / "contracts" / "deployments" / "radicle-spike-v3"
 OUT = ROOT / ".radicle-spike" / "v3"
 COIN = 10**6
 PLEDGE = 200
+REP_PLEDGE = 105  # the solver's reputation fix: judged at about $44, under the $50 a new identity may claim (D29)
+K_MAX = 7  # RaceV3's: a fix's deposit is FeesV3's worst case for K_MAX judges under the taxi fare
 HOUR = 3600
 REGISTERED_V = ("Registered(address,address,bool,uint8,uint256,"
                 "(address,address,bytes32,bytes32,uint8,bytes32,bytes32,bytes32,bytes32,uint32))")
@@ -99,7 +108,15 @@ CONVERGE_S = 45  # how long a passive convergence is watched before a sync is fo
 
 GENESIS_CALC = "# The spike's target (proof-of-fix#251): shell arithmetic.\nadd() { echo $(( $1 - $2 )); }\n"
 FIXED_CALC = "# The spike's target (proof-of-fix#251): shell arithmetic.\nadd() { echo $(( $1 + $2 )); }\n"
-SUB_CALC = FIXED_CALC + "sub() { echo $(( $1 - $2 )); }\n"
+# A's fixes after add()'s each add one function and its check to what A's head has (`Spike.a_files`); B only fixes
+# add().
+FUNCS = {
+    "neg": ("neg() { echo $(( 0 - $1 )); }", 'check "neg 4" "$(neg 4)" -4'),
+    "sq": ("sq() { echo $(( $1 * $1 )); }", 'check "sq 3" "$(sq 3)" 9'),
+    "mul": ("mul() { echo $(( $1 * $2 )); }", 'check "mul 2 3" "$(mul 2 3)" 6'),
+    "max": ("max() { if [ $1 -gt $2 ]; then echo $1; else echo $2; fi; }", 'check "max 2 5" "$(max 2 5)" 5'),
+    "sub": ("sub() { echo $(( $1 - $2 )); }", 'check "sub 5 3" "$(sub 5 3)" 2'),
+}
 TEST = """#!/usr/bin/env bash
 # The repository's tests (proof-of-fix#251's spike target): exit 0 when every check passes.
 set -u
@@ -111,7 +128,13 @@ check "add 2 3" "$(add 2 3)" 5
 exit $fail
 """
 GENESIS_TEST = TEST % ""
-SUB_TEST = TEST % 'check "sub 5 3" "$(sub 5 3)" 2'
+
+
+def files_with(funcs: list) -> dict:
+    """calc.sh and test.sh with add() fixed and `funcs` (FUNCS' names) added, each with its check."""
+    return {"calc.sh": FIXED_CALC + "".join(FUNCS[f][0] + "\n" for f in funcs),
+            "test.sh": TEST % "\n".join(FUNCS[f][1] for f in funcs)}
+
 
 RELAY = r"""
 import json, sys, urllib.request
@@ -467,6 +490,7 @@ class Spike:
         self.sha_repo: dict = {}
         self.test_runs: list = []  # (validator, repo, sha, exit code)
         self.fetches: list = []  # (validator, repo, sha, patch, base ok)
+        self.a_funcs: list = []  # the functions A's head has beyond add() (FUNCS' names)
         self.started = time.time()
 
     # ---------- infrastructure ----------
@@ -790,26 +814,48 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                      poke=True)
         self.n.drive(lambda: c.verdict(s)["status"] == v3.FINAL, f"registration check {s} final", poke=True)
 
-    def bounty(self, repo: str, label: str, files: dict, judges: list) -> dict:
-        """A fix of `repo` through v3: a registration made final, a bounty opened and funded, the solver's sealed fix
-        opened as a Radicle patch, drawn and judged by validators reading it from their own nodes, claimed, final,
-        then merged (L9: A's by the race's `merge`, B's by the stand-in). Returns what happened."""
+    def a_files(self, func: str) -> dict:
+        """A fix of A that adds `func` (FUNCS) to what A's head has."""
+        return files_with(self.a_funcs + [func])
+
+    def solver_line(self, w: Wallet) -> str:
+        """`w`'s standing in the SolverBook (D29): reputation, open claims and cap, in dollars."""
+        rep, open_, cap = (self.rpc.view(self.book, f"{f}(address)", ["uint256"], w.address)[0] / COIN
+                           for f in ("reputation", "openClaims", "capOf"))
+        return f"{w.role}: reputation {rep:,.2f}, open claims {open_:,.2f}, cap {cap:,.2f}"
+
+    def bounty(self, repo: str, label: str, files: dict, judges: list, pledge: int = PLEDGE,
+               solver: Wallet | None = None, issue: int | None = None, b: int | None = None,
+               kind: str = "bounties") -> dict:
+        """A fix of `repo` through v3: a registration made final (unless `issue` is), a bounty opened (unless `b` is)
+        and funded with `pledge` (0: raced unfunded, as before three solvers are active, L6), `solver`'s (default the
+        run's) sealed fix opened as a Radicle patch, drawn and judged by validators reading it from their own nodes,
+        claimed, final, then merged (L9: A's by the race's `merge`, B's by the stand-in). Returns what happened."""
         res, rad, n = self.res, self.rad, self.n
         c = n.chain
-        issue, s_reg = n.register_issue()
-        self.wait_registration(s_reg)
-        b = n.open_bounty(issue)
-        n.funder.send(c.race, "pledge(uint256,uint256)", b, PLEDGE * COIN)
+        w = solver or n.solver
+        if issue is None:
+            issue, s_reg = n.register_issue()
+            self.wait_registration(s_reg)
+        if b is None:
+            b = n.open_bounty(issue)
+        if pledge:
+            n.funder.send(c.race, "pledge(uint256,uint256)", b, pledge * COIN)
         base = self.head(repo)
         fix = rad.commit_on("solver", repo, base, files, label)
         salt = crypto.keccak256(f"pof251 salt {label}".encode())
         fix_w, base_w = v2.commit_word(fix), v2.commit_word(base)
-        n.solver.send(c.race, "attempt(uint256)", b)
-        receipt = n.solver.send(c.race, "commit(uint256,bytes32)", b,
-                                v3.fix_commitment(fix_w, base_w, salt, n.solver.address))
+        w.send(c.race, "attempt(uint256)", b)
+        deposit = self.rpc.view(c.fees, "maxDeposit(bytes32,uint256)", ["uint256"], c.repo(), K_MAX)[0]
+        receipt = w.send(c.race, "commit(uint256,bytes32)", b, v3.fix_commitment(fix_w, base_w, salt, w.address))
         log_ = next(x for x in receipt["logs"] if x["topics"][0] == topic(v3.COMMITTED))
         s = int(log_["topics"][2], 16)
-        body = logic.pr_body(100 + issue, b, s, "0x" + salt.hex(), n.solver.address)
+        sub = c.submission(s)
+        res.check(sub["deposit"] + sub["charged"] == deposit and deposit > 0,
+                  f"the taxi fare: {w.role}'s submission {s} posted FeesV3's deposit for K_MAX judges "
+                  f"({deposit / COIN:,.2f}), no flat fee, no attempt fee; its claim of "
+                  f"{c.verdict(s)['bounty'] / COIN:,.2f} fits its cap ({self.solver_line(w)})")
+        body = logic.pr_body(100 + issue, b, s, "0x" + salt.hex(), w.address)
         patch = rad.open_patch("solver", repo, fix, [label] + [x for x in body.splitlines() if x.strip()])
         c.live[s] = True
         judged = c.verdict(s)["bounty"]
@@ -837,7 +883,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
                   "2.5: each drawn validator ran the tests on the commit from its own node, in its own node's "
                   f"container ({', '.join(f'{r[0]}: exit {r[3]}' for r in runs)}), and the fake judge followed them")
         if repo == "a":  # the race's one repository (L1): claimed there; B's fix isn't (its base isn't the race's head)
-            n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b, fix_w, base_w, salt)
+            w.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b, fix_w, base_w, salt)
         claimed_at = c.now()
         moved, why = self.merge_at_finality(repo, b, s, fix, base)
         res.check(not moved, f"L9: Heads doesn't move at the claim, before finality ({why})")
@@ -848,8 +894,9 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.check(moved, f"at finality Heads.head({repo.upper()}) moved to the fix ({why})")
         res.expect(f"Heads.head({repo.upper()})", self.head(repo)[:12], fix[:12])
         out = {"repo": repo, "bounty": b, "submission": s, "fix": fix, "base": base, "patch": patch, "drawn": drawn,
-               "k": len(drawn), "claimToFinalChainSeconds": final_at - claimed_at}
-        res.meas.setdefault("bounties", []).append(out)
+               "k": len(drawn), "claimToFinalChainSeconds": final_at - claimed_at, "solver": w.role,
+               "pledge": pledge}
+        res.meas.setdefault(kind, []).append(out)
         res.info(f"chain time from claim to finality (the wait L9 adds before the head moves): "
                  f"{(final_at - claimed_at) / HOUR:,.1f} h")
         return out
@@ -927,7 +974,7 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
     def scenarios(self) -> None:
         res, rad = self.res, self.rad
         res.scenario("S", "setup (2.1): v3 on anvil, validators qualify and are seated, panels drawn, Heads at "
-                          "genesis for A and B; isolation starts here")
+                          "genesis for A and B, three solvers made active (L6); isolation starts here")
         self.up()
         genesis_commit = self.repos()
         record = self.deploy_v3(self.rad.rid["a"], genesis_commit)
@@ -964,8 +1011,9 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res.expect("RaceV3's own Heads holds A only (#251 L1: one repository; B's head is the stand-in's)",
                    ["0x" + v3.b32(x).hex() for x in self.rpc.view(race_heads, "repos()", ["bytes32[]"])[0]],
                    ["0x" + self.repo_id["a"].hex()])
+        self.activate()
 
-        self.candidate_a_start(genesis_commit)
+        self.candidate_a_start()
         self.both_bounties()
         self.outsider()
         self.seat_added()
@@ -978,14 +1026,82 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
 
     # ---------- (a) and (b), in order ----------
 
-    def candidate_a_start(self, genesis_commit: str) -> None:
+    def activate(self) -> None:
+        """L6 (#251 contract batch 3): RaceV3 refuses pledges until ACTIVE_SOLVERS_MIN (3) solvers are active, each for
+        ACTIVE_WINDOW (26 weeks) after a fix of it was merged. As the devnet suite does (#270): three solvers' fixes
+        to A, raced unfunded and merged at finality, then a funded fix of about $44 (under D29's $50 for a new
+        identity) gives the run's solver the reputation its $200 bounties' claims need. A's head moves four times;
+        each time the owner's node, A's one delegate until a1, pushes it through its gate (`owner_follows`): a patch's
+        base is where it leaves the canonical main, and a validator takes only a patch based on Heads.head."""
+        res, rad, n = self.res, self.rad, self.n
+        c = n.chain
+        self.book = crypto.checksum(self.rpc.view(c.race, "solverBook()", ["address"])[0])
+        cfg = c.config()
+        res.check(cfg["judgeFee"] == 0 and cfg["attemptFee"] == cfg["evaluationFee"] == cfg["appealFee"] == 0,
+                  f"the taxi fare (#251 contract batch 3): judgeFee {cfg['judgeFee']}, attempt, evaluation and appeal "
+                  f"fees {cfg['attemptFee']}, {cfg['evaluationFee']}, {cfg['appealFee']}")
+        solvers = [n.solver, n.account("second solver"), n.account("third solver")]
+        regs = [n.register_issue() for _ in range(4)]
+        for _, s in regs:
+            self.wait_registration(s)
+        b0 = n.open_bounty(regs[0][0])
+        too_few = crypto.keccak256(b"TooFewActiveSolvers(uint256)")[:4].hex()
+        try:
+            n.funder.send(c.race, "pledge(uint256,uint256)", b0, 10 * COIN)
+            res.bad("a pledge landed before three solvers were active")
+        except Reverted as e:
+            res.check(too_few in (e.data or "").lower() or "TooFewActiveSolvers" in e.reason,
+                      f"no active solver yet: a pledge is refused (TooFewActiveSolvers, {e.reason}); the issues are "
+                      f"raced unfunded")
+        fixes = [(solvers[0], "fix add() on A, unfunded", files_with([]), None),
+                 (solvers[1], "add neg() on A, unfunded", files_with(["neg"]), "neg"),
+                 (solvers[2], "add sq() on A, unfunded", files_with(["neg", "sq"]), "sq")]
+        for k, (w, label, files, func) in enumerate(fixes):
+            self.bounty("a", label, files, ["v1", "v2", "v3"], pledge=0, solver=w, issue=regs[k][0],
+                        b=b0 if k == 0 else None, kind="activation")
+            if func:
+                self.a_funcs.append(func)
+            self.owner_follows()
+        actives = self.rpc.view(self.book, "activeCount()", ["uint256"])[0]
+        window = self.rpc.view(self.book, "ACTIVE_WINDOW()", ["uint256"])[0]
+        res.check(actives == 3 and self.rpc.view(self.book, "pledgesOpen()", ["bool"])[0],
+                  f"three solvers' unfunded fixes were merged: {actives} active solvers, pledges open "
+                  f"(ACTIVE_SOLVERS_MIN 3, ACTIVE_WINDOW {window / (7 * 24 * HOUR):g} weeks)")
+        self.bounty("a", "add mul() on A, the solver's reputation", self.a_files("mul"), ["v1", "v2", "v3"],
+                    pledge=REP_PLEDGE, issue=regs[3][0], kind="activation")
+        self.a_funcs.append("mul")
+        rep = self.rpc.view(self.book, "reputation(address)", ["uint256"], n.solver.address)[0]
+        res.check(rep > 30 * COIN, f"the solver's funded fix was merged: {self.solver_line(n.solver)}, so its "
+                                   f"${PLEDGE} bounties' claims fit")
+        head = self.owner_follows(converge=True)
+        res.meas["activeSolvers"] = {"active": actives, "reputation": rep, "headA": head}
+
+    def owner_follows(self, converge: bool = False) -> str:
+        """Before a1 the owner's node is A's one delegate: it pushes Heads.head(A) through its gate, so the canonical
+        main follows the head and the next patch is based on it. Returns the head."""
+        res, rad = self.res, self.rad
+        head = self.head("a")
+        start = time.time()
+        code, out = rad.gate("owner", "a", head, self.heads_for("a"), self.repo_id["a"])
+        res.expect(f"the owner's node (A's one delegate) pushes Heads.head(A) = {head[:12]} through its gate (exit)",
+                   code, 0)
+        if converge:
+            self.converge("S", "a", lambda x: rad.canonical(x, "a"), head, "canonical main of A after the activation",
+                          start=start)
+        else:
+            rad.sync("a")
+            res.expect("the solver's node: canonical main of A", rad.canonical("solver", "a")[:12], head[:12])
+        return head
+
+    def candidate_a_start(self) -> None:
         res, rad = self.res, self.rad
         res.scenario("a1", "(a) the genesis delegate (the owner's node) hands over to the seats")
         ok, problems = self.verify_delegates("owner", "a")
         res.check(not ok, f"before: verify-delegates fails ({'; '.join(problems)})")
         seated = [self.name_of(a) for a in self.seats()]
+        head = self.head("a")
         for name in seated:  # a new delegate must have published main first (#190): through its gate, at the head
-            code, out = rad.gate(name, "a", genesis_commit, self.heads_for("a"), self.repo_id["a"])
+            code, out = rad.gate(name, "a", head, self.heads_for("a"), self.repo_id["a"])
             res.expect(f"{name} publishes main at Heads.head through its gate (exit)", code, 0)
         rad.sync("a", ["owner"])
         self.mark()
@@ -1005,7 +1121,8 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res, rad, n = self.res, self.rad, self.n
         res.scenario("a2", "(a) a fix judged by a v3 panel reading it from Radicle (2.5), final, Heads moves, the "
                            "seated nodes' gates move canonical main at the threshold")
-        out = self.bounty("a", "fix add() on A", {"calc.sh": FIXED_CALC}, ["v1", "v2", "v3"])
+        out = self.bounty("a", "add max() on A", self.a_files("max"), ["v1", "v2", "v3"])
+        self.a_funcs.append("max")
         self.fix_a1 = out["fix"]
         seated = [self.name_of(a) for a in self.seats()]
         _, doc, _ = rad.identity("owner", "a")
@@ -1053,7 +1170,8 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         for repo, key in (("a", "a3"), ("b", "b4")):
             res.scenario(key, f"({repo}) an outsider pushes its own main to an unjudged commit and opens a patch")
             head = self.head(repo)
-            unjudged = rad.commit_on("solver", repo, head, {"calc.sh": FIXED_CALC + "# an unjudged change\n"},
+            calc = files_with(self.a_funcs)["calc.sh"] if repo == "a" else FIXED_CALC
+            unjudged = rad.commit_on("solver", repo, head, {"calc.sh": calc + "# an unjudged change\n"},
                                      "an unjudged change")
             rad.push_main("solver", repo, unjudged)
             rad.open_patch("solver", repo, unjudged, ["An unjudged change"])
@@ -1160,7 +1278,17 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res, rad = self.res, self.rad
         res.scenario("a7", "(a) seated nodes offline: a second fix, then 2 of 4 seated nodes down at the merge; "
                            "canonical main lags until the threshold is back")
-        out = self.bounty("a", "add sub() on A", {"calc.sh": SUB_CALC, "test.sh": SUB_TEST}, ["v1", "v3", "v4"])
+        n = self.n
+        c = n.chain
+        subs = [x["submission"] for x in res.meas.get("activation", []) + res.meas.get("bounties", [])]
+        n.drive(lambda: all(c.submission(s)["done"] for s in subs), "the earlier fixes finished", poke=True)
+        rows = [c.submission(s) for s in subs]
+        paid = ", ".join(f"{r['charged'] / COIN:,.2f}" for r in rows)
+        res.check(all(r["done"] and r["deposit"] == 0 for r in rows),
+                  f"the taxi fare: after finality the keeper's `finish` returned each earlier fix's deposit rest to its "
+                  f"solver ({len(rows)} fixes; their counted judges were paid {paid} from them)")
+        out = self.bounty("a", "add sub() on A", self.a_files("sub"), ["v1", "v3", "v4"])
+        self.a_funcs.append("sub")
         _, doc, _ = rad.identity("genesis", "a")
         seated = [self.name_of(a) for a in self.seats()]
         res.info(f"seats {', '.join(seated)}; threshold {doc['threshold']}")
@@ -1209,7 +1337,8 @@ forge create --rpc-url $R --unlocked --from $a --broadcast src/v2/Heads.sol:Head
         res, rad = self.res, self.rad
         res.scenario("a8", "(a) one rogue delegate (v4): pushes an unjudged main and proposes adding an unseated key")
         head = self.head("a")
-        rogue = rad.commit_on("v4", "a", head, {"calc.sh": SUB_CALC + "# a rogue change, never judged\n"},
+        rogue = rad.commit_on("v4", "a", head, {"calc.sh": files_with(self.a_funcs)["calc.sh"] +
+                                                "# a rogue change, never judged\n"},
                               "a rogue change, never judged")
         rad.push_main("v4", "a", rogue)
         rad.sync("a")

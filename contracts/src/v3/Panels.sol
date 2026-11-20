@@ -57,7 +57,15 @@ import {LaunchChain} from "./LaunchChain.sol";
 /// largest odd number above k the network allows; K_MAX for K_MAX), without the original judges, its auditors or
 /// parties, judges the fix and each original judge's receipt. Until one can be drawn it waits, and the window is
 /// frozen. A false receipt found by its majority is `Fault.FalseVerdict` (the whole bond, the challenger's share); the
-/// challenge panel's majority decides the fix.
+/// challenge panel's majority decides the fix. While fewer than CAP_MIN_FAMILIES families are seated (#132 D27,
+/// `SECOND_PANEL` "few families"), a challenge of a panel of 3 or more that can't draw its larger panel is judged by a
+/// second draw of the original size, the original judges not excluded (`SecondDraw`); a lone verdict's challenge still
+/// waits (its hold does). A test-backed dispute (D21) is a challenge the race
+/// files with the test's hash as its evidence; the race holds its stake and pays its reward.
+///
+/// **Seats by rank (#132 D20).** Counted, audit, challenge and replacement draws seat only validators of seated
+/// families (PanelScores: within SEAT_MARGIN of the best Scored family, not barred); contenders shadow. The family cap
+/// applies only while at least CAP_MIN_FAMILIES families are seated.
 ///
 /// **Proof levels (D10, task 3.4).** A panel's level is its majority's weakest; each (k, level) has its own largest
 /// bounty and window (`limitOf`, `windowOf`). A submission opened with `openHidden` (hidden tests or a private
@@ -163,6 +171,11 @@ contract Panels {
     uint256 public immutable MAX_REDRAWS;
     /// The trailing window MAX_CHECKS_PER_HOUR counts over (an hour in production).
     uint256 public immutable CAP_WINDOW;
+    /// A rejected fix's one appeal is filed within this of its counted panel's reveal deadline (#132 D24; 72 h).
+    uint256 public immutable APPEAL_WINDOW;
+    /// How long a merged fix or an upheld test dispute keeps its solver active (launch L6; 26 weeks). The race's
+    /// SolverBook reads it.
+    uint256 public immutable ACTIVE_WINDOW;
     Store internal _st;
 
     // The libraries' events, declared here too so Panels' ABI carries them.
@@ -190,6 +203,7 @@ contract Panels {
     event Audited(uint256 indexed id, uint256 indexed pid, address indexed auditor, bool agrees);
     event ChallengeOpened(uint256 indexed id, address indexed challenger, bytes32 evidence);
     event ChallengeWaits(uint256 indexed id);
+    event SecondDraw(uint256 indexed id, uint256 indexed pid);
     event ChallengeResolved(uint256 indexed id, uint256 indexed pid, bool upheld, bool pass, bool falseReceipt);
     event Final(uint256 indexed id, bool pass);
     event Released(uint256 indexed id, uint256 indexed pid, uint256 redraws);
@@ -258,6 +272,8 @@ contract Panels {
         RETRY_DELAY = windows_.retryDelay;
         MAX_REDRAWS = windows_.maxRedraws;
         CAP_WINDOW = windows_.capWindow;
+        APPEAL_WINDOW = windows_.appeal;
+        ACTIVE_WINDOW = windows_.active;
         validators_.bind();
         scores_.bind();
     }
@@ -528,6 +544,8 @@ contract Panels {
         w.retryDelay = RETRY_DELAY;
         w.maxRedraws = MAX_REDRAWS;
         w.capWindow = CAP_WINDOW;
+        w.appeal = APPEAL_WINDOW;
+        w.active = ACTIVE_WINDOW;
         uint8[3] memory levels = [1, 2, 3];
         uint256[4] memory ks = [uint256(1), 3, 5, 7];
         for (uint256 l; l < 3; ++l) {

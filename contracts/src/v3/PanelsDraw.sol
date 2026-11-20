@@ -23,9 +23,11 @@ import {IPanelsRegistry, IPanelsFees, IPanelsHost, IPanelScores} from "./IPanels
 /// tries.
 ///
 /// An entry is also skipped when it sits or sat on the panel or on its excluded panel (a challenge's or an audit's
-/// original panel), is a party, or would break a cap:
+/// original panel), is a party, its family isn't seated (#132 D20: barred, or a contender more than SEAT_MARGIN below
+/// the best family; PanelScores.isSeatedSince), or would break a cap:
 /// - one per operator account;
-/// - at most (k − 1) / 2 per host and per model family, from k = 3;
+/// - at most (k − 1) / 2 per host, from k = 3, and per model family, from k = 3 while the family cap applies (D20: at
+///   least CAP_MIN_FAMILIES families seated at the snapshot, `famCap`; with fewer, a panel may be one family's);
 /// - at most (k − 1) / 2 per TEE type, from `teeFrom` (3 while TEE_CAP_K3_TYPES types are accepted, else 5).
 /// Each k gets DRAW_TRIES × k tries; a k that can't be filled steps down by 2, keeping the members that still fit its
 /// caps, in order, and the sample continues from the same counter, down to `kMin`.
@@ -103,6 +105,7 @@ library PanelsDraw {
         address unpriced; // the first validator of an unpriced family met, to announce
         uint256 capWindow; // the capacity's trailing window (L16)
         bool full; // a validator was skipped for its capacity: the submission's retry comes after capWindow
+        bool famCap; // the family cap applies (D20: PanelScores.capApplies at the snapshot)
     }
 
     /// A shadow draw (D5): `count` candidates, or validators of barred families, by the seed. The k = 1 hold's count of
@@ -250,7 +253,7 @@ library PanelsDraw {
                 continue;
             }
             if (c.fees.pricedFrom(v.family) > c.snap.rolled) continue;
-            if (c.scores.isBarredSince(v.family, c.snap.blockNo)) continue;
+            if (!c.scores.isSeatedSince(v.family, c.snap.blockNo)) continue; // barred or a contender (D20)
             c.members[c.m++] = x;
         }
         return c;
@@ -269,13 +272,13 @@ library PanelsDraw {
             if (y.family == x.family) ++families;
             if (x.tee != 0 && y.tee == x.tee) ++tees;
         }
-        if (k >= 3 && (hosts >= cap || families >= cap)) return false;
+        if (k >= 3 && (hosts >= cap || (c.famCap && families >= cap))) return false;
         if (k >= c.teeFrom && x.tee != 0 && tees >= cap) return false;
         return true;
     }
 
     /// The shadow judges (D5): candidates in standing not cooling off, or drawable validators of a family barred by its
-    /// score (they judge only as shadows until it recovers), not parties, of a priced family (D19), and at level A or B
+    /// score or a contender (D20: they judge only as shadows until it recovers or is seated), not parties, of a priced family (D19), and at level A or B
     /// for a hidden-test submission (D10). DRAW_TRIES tries a shadow, over the candidates and then the validators
     /// eligible for the bounty.
     function shadows(ShadowCtx memory c, mapping(address => Load) storage load)
@@ -284,7 +287,7 @@ library PanelsDraw {
         returns (address[] memory keys, address unpriced)
     {
         uint256 cc = c.reg.candidateCount();
-        uint256 ne = c.scores.barredCount() == 0 ? 0 : c.reg.eligibleCount(c.bounty);
+        uint256 ne = c.scores.unseatedCount() == 0 ? 0 : c.reg.eligibleCount(c.bounty);
         keys = new address[](c.count);
         uint256 got;
         if (cc + ne == 0) return (_trim(keys, 0), address(0));
@@ -299,7 +302,7 @@ library PanelsDraw {
             IValidators.Validator memory v = c.reg.validator(key);
             bytes32 family = v.family;
             if (c.teeOnly && v.level == LEVEL_C) continue;
-            if (idx < cc ? !c.reg.canShadow(key) : !c.scores.isBarred(family) || !c.reg.isDrawable(key)) continue;
+            if (idx < cc ? !c.reg.canShadow(key) : c.scores.isSeated(family) || !c.reg.isDrawable(key)) continue;
             if (c.host.isParty(c.id, key) || c.host.isParty(c.id, v.operator)) continue;
             if (!c.fees.isPriced(family)) {
                 if (unpriced == address(0)) unpriced = key;

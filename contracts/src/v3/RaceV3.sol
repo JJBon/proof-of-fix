@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {RaceV3Base} from "./RaceV3Base.sol";
 import {RaceV3Annex} from "./RaceV3Annex.sol";
 import {Heads} from "../v2/Heads.sol";
@@ -11,6 +10,7 @@ import {Panels} from "./Panels.sol";
 import {IValidators} from "./IValidators.sol";
 import {PoolV3} from "./PoolV3.sol";
 import {Status} from "./PanelsBase.sol";
+import {SolverBook} from "./SolverBook.sol";
 
 /// The race on-chain, v3 (proof-of-fix#138, task 3.5 of #132; design D1, D4, D5, D9, D13, D14; specs/judge-panels):
 /// v2's race (RaceV2: bounties, attempts, sealed commitments, the rising price locked by the first attempt, the
@@ -26,9 +26,10 @@ import {Status} from "./PanelsBase.sol";
 /// fork can remove them.
 ///
 /// **Every check is a Panels submission under the same id.** A fix's submission, and an issue's registration check
-/// (judged at CHECK_BOUNTY, the lowest tier): each posts FeesV3's deposit for K_MAX counted judges (k is fixed only at
-/// the draw), FeesV3 fixes its prices (`open`), and Panels opens it with the bounty it's judged at: the price on offer
-/// at the commitment. An award never pays more than that bounty, so a pledge made after the commitment can't put more
+/// (judged at CHECK_BOUNTY, the lowest tier): each posts FeesV3's deposit for K_MAX counted judges (k is fixed only
+/// at the draw), or, under a flat judges' fee (`Config.judgeFee` above 0, below), a fix pays that fee instead; FeesV3
+/// fixes its prices (`open`), and Panels opens it with the bounty it's judged at: the price on offer at the
+/// commitment. An award never pays more than that bounty, so a pledge made after the commitment can't put more
 /// at stake than the panel was sized for (the rest returns to the funders).
 ///
 /// **Its parties are fixed when it opens** (`isParty`, which Panels reads at every draw, audit, challenge and hold
@@ -42,7 +43,8 @@ import {Status} from "./PanelsBase.sol";
 /// 1 is its own median) and repays the relayer's gas, all from the deposit. Audits and challenge panels are paid
 /// `checkCost` (the unscaled service fee) from the deposit's rest, and from the pool beyond it (`payPanel`); shadows
 /// their capped usage from the pool (`payShadow`: one capped report a seated shadow, so a draw's shadows cost at most
-/// their seats' quoted usage). The deposit's rest returns after finality (`finish`).
+/// their seats' quoted usage). After finality the deposit's rest returns to the solver (or reporter); under a flat
+/// judges' fee, the rest of a fix's fee goes to the sponsors' pool instead (`finish`).
 ///
 /// **The verdict (D4).** The counted verdict decides the queue at once (`result`): the earliest commitment that passes,
 /// once every earlier one is decided, wins, and its solver claims it (`claim`): it opens the commitment,
@@ -60,9 +62,9 @@ import {Status} from "./PanelsBase.sol";
 ///
 /// **A check that can't be judged is refunded (#251, design L19; specs/panel-liveness).** When Panels releases its
 /// rounds MAX_REDRAWS times, or at its deadline (resultDays after the commitment) once a round was released, anyone
-/// calls `release`: the deposit's rest returns to the solver (no slash, no failed verdict), and the bounty (if it's
-/// open, or this check won it) is refunded to its funders by input, the issue stake back to its reporter; a
-/// registration check's issue is returned the same way.
+/// calls `release`: the deposit's or fee's rest returns to the solver (no slash, no failed verdict, no reputation
+/// lost), and the bounty (if it's open, or this check won it) is refunded to its funders by input, the issue stake back
+/// to its reporter; a registration check's issue is returned the same way.
 ///
 /// **Challenges (D4; specs/challenges).** Anyone challenges a verdict in its window (or held) with the published stake
 /// plus its panel's worst-case cost (`challenge`); the race holds both. Upheld, both return and the panel is paid from
@@ -72,14 +74,32 @@ import {Status} from "./PanelsBase.sol";
 /// **FeesV3's queue signals** come from Panels' status (`signal`, anyone, and at each result): a waiting submission,
 /// a stalled counted panel, and the validators seated on a counted panel.
 ///
+/// **Solvers (#251 contract batch 3; #132 D21, D24, D29, D30; launch L6; ADR 0007; specs/reputation,
+/// specs/bounty-market).** The race keeps a `SolverBook`, deployed here, readable by anyone:
+/// - the judges' fee (`Config.judgeFee`, D30). 0, the pure taxi fare (the Sepolia launch's): a fix posts FeesV3's
+///   worst-case deposit, its judges are paid by the meter, and whatever is left returns to the solver, pass or fail,
+///   withdrawn or not. Above 0, a flat fee (for a later mainnet decision): a fix pays it in place of the deposit, its
+///   judges are paid from it at market prices, and its rest goes to the sponsors' pool, never back (unless the network
+///   never judged it). Either way no solver's deposit is lost on rejection;
+/// - its claim (the bounty it's judged at) must fit its solver's cap, REP_BASE + REP_MULT × reputation, or the commit
+///   reverts; the claim closes at finality (`close`) or at the merge, which adds the bounty to the reputation; a pass
+///   reversed takes twice its bounty off;
+/// - a pass may be disputed with a failing test (`dispute`, D21): the stake is the larger of $5 and 10 % of the bounty;
+///   upheld, the disputer gets its stake back and EVIDENCE_REWARD_BPS of the bounty from the pot; rejected, the stake
+///   goes to the solver;
+/// - a rejection may be appealed once with a test (`appeal`, D24), within APPEAL_WINDOW of its counted panel's reveal
+///   deadline, with no stake (owner, 2026-11-19): a new submission judged by a fresh draw of the seated families,
+///   paying its own metered checks as any submission does;
+/// - pledges are refused while fewer than ACTIVE_SOLVERS_MIN solvers are active (L6): an identity is active for
+///   ACTIVE_WINDOW after its fix is merged, or after its test dispute is upheld if it had a merged fix. Unfunded
+///   bounties are raced as before, and funded ones continue whatever the count.
+///
 /// Coin only, one coin: the version's fee coin (Panels' bounty limits are in it, and no price feed converts another).
 /// RaceV3 runs its rarely called actions in RaceV3Annex (DELEGATECALL, its address fixed here), as RaceV2 did.
 contract RaceV3 is RaceV3Base {
     address public immutable annex;
     /// The deployment's one repository: keccak256 of its Radicle RID (#251, L1).
     bytes32 public immutable repo;
-
-    error BadSignature();
 
     /// The head registry's genesis (S10) is deployed here with one entry, `repo_` at `genesisHead_` (the commit of its
     /// Radicle `main` at deployment; both nonzero, #251 L1), and this contract fixed as its only mover; Panels, FeesV3
@@ -112,6 +132,7 @@ contract RaceV3 is RaceV3Base {
         if (address(annex_).code.length == 0 || annex_.fingerprint() != _fingerprint()) revert BadParams();
         repo = repo_;
         annex = address(annex_);
+        book = new SolverBook(panels_.ACTIVE_WINDOW());
         panels_.bind();
         fees.bind();
         pool_.bind();
@@ -122,6 +143,11 @@ contract RaceV3 is RaceV3Base {
     /// The chain this deployment runs on: 11155111 (Sepolia), or a local test chain (#251, L2).
     function chainId() external view returns (uint256) {
         return block.chainid;
+    }
+
+    /// The solvers' reputations, claims and activity (#251 batch 3).
+    function solverBook() external view returns (SolverBook) {
+        return book;
     }
 
     function getConfig() external view returns (Config memory) {
@@ -208,18 +234,21 @@ contract RaceV3 is RaceV3Base {
 
     /// Anyone registers an issue in `repo` (the deployment's, `repo()`; any other is refused), with its registration
     /// check; `hidden` for hidden tests or a private repository, whose checks only TEE judges may take
-    /// (RaceV3Annex.register).
+    /// (RaceV3Endings.register).
     function register(bytes32, bool) external returns (uint256) {
         _delegate();
     }
 
     // ---------- bounties ----------
 
-    /// A pledge in the fee coin, from anyone, while the bounty is open. A first pledge takes the next place in the
-    /// bounty's funder order, which fixes which checks it is a party to.
+    /// A pledge in the fee coin, from anyone, while the bounty is open and at least ACTIVE_SOLVERS_MIN solvers are
+    /// active (launch L6: otherwise it reverts with the count, and no coin moves). A first pledge takes the next place
+    /// in the bounty's funder order, which fixes which checks it is a party to.
     function pledge(uint256 b, uint256 amount) external nonReentrant {
         Bounty storage bt = _bounties[b];
         if (bt.state != State.Open) revert WrongState(b, bt.state);
+        uint256 n = book.activeAtLeast(ACTIVE_SOLVERS_MIN);
+        if (n < ACTIVE_SOLVERS_MIN) revert TooFewActiveSolvers(n);
         if (pledgeOrder[b][msg.sender] == 0) pledgeOrder[b][msg.sender] = ++bt.pledges;
         _touch(b, coin);
         _pledge(b, coin, amount);
@@ -255,13 +284,16 @@ contract RaceV3 is RaceV3Base {
         _stopAttempt(b, msg.sender);
     }
 
-    /// A sealed submission, keccak256(abi.encode(fix, base, salt, solver)), with its check deposit: Panels judges it at
-    /// the price on offer now. While the bounty is open it joins the queue in commitment order; once it's won, it isn't
+    /// A sealed submission, keccak256(abi.encode(fix, base, salt, solver)), posting its check deposit (or the flat
+    /// judges' fee), its claim (the price
+    /// on offer now, which Panels judges it at) within its solver's cap (D29: over it, the commit reverts and costs
+    /// nothing). While the bounty is open it joins the queue in commitment order; once it's won, it isn't
     /// checked and pays the evaluation fee.
     function commit(uint256 b, bytes32 commitment) external nonReentrant returns (uint256 id) {
         Bounty storage bt = _bounties[b];
         if (bt.state == State.Won || bt.state == State.Merged || bt.state == State.Paid) {
-            _collect(coin, msg.sender, _units(config.evaluationFee), config.infrastructure);
+            uint256 fee = _units(config.evaluationFee);
+            if (fee != 0) _collect(coin, msg.sender, fee, config.infrastructure); // 0 on Sepolia: no charge
             emit TooLate(b, msg.sender);
             return 0;
         }
@@ -273,29 +305,13 @@ contract RaceV3 is RaceV3Base {
 
     // ---------- the judges' reports and the result ----------
 
-    /// Seat `key`'s metered usage on panel `pid` (any kind), signed by `key` as a registry statement on the subject
-    /// keccak256(USAGE_TAG, this race, pid, key) over keccak256(abi.encode(u)) (two usages for one seat are provable
-    /// equivocation). Its receipt must be the seat's on-chain receipt. A replacement in the same seat reports its own.
-    function report(uint256 pid, address key, IFeesV3.Usage calldata u, bytes calldata sig) external {
-        address[] memory keys = panels.judges(pid);
-        uint256 slot = keys.length;
-        for (uint256 i; i < keys.length; ++i) {
-            if (keys[i] == key && key != address(0)) slot = i;
-        }
-        if (slot == keys.length || reportedBy[pid][slot] == key) revert Refused();
-        bytes memory x = _seat(pid, slot);
-        if (_w(x, X_RECEIPTED) == 0 || bytes32(_w(x, X_RECEIPT)) != u.receipt) revert Refused();
-        bytes32 subject = keccak256(abi.encode(USAGE_TAG, address(this), pid, key));
-        if (ECDSA.recover(registry.statementDigest(subject, keccak256(abi.encode(u))), sig) != key) {
-            revert BadSignature();
-        }
-        _usage[pid][slot] = u;
-        reportedBy[pid][slot] = key;
-        emit Reported(pid, slot, key, u.receipt);
+    /// Seat `key`'s metered usage on panel `pid` (any kind), signed by `key` (RaceV3Endings.report).
+    function report(uint256, address, IFeesV3.Usage calldata, bytes calldata) external {
+        _delegate();
     }
 
     /// The counted verdict of check `id`, once Panels has counted it and its reports are in: FeesV3 pays each counted
-    /// judge and the caller's gas from the deposit (judges first), FeesV3 hears who was seated, and the verdict decides
+    /// judge and the caller's gas from the fee or deposit (judges first), FeesV3 hears who was seated, and the verdict decides
     /// the queue. Anyone, once.
     function result(uint256 id) external nonReentrant {
         uint256 g = gasleft();
@@ -366,9 +382,11 @@ contract RaceV3 is RaceV3Base {
         (Status st, bool pass,) = _verdict(id);
         if (st != Status.Final) revert NotYet();
         if (a.closed || a.merged || !pass) revert Refused(); // reversed: `sync` reopens the bounty
-        heads.move(repo, _submissions[id].base, a.fix, b, id, keccak256(abi.encode(address(panels), id)));
+        Submission storage s = _submissions[id];
+        heads.move(repo, s.base, a.fix, b, id, keccak256(abi.encode(address(panels), id)));
         a.merged = true;
         paidFix[a.fix] = true;
+        book.paid(id, s.solver, s.judged); // D29: its claim closes and its bounty joins its reputation; L6: active
         emit HeadMerged(b, bt.epoch, id, a.fix);
     }
 
@@ -387,11 +405,12 @@ contract RaceV3 is RaceV3Base {
 
     // ---------- delegated to RaceV3Annex, run in this contract's storage ----------
 
-    // withdrawIssue, withdraw, timeOut, mergeExpired and release run in RaceV3Endings, which the annex reaches for any
-    // call it doesn't have (its fallback): one more DELEGATECALL, still in this contract's storage.
+    // register, openBounty, report, withdrawIssue, withdraw, timeOut, mergeExpired, release, payShadow, signal and
+    // finish run in RaceV3Endings, which the annex reaches for any call it doesn't have (its fallback): one more
+    // DELEGATECALL, still in this contract's storage.
 
     /// An issue's final registration check: a pass opens its bounty, a fail forfeits its stake
-    /// (RaceV3Annex.openBounty).
+    /// (RaceV3Endings.openBounty).
     function openBounty(uint256) external returns (uint256) {
         _delegate();
     }
@@ -401,12 +420,24 @@ contract RaceV3 is RaceV3Base {
         _delegate();
     }
 
-    /// The author of a failed submission appeals once: the same commitment judged again (RaceV3Annex.appeal).
-    function appeal(uint256) external returns (uint256) {
+    /// The author of a rejected fix appeals once, with a failing-then-passing test and no stake (D24): the same
+    /// commitment judged again by a fresh draw of the seated families, paying its metered checks (RaceV3Annex.appeal).
+    function appeal(uint256, bytes32) external returns (uint256) {
         _delegate();
     }
 
-    /// The solver withdraws a submission no panel was seated for (RaceV3Endings.withdraw).
+    /// A failing-test dispute of a pass in its window, with its stake (D21; RaceV3Annex.dispute).
+    function dispute(uint256, bytes32) external {
+        _delegate();
+    }
+
+    /// A submission's open claim closes once its verdict is final or it ended (RaceV3Annex.close).
+    function close(uint256) external {
+        _delegate();
+    }
+
+    /// The solver withdraws a submission no panel was seated for: its deposit returns (a flat judges' fee goes to the
+    /// sponsors' pool) (RaceV3Endings.withdraw).
     function withdraw(uint256) external {
         _delegate();
     }
@@ -448,17 +479,18 @@ contract RaceV3 is RaceV3Base {
         _delegate();
     }
 
-    /// A revealed shadow's usage paid from the pool, once (RaceV3Annex.payShadow).
+    /// A revealed shadow's usage paid from the pool, once (RaceV3Endings.payShadow).
     function payShadow(uint256, uint256) external {
         _delegate();
     }
 
-    /// FeesV3's queue signals from Panels' status (RaceV3Annex.signal).
+    /// FeesV3's queue signals from Panels' status (RaceV3Endings.signal).
     function signal(uint256) external {
         _delegate();
     }
 
-    /// The deposit's rest back to the solver after finality (RaceV3Annex.finish).
+    /// After finality: the deposit's rest back to its solver or reporter (a fix's flat judges' fee's rest, when
+    /// `judgeFee` is above 0, to the sponsors' pool), and the fix's claim closed (RaceV3Endings.finish).
     function finish(uint256) external {
         _delegate();
     }
