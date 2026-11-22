@@ -6,6 +6,13 @@
 #   scripts/radicle-spike.sh clean    remove any containers and network a stopped run left behind (v1's and v3's)
 #   scripts/radicle-spike.sh --v3     the spike under v3 (proof-of-fix#251): candidates (a) and (b) with the v3
 #                                     contracts on anvil and v3 node objects (spikes/radicle/v3_spike.py)
+#   scripts/radicle-spike.sh --seed   the proof-of-fix seed (#251 task 5.3, seed/): replicates proof-of-fix, refuses
+#                                     another repository, serves a fresh node (tests/integration/seed_radicle.py)
+#   scripts/radicle-spike.sh --publish  the snapshot script's Radicle target (#251 task 5.1): a dry run, a refused
+#                                     scan, then --publish to a local node and a fresh node's clone
+#                                     (tests/integration/publish_radicle.py)
+#   scripts/radicle-spike.sh --guides the onboarding guides (#251 task 5.7, docs/guides/): their commands, as
+#                                     written, on the local devnet with Radicle (tests/integration/guides_radicle.py)
 #
 # Everything runs in Docker on a network created with --internal (no route out): an anvil with Heads deployed, three
 # judge nodes (the delegates), one outsider node, and a fresh "viewer" node per clone check. The only download is the
@@ -35,9 +42,39 @@ clean() {
   docker network rm "$NET" >/dev/null 2>&1 || true
 }
 
-if [[ "${1:-}" == clean ]]; then clean; python3 spikes/radicle/v3_spike.py clean >/dev/null; echo "cleaned"; exit 0; fi
-[[ $# -eq 0 || "$1" == --v3 ]] || { sed -n '5,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+if [[ "${1:-}" == clean ]]; then
+  clean
+  python3 spikes/radicle/v3_spike.py clean >/dev/null
+  python3 tests/integration/seed_radicle.py clean >/dev/null
+  python3 tests/integration/publish_radicle.py clean >/dev/null
+  python3 tests/integration/guides_radicle.py clean >/dev/null
+  echo "cleaned"
+  exit 0
+fi
+[[ $# -eq 0 || "$1" == --v3 || "$1" == --seed || "$1" == --publish || "$1" == --guides ]] ||
+  { sed -n '5,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+if [[ "${1:-}" == --publish ]]; then
+  # The Radicle target (#251 task 5.1): the same image (plus python3, built by the test) and isolation rules, no chain.
+  # Results and node logs: .publish-radicle/.
+  echo "building $IMAGE (pinned Radicle release, sha256-checked) ..."
+  docker build -q -t "$IMAGE" spikes/radicle >/dev/null
+  exec python3 tests/integration/publish_radicle.py run "${@:2}" </dev/null
+fi
+if [[ "${1:-}" == --seed ]]; then
+  # The seed (#251 task 5.3): the same image and isolation rules, no chain (so no solc). Results and node logs:
+  # .seed-radicle/.
+  echo "building $IMAGE (pinned Radicle release, sha256-checked) ..."
+  docker build -q -t "$IMAGE" spikes/radicle >/dev/null
+  exec python3 tests/integration/seed_radicle.py run "${@:2}" </dev/null
+fi
 [[ -f "$SOLC" ]] || { echo "solc missing; run: scripts/contracts.sh setup" >&2; exit 1; }
+if [[ "${1:-}" == --guides ]]; then
+  # The guides (#251 task 5.7): task 4.6's devnet and Radicle network (tests/integration/suite_v3_radicle.py), and a
+  # newcomer's machine on it. Needs the pinned test image too (scripts/test-image.sh). Results: .guides-radicle/.
+  echo "building $IMAGE (pinned Radicle release, sha256-checked) ..."
+  docker build -q -t "$IMAGE" spikes/radicle >/dev/null
+  POF_SOLC="$SOLC" exec python3 tests/integration/guides_radicle.py run "${@:2}" </dev/null
+fi
 if [[ "${1:-}" == --v3 ]]; then
   # Under v3 (#251): the same image and isolation rules; the run, its scenarios and its clean-up are in Python, as
   # the v3 node objects it drives are. Results and node logs: .radicle-spike/v3/.

@@ -11,6 +11,7 @@ import {IPanelsRegistry, IPanelsFees, IPanelsHost, IPanelScores} from "../../../
 import {PanelScores} from "../../../src/v3/PanelScores.sol";
 import {ValidatorsSetup, ValidatorsWithZkTls, TDX, SEV_SNP, NITRO, SGX, IMAGE} from "./ValidatorsSetup.sol";
 import {suiteWindows, TEST_REPO} from "./SuiteWindows.sol";
+import {PanelRules, PanelRulesLib} from "../../../src/v3/PanelRules.sol";
 
 bytes32 constant IBM_SE = keccak256("ibm-secure-execution");
 bytes32 constant ZKTLS = keccak256("zktls");
@@ -76,6 +77,12 @@ abstract contract PanelsSetup is ValidatorsSetup {
     MockRace internal race;
     address internal genesisKey;
     mapping(uint256 pid => mapping(address key => bool)) internal voteOf;
+    /// The panel rules `_deployVersion` deploys with (#251 batch 4): #132's defaults unless a test sets others first.
+    PanelRules internal rules = PanelRulesLib.strict();
+    /// The genesis validator's operator, host and TEE type when a test sets them (0: its own, TDX).
+    address internal genesisOperator;
+    bytes32 internal genesisHost;
+    bytes32 internal genesisTee;
 
     function _family(uint256 i) internal pure returns (bytes32) {
         return keccak256(abi.encode("family", i));
@@ -93,6 +100,9 @@ abstract contract PanelsSetup is ValidatorsSetup {
         genesisKey = _newKey("genesis");
         IValidators.Registration[] memory gs = new IValidators.Registration[](1);
         gs[0] = _reg(genesisKey, makeAddr("genesis operator"), keccak256("host-genesis"), _family(0));
+        if (genesisOperator != address(0)) gs[0].operator = genesisOperator; // a layout test's (#251 batch 4)
+        if (genesisHost != 0) gs[0].host = genesisHost;
+        if (genesisTee != 0) gs[0].teeType = genesisTee;
         Validators.Genesis memory g = _genesis(false, gs, FULL_BOND);
         g.teeTypes = new bytes32[](teeTypes);
         for (uint256 i; i < teeTypes; ++i) {
@@ -107,7 +117,7 @@ abstract contract PanelsSetup is ValidatorsSetup {
         scores = new PanelScores();
         fees = new FeesV3(IFeesV3Validators(address(reg)), scores, _feesGenesis());
         pn = new Panels(
-            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows
+            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows, rules
         );
         race = new MockRace(pn);
     }

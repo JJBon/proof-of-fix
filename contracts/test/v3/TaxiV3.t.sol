@@ -124,7 +124,7 @@ contract TaxiV3Test is RaceV3Setup {
         _judge(pid, _votes(1, 1));
         _reportAll(pid);
         rc.result(id);
-        _network(3, FAMILIES, 3);
+        _network(6, FAMILIES, 3); // three challengers and room for its audits (#290)
         pn.startWindow(id);
         uint256 before = pn.panelCount();
         _runAudits(id, true);

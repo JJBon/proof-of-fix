@@ -39,7 +39,8 @@ from bot import logic
 from .race import fmt
 from .rpc import Reverted
 
-K_MAX = 7  # RaceV3's: a fix's deposit is FeesV3's worst case for K_MAX judges (k is fixed only at the draw)
+# RaceV3's: a fix's deposit is FeesV3's worst case for Panels' `kTop` judges (k is fixed only at the draw; #251 batch 4,
+# L24: 3 on Sepolia, 7 by default), read from the deployment (`Chain.panel_rules`).
 ACTIVE_SOLVERS_MIN = 3  # SolverBook.ACTIVE_SOLVERS_MIN (launch L6)
 MAX = 2**256 - 1
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -192,10 +193,14 @@ class RaceV3:
 
     def check_deposit(self) -> int:
         """What a fix posts now (micro-coins): the flat judges' fee if the deployment set one, else FeesV3's worst case
-        for K_MAX judges at today's prices (the taxi fare)."""
+        for Panels' `kTop` judges at today's prices (the taxi fare)."""
         fee = self.chain.config()["judgeFee"]
         return fee if fee else self.rpc.view(self.chain.fees, "maxDeposit(bytes32,uint256)", ["uint256"],
-                                             self.chain.repo(), K_MAX)[0]
+                                             self.chain.repo(), self.k_top())[0]
+
+    def k_top(self) -> int:
+        """Panels' largest issue-tier panel (#251 batch 4, L24): a check's deposit is priced for this many judges."""
+        return self.chain.panel_rules()["kTop"]
 
     def state(self, b: int) -> str:
         return v3.RACE_STATES[self.chain.bounty(b)["state"]]
@@ -252,6 +257,7 @@ def cmd_status(ctx, a) -> tuple:
     st = rc.standing(who)
     claims = rc.claims(who)
     deposit, cfg = rc.check_deposit(), c.config()
+    k_top = rc.k_top()
     active = rc.active()
     data = {"version": 3, "chainId": rc.chain_id(), "block": rc.rpc.block(), "race": rc.address, "coin": rc.coin,
             "repo": "0x" + c.repo().hex(), "head": rc.head(), "rid": rc.record.get("rid", ""),
@@ -274,7 +280,7 @@ def cmd_status(ctx, a) -> tuple:
         lines.append(f"    submission {cl['submission']} on bounty {cl['bounty']}: {fmt(cl['amount'])}, "
                      f"{cl['status']}{', passed' if cl['pass'] else ''}, outcome {cl['outcome']}")
     if cfg["judgeFee"] == 0:
-        lines.append(f"  a fix posts    {fmt(deposit)}: FeesV3's maxDeposit, the meter's worst case for {K_MAX} judges at "
+        lines.append(f"  a fix posts    {fmt(deposit)}: FeesV3's maxDeposit, the meter's worst case for {k_top} judges at "
                      f"today's prices. Its judges are paid by the meter and the rest is refunded to you after the "
                      f"verdict, pass or fail (the taxi fare: no attempt, evaluation or appeal fee)")
     else:
@@ -311,7 +317,7 @@ def cmd_register(ctx, a) -> tuple:
         raise Fail(f"{rid} isn't the race's repository (its keccak256 isn't the race's repo())")
     w = ctx.wallet("reporter")
     cfg = rc.chain.config()
-    deposit = rc.rpc.view(rc.chain.fees, "maxDeposit(bytes32,uint256)", ["uint256"], rc.chain.repo(), K_MAX)[0]
+    deposit = rc.rpc.view(rc.chain.fees, "maxDeposit(bytes32,uint256)", ["uint256"], rc.chain.repo(), rc.k_top())[0]
     need = cfg["registrationFee"] + cfg["issueStake"] + deposit
     lines = ensure_allowance(rc, w, need, "the registration")
     receipt = _send(w, rc.address, "register(bytes32,bool)", rc.chain.repo(), bool(a.hidden))

@@ -20,6 +20,8 @@ Spending guards (per process, so per on-demand run of the validator kit):
     ORACLE_MAX_CALLS       attempts at most, retries included (default 20)
     ORACLE_MAX_RUN_TOKENS  tokens at most, in plus out; before each attempt its worst case (the prompt's estimate plus
                            the answer's cap) must fit what's left (default 500000)
+    ORACLE_SPEND_DAILY_USD, ORACLE_SPEND_MONTHLY_USD
+                           the node's own daily and monthly caps across runs (oracle/spend.py, #253; the v3 node)
     ORACLE_MODEL_TIMEOUT   seconds per attempt (default 120)
     ORACLE_MODEL_RETRIES   retries of a throttled, overloaded or timed-out call (default 2), with backoff that honours
                            Retry-After up to 30 s; any other 4xx is never retried
@@ -379,13 +381,14 @@ class Client:
 
     def __init__(self, provider: Provider, max_tokens: int = DEFAULT_MAX_TOKENS, budget: Optional[Budget] = None,
                  timeout: float = DEFAULT_TIMEOUT_S, retries: int = DEFAULT_RETRIES, request=http_request,
-                 sleep=time.sleep, log=None):
+                 sleep=time.sleep, log=None, spend=None):
         if max_tokens < 1 or retries < 0 or timeout <= 0:
             raise ConfigError("ORACLE_MAX_TOKENS, ORACLE_MODEL_RETRIES and ORACLE_MODEL_TIMEOUT must be positive")
         provider.endpoint  # noqa: B018 - refuses a URL that isn't https (or http on loopback) before any call
         self.provider, self.max_tokens, self.budget = provider, max_tokens, budget or Budget()
         self.timeout, self.retries, self.request, self.sleep = timeout, retries, request, sleep
         self.log = log or (lambda m: None)
+        self.spend = spend  # oracle/spend.py's daily and monthly caps (#253), when the node sets them
 
     def _rid(self, reply: Optional[Reply]) -> str:
         h = self.provider.request_id_header
@@ -402,12 +405,16 @@ class Client:
                     wait = min(MAX_BACKOFF_S, max(wait, last.retry_after))
                 self.log(f"model {p.name}:{p.model}: {last}; retry {attempt} of {self.retries} in {wait:.0f}s")
                 self.sleep(wait)
+            if self.spend is not None:  # the node's daily and monthly caps (#253): checked before the run's budget
+                worst_cost = self.spend.reserve(worst - self.max_tokens, self.max_tokens)
             self.budget.reserve(worst)
             url, headers, body = p.build(system, user, self.max_tokens)
             try:
                 reply = self.request("POST", url, headers, body, self.timeout)
             except (OSError, http.client.HTTPException) as e:  # no reply: it may have run, so its worst case counts
                 self.budget.spend(worst)
+                if self.spend is not None:
+                    self.spend.record(worst_cost)
                 last = ModelError(f"{p.name} call failed: {type(e).__name__}", 0, "network", retryable=True)
                 continue
             try:
@@ -418,9 +425,13 @@ class Client:
             if reply.status == 200 and isinstance(data, dict) and data:
                 text, usage, stop, body_id = p.parse(data)
                 self.budget.spend(usage["input_tokens"] + usage["output_tokens"])
+                if self.spend is not None:
+                    self.spend.record_usage(usage)
                 info = {"provider": p.name, "model": p.model, "endpoint": urlsplit(url).netloc,
                         "request_id": rid or body_id, "stop": stop}
                 return Completion(text, usage, info)
+            if self.spend is not None and reply.status in (408, 504):  # a timed-out call may have run: worst case
+                self.spend.record(worst_cost)
             kind, message = p.error(data) if data else ("", reply.body[:200].decode(errors="replace"))
             kind = kind or reply.headers.get("x-amzn-errortype", "").split(":")[0]
             last = ModelError(f"{p.name} refused the call: HTTP {reply.status} {kind} {message[:300]}".rstrip(),

@@ -39,7 +39,7 @@
 # DEVNET_KEYS=insecure-local. Nothing here touches a public chain (rule 1).
 #
 # Remote mode (#150, #112): DEVNET_RPC_URL names a devnet that runs elsewhere, behind HTTP Basic auth (the AWS devnet,
-# platform#197), with the credential "<handle>:<key>" in DEVNET_RPC_AUTH or a file named by DEVNET_RPC_AUTH_FILE. It
+# infra#197), with the credential "<handle>:<key>" in DEVNET_RPC_AUTH or a file named by DEVNET_RPC_AUTH_FILE. It
 # refuses any chain but 7193, keeps its own record (contracts/deployments/devnet-aws-v2.json), and adds
 #   scripts/devnet.sh check       the credential works and the chain is 7193: only eth_chainId and eth_blockNumber
 #   scripts/devnet.sh fund-address <address> [eth]   give one address devnet ETH (default 100), e.g. a validator's
@@ -198,7 +198,9 @@ deploy_v2() {
 # v3 beside v2 (#140 task 5.1; design D18): contracts/script/NodeV3Local.s.sol, with its test values and a coin anyone
 # can mint, for one repository (#251 L1: the script's default RID and genesis head). Its windows are production's
 # unless DEVNET_V3_WINDOWS=minutes (every hour a minute, #251 L4); the record lists them. DEVNET_V3_GENESIS_RAD_NODE,
-# a bytes32, is the genesis validator's Radicle node key (#251 L11; default 0: no node). The `simulated` proof type
+# a bytes32, is the genesis validator's Radicle node key (#251 L11; default 0: no node). The panel rules (#251 batch 4,
+# L23 and L24) are #132's (every cap strict, kTop 7, larger challenges) unless DEVNET_V3_PANEL_CAPS=launch,
+# DEVNET_V3_K_TOP=3 and DEVNET_V3_CHALLENGE_SIZE=same (the Sepolia record's) say otherwise. The `simulated` proof type
 # is accepted on chains 31337 and 7193 only, so this is a devnet's deployment and nothing else's; the AWS devnet's
 # (task 5.2) is not written yet, and remote mode refuses.
 deploy_v3() {
@@ -215,6 +217,8 @@ deploy_v3() {
   printf '%s\n%s\n' "$deployer" "$DEVNET_V3_GENESIS_PK" | in_devnet -e LOCAL_ATTESTATION="$DEVNET_V3_ATTESTATION" \
     -e LOCAL_FAMILIES="${DEVNET_V3_FAMILIES:-fake}" -e LOCAL_RECORD="${RECORD_V3#contracts/deployments/}" \
     -e LOCAL_BESIDE="$beside" -e LOCAL_WINDOWS="${DEVNET_V3_WINDOWS:-production}" \
+    -e LOCAL_PANEL_CAPS="${DEVNET_V3_PANEL_CAPS:-strict}" -e LOCAL_K_TOP="${DEVNET_V3_K_TOP:-7}" \
+    -e LOCAL_CHALLENGE_SIZE="${DEVNET_V3_CHALLENGE_SIZE:-larger}" \
     -e LOCAL_GENESIS_RAD_NODE="${DEVNET_V3_GENESIS_RAD_NODE:-0x$(printf '0%.0s' {1..64})}" "$NAME" sh -c \
     'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK
      forge script script/NodeV3Local.s.sol:NodeV3LocalScript --rpc-url '"$RPC"' --broadcast --private-key "$PK" --slow' \

@@ -4,8 +4,11 @@
 # (a staked challenge judged by a fresh, larger panel). It is scripts/devnet-v3-e2e.sh --heal, which measures two:
 #   - a wrong k = 1 verdict of the lone genesis validator (a registration nobody claimed, passed anyway), challenged
 #     at once, reversed by a fresh panel of 3 once six validators exist;
-#   - a bad fix passed 2 to 1 by a panel of 3 with two lying judges, won and claimed, challenged at once, reversed by a
-#     fresh panel of 5 once five more validators are bonded for its bounty; the award is clawed back with nothing earned.
+#   - a bad fix passed by a panel of 3 with lying judges, won and claimed, challenged at once, reversed by a fresh panel
+#     of 5 of the validators that topped up for its bounty; the award is clawed back with nothing earned. Since #251's
+#     L25 a challenge that can't be drawn by CHALLENGE_DEADLINE lapses, so the validators qualify before this fix is
+#     submitted; a k = 1 watcher's challenge that lapsed is filed again once a panel could be drawn (both counted in
+#     the breakdown).
 # Each prints the time from the wrong pass to its reversal, split into: until the challenge, the challenge's wait for
 # a panel to exist, and the panel's own seal and reveal windows. Under #251's L9 (contract batch 2) the head moves only
 # at a fix's finality (`merge`): the run also prints the wait L9 adds, from a good fix's claim to the merge a keeper

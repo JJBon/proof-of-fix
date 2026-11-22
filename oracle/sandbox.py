@@ -28,7 +28,14 @@ measured disk of task 4.9 will carry it). The runs get two scratch folders, both
 counted against the memory limit: `/tmp`, noexec as before, and `/scratch`, the tests' TMPDIR, where a test may run a
 script it wrote (a fake `git` or token helper). The code under test can already run anything the interpreter can, so
 `/scratch`'s exec gives it nothing the read-only root, the missing network and capabilities, and the limits take away.
-POF_SANDBOX=1 tells a repository's tests they run here (proof-of-fix's own: tests/sandbox_env.py)."""
+POF_SANDBOX=1 tells a repository's tests they run here (proof-of-fix's own: tests/sandbox_env.py).
+
+Attested mode (#251 L21, task 4.9): on the measured checker disk (validator-kit/sevsnp/disk) the node gets
+ORACLE_ATTESTED_IMAGES, the disk's `images.json`: the images the disk carries and loaded at boot, each as name@digest.
+`DockerApi` then never pulls (no /images/create, /images/load or /build call leaves it), and refuses to create a
+container whose image isn't listed, or whose local image isn't the listed digest. A refusal is `ImageRefused`, a setup
+error: the node stops (oracle/__main__.py), as on a daemon that can't enforce the limits. The Docker CLI isn't used in
+this mode (it could pull). Outside it nothing changes."""
 
 from __future__ import annotations
 
@@ -197,6 +204,53 @@ def _inner_limit(argv: list) -> int:
     return int(LIMITS["timeout_s"])
 
 
+IMAGES_FORMAT = "pof-images/1"  # the measured disk's images.json (validator-kit/sevsnp/disk)
+NEVER_ATTESTED = ("/images/create", "/images/load", "/build", "/images/prune")  # what an attested node never asks for
+
+
+class ImageRefused(RuntimeError):
+    """Attested mode refused an image or a pull (#251 L21): a setup error, so the node stops rather than judge."""
+
+
+@dataclass(frozen=True)
+class AttestedImages:
+    """The images the measured disk carries (its images.json): each `name@sha256:<digest>`, as Docker's containerd
+    image store keeps the archive the disk loaded at boot."""
+    refs: tuple
+    source: str = ""
+
+    @classmethod
+    def parse(cls, doc: dict, source: str = "") -> "AttestedImages":
+        if not isinstance(doc, dict) or doc.get("format") != IMAGES_FORMAT:
+            raise ImageRefused(f"{source or 'images.json'} isn't {IMAGES_FORMAT}")
+        refs = []
+        for entry in doc.get("images") or []:
+            ref = entry.get("ref", "") if isinstance(entry, dict) else ""
+            name, _, digest = ref.partition("@")
+            if not name or not digest.startswith("sha256:") or len(digest) != 71 or not all(
+                    c in "0123456789abcdef" for c in digest[7:]):
+                raise ImageRefused(f"{source or 'images.json'}: {ref!r} isn't name@sha256:<64 hex>")
+            refs.append(ref)
+        if not refs:
+            raise ImageRefused(f"{source or 'images.json'} lists no image")
+        return cls(tuple(refs), source)
+
+    @classmethod
+    def load(cls, path: str) -> "AttestedImages":
+        try:
+            doc = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise ImageRefused(f"attested mode: can't read the image list {path} ({e})") from None
+        return cls.parse(doc, path)
+
+    def check(self, image: str) -> str:
+        """The listed digest of `image`, or ImageRefused: only a listed name@digest runs."""
+        if image not in self.refs:
+            raise ImageRefused(f"attested mode: the image {image} isn't on the measured disk's list "
+                               f"({self.source or 'images.json'}); nothing else runs, and nothing is pulled")
+        return image.partition("@")[2]
+
+
 def _missing_test_image(image: str) -> RuntimeError:
     return RuntimeError(f"the test image {image} isn't here: build it with scripts/test-image.sh")
 
@@ -241,12 +295,16 @@ class DockerApi:
 
     VERSION = "v1.41"
 
-    def __init__(self, socket_path: str = "/var/run/docker.sock", margin_s: int = 30) -> None:
-        self.socket_path, self.margin_s = socket_path, margin_s
+    def __init__(self, socket_path: str = "/var/run/docker.sock", margin_s: int = 30,
+                 attested: Optional[AttestedImages] = None) -> None:
+        self.socket_path, self.margin_s, self.attested = socket_path, margin_s, attested
         self._daemon_ok = False
 
     def _call(self, method: str, path: str, body: Optional[dict] = None, timeout: float = 60.0,
               ok=(200, 201, 204, 304)) -> Tuple[int, bytes]:
+        if self.attested is not None and path.split("?")[0].startswith(NEVER_ATTESTED):
+            raise ImageRefused(f"attested mode: never {method} {path.split('?')[0]} (nothing is pulled, loaded or "
+                               f"built; the measured disk loaded its images at boot)")
         conn = _UnixConnection(self.socket_path, timeout)
         try:
             data = json.dumps(body).encode() if body is not None else None
@@ -261,6 +319,8 @@ class DockerApi:
         return resp.status, payload
 
     def ensure_image(self, image: str) -> None:
+        if self.attested is not None:
+            return self._ensure_attested(image)
         status, _ = self._call("GET", f"/images/{quote(image, safe='')}/json", ok=(200, 404))
         if status == 200:
             return
@@ -272,6 +332,18 @@ class DockerApi:
         for line in out.splitlines():  # the daemon streams its progress; a failure arrives in the stream
             if line.strip() and json.loads(line).get("error"):
                 raise RuntimeError(f"docker pull {image}: {json.loads(line)['error']}")
+
+    def _ensure_attested(self, image: str) -> None:
+        """Attested mode: `image` is listed, and the daemon's image under that name is the listed digest (its id, or
+        one of its repository digests); a missing one is refused, never pulled."""
+        digest = self.attested.check(image)
+        status, raw = self._call("GET", f"/images/{quote(image, safe='')}/json", ok=(200, 404))
+        if status != 200:
+            raise ImageRefused(f"attested mode: the listed image {image} isn't loaded (the disk loads it at boot); "
+                               f"nothing is pulled")
+        info = json.loads(raw or b"{}")
+        if info.get("Id") != digest and image not in (info.get("RepoDigests") or []):
+            raise ImageRefused(f"attested mode: the daemon's {image} is {info.get('Id')!r}, not the listed digest")
 
     def create_body(self, spec: Spec) -> dict:
         host = {"NetworkMode": "none", "ReadonlyRootfs": True, "CapDrop": ["ALL"],
@@ -356,8 +428,16 @@ class DockerApi:
 
 
 def default_runner(env=os.environ):
-    """The CLI when there's one, else the Docker socket; ORACLE_SANDBOX=cli|api picks one."""
+    """The CLI when there's one, else the Docker socket; ORACLE_SANDBOX=cli|api picks one. With
+    ORACLE_ATTESTED_IMAGES (the measured disk's images.json, #251 L21) always the socket, in attested mode: it refuses
+    ORACLE_SANDBOX=cli, since the CLI could pull."""
     mode = env.get("ORACLE_SANDBOX", "")
+    listed = env.get("ORACLE_ATTESTED_IMAGES", "")
+    if listed:
+        if mode == "cli":
+            raise ImageRefused("attested mode (ORACLE_ATTESTED_IMAGES) runs the sandbox through the Docker socket "
+                               "only: unset ORACLE_SANDBOX=cli")
+        return DockerApi(env.get("DOCKER_SOCKET", "/var/run/docker.sock"), attested=AttestedImages.load(listed))
     if mode == "api" or (mode != "cli" and not shutil.which("docker")):
         return DockerApi(env.get("DOCKER_SOCKET", "/var/run/docker.sock"))
     return docker_runner

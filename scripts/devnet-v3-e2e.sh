@@ -16,8 +16,20 @@
 #   scripts/devnet-v3-e2e.sh --heal     also time to heal for a paid fix (scripts/time-to-heal.sh): a bad fix passed by
 #                                       a panel of 3, claimed, challenged, and reversed by a fresh panel of 5
 #   scripts/devnet-v3-e2e.sh --report <file>   write the run's numbers as JSON; --verbose prints every node's log
+#   scripts/devnet-v3-e2e.sh --set <name>      instead of the story, one set of #256's lettered scenarios
+#                                       (tests/integration/scenarios_v3.py: launch, few-larger, few-same), its devnet
+#                                       deployed with the set's panel rules and model families (#251 task 3.27)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+SET=""
+if [[ "${1:-}" == --set ]]; then
+  (($# >= 2)) || { echo "devnet-v3-e2e: --set needs a name" >&2; exit 2; }
+  SET=$2
+  shift 2
+fi
+SUITE=tests/integration/suite_v3.py
+PREPARE=(prepare)
+[[ -z "$SET" ]] || { SUITE=tests/integration/scenarios_v3.py; PREPARE=(prepare --set "$SET"); }
 export DEVNET_NAME=${POF_V3_E2E_NAME:-pof-devnet-v3-e2e} DEVNET_PORT=${POF_V3_E2E_PORT:-8558} \
   DEVNET_STATE=${POF_V3_E2E_STATE:-.devnet-v3-e2e} DEVNET_KEYS=insecure-local DEVNET_V2_VACANT=2
 RECORDS=contracts/deployments/${POF_V3_E2E_RECORDS:-v3-e2e}
@@ -40,11 +52,14 @@ scripts/devnet.sh deploy-v2 >/dev/null
 echo "deployed v2: $(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print("RaceV2", r["race"] + ",", r["seats"], "seats, quorum", r["quorum"])' "$DEVNET_RECORD_V2")"
 # The genesis validator's throwaway key and its attestation hash reach the deployment through the environment, never
 # a command line or the output.
-keys=$(python3 tests/integration/suite_v3.py prepare)
-DEVNET_V3_GENESIS_PK=$(sed -n 's/^GENESIS=//p' <<<"$keys") DEVNET_V3_ATTESTATION=$(sed -n 's/^ATTESTATION=//p' <<<"$keys") \
-  DEVNET_V3_FAMILIES=$(sed -n 's/^FAMILIES=//p' <<<"$keys") scripts/devnet.sh deploy-v3 >"$WORK/deploy-v3.log" 2>&1 ||
-  { tail -40 "$WORK/deploy-v3.log" >&2; exit 1; }
+# A set names its panel rules (#251 batch 4); the story deploys the environment's (#132's defaults unless set).
+keys=$(python3 "$SUITE" "${PREPARE[@]}")
+rule() { local v; v=$(sed -n "s/^$1=//p" <<<"$keys"); echo "${v:-$2}"; }
+DEVNET_V3_GENESIS_PK=$(rule GENESIS "") DEVNET_V3_ATTESTATION=$(rule ATTESTATION "") DEVNET_V3_FAMILIES=$(rule FAMILIES "") \
+  DEVNET_V3_PANEL_CAPS=$(rule PANEL_CAPS "${DEVNET_V3_PANEL_CAPS:-strict}") DEVNET_V3_K_TOP=$(rule K_TOP "${DEVNET_V3_K_TOP:-7}") \
+  DEVNET_V3_CHALLENGE_SIZE=$(rule CHALLENGE_SIZE "${DEVNET_V3_CHALLENGE_SIZE:-larger}") \
+  scripts/devnet.sh deploy-v3 >"$WORK/deploy-v3.log" 2>&1 || { tail -40 "$WORK/deploy-v3.log" >&2; exit 1; }
 unset keys
 echo "deployed v3 beside it: $(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print("RaceV3", r["race"] + ", Panels", r["panels"] + ", Validators", r["registry"])' "$DEVNET_RECORD_V3")"
-python3 tests/integration/suite_v3.py run --rpc "http://127.0.0.1:$DEVNET_PORT" --record "$DEVNET_RECORD_V3" \
+python3 "$SUITE" run ${SET:+--set "$SET"} --rpc "http://127.0.0.1:$DEVNET_PORT" --record "$DEVNET_RECORD_V3" \
   --work "$WORK" "$@"

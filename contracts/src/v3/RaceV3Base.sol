@@ -12,6 +12,7 @@ import {PoolV3} from "./PoolV3.sol";
 import {Status, Kind} from "./PanelsBase.sol";
 import {LaunchChain} from "./LaunchChain.sol";
 import {SolverBook} from "./SolverBook.sol";
+import {PanelRules, PanelRulesLib} from "./PanelRules.sol";
 
 /// RaceV3's state, types and internals (proof-of-fix#138, task 3.5 of #132). RaceV3 and its companion RaceV3Annex both
 /// inherit it, so they share one storage layout: RaceV3 runs its rarely called actions in its own storage by
@@ -39,7 +40,7 @@ abstract contract RaceV3Base is Baskets {
         uint256 releaseEveryDays; // instalments are paid at each release after finality
         uint256 instalments;
         /// The judges' fee mode (#132 D30; ADR 0007). 0, the pure taxi fare (the Sepolia launch's, owner 2026-11-19):
-        /// a fix's submission posts FeesV3's worst-case deposit for K_MAX judges, its judges are paid by the meter,
+        /// a fix's submission posts FeesV3's worst-case deposit for `kTop` judges, its judges are paid by the meter,
         /// and whatever is left returns to the solver, pass or fail, withdrawn or not, as a registration check's.
         /// Above 0, JUDGE_FEE, a flat fee (kept for a later mainnet decision): every fix's submission pays it on
         /// arrival in place of a deposit sized to the quote, its judges are paid from it, and its rest goes to the
@@ -137,14 +138,19 @@ abstract contract RaceV3Base is Baskets {
     struct Challenge {
         address challenger;
         uint256 stake; // config.challengeStake, in units
-        uint256 cover; // FeesV3.depositFor(id, repo, K_MAX), in units
+        uint256 cover; // FeesV3.depositFor(id, repo, coverJudges), in units
         bool wasPass; // the verdict challenged
         uint256 floor; // Panels' panel count at the filing: its panel's id is above it
         bool test; // a failing-test dispute of a pass (#132 D21), not a receipt challenge
     }
 
 
-    uint256 internal constant K_MAX = 7;
+    /// Panels' largest issue-tier panel (`PanelRules.kTop`, #251 batch 4, L24): a check's deposit is priced for this
+    /// many judges, k being unknown until the draw.
+    uint256 internal immutable topJudges;
+    /// The largest challenge panel Panels' rules can draw (PanelRulesLib.challengeTop): a challenge's cover is priced
+    /// for it (`kTop` with `Same`; CHALLENGE_K[kTop] with `Larger`, 7 with the defaults).
+    uint256 internal immutable coverJudges;
     /// D21's stake (D24's appeal has none since 2026-11-19): the larger of $5 and 10 % of the bounty (micro-coins, bps); D21's reward, of the bounty.
     uint256 internal constant STAKE_MIN = 5e6;
     uint256 internal constant STAKE_BPS = 1_000;
@@ -199,6 +205,7 @@ abstract contract RaceV3Base is Baskets {
     event ClawedBack(uint256 indexed bounty, uint256 indexed epoch, uint256 earned);
     event ChallengeFiled(uint256 indexed submission, address indexed challenger);
     event ChallengeSettled(uint256 indexed submission, uint256 indexed pid, bool upheld);
+    event ChallengeLapsed(uint256 indexed submission, address indexed challenger, uint256 returned);
     event PanelPaid(uint256 indexed submission, uint256 indexed pid, uint256 fromDeposit, uint256 fromPool);
     event HeadMerged(uint256 indexed bounty, uint256 indexed epoch, uint256 indexed submission, bytes32 fix);
     event Disputed(uint256 indexed submission, address indexed disputer, bytes32 test, uint256 stake);
@@ -237,6 +244,9 @@ abstract contract RaceV3Base is Baskets {
         fees = fees_;
         pool = pool_;
         registry = IValidators(address(panels_.validators()));
+        PanelRules memory rules = panels_.panelRules();
+        topJudges = rules.kTop;
+        coverJudges = PanelRulesLib.challengeTop(rules);
         heads = heads_;
         coin = coin_;
         start = start_ == 0 ? block.timestamp : start_;
@@ -327,6 +337,7 @@ abstract contract RaceV3Base is Baskets {
     uint256 internal constant S_FINAL_AT = 15;
     uint256 internal constant S_PID = 16;
     uint256 internal constant S_REDRAWS = 41;
+    uint256 internal constant S_FILED_LAPSED = 48; // #251 batch 4, L25
     uint256 internal constant P_ID = 0; // Panels' Panel
     uint256 internal constant P_REVEAL_BY = 3;
     uint256 internal constant P_K = 5;
@@ -334,6 +345,7 @@ abstract contract RaceV3Base is Baskets {
     uint256 internal constant P_PASSES = 9;
     uint256 internal constant P_COUNTED = 11;
     uint256 internal constant P_KIND = 12;
+    uint256 internal constant P_CLOSED = 13;
     uint256 internal constant X_KEY = 0; // Panels' Seat
     uint256 internal constant X_REVEALED = 3;
     uint256 internal constant X_RECEIPTED = 4;
@@ -442,7 +454,7 @@ abstract contract RaceV3Base is Baskets {
         return _issues[s.issue != 0 ? s.issue : _bounties[s.bounty].issue].repo;
     }
 
-    /// A check for Panels: its deposit (FeesV3's worst case for K_MAX judges, k being unknown until the draw) is held,
+    /// A check for Panels: its deposit (FeesV3's worst case for `kTop` judges, k being unknown until the draw) is held,
     /// FeesV3 fixes its prices, and Panels opens it at `judged` micro-coins (TEE judges only for a hidden issue). Its
     /// parties among the funders are those who pledged before it (`pledges`).
     function _newCheck(uint256 b, uint256 issueId, address solver, bytes32 commitment, uint256 judged)
@@ -460,7 +472,7 @@ abstract contract RaceV3Base is Baskets {
         s.judged = judged;
         if (b != 0) s.pledges = _bounties[b].pledges;
         uint256 fee = b != 0 ? config.judgeFee : 0;
-        uint256 deposit = _units(fee != 0 ? fee : fees.maxDeposit(_repoOf(s), K_MAX));
+        uint256 deposit = _units(fee != 0 ? fee : fees.maxDeposit(_repoOf(s), topJudges));
         if (deposit != 0) _hold(coin, solver, deposit);
         s.deposit = deposit;
         fees.open(id);

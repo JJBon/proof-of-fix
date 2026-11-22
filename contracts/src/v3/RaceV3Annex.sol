@@ -112,8 +112,9 @@ contract RaceV3Annex is RaceV3Base {
     // ---------- challenges and reversals ----------
 
     /// A challenge of check `id`'s verdict in its window (or held), with `evidence`: the challenger posts the
-    /// published stake and its panel's worst-case cost (FeesV3's deposit for K_MAX judges at the check's prices), held
-    /// here; Panels draws a larger, fresh panel. One at a time.
+    /// published stake and its panel's worst-case cost (FeesV3's deposit for the largest challenge panel Panels' rules
+    /// can draw, at the check's prices), held here; Panels draws a fresh panel (larger, or of the verdict's size under
+    /// `Same`, L24). One at a time.
     function challenge(uint256 id, bytes32 evidence) external delegated nonReentrant {
         _file(id, evidence, _units(config.challengeStake), false);
     }
@@ -137,10 +138,11 @@ contract RaceV3Annex is RaceV3Base {
     function settleChallenge(uint256 id, uint256 cpid) external delegated nonReentrant {
         Challenge memory c = challenges[id];
         bytes memory p = _pan(cpid);
+        bytes memory ps = _sub(id);
         if (
             c.challenger == address(0) || _w(p, P_ID) != id || Kind(_w(p, P_KIND)) != Kind.Challenge
-                || _w(p, P_COUNTED) == 0 || cpid <= c.floor
-        ) revert Refused();
+                || _w(p, P_COUNTED) == 0 || cpid <= c.floor || _w(ps, S_FILED_LAPSED) != 0
+        ) revert Refused(); // a filed challenge that lapsed is settled by `settleLapse`; a later panel isn't its
         address[] memory keys = panels.judges(cpid);
         _reportsDue(cpid, _w(p, P_REVEAL_BY), keys);
         delete challenges[id];
@@ -148,7 +150,6 @@ contract RaceV3Annex is RaceV3Base {
         Submission storage s = _submissions[id];
         IFeesV3.Report[] memory rs = _reports(cpid, keys);
         uint256[] memory micro = fees.checkCost(id, _repoOf(s), rs);
-        bytes memory ps = _sub(id);
         uint256 kc = _w(p, P_K);
         bool upheld = (2 * _w(p, P_PASSES) > kc) != c.wasPass || (!c.test && _falseReceipt(cpid, kc, _w(ps, S_K)));
         if (upheld) {
@@ -173,6 +174,18 @@ contract RaceV3Annex is RaceV3Base {
         if (upheld && c.test) _reward(id, c.challenger, won);
     }
 
+    /// A filed challenge (or test dispute) that lapsed in Panels (#251 batch 4, L25: no panel by its CHALLENGE_DEADLINE,
+    /// or its panel released after it): the network failed to judge it, not the challenger, so its stake and cover
+    /// return whole, with no reward and nothing to the accused; the verdict stands. Seats of a released challenge
+    /// panel that revealed with receipts are paid from the check's deposit and the pool (`payPanel`). Anyone.
+    function settleLapse(uint256 id) external delegated nonReentrant {
+        Challenge memory c = challenges[id];
+        if (c.challenger == address(0) || _w(_sub(id), S_FILED_LAPSED) == 0) revert Refused();
+        delete challenges[id];
+        _release(coin, c.stake + c.cover, c.challenger);
+        emit ChallengeLapsed(id, c.challenger, c.stake + c.cover);
+    }
+
     /// The race follows the verdict Panels holds now, after a challenge (filed here, or opened by an auditor) reversed
     /// it: a pass reversed to a fail claws back the bounty's award (nothing was earned before finality) and reopens the
     /// bounty; a fail reversed to a pass wins if the bounty is still open, in its commitment's turn. Anyone.
@@ -184,16 +197,20 @@ contract RaceV3Annex is RaceV3Base {
 
     /// An audit panel, or the challenge panel of an auditor's challenge, once counted with its reports in: each judge
     /// is paid FeesV3's `checkCost` (the median of the panel's reports, the unscaled service fee) from the check's
-    /// deposit, and from the sponsors' pool beyond it. Once a panel. Anyone.
+    /// deposit, and from the sponsors' pool beyond it. A released challenge panel's seats that revealed with receipts
+    /// are paid the same way, filed or not (L25: as an upheld challenge's panel, not from the cover). Once a panel.
+    /// Anyone.
     function payPanel(uint256 pid) external delegated nonReentrant {
         bytes memory p = _pan(pid);
         uint256 id = _w(p, P_ID);
         Kind kind = Kind(_w(p, P_KIND));
         Challenge storage c = challenges[id];
         bool filed = c.challenger != address(0) && pid > c.floor; // its own panel: settleChallenge
-        if ((kind != Kind.Audit && kind != Kind.Challenge) || _w(p, P_COUNTED) == 0 || panelPaid[pid] || filed) {
-            revert Refused();
-        }
+        bool released = kind == Kind.Challenge && _w(p, P_CLOSED) != 0;
+        if (
+            (kind != Kind.Audit && kind != Kind.Challenge) || panelPaid[pid]
+                || (!released && (_w(p, P_COUNTED) == 0 || filed))
+        ) revert Refused();
         address[] memory keys = panels.judges(pid);
         _reportsDue(pid, _w(p, P_REVEAL_BY), keys);
         panelPaid[pid] = true;
@@ -208,7 +225,7 @@ contract RaceV3Annex is RaceV3Base {
     function _file(uint256 id, bytes32 evidence, uint256 stake, bool test) internal {
         Submission storage s = _submissions[id];
         if (s.solver == address(0) || challenges[id].challenger != address(0)) revert Refused();
-        uint256 cover = _units(fees.depositFor(id, _repoOf(s), K_MAX));
+        uint256 cover = _units(fees.depositFor(id, _repoOf(s), coverJudges));
         (, bool pass,) = _verdict(id);
         if (stake + cover != 0) _hold(coin, msg.sender, stake + cover);
         challenges[id] = Challenge(msg.sender, stake, cover, pass, panels.panelCount(), test);

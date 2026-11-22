@@ -1,4 +1,4 @@
-"""The AWS devnet's seats host's side in proof-of-fix (#152, platform#219): the role seat's entry in the node's image
+"""The AWS devnet's seats host's side in proof-of-fix (#152, infra#219): the role seat's entry in the node's image
 (oracle/seat.py) and the images' build script. No network, no Docker, no AWS."""
 
 from __future__ import annotations

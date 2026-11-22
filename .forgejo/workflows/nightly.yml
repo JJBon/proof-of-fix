@@ -6,7 +6,7 @@
 # the next pass comments and closes it. Not a required check. The on-demand run is integration.yml.
 #
 # When: 03:00 UTC, 22:00 America/Bogota. The test runner (platform modules/ci, prod stack ci) runs 09:00-01:00 Bogota
-# (14:00-06:00 UTC; stop_cron 01:00, owner, platform#160), so this starts 3 hours before it stops and finishes, even at
+# (14:00-06:00 UTC; stop_cron 01:00, owner, infra#160), so this starts 3 hours before it stops and finishes, even at
 # the 60-minute timeout, before the module's older 23:00 default; a run outside the window just waits for the runner.
 # Late in the evening so the suite (about 15-25 minutes) rarely queues in front of pof / check on the runner's one slot.
 # Forgejo's scheduler reads cron in the server's time zone, UTC (the forgejo container sets none).

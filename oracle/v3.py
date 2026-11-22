@@ -50,16 +50,23 @@ CANDIDATE, ACTIVE, LEAVING, EXITED, BELOW_FLOOR = 1, 2, 3, 4, 5
 SNAP = "(uint64,uint32,uint32,uint64)"
 PANELS_SUBMISSION = (f"(bytes32,uint128,uint64,uint8,uint8,uint8,uint8,bool,bool,bool,{SNAP},uint64,uint64,uint64,"
                      f"uint64,uint64,uint64,uint8,uint8,uint8,bool,bool,bool,uint64,uint64,uint64,{SNAP},{SNAP},"
-                     "address,address,uint64,bool,uint8,uint64,uint64)")
+                     "address,address,uint64,bool,uint8,uint64,uint64,uint64,uint64,uint8,bool,bool)")
 PANELS_SUBMISSION_FIELDS = ["commitment", "bounty", "seedBlock", "status", "tier", "k", "level", "pass",
                             "heldAtCount", "teeOnly", "snap", "waitEpoch", "finalAt", "pid", "shadowPid",
                             "frozenLeft", "auditBlock", "auditsDue", "auditsDrawn", "auditsDone", "auditDecided",
                             "challengeOpen", "lastUpheld", "challengeBlock", "challengeEpoch", "challengePid",
                             "auditSnap", "challengeSnap", "challenger", "author", "auditEpoch", "auditWaits",
-                            "redraws", "retryAt", "auditStuckAt"]
+                            "redraws", "retryAt", "auditStuckAt", "challengeBy", "challengeRetryAt", "lapses",
+                            "chalFiled", "filedLapsed"]
 PANEL = f"(uint256,bytes32,uint64,uint64,uint32,uint8,uint8,uint8,uint8,uint8,uint8,bool,uint8,bool,bool,uint64,{SNAP})"
 PANEL_FIELDS = ["id", "seed", "sealBy", "revealBy", "counter", "k", "seats", "nSealed", "done", "passes", "level",
                 "counted", "kind", "closed", "scored", "ex", "snap"]
+# Panels' rules (#251 contract batch 4, L23 and L24): each cap Strict (0) or Off (1), kTop, and the challenge's size,
+# Larger (0) or Same (1).
+PANEL_RULES = "(uint8,uint8,uint8,uint256,uint8)"
+PANEL_RULES_FIELDS = ["operatorCap", "hostCap", "teeCap", "kTop", "challengeSize"]
+CAPS = ["strict", "off"]
+CHALLENGE_SIZES = ["larger", "same"]
 SEAT = "(address,uint8,bool,bool,bool,bool,uint8,bytes32,bytes32)"
 SEAT_FIELDS = ["key", "level", "hasSeal", "revealed", "receipted", "vote", "mask", "seal", "receipt"]
 VALIDATOR = ("(address,uint8,uint8,bool,uint8,address,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint128,"
@@ -303,11 +310,27 @@ class Chain:
         return out
 
     def liveness(self) -> dict:
-        """Panels' liveness values (#251, L19 and L16): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS and the capacity's
-        window, in seconds (MAX_REDRAWS a count)."""
+        """Panels' liveness values (#251, L19, L16 and L25): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS, the capacity's
+        window and CHALLENGE_DEADLINE, in seconds (MAX_REDRAWS a count)."""
         names = {"stuckGrace": "STUCK_GRACE()", "retryDelay": "RETRY_DELAY()", "maxRedraws": "MAX_REDRAWS()",
-                 "capWindow": "CAP_WINDOW()"}
+                 "capWindow": "CAP_WINDOW()", "challengeDeadline": "CHALLENGE_DEADLINE()"}
         return {k: self.rpc.view(self.panels, sig, ["uint256"])[0] for k, sig in names.items()}
+
+    def panel_rules(self) -> dict:
+        """Panels' rules (#251 contract batch 4, L23 and L24), named as the deployment record names them: each cap
+        "strict" or "off", "kTop", and "challengeSize" "larger" or "same"."""
+        r = _named(PANEL_RULES_FIELDS, self.rpc.view(self.panels, "panelRules()", [PANEL_RULES])[0])
+        return {"operatorCap": CAPS[r["operatorCap"]], "hostCap": CAPS[r["hostCap"]], "teeCap": CAPS[r["teeCap"]],
+                "kTop": r["kTop"], "challengeSize": CHALLENGE_SIZES[r["challengeSize"]]}
+
+    def cover_judges(self) -> int:
+        """How many judges a challenge's cover is priced for (RaceV3: the largest challenge panel the rules draw,
+        PanelRulesLib.challengeTop): kTop with `same` (3 for kTop 1), CHALLENGE_K[kTop] with `larger`."""
+        r = self.panel_rules()
+        k = r["kTop"]
+        if k == 1:
+            return 3
+        return k if r["challengeSize"] == "same" else min(k + 2, K_MAX)
 
     def capacity(self, key: str) -> dict:
         """A validator's capacity (#251 L16, #253): checks a window in force now, the next one and from which block,
@@ -433,7 +456,10 @@ class Chain:
     def token_prices(self, family: bytes) -> list:
         return self.rpc.view(self.fees, "tokenPrices(bytes32)", ["uint256[3]"], family)[0]
 
-    def deposit_for(self, s: int, repo, judges: int = K_MAX) -> int:
+    def deposit_for(self, s: int, repo, judges: int | None = None) -> int:
+        """FeesV3's deposit for check `s` and `judges` judges (default: what a challenge's cover is priced for)."""
+        if judges is None:
+            judges = self.cover_judges()
         return self.rpc.view(self.fees, "depositFor(uint256,bytes32,uint256)", ["uint256"], s, b32(repo), judges)[0]
 
     # ----- the fee coin -----

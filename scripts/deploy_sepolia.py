@@ -20,7 +20,7 @@ Before anything is signed, in this order, and stopping at the first refusal (exi
    creation-code hash against the record (it names the contract that differs), the genesis mint, the genesis
    validator's signature for the registry's address, and every constructor's own checks.
 Only then, and only with `--broadcast-sepolia`, forge broadcasts; the wrapper checks that every address in the record
-has code and that the race reports the chain id. The record (chain id, addresses, every constructor argument, the
+has code, that the race reports the chain id, and that Panels reads back the panel rules asked for. The record (chain id, addresses, every constructor argument, the
 deployer, the bytecode hashes, the limit of the binding; plus Panels' linked libraries, which forge deploys through the
 CREATE2 deployer at addresses that follow from their code, the release candidate, the commit and the genesis-head
 check) is written under contracts/deployments: `sepolia-v3.json` on Sepolia, `sepolia-local/chain-<id>.json` on a
@@ -33,6 +33,15 @@ genesis mint, fixed at deploy, is `--genesis-mint AMOUNT` coins in total (defaul
 seed bounties): the genesis validator's 250-coin bond goes to the registry maker, which bonds it into Validators, and
 the rest to `--genesis-mint-to ADDRESS` (default the deployer). The record's `testCoin` names the coin, the faucet, the
 genesis mint and the faucet's rule.
+
+The panel rules (#251 contract batch 4, design L23 and L24): `--panel-caps strict|launch` (default `strict`: the
+operator, host and TEE-type caps each `Strict`; `launch`: each `Off`), `--k-top N` (the largest issue-tier panel, odd
+from 1 to 7; default 7) and `--challenge-size larger|same` (default `larger`, D4). The Sepolia deployment runs with
+`--panel-caps launch --k-top 3 --challenge-size same` (owner, 2026-11-20). They are Panels' constructor argument, not its
+creation code, so the bytecode hashes don't cover them: the release-candidate record names them (`panelRules`) and
+the wrapper refuses one that ran with other rules; the deployment record names them as Panels reads them back
+(`panelRules`), and a record whose rules differ from the ones asked for (or, after a broadcast, from the chain's) is
+refused.
 
 The genesis validator's Radicle node (#251, design L11 condition 1, owner 2026-11-20): `--genesis-rad-node` names it
 (required). Its 32-byte Ed25519 key is a field of the genesis registration, inside the digest the genesis validator
@@ -55,17 +64,24 @@ contracts/release-candidates/ once the run of task 7.0 passes):
 
     {"format": "pof-release-candidate/1",
      "tag": "v3-rc1", "commit": "<the tagged commit's 40-hex SHA-1>",
-     "result": "passed",                                   # or "failed"
+     "result": "passed",                                   # or "failed"; "incomplete" while items are pending
      "checks": {"integration": {"command": "scripts/integration.sh --release-candidate <commit>",
                                 "runs": ["passed", "passed", "passed"]},   # the last 3 must have passed, in a row
                 "productionWindows": "passed",             # L18 item 2: a bounty with production windows, clock moved
                 "sevSnpValidator": "passed",               # item 3: one real SEV-SNP validator registered and judged
-                "realModelRun": "passed"},                 # item 4: one small real-model run
+                "realModelRun": "passed",                  # item 4: one small real-model run
+                "attestedImages": "passed"},               # item 6 (L21): item 3's host booted the measured checker
+                                                           # disk, its measurement equals the reproducible build's and
+                                                           # the genesis's image digest, and it refused an unlisted image
+     "panelRules": {"operatorCap": "off", "hostCap": "off", "teeCap": "off",   # the rules the run deployed with (#251
+                    "kTop": 3, "challengeSize": "same"},                       # batch 4): the deploy's must equal them
      "bytecode": {"TestCoin": "0x<keccak256 of the creation code>", "CoinFaucet": "0x…", "PoolV3": "0x…",
                   "RegistryMaker": "0x…", "Validators": "0x…",
                   "PanelScores": "0x…", "FeesV3": "0x…", "Panels": "0x…", "RaceV3Endings": "0x…", "RaceV3Annex": "0x…",
                   "RaceV3": "0x…"}}
 
+`scripts/integration.sh --release-candidate <commit>` (scripts/release_candidate.py) writes the record: the commit, the
+hashes, the integration runs and `productionWindows`; the items it can't check stay "pending" until recorded.
 `hashes` prints the `bytecode` object for the checkout as it is. The record is refused if any field is missing or not
 "passed", if it names other contracts, or if its commit isn't this checkout's HEAD or an ancestor of it; forge then
 refuses any contract whose hash differs, so a change after the run means a new release candidate.
@@ -113,7 +129,12 @@ CONTRACTS = ("TestCoin", "CoinFaucet", "PoolV3", "RegistryMaker", "Validators", 
 COIN_DECIMALS = 6
 GENESIS_BOND_COINS = 250  # the genesis validator's bond (L17), paid from the genesis mint
 GENESIS_MINT_COINS = 5_000  # L17, 2026-11-20: 15 bonds of $250 (3,750) and 1,250 to seed bounties
-RC_CHECKS = ("productionWindows", "sevSnpValidator", "realModelRun")
+RC_CHECKS = ("productionWindows", "sevSnpValidator", "realModelRun", "attestedImages")
+# The panel rules (#251 batch 4, L23, L24), as the records name them; the defaults are #132's, the Sepolia launch's
+# `launch`, 3 and `same`.
+RULE_FIELDS = ("operatorCap", "hostCap", "teeCap", "kTop", "challengeSize")
+PANEL_CAPS = ("strict", "launch")
+CHALLENGE_SIZES = ("larger", "same")
 RID_RE = re.compile(r"^rad:z[1-9A-HJ-NP-Za-km-z]+$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
@@ -204,10 +225,28 @@ def contains(commit: str, root: Path = ROOT) -> bool:
     return r.returncode == 0
 
 
-def load_release_candidate(path: str, root: Path = ROOT) -> dict:
+def panel_rules(caps: str = "strict", k_top: int = 7, size: str = "larger") -> dict:
+    """The panel rules from the flags, named as the records name them (#251 batch 4): refused unless the caps are
+    `strict` or `launch`, kTop odd from 1 to 7 and the challenge size `larger` or `same`."""
+    if caps not in PANEL_CAPS:
+        raise Refused(f"--panel-caps is strict or launch, not {caps!r}")
+    if not isinstance(k_top, int) or isinstance(k_top, bool) or not 1 <= k_top <= 7 or k_top % 2 == 0:
+        raise Refused(f"--k-top is an odd number from 1 to 7, not {k_top!r}")
+    if size not in CHALLENGE_SIZES:
+        raise Refused(f"--challenge-size is larger or same, not {size!r}")
+    cap = "strict" if caps == "strict" else "off"
+    return {"operatorCap": cap, "hostCap": cap, "teeCap": cap, "kTop": k_top, "challengeSize": size}
+
+
+def _rules_text(r: dict) -> str:
+    return ", ".join(f"{k} {r.get(k)}" for k in RULE_FIELDS)
+
+
+def load_release_candidate(path: str, root: Path = ROOT, rules: dict | None = None) -> dict:
     """The record, refused unless it's `pof-release-candidate/1`, passed in every L18 item (the integration suite's
-    last 3 runs in a row), names exactly this script's contracts with a 32-byte hash each, and names a commit this
-    checkout contains. The bytecode itself is compared by forge, which compiles it."""
+    last 3 runs in a row), names exactly this script's contracts with a 32-byte hash each, names a commit this
+    checkout contains, and names every panel rule (`panelRules`), which must be `rules` when given (the deployment's:
+    the run tested those rules, #251 batch 4). The bytecode itself is compared by forge, which compiles it."""
     p = Path(path)
     if not p.is_file():
         raise Refused(f"no release-candidate record at {path}")
@@ -237,6 +276,12 @@ def load_release_candidate(path: str, root: Path = ROOT) -> dict:
     for name, h in code.items():
         if not isinstance(h, str) or not B32_RE.match(h):
             raise Refused(f"the release-candidate record's hash for {name} isn't 32 bytes")
+    pr = rc.get("panelRules")
+    if not isinstance(pr, dict) or set(pr) != set(RULE_FIELDS):
+        raise Refused(f"the release-candidate record must name every panel rule: {', '.join(RULE_FIELDS)}")
+    if rules is not None and pr != rules:
+        raise Refused(f"the release-candidate record ran with other panel rules ({_rules_text(pr)}), not the ones asked "
+                      f"for ({_rules_text(rules)})")
     return rc
 
 
@@ -448,12 +493,13 @@ def deploy(a) -> int:
     deployer = _deployer(a)
     mint, mint_to = genesis_mint(a.genesis_mint, a.genesis_mint_to, deployer)
     rad_key, rad_did = genesis_rad_node(a.genesis_rad_node)
+    rules = panel_rules(a.panel_caps, a.k_top, a.challenge_size)
 
     cid = chain_id(url)  # before anything is signed
     check_chain(cid, local)
     say(f"chain {cid}, {'a local endpoint' if local else 'a remote endpoint'}; deployer {deployer}")
 
-    rc = load_release_candidate(a.release_candidate)
+    rc = load_release_candidate(a.release_candidate, rules=rules)
     say(f"release candidate {rc.get('tag', '?')} at {rc['commit'][:12]}: passed")
 
     cmd = shlex.split(a.verify_head_cmd) if a.verify_head_cmd else [sys.executable, "-m", "pofctl", "verify-head"]
@@ -471,6 +517,9 @@ def deploy(a) -> int:
     env["DEPLOY_GENESIS_MINT"] = str(mint)
     env["DEPLOY_GENESIS_MINT_TO"] = mint_to
     env["DEPLOY_GENESIS_RAD_NODE"] = rad_key
+    env["DEPLOY_PANEL_CAPS"] = a.panel_caps
+    env["DEPLOY_K_TOP"] = str(a.k_top)
+    env["DEPLOY_CHALLENGE_SIZE"] = a.challenge_size
     script = f'forge script {SCRIPT} --rpc-url "$DEPLOY_RPC_URL" --sender "$DEPLOY_DEPLOYER"'
     stdin, mounts, tty = "", (), False
     if a.broadcast_sepolia:
@@ -508,9 +557,18 @@ def deploy(a) -> int:
         raise Refused("the record's genesis mint isn't the one asked for")
     if str(_genesis_args(record).get("radNode", "")).lower() != rad_key:
         raise Refused("the record's genesis Radicle node key isn't the one asked for")
+    if isinstance(record.get("panelRules"), str):  # forge writes a nested JSON object, or its text
+        try:
+            record["panelRules"] = json.loads(record["panelRules"])
+        except ValueError:
+            pass
+    if record.get("panelRules") != rules:
+        raise Refused(f"the record's panel rules ({_rules_text(record.get('panelRules') or {})}) aren't the ones asked "
+                      f"for ({_rules_text(rules)})")
     record["libraries"] = libraries(run_file)
     if a.broadcast_sepolia:
         _check_deployed(url, record, cid)
+        _check_rules(url, record, rules)
     record.update({
         "dryRun": not a.broadcast_sepolia,
         "endpoint": "local" if local else "remote",
@@ -614,6 +672,28 @@ def _check_deployed(url: str, record: dict, cid: int) -> None:
         raise Refused(f"the race reports chain {int(got or '0x0', 16)}, not {cid}")
 
 
+def read_rules(url: str, panels: str) -> dict:
+    """Panels' `panelRules()` on the chain, named as the records name them."""
+    out = rpc(url, "eth_call", [{"to": panels, "data": "0x" + keccak256(b"panelRules()")[:4].hex()}, "latest"])
+    raw = bytes.fromhex((out or "0x")[2:])
+    if len(raw) < 5 * 32:
+        raise Refused(f"Panels at {panels} doesn't answer panelRules()")
+    w = [int.from_bytes(raw[32 * i:32 * i + 32], "big") for i in range(5)]
+    if any(x > 1 for x in (w[0], w[1], w[2], w[4])):
+        raise Refused("Panels' panelRules() isn't a rules tuple")
+    caps = ("strict", "off")
+    return {"operatorCap": caps[w[0]], "hostCap": caps[w[1]], "teeCap": caps[w[2]], "kTop": w[3],
+            "challengeSize": CHALLENGE_SIZES[w[4]]}
+
+
+def _check_rules(url: str, record: dict, rules: dict) -> None:
+    """After a broadcast: the deployed Panels reads back the rules asked for (#251 batch 4)."""
+    got = read_rules(url, record["addresses"]["panels"])
+    if got != rules:
+        raise Refused(f"the deployed Panels has other panel rules ({_rules_text(got)}), not the ones asked for "
+                      f"({_rules_text(rules)})")
+
+
 def _rel(path: str) -> str:
     p = Path(path).resolve()
     try:
@@ -647,6 +727,12 @@ def parser() -> argparse.ArgumentParser:
     d.add_argument("--genesis-rad-node", metavar="DID", help="required: the genesis validator's Radicle node, "
                    "did:key:z6Mk… (its `rad self --did`) or 0x and 64 hex digits; signed into its registration and "
                    "stored on-chain (#251, L11)")
+    d.add_argument("--panel-caps", default="strict", help="the operator, host and TEE-type caps (#251 L23): strict "
+                   "(default, #132's) or launch (all off, the Sepolia record's)")
+    d.add_argument("--k-top", type=int, default=7, help="the largest issue-tier panel (L24): odd, 1 to 7 (default 7; "
+                   "Sepolia 3)")
+    d.add_argument("--challenge-size", default="larger", help="a challenge panel's size (L24): larger (default, D4) "
+                   "or same (the Sepolia record's)")
     d.set_defaults(fn=deploy)
     h = sub.add_parser("hashes", help="print each contract's creation-code hash (a release-candidate record's)")
     h.set_defaults(fn=lambda a: print(json.dumps({"bytecode": hashes()}, indent=2)) or 0)

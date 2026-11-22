@@ -26,8 +26,47 @@
 #                                              to heal of a paid fix. Local only: --target aws --version 3 is task 5.2.
 #                                              v2's scenarios 1-3, 5, 7 and 10 go through pofctl, the bot and the
 #                                              relay, which don't speak v3 yet: they are not run for v3.
+#   scripts/integration.sh --version 3 --radicle
+#                                              one bounty end to end on Radicle (#251 task 4.6, about 15-25 minutes):
+#                                              real Radicle 1.10.3 nodes, anvil and a relay on a Docker network created
+#                                              with --internal (the spike's setup, spikes/radicle/v3_spike.py), v3 on
+#                                              the launch's rules (panel caps off, panels of 3, same-size challenges,
+#                                              the windows in minutes, the taxi fare, the test coin), seven validators
+#                                              reading patches and issues from their own Radicle nodes, the reporter,
+#                                              funder and solvers through pofctl: tests/integration/suite_v3_radicle.py.
+#                                              Nothing is published beyond that network; --keep leaves it up. Results
+#                                              and node logs: .integration-radicle-v3/
+#
+#   scripts/integration.sh --version 3 --external
+#                                              one validator run outside the harness (#251 task 7.0, L18 items 3 and
+#                                              6): production windows on anvil, the seed and six harness validators on
+#                                              Radicle (task 4.9's kit network), and one validator this run neither
+#                                              starts nor signs for (POF_V3_EXTERNAL), which registers itself, qualifies
+#                                              and sits a fix's counted panel while the moved clock waits for its
+#                                              seats: tests/integration/external_v3.py. POF_EXT_MODE=aws (the test-chain
+#                                              host beside the SEV-SNP host, scripts/rc-aws.sh) or local (the dress
+#                                              rehearsal; scripts/rc-aws.sh rehearse starts the outside validator).
+#                                              It writes ready.json and external.json in POF_EXT_DIR
 #
 # POF_INTEGRATION_PORT picks the devnet's port (default 8556); POF_INTEGRATION_KEEP=1 keeps the devnet.
+#
+# --version 3 runs scripts/integration-v3.sh: the story above, then #256's lettered scenarios for #251's contract batch 4
+# (task 3.27), each set on its own throwaway devnet with the rules it needs (tests/integration/scenarios_v3.py): u, v
+# and w on the Sepolia record's rules (panel caps `launch`, kTop 3, `same`), f and g with one model family under both
+# challenge sizes. --sets story,launch,few-larger,few-same picks some (about 6, 25, 4 and 4 minutes); --report-dir
+# <dir> writes each set's numbers.
+#
+#   scripts/integration.sh --release-candidate <commit> [--runs N] [--record <file>] [--tag <name>]
+#        The release candidate (#251 L18, task 7.0; scripts/release_candidate.py): that exact commit, checked out into
+#        a fresh worktree, runs `--version 3 --heal` N times in a row (default 3, stopping at the first failure) on
+#        production windows (refused otherwise: SEV-SNP hosts can't cold-start within minute windows), and the record
+#        is written: the commit, every contract's bytecode hash (scripts/deploy-sepolia.sh hashes), the runs and the
+#        rules the launch set ran with. The items this run can't check (a real SEV-SNP validator, a real-model run, the
+#        attested images) stay "pending" until recorded; the deploy script refuses anything but "passed".
+#   scripts/integration.sh --release-candidate <commit> --external [--logs <dir>]
+#        That commit's external set only (--version 3 --external in its worktree, production windows enforced): the
+#        SEV-SNP host's chain part of task 7.0 (scripts/rc-aws.sh runs it on the test-chain host; its rehearsal here).
+#        It writes ready.json and external.json in <dir>; scripts/rc_aws.py records the items from them.
 #
 # --target aws (#152's second box) runs against the persistent AWS devnet instead, with pof-sandbox and the live validator
 # nodes (scripts/devnet-seats.sh up, and the owner's kit), the fake judge, and nothing started, reset or redeployed here:
@@ -47,6 +86,8 @@ TARGET=local
 VERSION=2
 FIRST_RUN=0
 RADICLE=0
+EXTERNAL=0
+RC=""
 ARGS=()
 while (($#)); do
   case "$1" in
@@ -62,23 +103,60 @@ while (($#)); do
       shift 2
       ;;
     --version=*) VERSION=${1#--version=}; shift ;;
+    --release-candidate)
+      (($# >= 2)) || { echo "integration: --release-candidate needs a commit" >&2; exit 2; }
+      RC=$2
+      VERSION=3
+      shift 2
+      ;;
     *)
       [[ "$1" == --with-first-run ]] && FIRST_RUN=1
       [[ "$1" == --radicle ]] && RADICLE=1
+      [[ "$1" == --external ]] && EXTERNAL=1
       ARGS+=("$1")
       shift
       ;;
   esac
 done
+if [[ -n "$RC" ]]; then  # #251 L18: its own worktree at that commit, its own devnet name and port
+  [[ "$TARGET" == local ]] || { echo "integration: --release-candidate runs on the local devnet only" >&2; exit 2; }
+  exec python3 scripts/release_candidate.py "$RC" "${ARGS[@]}"
+fi
 case "$VERSION" in
   2) ;;
   3)
     [[ "$TARGET" == local ]] || { echo "integration: --version 3 runs on the local devnet only for now (the AWS devnet is task 5.2 of #132)" >&2; exit 2; }
+    if [[ $EXTERNAL == 1 ]]; then  # an outside validator on production windows, the kit's Radicle network (7.0)
+      command -v docker >/dev/null && docker info >/dev/null 2>&1 || { echo "integration: Docker isn't reachable" >&2; exit 2; }
+      # shellcheck source=scripts/solc.sh
+      source scripts/solc.sh
+      [[ -f "$SOLC" ]] || { echo "integration: solc missing; run: scripts/contracts.sh setup" >&2; exit 2; }
+      rest=()
+      for a in "${ARGS[@]}"; do [[ "$a" == --external ]] || rest+=("$a"); done
+      if [[ "${POF_RADICLE_IMAGE_LOADED:-}" == 1 ]]; then  # the test-chain host: loaded from the operator's build,
+        docker image inspect pof190-radicle:spike >/dev/null  # checked by image ID (rc-remote.sh provision)
+      else
+        echo "building the Radicle node image (pinned release, sha256-checked) ..."
+        docker build -q -t pof190-radicle:spike spikes/radicle >/dev/null
+      fi
+      POF_SOLC="$SOLC" exec python3 tests/integration/external_v3.py run "${rest[@]}" </dev/null
+    fi
+    if [[ $RADICLE == 1 ]]; then  # its own chain and Radicle network, on an internal Docker network (task 4.6)
+      command -v docker >/dev/null && docker info >/dev/null 2>&1 || { echo "integration: Docker isn't reachable" >&2; exit 2; }
+      # shellcheck source=scripts/solc.sh
+      source scripts/solc.sh  # SOLC: the pinned solc, for the deployment inside the anvil container
+      [[ -f "$SOLC" ]] || { echo "integration: solc missing; run: scripts/contracts.sh setup" >&2; exit 2; }
+      rest=()
+      for a in "${ARGS[@]}"; do [[ "$a" == --radicle ]] || rest+=("$a"); done
+      echo "building the Radicle node image (pinned release, sha256-checked) ..."
+      docker build -q -t pof190-radicle:spike spikes/radicle >/dev/null
+      POF_SOLC="$SOLC" exec python3 tests/integration/suite_v3_radicle.py run "${rest[@]}" </dev/null
+    fi
     # The same throwaway devnet as v2's run (name, port, state, records), started and removed by devnet-v3-e2e.sh.
     export POF_V3_E2E_NAME=${POF_INTEGRATION_NAME:-pof-devnet-integration} POF_V3_E2E_PORT=${POF_INTEGRATION_PORT:-8556} \
       POF_V3_E2E_STATE=.devnet-integration POF_V3_E2E_RECORDS=integration POF_V3_E2E_WORK=.integration \
       POF_V3_E2E_KEEP=${POF_INTEGRATION_KEEP:-}
-    exec scripts/devnet-v3-e2e.sh "${ARGS[@]}"
+    exec scripts/integration-v3.sh "${ARGS[@]}"
     ;;
   *) echo "integration: unknown version $VERSION: 2 or 3" >&2; exit 2 ;;
 esac

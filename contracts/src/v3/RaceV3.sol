@@ -26,7 +26,7 @@ import {SolverBook} from "./SolverBook.sol";
 /// fork can remove them.
 ///
 /// **Every check is a Panels submission under the same id.** A fix's submission, and an issue's registration check
-/// (judged at CHECK_BOUNTY, the lowest tier): each posts FeesV3's deposit for K_MAX counted judges (k is fixed only
+/// (judged at CHECK_BOUNTY, the lowest tier): each posts FeesV3's deposit for `kTop` counted judges (k is fixed only
 /// at the draw), or, under a flat judges' fee (`Config.judgeFee` above 0, below), a fix pays that fee instead; FeesV3
 /// fixes its prices (`open`), and Panels opens it with the bounty it's judged at: the price on offer at the
 /// commitment. An award never pays more than that bounty, so a pledge made after the commitment can't put more
@@ -69,7 +69,10 @@ import {SolverBook} from "./SolverBook.sol";
 /// **Challenges (D4; specs/challenges).** Anyone challenges a verdict in its window (or held) with the published stake
 /// plus its panel's worst-case cost (`challenge`); the race holds both. Upheld, both return and the panel is paid from
 /// the deposit (and the pool); rejected, the panel is paid from the cover, its rest returns, and the stake goes to the
-/// accused: the challenged panel's judges.
+/// accused: the challenged panel's judges. The cover is priced for the largest challenge panel Panels' rules draw
+/// (#251 batch 4, L24: `kTop` with same-size challenges, 3 on Sepolia; 7 with the defaults). A challenge that lapses in
+/// Panels (L25: no panel by its CHALLENGE_DEADLINE, or its panel released after it) leaves the verdict standing, and its
+/// stake and cover return whole with no reward (`settleLapse`).
 ///
 /// **FeesV3's queue signals** come from Panels' status (`signal`, anyone, and at each result): a waiting submission,
 /// a stalled counted panel, and the validators seated on a counted panel.
@@ -466,6 +469,11 @@ contract RaceV3 is RaceV3Base {
 
     /// A filed challenge's panel decided: stakes and the panel's pay (RaceV3Annex.settleChallenge).
     function settleChallenge(uint256, uint256) external {
+        _delegate();
+    }
+
+    /// A filed challenge that lapsed in Panels: its stake and cover back whole (L25, RaceV3Annex.settleLapse).
+    function settleLapse(uint256) external {
         _delegate();
     }
 

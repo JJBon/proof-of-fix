@@ -553,7 +553,8 @@ contract PanelsV3Test is PanelsSetup {
     }
 
     /// Scenario "The genesis validator's first verdicts": held, unpaid, until three other validators eligible for its
-    /// challenge are active; only then does its 7-day window start.
+    /// challenge are active; only then does its 7-day window start. (#251 batch 5, #290: three that are left once its
+    /// audits are drawn, since each auditor sits out of its challenge; so, before its audits, three more for them.)
     function test_theGenesisValidatorsFirstVerdicts() public {
         uint256 id = _id();
         uint256 pid = _openAndDraw(id, 40e6);
@@ -569,6 +570,13 @@ contract PanelsV3Test is PanelsSetup {
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
         _addSpread(4, 3, 3);
+        // three could judge its challenge now, but its two audits (and its random one, undecided) would be drawn from
+        // them, each sitting out of it (#290): three more
+        vm.expectRevert(Panels.NotReady.selector);
+        pn.startWindow(id);
+        for (uint256 i = 5; i <= 7; ++i) {
+            _addSpread(i, 3, 3);
+        }
         pn.startWindow(id);
         Submission memory s = pn.submission(id);
         assertEq(uint256(s.status), uint256(Status.Window));
@@ -581,16 +589,21 @@ contract PanelsV3Test is PanelsSetup {
         assertEq(reg.validator(genesisKey).openVerdicts, 0);
     }
 
-    /// Scenario "The network already has challengers": a k = 1 verdict (k stepped down by the host cap) given while
-    /// three other validators are eligible for its challenge starts its window at once.
+    /// Scenario "The network already has challengers": a k = 1 verdict given while three other validators are
+    /// eligible for its challenge, and could sit together on it, with room for its audits (#251 batch 5, #290), starts
+    /// its window at once. (#251 batch 4, L23: the lone verdict is drawn while the genesis validator is alone, and the
+    /// validators join, on hosts of their own, before its count. Before batch 4 they shared the genesis host to step k
+    /// down to 1; under `Strict` caps three on one host can't sit together on a challenge panel of 3, so that verdict
+    /// is now held: the decided behaviour.)
     function test_theNetworkAlreadyHasChallengers() public {
-        bytes32 host = keccak256("host-genesis");
-        for (uint256 i = 1; i <= 3; ++i) {
-            _add(host, _family(i), _tee(i % 3), 1, FULL_BOND); // one host: no panel of 3
-        }
         uint256 id = _id();
         uint256 pid = _openAndDraw(id, 40e6);
         assertEq(pn.submission(id).k, 1);
+        // six: three challengers, and room for its two audits and its random one while undecided, since each auditor
+        // sits out of its challenge (#251 batch 5, #290: with three, its audits would leave its challenge one judge)
+        for (uint256 i = 1; i <= 6; ++i) {
+            _add(keccak256(abi.encode("host", i)), _family(i), _tee(i % 3), 1, FULL_BOND);
+        }
         _judge(pid, _votes(1, 0));
         Submission memory s = pn.submission(id);
         assertEq(uint256(s.status), uint256(Status.Window));
@@ -713,7 +726,7 @@ contract PanelsV3Test is PanelsSetup {
         vm.prank(deployer);
         ValidatorsWithRemoval r = new ValidatorsWithRemoval(g);
         Panels p = new Panels(
-            IPanelsRegistry(address(r)), pn.fees(), IPanelScores(address(new PanelScores())), g.teeTypes, g.windows
+            IPanelsRegistry(address(r)), pn.fees(), IPanelScores(address(new PanelScores())), g.teeTypes, g.windows, rules
         );
         assertEq(p.teeCapFrom(), 3);
         r.removeTeeType(IBM_SE);
@@ -816,6 +829,8 @@ contract PanelsV3Test is PanelsSetup {
                 "draw,drawAudits,drawChallenge,seal,reveal,receipt,advance,refill,settleShadows,startWindow,finalize,",
                 // stuck rounds (L19): anyone releases them; the race refunds a parked one at its deadline
                 "release,releaseAudits,abandon,",
+                // challenges that can't be drawn lapse at their deadline (#251 batch 4, L25)
+                "lapseChallenge,",
                 // a validator's own capacity (L16, #253): its setting, not a parameter of the deployment
                 "setCapacity,capacity,",
                 // views
@@ -829,7 +844,9 @@ contract PanelsV3Test is PanelsSetup {
                 // and the deployment's liveness values (immutables) and capacity's constants
                 "STUCK_GRACE,RETRY_DELAY,MAX_REDRAWS,CAP_WINDOW,CHECKS_DEFAULT,CHECKS_CEILING,CAP_DELAY,REPO_CHECKS_PER_HOUR,",
                 // and the solver-side windows (#251 batch 3): read by the race and its SolverBook
-                "APPEAL_WINDOW,ACTIVE_WINDOW"
+                "APPEAL_WINDOW,ACTIVE_WINDOW,",
+                // and the panel rules and the challenges' deadline (#251 batch 4, L23-L25): immutables, read only
+                "panelRules,challengeRange,CHALLENGE_DEADLINE"
             ),
             ","
         );

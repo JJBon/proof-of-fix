@@ -7,7 +7,7 @@
 - **Protected paths touched:** `docs/adr/0002-architecture-v2.md`
 
 ## Problem
-The design grew over many issues and PRs: #56 (the race), #58 (the token), #85 (self-healing, v2), #94 (the oracle node), #101/#105 (fees and bonds), #104 (the engineers' demo), #112 (the owner's seats), and platform#197–#200 (the devnet). There was no single record of **what the system is now:** which contracts exist, what they hold and call, where the AI checks run, who pays whom, and how a new validator joins. Newcomers, including the engineers invited to the demo, need that in one place, with an honest list of what's built and what isn't.
+The design grew over many issues and PRs: #56 (the race), #58 (the token), #85 (self-healing, v2), #94 (the oracle node), #101/#105 (fees and bonds), #104 (the engineers' demo), #112 (the owner's seats), and infra#197–#200 (the devnet). There was no single record of **what the system is now:** which contracts exist, what they hold and call, where the AI checks run, who pays whom, and how a new validator joins. Newcomers, including the engineers invited to the demo, need that in one place, with an honest list of what's built and what isn't.
 
 ## Options
 1. **Keep the record spread over issues, specs and reports:** nothing to write, but nobody can see the whole, and decisions get re-argued.
@@ -35,7 +35,7 @@ Option 2. The architecture, and each part's status: **built** (on `main`), **#11
 - **To build (#85 tasks):** data availability (5.9), the constitution's hash and ADR challenges (5.10), the pool's spending (5.11), the deployment record's library hashes (5.12), the migration from v1 (5.13), the replay with fees (5.14).
 
 ### 2. The chain: a private devnet with mainnet rules
-- **Built:** `https://devnet.example.com` (platform#199, #200), chain **7193**, Osaka, EIP-170 enforced, a block every 2 s.
+- **Built:** `https://devnet.example.com` (infra#199, #200), chain **7193**, Osaka, EIP-170 enforced, a block every 2 s.
   - It runs on a t4g.small in the **platform account**, isolated by its own security group (port 443 only) and a minimal IAM role, with no dedicated VPC and no separate account (owner, 2026-11-02).
   - Caddy terminates TLS (Let's Encrypt), and **each engineer has an API key** (HTTP basic auth, keys in OpenBao, only hashes on the host).
   - Daily snapshots; stopped 01:00–09:00 America/Bogota like the other hosts; about $15 a month.

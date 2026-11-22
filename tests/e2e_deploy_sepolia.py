@@ -139,7 +139,7 @@ class Rig:
         p.write_text(json.dumps(plan), encoding="utf-8")
         return p
 
-    def release_candidate(self, tamper: str = "") -> Path:
+    def release_candidate(self, tamper: str = "", rules: dict | None = None) -> Path:
         r = sh(str(ROOT / "scripts" / "deploy-sepolia.sh"), "hashes", env={**os.environ, "DEPLOY_FORGE_CONTAINER": NAME},
                timeout=1800)
         assert r.returncode == 0, r.stderr
@@ -150,9 +150,10 @@ class Rig:
         rc = {"format": "pof-release-candidate/1", "tag": "e2e", "commit": commit, "result": "passed",
               "checks": {"integration": {"command": f"scripts/integration.sh --release-candidate {commit}",
                                          "runs": ["passed"] * 3},
-                         "productionWindows": "passed", "sevSnpValidator": "passed", "realModelRun": "passed"},
-              "bytecode": code}
-        p = self.work / f"rc-{tamper or 'good'}.json"
+                         "productionWindows": "passed", "sevSnpValidator": "passed", "realModelRun": "passed",
+                         "attestedImages": "passed"},
+              "panelRules": rules or STRICT, "bytecode": code}
+        p = self.work / f"rc-{tamper or 'good'}-{(rules or STRICT)['kTop']}.json"
         p.write_text(json.dumps(rc), encoding="utf-8")
         return p
 
@@ -237,7 +238,24 @@ def pofctl_faucet(record: Path) -> None:
           "pofctl faucet before the next claim time is refused, saying when, and sends nothing")
 
 
-def deployed(rig: Rig, rc: Path, chain: int, *mint: str, recipient: str = DEPLOYER, total: int = 5_000 * 10**6) -> None:
+# The panel rules (#251 batch 4): the defaults, and the Sepolia launch's (`--panel-caps launch --k-top 3
+# --challenge-size same`), as the records name them.
+STRICT = {"operatorCap": "strict", "hostCap": "strict", "teeCap": "strict", "kTop": 7, "challengeSize": "larger"}
+LAUNCH = {"operatorCap": "off", "hostCap": "off", "teeCap": "off", "kTop": 3, "challengeSize": "same"}
+LAUNCH_FLAGS = ("--panel-caps", "launch", "--k-top", "3", "--challenge-size", "same")
+
+
+def rules_on_chain(panels: str) -> dict:
+    """Panels' panelRules() read back from the chain, named as the records name them."""
+    raw = bytes.fromhex(call(panels, "panelRules()")[2:])
+    w = [int.from_bytes(raw[32 * i:32 * i + 32], "big") for i in range(5)]
+    caps = ("strict", "off")
+    return {"operatorCap": caps[w[0]], "hostCap": caps[w[1]], "teeCap": caps[w[2]], "kTop": w[3],
+            "challengeSize": ("larger", "same")[w[4]]}
+
+
+def deployed(rig: Rig, rc: Path, chain: int, *mint: str, recipient: str = DEPLOYER, total: int = 5_000 * 10**6,
+             rules: dict = STRICT) -> None:
     r = rig.deploy(*mint, rc=rc)
     dry = RECORDS / f"chain-{chain}.dry-run.json"
     check(r.returncode == 0 and dry.is_file(), f"chain {chain}: the dry run passes and writes its record")
@@ -265,6 +283,12 @@ def deployed(rig: Rig, rc: Path, chain: int, *mint: str, recipient: str = DEPLOY
           "APPEAL_WINDOW 72 h and ACTIVE_WINDOW 26 weeks")
     check(rec["windows"]["challenge"][0][0] == 168 * 3600 and rec["windowsKind"] == "production",
           "the production windows")
+    check(rec["windows"]["challengeDeadline"] == 120 * 3600, "CHALLENGE_DEADLINE 120 h (L25)")
+    panels = rec["addresses"]["panels"]
+    check(rec["panelRules"] == rules and rules_on_chain(panels) == rules,
+          f"the panel rules ({rules['operatorCap']} caps, kTop {rules['kTop']}, {rules['challengeSize']} challenges) "
+          "are in the record and read back from the deployed Panels")
+    check(int(call(panels, "CHALLENGE_DEADLINE()"), 16) == 120 * 3600, "Panels' CHALLENGE_DEADLINE")
     check(rec["teeOnly"] is True, "TEE only")
     names = {"TestCoin", "CoinFaucet", "PoolV3", "RegistryMaker", "Validators", "PanelScores", "FeesV3", "Panels", "RaceV3Endings", "RaceV3Annex",
              "RaceV3"}
@@ -330,7 +354,11 @@ def main() -> int:
             check(r.returncode == 2 and bool(digest), "no genesis signature: refused, printing the digest to sign")
             r = rig.deploy(rc=rc, plan=rig.signed_plan(digest[-1]), genesis_key=False)
             check(r.returncode == 0 and nonce(DEPLOYER) == 0, "signed outside the script: the dry run passes, nothing sent")
-            deployed(rig, rc, 11_155_111)
+            # the Sepolia record's rules (#251 batch 4): a release candidate that ran with the defaults is refused
+            r = rig.deploy(*LAUNCH_FLAGS, rc=rc)
+            check(r.returncode == 2 and "ran with other panel rules" in r.stderr and nonce(DEPLOYER) == 0,
+                  "the launch's rules with a release candidate that ran with others: refused, nothing sent")
+            deployed(rig, rig.release_candidate(rules=LAUNCH), 11_155_111, *LAUNCH_FLAGS, rules=LAUNCH)
             passed += 1
 
             # 5. the local test id on a local endpoint: the same test coin, the genesis mint to another address

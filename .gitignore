@@ -59,6 +59,28 @@ __pycache__/
 
 # The Radicle spike's node logs and results (scripts/radicle-spike.sh, proof-of-fix#190).
 /.radicle-spike/
+# The seed's test on the internal network: its results, node logs and test publication record
+# (scripts/radicle-spike.sh --seed, #251 task 5.3).
+/.seed-radicle/
+# The Radicle target's publish test and the onboarding guides' test (scripts/radicle-spike.sh --publish and
+# --guides, #251 tasks 5.1 and 5.7).
+/.publish-radicle/
+/.guides-radicle/
+/contracts/deployments/guides-radicle/
+# OpenTofu's working directories (the lock files are committed).
+.terraform/
+# The v3 integration suite on Radicle: its results and node logs, and its throwaway deployment's record
+# (scripts/integration.sh --version 3 --radicle, #251 task 4.6).
+/.integration-radicle-v3/
+/contracts/deployments/integration-radicle-v3/
+# The SEV-SNP kit's Radicle node on the internal network: results, node logs, throwaway record (scripts/kit-radicle.sh,
+# #251 task 4.9).
+/.kit-radicle/
+/contracts/deployments/kit-radicle/
+# One validator run outside the harness (the release candidate's external set, #251 task 7.0): results, node logs,
+# throwaway record (scripts/integration.sh --version 3 --external).
+/.external-v3/
+/contracts/deployments/external-v3/
 
 # The v3 node's local-chain run: its scratch and its throwaway deployment's record (scripts/node-v3-e2e.sh, #139), and
 # a v3 node's default rounds on disk (python3 -m oracle run).
@@ -79,3 +101,7 @@ __pycache__/
 # #251 task 3.9). The Sepolia deployment's own record, contracts/deployments/sepolia-v3.json, is not ignored (L15).
 /contracts/deployments/sepolia-local/
 /contracts/deployments/sepolia-v3.dry-run.json
+
+# The measured checker disk's build output (scripts/checker-disk.sh, #251 L21): disk.raw is GiBs; the manifest is
+# what a release records.
+/validator-kit/sevsnp/out/

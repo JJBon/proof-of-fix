@@ -30,12 +30,12 @@
   | `claimInstalments` | anyone | an award has earned instalments | none |
   | `withdrawIssue`, `claimRefund`, `withdraw` | the reporter, a funder, an account | per function | its own money |
 
-- **platform#219** (its design, open on the `platform-219-pof-seats-host` branch): one c6g.large, normally stopped,
+- **infra#219** (its design, open on the `platform-219-pof-seats-host` branch): one c6g.large, normally stopped,
   that runs the six role seats' nodes from a pinned image when a watcher Lambda sees work, and powers off when every
   node is idle. Secrets come from OpenBao into SSM SecureString parameters under `/pof-seats/` by the owner's script,
   under a KMS key only the host's role may decrypt; on the host they're files in a tmpfs runtime directory. Its open
   question, whether the bot shares the host, is answered by the owner in #210: it does.
-- **The watcher** is proof-of-fix's `validator-kit/lambda/watcher.py`, which platform#219 deploys (its D11). It reads
+- **The watcher** is proof-of-fix's `validator-kit/lambda/watcher.py`, which infra#219 deploys (its D11). It reads
   only the chain and starts the host for draws and won bounties.
 
 ## Goals / Non-Goals
@@ -203,14 +203,14 @@ Every comment ends with a hidden marker that names its kind. The bot reads only 
 
 ### D6. Keys and tokens: the bot's own, read once from files
 
-| Secret | What it may do | Source on the devnet | On platform#219's host |
+| Secret | What it may do | Source on the devnet | On infra#219's host |
 |---|---|---|---|
 | the bot's signing key, role **`bot-service`** | send transactions from its own address (gas only) | OpenBao `secret/proof-of-fix/devnet/bot-service` (`key`), created by `scripts/devnet-keys.sh init` | `/pof-seats/bot/key` |
 | its devnet API key, handle **`pof-bot`** | reach the devnet's RPC | `keys.sh add pof-bot` (platform-197) | `/pof-seats/bot/rpc-auth` (`pof-bot:<key>`) |
 | a Forgejo token for user **`pof-bounty-bot`** | issues and comments on `pof-sandbox` only | the owner creates it; stored in OpenBao by platform's script from a hidden prompt | `/pof-seats/bot/repo-token` |
 
 - **Its own key, not `bot`:** people and the suites use the `bot` key with `pofctl`, and two senders on one key clash
-  on nonces (platform#219's D12, for seat keys). `bot-service` is appended to `devnet-keys.sh`'s roles, so every
+  on nonces (infra#219's D12, for seat keys). `bot-service` is appended to `devnet-keys.sh`'s roles, so every
   existing role keeps its mnemonic index.
 - **The forge user's reach:**
   - a team on `pof-sandbox` alone, with write on issues and nothing else, or read on code if Forgejo needs it to list
@@ -290,7 +290,7 @@ unchanged). It reads only the chain, with the watcher's own API key, and needs n
 **Its result line** names which work started the host: `registrations`, `opened`, `settle`, `timeout`, `merge-expired`,
 `sunset`, `ended`.
 
-### D9. Requirements handed to platform#219
+### D9. Requirements handed to infra#219
 
 1. **The bot's container** on the seats' host:
    - from the same image digest as the nodes, with `pofctl/` added to `oracle/Dockerfile`;
@@ -393,7 +393,7 @@ unchanged). It reads only the chain, with the watcher's own API key, and needs n
 1. Merge this change, then the code tasks: they change nothing on the devnet until deployed.
 2. The owner runs `devnet-keys.sh init` (adds `bot-service`), funds it with devnet gas, adds the `pof-bot` API key and
    creates the forge user and its token.
-3. platform#219 (or its follow-up) adds D9's container, parameters, configuration and watcher settings, with the image
+3. infra#219 (or its follow-up) adds D9's container, parameters, configuration and watcher settings, with the image
    digest from a clean commit that includes this change.
 4. **The first runs work through the backlog.** The shared devnet has stale open bounties and undecided submissions
    from earlier runs, now past their deadlines. The bot times out, expires and sunsets them at most 50 writes a run,

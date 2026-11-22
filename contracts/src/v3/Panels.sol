@@ -9,6 +9,7 @@ import {PanelsJudge} from "./PanelsJudge.sol";
 import {PanelsVerdict} from "./PanelsVerdict.sol";
 import {PanelsBase, Store, Env, Submission, Panel, Seat, Status, Tier, Kind} from "./PanelsBase.sol";
 import {Windows, WindowsLib} from "./Windows.sol";
+import {PanelRules, PanelRulesLib, Cap, ChallengeSize} from "./PanelRules.sol";
 import {LaunchChain} from "./LaunchChain.sol";
 
 /// v3's panels (proof-of-fix#138, task 3.2 of #132; design D2–D7, D10, D13, D14, D16, D18, D19; ADR 0004;
@@ -115,6 +116,24 @@ import {LaunchChain} from "./LaunchChain.sol";
 /// dodge that draw. Pausing applies to later draws only; a seat already given is judged or slashed as usual.
 /// REPO_CHECKS_PER_HOUR, a per-repository cap, is 0 (off) while a deployment serves one repository (L16, D31).
 ///
+/// **The panel rules (#251 contract batch 4, design L23, L24; PanelRules).** The deployment's, passed to the
+/// constructor beside its windows, immutable and readable (`panelRules`): the operator, host and TEE-type caps each
+/// `Strict` (the rules above) or `Off` (dropped from every draw and from the k = 1 hold's count of challengers, which
+/// under `Strict` counts only challengers that could sit together under them); `kTop`, the largest issue-tier panel
+/// (the constitution tier keeps K_MAX); and `challengeSize`: `Larger` (D4's CHALLENGE_K) or `Same`, a fresh panel of
+/// the challenged verdict's size for k >= 3, without the original judges, its auditors and its replaced judges, with
+/// no step-down (a lone verdict's challenge keeps 3; D27's second draw stays the fallback). The defaults are #132's
+/// (all `Strict`, 7, `Larger`); the Sepolia launch sets all `Off`, 3 and `Same`.
+///
+/// **Challenges always end (#251 batch 4, design L25; specs/panel-liveness).** Each challenge (filed, disputed, or
+/// opened by an auditor's mismatch) has CHALLENGE_DEADLINE from its opening (`Windows.challengeDeadline`). A waiting
+/// challenge is drawn again once the registry changes or at its retry time (RETRY_DELAY). A challenge panel whose
+/// replacements are exhausted is released as a counted one is (`release`): before the deadline the challenge waits
+/// again, after it the challenge lapses. Past the deadline a challenge with no panel lapses (`lapseChallenge`). A lapse
+/// leaves the verdict as it was, resumes its window where it froze and closes the challenge for the original judges;
+/// the race returns the challenger's stake and cover whole, with no reward. A verdict takes at most MAX_REDRAWS lapsed
+/// challenges (decided (owner, 2026-11-20)); after that new ones are refused and it finalizes at its window.
+///
 /// Keyless: no owner, no admin, no setter. The registry and the scores are bound once from the constructor; the race
 /// binds itself once (`bind`). A validator's capacity is its own setting, not an admin power. The constructor reverts off Sepolia and the local test chains (LaunchChain).
 ///
@@ -176,6 +195,14 @@ contract Panels {
     /// How long a merged fix or an upheld test dispute keeps its solver active (launch L6; 26 weeks). The race's
     /// SolverBook reads it.
     uint256 public immutable ACTIVE_WINDOW;
+    /// A challenge with no panel lapses this long after its opening (L25; 120 h, decided (owner, 2026-11-20)).
+    uint256 public immutable CHALLENGE_DEADLINE;
+    // The panel rules (L23, L24): the caps (true: Strict), the largest issue-tier panel and the challenge's size.
+    bool internal immutable _opCap;
+    bool internal immutable _hostCap;
+    bool internal immutable _teeCap;
+    uint256 internal immutable _kTop;
+    bool internal immutable _sameSize;
     Store internal _st;
 
     // The libraries' events, declared here too so Panels' ABI carries them.
@@ -209,6 +236,8 @@ contract Panels {
     event Released(uint256 indexed id, uint256 indexed pid, uint256 redraws);
     event Refunded(uint256 indexed id);
     event CapacitySet(address indexed key, uint256 checks, uint256 fromBlock);
+    event ChallengeReleased(uint256 indexed id, uint256 indexed pid, bool lapsed);
+    event ChallengeLapsed(uint256 indexed id, uint256 lapses);
 
     // Panels' errors and its libraries' (same selectors).
     error BadParams();
@@ -231,20 +260,23 @@ contract Panels {
     error NothingDue();
     error NotReady();
     error NotYours();
+    error TooManyLapses();
 
     /// `teeTypes_`: the accepted TEE types at deployment, exactly the registry's list (a deployment check). The TEE-type
     /// cap starts at k = 3 while at least TEE_CAP_K3_TYPES types are accepted, else at k = 5 (D6), following the
     /// registry's list as ADRs change it. `windows_`: the deployment's windows, checked for order and exactly the
-    /// registry's (#251, L4).
+    /// registry's (#251, L4). `rules_`: the panel rules (#251 batch 4, L23 and L24), `kTop` odd from 1 to K_MAX.
     constructor(
         IPanelsRegistry validators_,
         IPanelsFees fees_,
         IPanelScores scores_,
         bytes32[] memory teeTypes_,
-        Windows memory windows_
+        Windows memory windows_,
+        PanelRules memory rules_
     ) {
         LaunchChain.check();
         WindowsLib.check(windows_);
+        PanelRulesLib.check(rules_);
         if (
             address(validators_).code.length == 0 || address(fees_).code.length == 0
                 || address(scores_).code.length == 0 || teeTypes_.length != validators_.teeTypeCount()
@@ -274,6 +306,12 @@ contract Panels {
         CAP_WINDOW = windows_.capWindow;
         APPEAL_WINDOW = windows_.appeal;
         ACTIVE_WINDOW = windows_.active;
+        CHALLENGE_DEADLINE = windows_.challengeDeadline;
+        _opCap = rules_.operatorCap == Cap.Strict;
+        _hostCap = rules_.hostCap == Cap.Strict;
+        _teeCap = rules_.teeCap == Cap.Strict;
+        _kTop = rules_.kTop;
+        _sameSize = rules_.challengeSize == ChallengeSize.Same;
         validators_.bind();
         scores_.bind();
     }
@@ -326,7 +364,7 @@ contract Panels {
     }
 
     /// A challenge of a counted verdict in its window (or held), by `challenger` with `evidence`; the race holds the
-    /// stake. One at a time.
+    /// stake. One at a time; none once MAX_REDRAWS challenges of it lapsed (L25).
     function challenge(uint256 id, address challenger, bytes32 evidence) external {
         _onlyRace();
         Submission storage s = _st.subs[id];
@@ -334,7 +372,10 @@ contract Panels {
         if (s.status != Status.Held && (s.status != Status.Window || block.timestamp >= s.finalAt)) {
             revert WrongStatus();
         }
+        if (s.lapses >= MAX_REDRAWS) revert TooManyLapses();
         PanelsVerdict.openChallenge(_st, _env(), id, challenger, evidence);
+        s.chalFiled = true;
+        s.filedLapsed = false;
     }
 
     // ---------- anyone ----------
@@ -394,10 +435,17 @@ contract Panels {
         PanelsVerdict.settleShadows(_st, _env(), spid);
     }
 
-    /// A counted or audit panel whose replacements couldn't fill a seat, STUCK_GRACE after its reveal deadline: the
-    /// round ends, its silent seats slashed; the submission waits for a redraw, or its audit is due again (L19).
+    /// A counted, audit or challenge panel whose replacements couldn't fill a seat, STUCK_GRACE after its reveal
+    /// deadline: the round ends, its silent seats slashed; the submission waits for a redraw, or its audit is due
+    /// again (L19); a challenge waits for a redraw, or lapses past its CHALLENGE_DEADLINE (L25).
     function release(uint256 pid) external {
         PanelsJudge.release(_st, _env(), pid);
+    }
+
+    /// An open challenge with no panel, past its CHALLENGE_DEADLINE, lapses: the verdict stands and its window resumes
+    /// (L25).
+    function lapseChallenge(uint256 id) external {
+        PanelsJudge.lapseChallenge(_st, _env(), id);
     }
 
     /// A verdict's audit no validator could take for STUCK_GRACE: the round is released and the audit drawn again
@@ -546,6 +594,7 @@ contract Panels {
         w.capWindow = CAP_WINDOW;
         w.appeal = APPEAL_WINDOW;
         w.active = ACTIVE_WINDOW;
+        w.challengeDeadline = CHALLENGE_DEADLINE;
         uint8[3] memory levels = [1, 2, 3];
         uint256[4] memory ks = [uint256(1), 3, 5, 7];
         for (uint256 l; l < 3; ++l) {
@@ -557,6 +606,22 @@ contract Panels {
 
     function challengeK(uint256 k) external pure returns (uint256) {
         return PanelsBase.challengeK(k);
+    }
+
+    /// The deployment's panel rules, as the constructor took them (L23, L24).
+    function panelRules() external view returns (PanelRules memory) {
+        return PanelRules(
+            _opCap ? Cap.Strict : Cap.Off,
+            _hostCap ? Cap.Strict : Cap.Off,
+            _teeCap ? Cap.Strict : Cap.Off,
+            _kTop,
+            _sameSize ? ChallengeSize.Same : ChallengeSize.Larger
+        );
+    }
+
+    /// A challenge panel's size for a verdict of k under these rules: the first k tried and the smallest (L24).
+    function challengeRange(uint256 k) external view returns (uint256 top, uint256 min) {
+        return PanelsBase.challengeRange(_env(), k);
     }
 
     function teeCapFrom() external view returns (uint256) {
@@ -582,7 +647,13 @@ contract Panels {
             STUCK_GRACE,
             RETRY_DELAY,
             MAX_REDRAWS,
-            CAP_WINDOW
+            CAP_WINDOW,
+            CHALLENGE_DEADLINE,
+            _opCap,
+            _hostCap,
+            _teeCap,
+            _kTop,
+            _sameSize
         );
     }
 

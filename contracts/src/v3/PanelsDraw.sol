@@ -43,6 +43,7 @@ library PanelsDraw {
     uint256 internal constant DRAW_TRIES = 8;
     uint256 internal constant K1_PENDING_MAX = 10;
     uint256 internal constant HOLD_SCAN_MAX = 32;
+    uint256 internal constant HOLD_K = 3; // CHALLENGE_K[1]: a lone verdict's challenge panel (D4), the hold's caps
     uint256 internal constant ROSTER_SLACK_MAX = 4;
     uint8 internal constant LEVEL_A = 1;
     uint8 internal constant LEVEL_B = 2;
@@ -106,6 +107,8 @@ library PanelsDraw {
         uint256 capWindow; // the capacity's trailing window (L16)
         bool full; // a validator was skipped for its capacity: the submission's retry comes after capWindow
         bool famCap; // the family cap applies (D20: PanelScores.capApplies at the snapshot)
+        bool opCap; // the operator cap is Strict (#251 batch 4, L23)
+        bool hostCap; // the host cap is Strict (L23)
     }
 
     /// A shadow draw (D5): `count` candidates, or validators of barred families, by the seed. The k = 1 hold's count of
@@ -121,6 +124,9 @@ library PanelsDraw {
         uint256 count;
         bool teeOnly;
         uint256 capWindow;
+        bool opCap; // the k = 1 hold's count: the deployment's caps (L23); shadows ignore them
+        bool hostCap;
+        uint256 teeFrom; // type(uint256).max when the TEE-type cap is Off
     }
 
     /// The checks an hour a validator's `Load` allows now (0: paused).
@@ -259,7 +265,9 @@ library PanelsDraw {
         return c;
     }
 
-    /// Whether `x` may join `c.members[0..m)` on a panel of k under the caps (D6).
+    /// Whether `x` may join `c.members[0..m)` on a panel of k under the caps (D6), each of the operator, host and
+    /// TEE-type caps only when the deployment sets it `Strict` (#251 batch 4, L23; `Off` drops it; c.teeFrom is then
+    /// beyond every k). The family cap is D20's, whatever the settings.
     function fits(Ctx memory c, Member memory x, uint256 k) internal pure returns (bool) {
         uint256 cap = (k - 1) / 2;
         uint256 hosts;
@@ -267,8 +275,8 @@ library PanelsDraw {
         uint256 tees;
         for (uint256 j; j < c.m; ++j) {
             Member memory y = c.members[j];
-            if (y.operator == x.operator) return false;
-            if (y.host == x.host) ++hosts;
+            if (c.opCap && y.operator == x.operator) return false;
+            if (c.hostCap && y.host == x.host) ++hosts;
             if (y.family == x.family) ++families;
             if (x.tee != 0 && y.tee == x.tee) ++tees;
         }
@@ -313,12 +321,16 @@ library PanelsDraw {
         keys = _trim(keys, got);
     }
 
-    /// Whether `need` validators are eligible for a verdict's challenge: drawable and bonded for its bounty, outside
+    /// Whether `count` validators are eligible for a verdict's challenge: drawable and bonded for its bounty, outside
     /// its panel (and its auditors), not parties, at level A or B for a hidden-test submission (D4, D10), with room
-    /// for a check now (L16: a full or paused validator couldn't take its challenge's seat). Reads up to
-    /// HOLD_SCAN_MAX of them from a seeded offset: exact up to that many eligible validators, a random window beyond.
+    /// for a check now (L16: a full or paused validator couldn't take its challenge's seat), and able to sit together
+    /// under the deployment's `Strict` operator, host and TEE-type caps (#251 batch 4, L23: so a hold doesn't end while
+    /// its challenge can't be drawn; taken in scan order, as the draw takes them in sample order). The caps are a panel
+    /// of HOLD_K's whatever `count` is (#251 batch 5: `count` adds the audits still due, and any `count` validators that
+    /// pairwise fit leave HOLD_K that fit once the auditors are drawn from them). Reads up to HOLD_SCAN_MAX of them from
+    /// a seeded offset: exact up to that many eligible validators, a random window beyond.
     function challengersReady(
-        ShadowCtx memory c, // `count`: the challengers needed
+        ShadowCtx memory c, // `count`: the challengers needed, the audits still due included
         mapping(address => uint8) storage seated,
         mapping(address => Load) storage load
     ) public view returns (bool) {
@@ -326,16 +338,22 @@ library PanelsDraw {
         if (n < c.count) return false;
         uint256 start = uint256(keccak256(abi.encode(c.seed, "hold")));
         uint256 reads = n < HOLD_SCAN_MAX ? n : HOLD_SCAN_MAX;
-        uint256 found;
-        for (uint256 i; i < reads && found < c.count; ++i) {
+        Ctx memory h; // the challengers so far, under the caps (`fits`; no family cap: D20's, unchanged)
+        h.members = new Member[](c.count);
+        h.opCap = c.opCap;
+        h.hostCap = c.hostCap;
+        h.teeFrom = c.teeFrom;
+        for (uint256 i; i < reads && h.m < c.count; ++i) {
             address key = c.reg.eligibleAt(c.bounty, (start + i) % n);
             if (seated[key] != 0 || !hasRoom(load[key], c.capWindow) || !c.reg.isDrawable(key)) continue;
             IValidators.Validator memory v = c.reg.validator(key);
             if (c.teeOnly && v.level == LEVEL_C) continue;
             if (c.host.isParty(c.id, key) || c.host.isParty(c.id, v.operator)) continue;
-            ++found;
+            Member memory x = Member(key, v.operator, v.host, v.family, v.teeType, v.level);
+            if (!fits(h, x, HOLD_K)) continue;
+            h.members[h.m++] = x;
         }
-        return found >= c.count;
+        return h.m >= c.count;
     }
 
     /// At a step-down: keeps, in order, the members that fit the new k's caps (and its pending cap at k = 1).

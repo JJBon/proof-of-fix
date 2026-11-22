@@ -150,8 +150,12 @@ A k = 1 verdict's window SHALL run only while at least CHALLENGE_K[1] validators
 - **THEN** the verdict is held, unpaid, until three other validators eligible for its challenge are active, and only then does its 7-day window start
 
 #### Scenario: The network already has challengers
-- **WHEN** a k = 1 verdict is given while three or more other validators are eligible for its challenge panel
+- **WHEN** a k = 1 verdict is given while enough other validators are ready for both its audits still due and a challenge panel of 3 (six at the count, three once every audit is drawn; decided by the owner on 2026-11-21, #290)
 - **THEN** its window starts at once, as for any panel
+
+#### Scenario: Too few challengers once its audits are drawn
+- **WHEN** a k = 1 verdict is given while only three to five other validators are ready
+- **THEN** it stays held and unpaid until its audits are drawn and three ready validators remain for a challenge panel
 
 ### Requirement: A validator's pending lone verdicts are capped
 A validator SHALL NOT be drawn at k = 1 while it has the published maximum number of k = 1 verdicts that aren't final (10 at launch).

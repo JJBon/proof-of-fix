@@ -65,7 +65,7 @@ Each part is quoted as untrusted data between markers the judge is told never to
 Every family judges the 100 clean cases plus the 150 injected ones: 250 calls each, 1,750 in all. **Plan `9ed6768c875c4516`** is in `reports/judges-v1.plan.json` (tokens for each prompt). Prices are those of [`costs-v1`](costs-v1.md), with no prompt cache, except where a seat's model or route differs from costs-v1's (`PRICES` in `pof/judges/plan.py`). Output is costs-v1's assumption, thinking included: 2,000, 4,000 or 8,000 tokens for a small, medium or large fix.
 
 ### The seven seats, all through the owner's model gateway (agentcore#90; model cards, 2026-10-30)
-Every call goes through the AgentCore model gateway as the judges caller `pof-judges-models` (platform#192), under the hard token budget the gateway enforces. Nothing calls a provider directly.
+Every call goes through the AgentCore model gateway as the judges caller `pof-judges-models` (infra#192), under the hard token budget the gateway enforces. Nothing calls a provider directly.
 
 | Family | Model | Gateway route |
 |---|---|---|
@@ -78,7 +78,7 @@ Every call goes through the AgentCore model gateway as the judges caller `pof-ju
 | NVIDIA | Nemotron 3 Super 120B | chat completions → Bedrock Mantle |
 
 **Changes from the first plan:**
-- **Google is Gemini, not Gemma.** The gateway reaches Google's Gemini API with an API key restricted to that API (project `example-models`, platform#192). `gemini-3-pro-preview` was shut down on 2026-03-09; 3.1 Pro is the current Pro.
+- **Google is Gemini, not Gemma.** The gateway reaches Google's Gemini API with an API key restricted to that API (project `example-models`, infra#192). `gemini-3-pro-preview` was shut down on 2026-03-09; 3.1 Pro is the current Pro.
 - **NVIDIA takes Meta's seat.** Llama isn't served on Bedrock Mantle, and so not by the gateway. Nemotron 3 Super is the closest Mantle-served open family.
 - **Mantle in-Region prices:** GPT-6.1 Sol costs $2.20/$11.00 there, 10 % above the global price.
 

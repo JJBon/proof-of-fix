@@ -10,7 +10,8 @@ What it does:
    - shadow: a candidate's (or a barred family's) unpaid verdict, on a drawn submission or on one that waits for a
      panel; it seals in the counted panel's seal window, so before any counted reveal is public;
    - audit: a one-seat panel checking a counted verdict;
-   - challenge: a fresh, larger panel, which also names the original judges' false receipts (the mask).
+   - challenge: a fresh panel (larger, or of the verdict's size under the deployment's `Same` rule, #251 L24), which
+     also names the original judges' false receipts (the mask).
    For each: the check (the fix's tests in the sandbox and the judge, as in v2; a registration check: the issue that
    claims the registration, on the host or on Radicle, judged a genuine bug report in scope or not), a receipt,
    then its seal, and after the seal window its receipt's hash and its reveal, all on-chain through
@@ -20,7 +21,10 @@ What it does:
    shadow settlement, finality, the result, the panels' pay, FeesV3's signals and roll; since #251's contract batch 2
    also the merge of a claimed fix once its verdict is final (L9: the head moves then, not at the claim), the release
    of a stuck panel or of audits nobody can take (L19), the redraw of a waiting submission at its scheduled time, and
-   the refund of a check Panels released for good or parked at its deadline (RaceV3.release).
+   the refund of a check Panels released for good or parked at its deadline (RaceV3.release); since batch 4 (L25)
+   the redraw of a waiting challenge at its retry time, the release of a stuck challenge panel, the lapse of a
+   challenge past CHALLENGE_DEADLINE with no panel, the race's settlement of a filed challenge's lapse
+   (`settleLapse`: its stake and cover back) and the pay of a released challenge panel's revealed seats.
 5. `challenge`: re-runs a counted verdict's check and, if it disagrees or finds a false receipt, files a challenge
    with its evidence.
 
@@ -52,7 +56,8 @@ RECEIPT_VERSION = "pof-receipt-v3-1"
 REFUSED_BACKEND = "node:evidence-refused"  # oracle/judge.py `refused`: no model call, the reason in its answer
 EVIDENCE_VERSION = "pof-challenge-evidence-1"
 REGISTRATION_NOTE = b"proof-of-fix v3 registration"
-QUOTE_KINDS = {v3.PROOF_SIMULATED: "dstack-simulator", v3.PROOF_TEE: "dstack-tdx"}
+# The quotes each proof type takes: a TEE's from dstack (Intel TDX) or from an AMD SEV-SNP guest (oracle/snp.py, #253)
+QUOTE_KINDS = {v3.PROOF_SIMULATED: ("dstack-simulator",), v3.PROOF_TEE: ("dstack-tdx", "amd-sev-snp")}
 ROLES = {v3.COUNTED: "a counted judge", v3.SHADOW: "a shadow", v3.AUDIT: "an auditor",
          v3.CHALLENGE: "a challenge judge"}
 SHARED_UNITS = ("vcpu_second", "gb_second", "storage_mb", "eth")
@@ -64,6 +69,9 @@ SEAL_MARGIN_S = 600.0  # a check that still can't be run this long before the se
 REPORT_WINDOW_S = 86400  # RaceV3's REPORT_WINDOW: a panel is paid without the reports missing after it
 AUDIT_TRIES = 3  # drawAudits calls per state of the registry while no auditor can be drawn
 CHALLENGE_TRIES = 3  # drawChallenge calls per state of the challenge, the registry and the capacity window
+# lapseChallenge and settleLapse calls per state (#251 batch 4, L25): a lapse is due once past CHALLENGE_DEADLINE with
+# no panel, and the race's settlement once per lapse of a filed challenge
+LAPSE_TRIES = 3
 GIVE_UP = 50  # a keeper's once-only call refused this often is left to others
 
 
@@ -227,6 +235,7 @@ class NodeV3(NodeV2):
         self.fixes = None  # a Radicle fix source (oracle/radicle_v3.py, #251 task 4.2); None: the host's pull requests
         self.claims = None  # the registrations' Radicle issues (radicle_v3.RadicleIssues, task 4.3); None: the host's
         self.radicle_seat = None  # model (a) on this node's Radicle node (#251 task 4.1); None: nothing on Radicle
+        self.spend = None  # the daily and monthly model-spending caps and their on-chain pause (oracle/spend.py, #253)
 
     # ---------- setup ----------
 
@@ -247,8 +256,8 @@ class NodeV3(NodeV2):
                 if self.prover is None:
                     raise SetupError("a zkTLS (level C) validator needs a zkTLS prover for its model call "
                                      "(oracle/zktls.py)")
-            elif self.keys.quote(b"").kind != QUOTE_KINDS[proof]:
-                raise SetupError(_quote_hint(proof, self.keys.quote(b"").kind))
+            elif _kind(self.keys) not in QUOTE_KINDS[proof]:
+                raise SetupError(_quote_hint(proof, _kind(self.keys)))
             self.validator = val
         return self.validator
 
@@ -303,11 +312,27 @@ class NodeV3(NodeV2):
             progress |= self._table()
         except Reverted as e:
             self._say(("table", e.reason), f"table: the chain refused it ({e.reason}); trying again")
+        if self.spend is not None:
+            progress |= self._spend_pause()
         if self.keeper:
             progress |= self._keep(from_block, now)
         if self.radicle_seat is not None:
             progress |= self._radicle()
         return progress
+
+    def _spend_pause(self) -> bool:
+        """#253's pause: capacity 0 on-chain while a spending cap has stopped model calls this period, the earlier
+        capacity back at the next one (oracle/spend.py). A change Panels refuses (one still pending: `Busy`) is tried
+        again on the next pass."""
+        try:
+            return self.spend.pause_step(
+                lambda: self.chain.capacity(self.address),
+                lambda n: self.wallet.send(self.chain.panels, "setCapacity(address,uint256)", self.address, n),
+                log=self.log)
+        except Reverted as e:
+            self._say(("capacity", e.reason), f"spending: Panels refused the capacity change ({e.reason}); trying "
+                                              f"again")
+            return False
 
     def _radicle(self) -> bool:
         """The seat's pass on Radicle (oracle/radicle_v3.py): `Heads.head` as its `main`, the identity following the
@@ -649,7 +674,7 @@ class NodeV3(NodeV2):
             # the quote names the receipt it's for and the seat it's given on, so no other seat can reuse it
             q = self.keys.quote(keccak256(bare.hash() + v3.address_word(self.chain.panels) + v3.b32(p["seed"])
                                           + v3.address_word(self.address)))
-            if q.kind != QUOTE_KINDS[proof_type]:
+            if q.kind not in QUOTE_KINDS[proof_type]:
                 raise SetupError(_quote_hint(proof_type, q.kind))
             notary, proof_bytes, kind = v3.ZERO, bytes.fromhex(q.quote), q.kind
             shown = {"kind": q.kind, "quote": q.quote, "report_data": q.report_data}
@@ -745,7 +770,12 @@ class NodeV3(NodeV2):
                 if c.epoch() + 1 != v.get("waitEpoch", 0) or now >= v.get("retryAt", 0):
                     progress |= self._call(c.panels, "draw(uint256)", s)
             elif st in (v3.HELD, v3.WINDOW):
-                if st == v3.HELD:
+                if st == v3.HELD and not v["challengeOpen"]:
+                    # Not while its challenge is open: before contract batch 5 Panels' startWindow then left the
+                    # window's frozen rest at 0, and the challenge's lapse or resolution resumed the window with nothing
+                    # left (#256's flake). Since batch 5 (#290) Panels refuses it then; this guard only saves the
+                    # reverting call. Held, the verdict can't be final anyway; the window starts whole once the
+                    # challenge closes.
                     progress |= self._call(c.panels, "startWindow(uint256)", s)
                 waits = v.get("auditWaits") and c.epoch() + 1 == v.get("auditEpoch")
                 if (block > v["auditBlock"] and not waits
@@ -762,16 +792,7 @@ class NodeV3(NodeV2):
                         and now > stuck + self._liveness()["stuckGrace"]):
                     # audits nobody could take for STUCK_GRACE: the round is released (L19), the audit drawn afresh
                     progress |= self._call(c.panels, "releaseAudits(uint256)", s)
-                if v["challengeOpen"] and v["challengePid"] == 0 and block > v["challengeBlock"]:
-                    # drawChallenge succeeds without drawing while busy validators leave the fresh panel short (L16:
-                    # retried from the same seed once they have room), so a success isn't progress by itself. A few
-                    # tries per state of the challenge (its seed block and wait), of the registry, and per capacity
-                    # window (room comes back with time), never every pass.
-                    tried = ("challenge", s, v["challengeBlock"], v.get("challengeEpoch", 0), c.epoch(),
-                             now // max(self._liveness()["capWindow"], 1))
-                    if self._tries.get(tried, 0) < CHALLENGE_TRIES:
-                        self._tries[tried] = self._tries.get(tried, 0) + 1
-                        progress |= self._call(c.panels, "drawChallenge(uint256)", s)
+                progress |= self._keep_challenge(s, v, block, now)
                 if (st == v3.WINDOW and now >= v["finalAt"] and not v["challengeOpen"] and v["auditDecided"]
                         and v["auditsDone"] >= v["auditsDue"]):
                     progress |= self._call(c.panels, "finalize(uint256)", s)
@@ -793,6 +814,41 @@ class NodeV3(NodeV2):
                 progress |= self._keep_panel(pid, now)
         if c.rolled() < c.current_period():
             progress |= self._call(c.fees, "roll()")
+        return progress
+
+    def _keep_challenge(self, s: int, v: dict, block: int, now: int) -> bool:
+        """An open challenge with no panel (#251 batch 4, L25): drawn from its seed block; while it waits, drawn again
+        once the registry changes or at its retry time (RETRY_DELAY); past CHALLENGE_DEADLINE, lapsed. Then a filed
+        challenge's lapse is settled at the race (its stake and cover back). Each call a few times per state, as
+        drawAudits."""
+        c, progress = self.chain, False
+        if v["challengeOpen"] and v["challengePid"] == 0:
+            past = now > v.get("challengeBy", 0) and v.get("challengeBy", 0) != 0
+            waits = (v.get("challengeEpoch", 0) != 0 and c.epoch() + 1 == v["challengeEpoch"]
+                     and now < v.get("challengeRetryAt", 0))
+            if past:
+                tried = ("lapse", s, v["challengeBy"])
+                if self._tries.get(tried, 0) < LAPSE_TRIES:
+                    self._tries[tried] = self._tries.get(tried, 0) + 1
+                    progress |= self._call(c.panels, "lapseChallenge(uint256)", s)
+            elif not waits and block > v["challengeBlock"]:
+                # drawChallenge succeeds without drawing while busy validators leave the fresh panel short (L16:
+                # retried from the same seed once they have room), so a success isn't progress by itself. A few
+                # tries per state of the challenge (its seed block and wait), of the registry, and per capacity
+                # window (room comes back with time), never every pass.
+                tried = ("challenge", s, v["challengeBlock"], v.get("challengeEpoch", 0), c.epoch(),
+                         now // max(self._liveness()["capWindow"], 1))
+                if self._tries.get(tried, 0) < CHALLENGE_TRIES:
+                    self._tries[tried] = self._tries.get(tried, 0) + 1
+                    progress |= self._call(c.panels, "drawChallenge(uint256)", s)
+        if v.get("filedLapsed"):
+            # the race holds a lapsed filed challenge's stake and cover until settled; refused once settled
+            tried = ("settleLapse", s, v.get("lapses", 0))
+            if self._tries.get(tried, 0) < LAPSE_TRIES:
+                self._tries[tried] = self._tries.get(tried, 0) + 1
+                if self._call(c.race, "settleLapse(uint256)", s):
+                    self._tries[tried] = LAPSE_TRIES
+                    progress = True
         return progress
 
     def _keep_panel(self, pid: int, now: int) -> bool:
@@ -827,12 +883,20 @@ class NodeV3(NodeV2):
             self._kept.add(("panel", pid))
             return progress
         if p["closed"]:
+            if p["kind"] == v3.CHALLENGE:
+                # a released challenge panel (L25): its seats that revealed with receipts are paid (deposit, pool)
+                pay = (c.race, "payPanel(uint256)", (pid,))
+                progress = self._call(pay[0], pay[1], pid, once=True)
+                if pay in self._kept or self._settled(pay):
+                    self._kept.add(("panel", pid))
+                return progress
             return False
         if p["seats"] < p["k"]:
             if self._call(c.panels, "refill(uint256)", pid):
                 return self._call(c.race, "signal(uint256)", p["id"]) or True
-            if now > p["revealBy"] + self._liveness()["stuckGrace"] and p["kind"] in (v3.COUNTED, v3.AUDIT):
-                # replacements exhausted: the round ends, its silent seats slashed, the submission waits (L19)
+            if now > p["revealBy"] + self._liveness()["stuckGrace"]:
+                # replacements exhausted: the round ends, its silent seats slashed, the submission waits (L19); a
+                # challenge panel's challenge waits for a redraw, or lapses past its deadline (L25)
                 return self._call(c.panels, "release(uint256)", pid)
             return False
         if (now > p["sealBy"] and p["nSealed"] < p["seats"]) or (now > p["revealBy"] and p["done"] < p["k"]):
@@ -908,11 +972,18 @@ def _no_run() -> TestRun:
     return nothing_ran()
 
 
+def _kind(keys) -> str:
+    """The key provider's quote kind, without asking for a quote when it names its kind (an SEV-SNP report is a call
+    to the AMD Secure Processor)."""
+    return getattr(keys, "kind", "") or keys.quote(b"").kind
+
+
 def _quote_hint(proof: bytes, kind: str) -> str:
     if proof == v3.PROOF_SIMULATED:
         return (f"the `simulated` proof type's quote comes from the dstack simulator (D18): set ORACLE_KEYS=dstack "
                 f"and DSTACK_SIMULATOR_ENDPOINT (this node's key gives {kind!r})")
-    return f"a TEE validator's quote comes from its dstack guest agent (ORACLE_KEYS=dstack); this key gives {kind!r}"
+    return (f"a TEE validator's quote comes from its dstack guest agent (ORACLE_KEYS=dstack) or its SEV-SNP guest "
+            f"(ORACLE_KEYS=snp); this key gives {kind!r}")
 
 
 # ---------- register and leave ----------
@@ -930,7 +1001,7 @@ def registration(chain: v3.Chain, keys, *, proof: str, family: str, host: str, i
         return (v3.Registration(me, operator or me, proof_type, v3.ZERO, 0, v3.ZERO, image, v3.name_id(host),
                                 v3.name_id(family), 0, rad_node), {})
     q = keys.quote(keccak256(REGISTRATION_NOTE + chain.domain() + v3.address_word(me)))
-    if q.kind != QUOTE_KINDS[proof_type]:
+    if q.kind not in QUOTE_KINDS[proof_type]:
         raise SetupError(_quote_hint(proof_type, q.kind))
     if not q.quote:
         raise SetupError("the guest agent gave no quote")

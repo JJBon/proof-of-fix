@@ -217,7 +217,8 @@ class Story:
         roles = ["reporter", "funder", "solver-a", "solver-b", "solver-c"]
         for r in roles:
             n.fund(self.addr(r), 1_000)
-        maxdep = self.rpc.view(c.fees, "maxDeposit(bytes32,uint256)", ["uint256"], c.repo(), 7)[0]
+        maxdep = self.rpc.view(c.fees, "maxDeposit(bytes32,uint256)", ["uint256"], c.repo(),
+                               c.panel_rules()["kTop"])[0]  # for Panels' kTop judges (#251 batch 4, L24)
 
         print("\n== 1. status before anything ==", flush=True)
         st = self.ctl("status", keystore_=True)

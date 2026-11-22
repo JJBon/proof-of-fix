@@ -166,6 +166,14 @@ for line in sys.stdin:
 """
 
 
+def use_names(prefix: str, nodes: list, out: Path, record_dir: Path) -> None:
+    """Another run of this harness beside the spike (tests/integration/suite_v3_radicle.py, #251 task 4.6): its own
+    container and network names, Radicle nodes, results folder and deployment record, so neither run's clean-up
+    touches the other's."""
+    global P, NET, NODES, OUT, RECORD_DIR
+    P, NET, NODES, OUT, RECORD_DIR = prefix, f"{prefix}-net", list(nodes), out, record_dir
+
+
 def log(msg: str) -> None:
     print(msg, flush=True)
 
@@ -552,8 +560,9 @@ class Spike:
         self.radicle_version = rad.sh("owner", "rad --version")
         log(f"radicle: {self.radicle_version}; nodes: " + ", ".join(f"{n} {rad.did[n]}" for n in NODES))
 
-    def deploy_v3(self, rid: str, genesis_commit: str) -> dict:
-        """v3 for one repository (#251, L1): `rid` and its genesis commit; the windows are production's."""
+    def deploy_v3(self, rid: str, genesis_commit: str, env: dict | None = None) -> dict:
+        """v3 for one repository (#251, L1): `rid` and its genesis commit; the windows are production's. `env`: more
+        of NodeV3Local's settings (LOCAL_*), or other values for these."""
         rpc = self.rpc
         sim = simulator()
         genesis = keys_for(sim, "genesis")
@@ -565,11 +574,13 @@ class Spike:
         RECORD_DIR.mkdir(parents=True)
         keys_in = f"0x{deployer:064x}\n0x{genesis.account_secret():064x}\n"  # on stdin, never on a command line
         started = time.time()
+        settings = {"LOCAL_ATTESTATION": attestation, "LOCAL_RID": rid,
+                    "LOCAL_GENESIS_HEAD": f"0x{genesis_commit}{'0' * 24}",
+                    "LOCAL_GENESIS_RAD_NODE": f"0x{D.key_from_did(self.rad.did['genesis']).hex()}",
+                    "LOCAL_FAMILIES": ",".join(SV.FAMILIES[:6]), "LOCAL_RECORD": f"{RECORD_DIR.name}/local.json",
+                    **(env or {})}
         try:
-            docker("exec", "-i", "-w", "/work", "-e", f"LOCAL_ATTESTATION={attestation}",
-                   "-e", f"LOCAL_RID={rid}", "-e", f"LOCAL_GENESIS_HEAD=0x{genesis_commit}{'0' * 24}",
-                   "-e", f"LOCAL_GENESIS_RAD_NODE=0x{D.key_from_did(self.rad.did['genesis']).hex()}",
-                   "-e", "LOCAL_FAMILIES=" + ",".join(SV.FAMILIES[:6]), "-e", "LOCAL_RECORD=radicle-spike-v3/local.json",
+            docker("exec", "-i", "-w", "/work", *(x for k, v in settings.items() for x in ("-e", f"{k}={v}")),
                    f"{P}-anvil", "sh", "-c",
                    'read -r PK; read -r LOCAL_GENESIS_PK; export LOCAL_GENESIS_PK; forge script '
                    'script/NodeV3Local.s.sol:NodeV3LocalScript --rpc-url http://127.0.0.1:8545 --broadcast '
@@ -1593,14 +1604,15 @@ echo "@error $(echo "$o" | grep -i error | head -1)"
 
     # ---------- isolation and the record ----------
 
-    def isolation(self) -> None:
+    def isolation(self, others: tuple = ("anvil", "relay")) -> None:
+        """`others`: the run's containers that aren't Radicle nodes (the seed's test, #251 task 5.3, has none)."""
         res, rad = self.res, self.rad
         res.scenario("I", "isolation: internal network, no route out, nodes dialled only each other, no public "
                           "hostname in the logs")
         res.expect(f"network {NET} is internal", docker("network", "inspect", "-f", "{{.Internal}}", NET), "true")
         subnet = docker("network", "inspect", "-f", "{{range .IPAM.Config}}{{.Subnet}}{{end}}", NET)
         prefix = ".".join(subnet.split(".")[:2]) + "."
-        for x in ("anvil", "relay"):
+        for x in others:
             routes = docker("exec", f"{P}-{x}", "awk", '$2 == "00000000"', "/proc/net/route").splitlines()
             res.expect(f"{x}: default routes", len(routes), 0)
         names = set(rad.started)

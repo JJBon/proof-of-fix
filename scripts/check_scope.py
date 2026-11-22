@@ -28,9 +28,11 @@ TESTS_READ = (       # documentation a test reads: a change here runs everything
     "openspec/config.yaml",  # tests/test_no_network.py
     "reports/*",             # the simulations' reports, reproduced by tests (test_judges, test_openval*, test_fundertoken)
     "validator-kit/*",       # tests/test_devnet_remote.py reads the runbook
+    "seed/*",                # tests/test_seed.py scans every file there, its README too (no RID, no account value)
     "tests/*",
     "experiments/*",         # tests/test_zktls_receipt.py
     "docs/research/hypotheses.md",  # tests/test_judges_v2.py checks the pre-registration's thresholds against it
+    "docs/guides/*",         # tests/test_guides.py parses the onboarding guides' command blocks (#251 task 5.7)
 )
 
 

@@ -52,3 +52,25 @@ v3's contracts.
 Nitro Enclaves don't run on burstable instances: the attested node needs a **c6g.xlarge (about $0.136 an hour)** or
 similar, so a 12-minute run costs about $0.03. That's the overhead `reports/self-healing-v1.md` sized `SERVICE_FEE`
 against ($0.0119 per counted check at its volumes).
+
+## The SEV-SNP kit (#253, `sevsnp/`)
+
+Prices from AWS's Price List API on 2026-11-20 (us-east-2, Linux, on demand, shared tenancy); SEV-SNP adds 10 % of the
+on-demand price on shared tenancy ([AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sev-snp.html)).
+
+| Item | Cost | Note |
+|---|---|---|
+| c6a.large (2 vCPUs, 4 GiB) | $0.0765 + 10 % = **$0.0842 an hour** while running | m6a.large: $0.0864 + 10 % = $0.0950 |
+| Public IPv4 | $0.005 an hour while running | |
+| The measured disk's root volume, 1 GiB gp3 | $0.08 a month | its snapshot: about $0.02 (only written blocks) |
+| The data volume, 20 GiB gp3 | $1.60 a month | the node's state; scratch wiped at each boot |
+| The signing key's secret | $0.40 a month | |
+| **Idle (stopped)** | **about $2.10 a month** | |
+
+A run of the node (boot, attest, checks, ten idle minutes) of about 15 minutes costs about $0.022. A Dedicated Host
+(the only SEV-SNP option in us-east-1) is $8.078 an hour for a c6a host: not used.
+
+**The model** is capped in the node: `ORACLE_SPEND_DAILY_USD` (default $0.50) and `ORACLE_SPEND_MONTHLY_USD` (default
+$5) across runs, so the owner's 7 launch validators spend at most $35 a month on models together, inside #253's
+$30-50; at 15 validators set $3 each ($45). At a cap the node makes no call (the seat stays silent) and sets its
+capacity to 0 on-chain until the next day or month.

@@ -354,6 +354,34 @@ contract LaunchBindingV3Test is RaceV3Setup {
 
     uint256 internal badWindowCases;
 
+    /// CHALLENGE_DEADLINE (#251 batch 4, L25; specs/panel-liveness, "A challenge has a deadline"): 120 h in production
+    /// (decided (owner, 2026-11-20)), 120 minutes in the minutes run, nonzero and below 2^32 s, and at least
+    /// MAX_REDRAWS × RETRY_DELAY + the seal and reveal windows + STUCK_GRACE (99 h in production): the constructors
+    /// refuse anything shorter.
+    function test_theChallengeDeadlineIsCheckedForOrder() public {
+        Windows memory w = WindowsLib.production();
+        assertEq(w.challengeDeadline, 120 hours);
+        assertEq(WindowsLib.inMinutes().challengeDeadline, 120 minutes);
+        assertEq(w.maxRedraws * w.retryDelay + w.seal + w.reveal + w.stuckGrace, 99 hours);
+        w.challengeDeadline = 99 hours - 1;
+        _expectBadWindows(w);
+        w.challengeDeadline = 0;
+        _expectBadWindows(w);
+        w.challengeDeadline = uint256(type(uint32).max) + 1;
+        _expectBadWindows(w);
+        w = WindowsLib.production();
+        w.retryDelay = 30 hours; // a longer retry needs a longer deadline: 3 × 30 + 2 + 1 + 24 = 117 h still fits
+        _deployWith(w);
+        w.retryDelay = 32 hours; // 123 h: 120 h is too short
+        _expectBadWindows(w);
+        w = WindowsLib.production();
+        w.challengeDeadline = 99 hours;
+        _deployWith(w);
+        assertEq(pn.CHALLENGE_DEADLINE(), 99 hours);
+        assertEq(pn.windows().challengeDeadline, 99 hours);
+        assertEq(badWindowCases, 4);
+    }
+
     /// Panels' windows must be exactly the registry's, whose unbonding delay derives from them.
     function test_panelsTakesTheRegistrysWindows() public {
         Validators.Genesis memory g = _genesis(false, new IValidators.Registration[](0), 0);
@@ -373,7 +401,9 @@ contract LaunchBindingV3Test is RaceV3Setup {
         external
         returns (Panels)
     {
-        return new Panels(IPanelsRegistry(address(r)), IPanelsFees(address(fees)), IPanelScores(address(sc)), tees, w);
+        return new Panels(
+            IPanelsRegistry(address(r)), IPanelsFees(address(fees)), IPanelScores(address(sc)), tees, w, rules
+        );
     }
 
     /// Fuzz: any windows in order deploy, read back as given, and derive the unbonding delay.
@@ -391,6 +421,8 @@ contract LaunchBindingV3Test is RaceV3Setup {
         w.capWindow = bound(x[3], 1, 1 days);
         w.appeal = bound(x[4], 1, 30 days);
         w.active = bound(x[5], 1, 52 weeks);
+        // L25 (#251 batch 4): CHALLENGE_DEADLINE at least MAX_REDRAWS × RETRY_DELAY + seal + reveal + STUCK_GRACE
+        w.challengeDeadline = w.maxRedraws * w.retryDelay + w.seal + w.reveal + w.stuckGrace + bound(x[6], 0, 7 days);
         for (uint256 l; l < 3; ++l) {
             for (uint256 i; i < 4; ++i) {
                 uint256 lo = l > 0 ? w.challenge[l - 1][i] : 1;

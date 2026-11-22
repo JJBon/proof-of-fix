@@ -8,7 +8,7 @@
 #   scripts/devnet-seats.sh down     stop a running `up`, from another shell
 #   scripts/devnet-seats.sh clean    delete the nodes' working directory (checkouts, receipts, logs)
 #
-# NOT while the AWS seats' host serves the same keys (platform#219: once its node_image_digest is set): two nodes with
+# NOT while the AWS seats' host serves the same keys (infra#219: once its node_image_digest is set): two nodes with
 # one seat's key would both report, seal and sign. Set seats_enabled = false there and wait until the host is stopped
 # first. validator-kit/runbook.md, "The seats' host on AWS".
 #

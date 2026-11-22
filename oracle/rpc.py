@@ -3,7 +3,7 @@ transactions with a key. Standard library only (urllib); no cast, forge or Docke
 a devnet on this machine or one reached over HTTPS (#104's chain on AWS). Shared by pofctl (pofctl.rpc) and the v2
 oracle node.
 
-The chain on AWS sits behind an API key (platform#198): give it as the URL's user info
+The chain on AWS sits behind an API key (infra#198): give it as the URL's user info
 (https://<handle>:<key>@devnet.example, sent as HTTP Basic and never printed) or as a token (sent as
 `Authorization: Bearer <token>`, or under another header name). Nothing here logs a URL with its user info.
 
@@ -104,7 +104,7 @@ def split_auth(url: str) -> tuple:
 
 def auth_headers(token: str | None = None, header: str = "Authorization") -> dict:
     """A token's header. `header` names the scheme: "Authorization" sends `Bearer <token>`; "Basic" sends HTTP Basic
-    for a "<handle>:<key>" token (the demo chain's, platform#198); any other name carries the raw token (X-Api-Key)."""
+    for a "<handle>:<key>" token (the demo chain's, infra#198); any other name carries the raw token (X-Api-Key)."""
     if not token:
         return {}
     if header.lower() == "basic":

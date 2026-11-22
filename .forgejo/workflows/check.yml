@@ -1,5 +1,5 @@
 # Required check "pof / check" (platform forgejo-config, it-ops#14): scripts/check.sh.
-# Runner label test (platform#194): its own credential-less host, so this check no longer queues in front of
+# Runner label test (infra#194): its own credential-less host, so this check no longer queues in front of
 # tofu plans and applies. Host executor, plain shell. No credentials: this job never runs upstream code (that
 # only runs in containers, openspec/config.yaml rule 4).
 name: pof

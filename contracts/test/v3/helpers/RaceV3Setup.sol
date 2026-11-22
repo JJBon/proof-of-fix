@@ -92,7 +92,7 @@ abstract contract RaceV3Setup is PanelsSetup {
         scores = new PanelScores();
         fees = new FeesV3(IFeesV3Validators(address(reg)), scores, _feesGenesis());
         pn = new Panels(
-            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows
+            IPanelsRegistry(address(reg)), IPanelsFees(address(fees)), IPanelScores(address(scores)), g.teeTypes, g.windows, rules
         );
         RaceV3Annex ax = new RaceV3Annex(_config(), 625, 100_000, pn, pool3, block.timestamp, new RaceV3Endings(_config(), 625, 100_000, pn, pool3, block.timestamp));
         rc = new RaceV3(_config(), 625, 100_000, pn, pool3, block.timestamp, repo, head, keccak256("c"), ax);

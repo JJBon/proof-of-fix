@@ -28,6 +28,7 @@ library PanelsVerdict {
     error NothingChanged();
     error NothingDue();
     error NotReady();
+    error TooLate();
 
     // ---------- the draws ----------
 
@@ -130,11 +131,17 @@ library PanelsVerdict {
         emit AuditWaits(id, s.auditBlock);
     }
 
+    /// An open challenge's panel (#251 batch 4, L24 and L25): with `Same`, k fresh judges for a verdict of k >= 3 (a
+    /// lone verdict's challenge keeps 3), else D4's larger panel; D27's second draw as the fallback. A challenge with no
+    /// panel waits, and is drawn again with a fresh seed block and snapshot once the registry changes or at its
+    /// `challengeRetryAt` (RETRY_DELAY), whichever comes first; past its CHALLENGE_DEADLINE it is refused here and
+    /// lapses (PanelsJudge.lapseChallenge).
     function drawChallenge(Store storage st, Env memory e, uint256 id) external {
         Submission storage s = st.subs[id];
         if (!s.challengeOpen || s.challengePid != 0) revert WrongStatus();
+        if (block.timestamp > s.challengeBy) revert TooLate();
         if (s.challengeEpoch != 0) {
-            if (e.reg.epoch() + 1 == s.challengeEpoch) revert NothingChanged();
+            if (e.reg.epoch() + 1 == s.challengeEpoch && block.timestamp < s.challengeRetryAt) revert NothingChanged();
             s.challengeEpoch = 0;
             return _retargetChallenge(e, s);
         }
@@ -143,8 +150,7 @@ library PanelsVerdict {
         bytes32 seed = keccak256(abi.encode(bh, s.commitment, id, "challenge"));
         uint256 k = s.k;
         PanelsDraw.Ctx memory c = PanelsBase.ctx(st, e, id, s.bounty, seed, s.challengeSnap, st.panelCount + 1, s.pid);
-        c.kTop = PanelsBase.challengeK(k);
-        c.kMin = k == PanelsBase.K_MAX ? PanelsBase.K_MAX : k + 2;
+        (c.kTop, c.kMin) = PanelsBase.challengeRange(e, k);
         uint256 kc;
         (c, kc,) = PanelsDraw.drawPanel(c, st.seatOf, st.k1Pending, st.k1FreedAt, st.load);
         if (c.unpriced != address(0)) PanelsBase.announce(e, c.unpriced);
@@ -167,6 +173,7 @@ library PanelsVerdict {
             }
             if (kc == 0) {
                 s.challengeEpoch = uint64(e.reg.epoch() + 1);
+                s.challengeRetryAt = uint64(block.timestamp + e.retryDelay); // L25: a clock beside the registry
                 emit ChallengeWaits(id);
                 return;
             }
@@ -181,12 +188,15 @@ library PanelsVerdict {
 
     // ---------- challenges, the window, finality ----------
 
-    /// Opens a challenge (the race's, or an auditor's mismatch): its seed block and snapshot are fixed now, the
-    /// window freezes, and the original judges can't unbond until it closes.
+    /// Opens a challenge (the race's, or an auditor's mismatch): its seed block and snapshot are fixed now, its
+    /// CHALLENGE_DEADLINE starts (L25), the window freezes, and the original judges can't unbond until it closes.
     function openChallenge(Store storage st, Env memory e, uint256 id, address challenger, bytes32 evidence) public {
         Submission storage s = st.subs[id];
         s.challengeOpen = true;
         s.challenger = challenger;
+        s.challengeBy = uint64(block.timestamp + e.challengeDeadline);
+        s.challengeEpoch = 0;
+        s.chalFiled = false; // Panels.challenge marks a race-filed one
         _retargetChallenge(e, s);
         if (s.status == Status.Window) {
             s.frozenLeft = s.finalAt > block.timestamp ? uint64(s.finalAt - block.timestamp) : 0;
@@ -199,10 +209,14 @@ library PanelsVerdict {
         emit ChallengeOpened(id, challenger, evidence);
     }
 
+    /// A held verdict's window starts once its challenge could be judged, and never while a challenge of it is open
+    /// (#251 contract batch 5, #290): the window would then start unfrozen (`frozenLeft` is set only when a challenge
+    /// opens in the window), and that challenge's lapse or resolution would resume it with nothing left. Refused, the
+    /// window starts whole once the challenge closes.
     function startWindow(Store storage st, Env memory e, uint256 id) external {
         Submission storage s = st.subs[id];
         if (s.status != Status.Held) revert WrongStatus();
-        if (!_challengersReady(st, e, id, s)) revert NotReady();
+        if (s.challengeOpen || !_challengersReady(st, e, id, s)) revert NotReady();
         _startWindow(e, id, s);
     }
 
@@ -305,7 +319,11 @@ library PanelsVerdict {
         ++s.auditsDone;
         bool agrees = x.vote == s.pass;
         emit Audited(id, apid, x.key, agrees);
-        if (!agrees && !s.challengeOpen && (s.status == Status.Held || s.status == Status.Window)) {
+        // L25: a verdict that already had MAX_REDRAWS challenges lapse takes no new one; it finalizes at its window
+        if (
+            !agrees && !s.challengeOpen && s.lapses < e.maxRedraws
+                && (s.status == Status.Held || s.status == Status.Window)
+        ) {
             openChallenge(st, e, id, x.key, bytes32(0));
         }
     }
@@ -359,6 +377,10 @@ library PanelsVerdict {
         emit WindowStarted(id, finalAt);
     }
 
+    /// Whether a lone verdict's challenge could be judged (D4, L23): CHALLENGE_K[1] challengers, plus one for each of
+    /// its audits still to be drawn (its random audit while undecided too), since each auditor sits out of its
+    /// challenge (#251 contract batch 5, #290): so honest audits that catch a wrong lone pass can't leave nobody to
+    /// judge it. Auditors already drawn are outside the count (`GONE` on its panel).
     function _challengersReady(Store storage st, Env memory e, uint256 id, Submission storage s)
         private
         view
@@ -373,9 +395,12 @@ library PanelsVerdict {
                 id,
                 s.bounty,
                 st.panels[s.pid].seed,
-                PanelsBase.challengeK(1),
+                PanelsBase.challengeK(1) + s.auditsDue - s.auditsDrawn + (s.auditDecided ? 0 : 1),
                 s.teeOnly,
-                e.capWindow
+                e.capWindow,
+                e.opCap,
+                e.hostCap,
+                e.teeCap ? PanelsBase.teeCapFrom(e) : type(uint256).max
             ),
             st.seatOf[s.pid],
             st.load
@@ -405,7 +430,10 @@ library PanelsVerdict {
                 keccak256(abi.encode(seed, "shadow")),
                 n,
                 s.teeOnly,
-                e.capWindow
+                e.capWindow,
+                false,
+                false,
+                0
             ),
             st.load
         );

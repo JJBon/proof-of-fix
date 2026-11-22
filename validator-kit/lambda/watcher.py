@@ -2,7 +2,7 @@
 the chain for this validator's seat, and starts the validator's stopped node instance only when there is some. The
 instance checks the work and stops itself when idle, so the validator pays for compute only while checking.
 
-The same code is the AWS devnet's seats host's watcher (proof-of-fix#152, platform#219): one instance running several
+The same code is the AWS devnet's seats host's watcher (proof-of-fix#152, infra#219): one instance running several
 seats' nodes (SEAT_ADDRESSES: work for any of them is work), and later the bot service (#210) beside them (BOT_WORK).
 
 Work is:

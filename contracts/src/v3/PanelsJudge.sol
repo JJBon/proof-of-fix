@@ -20,6 +20,9 @@ library PanelsJudge {
     event Released(uint256 indexed id, uint256 indexed pid, uint256 redraws);
     event Refunded(uint256 indexed id);
     event Waited(uint256 indexed id, uint256 k, uint8 level);
+    event ChallengeReleased(uint256 indexed id, uint256 indexed pid, bool lapsed);
+    event ChallengeWaits(uint256 indexed id);
+    event ChallengeLapsed(uint256 indexed id, uint256 lapses);
 
     error TooEarly();
     error TooLate();
@@ -148,14 +151,16 @@ library PanelsJudge {
     /// round sends its submission back to waiting with a redraw scheduled (a fresh seed block and snapshot at the next
     /// `draw`, once the registry changes or at `retryAt`); an audit round makes its audit due again, from a fresh audit
     /// block. Each is one of the submission's MAX_REDRAWS released rounds; the last one refunds it (`_refund`).
+    ///
+    /// A challenge panel is released the same way (#251 batch 4, L25; specs/panel-liveness, "A stuck challenge panel is
+    /// released"), its seats slashed or closed alike; it isn't one of the submission's released rounds. Before the
+    /// challenge's CHALLENGE_DEADLINE the challenge waits again, drawn with a fresh seed block and snapshot once the
+    /// registry changes or at its retry time (RETRY_DELAY); after it, the challenge lapses (`_lapse`).
     function release(Store storage st, Env memory e, uint256 pid) external {
         Panel storage p = _live(st, pid);
         Kind kind = p.kind;
         uint256 k = p.k;
-        if ((kind != Kind.Counted && kind != Kind.Audit) || p.seats == k || block.timestamp <= p.revealBy + e.stuckGrace)
-        {
-            revert NothingDue();
-        }
+        if (kind == Kind.Shadow || p.seats == k || block.timestamp <= p.revealBy + e.stuckGrace) revert NothingDue();
         for (uint256 i; i < k; ++i) {
             Seat storage x = st.seats[pid][i];
             address key = x.key;
@@ -170,6 +175,16 @@ library PanelsJudge {
         p.closed = true;
         uint256 id = p.id;
         Submission storage s = st.subs[id];
+        if (kind == Kind.Challenge) {
+            s.challengePid = 0;
+            bool lapsed = block.timestamp > s.challengeBy;
+            emit ChallengeReleased(id, pid, lapsed);
+            if (lapsed) return _lapse(st, e, id, s);
+            s.challengeEpoch = uint64(e.reg.epoch() + 1);
+            s.challengeRetryAt = uint64(block.timestamp + e.retryDelay);
+            emit ChallengeWaits(id);
+            return;
+        }
         emit Released(id, pid, s.redraws + 1);
         if (kind == Kind.Audit) {
             if (s.status != Status.Held && s.status != Status.Window) return; // already refunded: nothing to redraw
@@ -203,6 +218,33 @@ library PanelsJudge {
         if (_round(st, e, id, s)) return;
         _retargetAudits(e, s);
         s.auditStuckAt = uint64(block.timestamp);
+    }
+
+    /// An open challenge with no panel past its CHALLENGE_DEADLINE lapses (#251 batch 4, L25; specs/panel-liveness, "A
+    /// challenge has a deadline"). Anyone.
+    function lapseChallenge(Store storage st, Env memory e, uint256 id) external {
+        Submission storage s = st.subs[id];
+        if (!s.challengeOpen || s.challengePid != 0) revert WrongStatus();
+        if (block.timestamp <= s.challengeBy) revert TooEarly();
+        _lapse(st, e, id, s);
+    }
+
+    /// A lapse (L25): the verdict stands and its window resumes where it froze, as after a rejected challenge; the
+    /// original judges' challenge closes (they can unbond); nobody is slashed. A race-filed challenge is marked
+    /// (`filedLapsed`) so the race returns its stake and cover whole, with no reward (RaceV3.settleLapse).
+    function _lapse(Store storage st, Env memory e, uint256 id, Submission storage s) private {
+        s.challengeOpen = false;
+        s.challengePid = 0;
+        s.challengeEpoch = 0;
+        uint256 n = ++s.lapses;
+        if (s.chalFiled) s.filedLapsed = true;
+        if (s.status == Status.Window) s.finalAt = uint64(block.timestamp + s.frozenLeft);
+        uint256 pid = s.pid;
+        for (uint256 i; i < s.k; ++i) {
+            address key = st.seats[pid][i].key;
+            if (key != address(0)) e.reg.challengeClosed(key);
+        }
+        emit ChallengeLapsed(id, n);
     }
 
     /// The race's deadline (RaceV3's resultDays after the commitment) for a submission with a released round that is

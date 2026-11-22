@@ -1,7 +1,7 @@
 # Proposal
 
 Ticket: [proof-of-fix#210](https://git.example.com/example-org/proof-of-fix/issues/210). Related:
-platform#219 (the on-demand seats host the bot shares), #206 (`pofctl bot settle` and `bot close`), #151 (closing paid
+infra#219 (the on-demand seats host the bot shares), #206 (`pofctl bot settle` and `bot close`), #151 (closing paid
 issues), #152 (the integration suite and its AWS target), #160 (the paid AI judge check, which waits for this).
 
 ## Why
@@ -48,8 +48,8 @@ bounty ended unpaid.
   - It keeps no local state, so a restart resumes from what the chain and the forge say.
   - It polls every 30 s and makes at most 5 writes a pass and 50 a run, transactions and comments alike.
   - It backs off on forge or RPC errors, and exits when idle so the on-demand host can power off.
-- **On platform#219's host:** the bot runs as its own container beside the six nodes, without the Docker socket or any
-  seat key, and the host's idle rule counts it. The watcher Lambda (proof-of-fix's kit watcher, which platform#219
+- **On infra#219's host:** the bot runs as its own container beside the six nodes, without the Docker socket or any
+  seat key, and the host's idle rule counts it. The watcher Lambda (proof-of-fix's kit watcher, which infra#219
   deploys) also starts the host for:
   - a claimed registration waiting for its check;
   - a newly opened bounty;
@@ -57,7 +57,7 @@ bounty ended unpaid.
   - housekeeping that's come due;
   - a bounty that just ended.
 
-  It reads only the chain (design D8). This change hands those as requirements to platform#219.
+  It reads only the chain (design D8). This change hands those as requirements to infra#219.
 - **Tests:**
   - unit tests with a fake chain and a fake forge;
   - a new local suite scenario, 10: a labelled issue becomes a bounty, is solved, paid and closed with no `pofctl` call
@@ -75,7 +75,7 @@ bounty ended unpaid.
   pays the same instalments.
 - **GitHub repositories:** the service uses `bot/forge.py`'s `RepoHost`, so a GitHub repository works the same way,
   but the devnet serves only `pof-sandbox`; the engineers' demo (#104) isn't changed.
-- **platform#219's own module:** platform builds the host, the secrets' parameters and the watcher's wiring (D9).
+- **infra#219's own module:** platform builds the host, the secrets' parameters and the watcher's wiring (D9).
 
 **Actors, incentives and attacks affected:**
 - **Reporters:** unchanged incentives. They still pay and stake for their own registration and are paid its finder's
@@ -125,7 +125,7 @@ _None._ The main specs have no bot or node capability yet, and the contracts don
   - `oracle/Dockerfile`: `pofctl/` in the image, so one pinned digest runs the nodes and the bot;
   - `validator-kit/lambda/watcher.py`: the bot's work, behind its own switch;
   - `tests/`: unit tests, suite scenario 10, and its AWS version.
-- **platform#219:** a bot container, three more SSM parameters under `/pof-seats/bot/`, the watcher's bot settings,
+- **infra#219:** a bot container, three more SSM parameters under `/pof-seats/bot/`, the watcher's bot settings,
   and the idle rule counting the bot (design D9). This answers its design's open question about the bot: it shares the
   host (the owner, in #210).
 - **The devnet:**

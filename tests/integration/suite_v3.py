@@ -14,7 +14,10 @@ the v2 suite reads its draws through too (task 5.0).
 Time is the chain's. Panels' windows are the deployment's (#251, L4); the devnet deploys the production ones, in
 hours and days (SEAL_WINDOW 2 h, REVEAL_WINDOW 1 h, a k = 1 window of 168 h), as Sepolia will, so this run moves the
 chain's clock (evm_increaseTime, a devnet affordance) to the next deadline whenever no node has anything to do. Every duration it
-prints is chain time under the real windows. The devnet's 2-second blocks are switched to mining on demand for the
+prints is chain time under the real windows. A validator run outside this harness (POF_V3_EXTERNAL, its addresses,
+comma-separated: a real SEV-SNP host, #251 L18 item 3) acts in wall time, so the clock doesn't pass a deadline its open
+seat still has to meet: it waits, up to POF_V3_EXTERNAL_WAIT seconds a seat (default 900; the host's cold start takes
+about 127 s, validator-kit/SEVSNP-PLAN.md), then lets the seat be missed. The devnet's 2-second blocks are switched to mining on demand for the
 run (evm_setIntervalMining 0, evm_setAutomine).
 
 The story, in order (each step needs the one before):
@@ -37,9 +40,11 @@ The story, in order (each step needs the one before):
 7. the challenge (third bullet): the wrong k = 1 verdict's challenge is drawn (a fresh panel of 3, without its judge
    or its auditors), it reverses the verdict, the challenger's stake returns, and the registration ends forfeited.
    Time to heal, k = 1: the chain time from the wrong pass to its reversal;
-8. with --heal, time to heal for a paid fix: a bad fix is passed 2 to 1 by a panel of 3 with two lying judges, wins and
-   is claimed; the outvoted judge challenges it; more validators qualify until a fresh panel of 5 can be drawn; the
-   panel reverses it, the award is clawed back with nothing earned, and the bounty reopens.
+8. with --heal, time to heal for a paid fix: once validators v1-v8 have qualified (#251 L25: a challenge that can't be
+   drawn by CHALLENGE_DEADLINE lapses, so the network that can judge it is grown first), a bad fix is passed by a panel
+   of 3 of the four validators bonded for its bounty, three of whom lie; it wins and is claimed; the others top up and
+   an honest validator challenges it; a fresh panel of 5 reverses it, the award is clawed back with nothing earned, and
+   the bounty reopens. A challenge that lapses (none here, normally) is filed again once a panel could be drawn.
 
 10. protected tests (#251 L20, task 4.8): a repository of real code on this machine (git over file://) whose
    `.pof/check.json` protects `tests/`. A bad fix that also weakens its protected test fails, and so does the same bad
@@ -186,6 +191,28 @@ class ProtectedRepo:
         return git(self.work, "rev-parse", f"{sha}^{{tree}}")
 
 
+FEED_EVERY = 6 * HOUR  # while `drive` is fed (validators qualifying), at least this often in chain time
+LAST_CALL = HOUR  # a watcher's last moment to re-file a lapsed challenge before the verdict's window closes
+EXTERNAL_WAIT_S = 900.0  # how long (wall time) the clock waits on one seat of a validator run outside the harness
+
+
+def external_hold(seats: list, external: set, now: int) -> list:
+    """The deadlines the moved clock mustn't pass yet (#251 L18 item 3: a validator run outside this harness, such as
+    a real SEV-SNP host, acts in wall time; its cold start takes about 2 minutes, validator-kit/SEVSNP-PLAN.md). From
+    `seats` ({"pid", "slot", "key", "sealBy", "revealBy", "allSealed", "hasSeal", "revealed", "closed"} per open seat):
+    each seat of an `external` key that can still seal (before its sealBy) or reveal (every seat sealed, before
+    revealBy) and hasn't. Returns [(pid, slot, phase, deadline)], phase "seal" or "reveal"."""
+    out = []
+    for x in seats:
+        if x["closed"] or x["key"].lower() not in external:
+            continue
+        if not x["hasSeal"] and now <= x["sealBy"]:
+            out.append((x["pid"], x["slot"], "seal", x["sealBy"]))
+        elif x["hasSeal"] and x["allSealed"] and not x["revealed"] and now <= x["revealBy"]:
+            out.append((x["pid"], x["slot"], "reveal", x["revealBy"]))
+    return out
+
+
 class LiveChain(v3.Chain):
     """v3.Chain whose keeper list is the submissions this run still has open: a node's keeper reads every submission
     since its start block on each pass, which is quadratic over a run of a few hundred checks."""
@@ -206,9 +233,10 @@ class Node(NodeV3):
         super().__init__(*a, **kw)
         self.lies: set = set()
         self.mute: set = set()  # panels this node never answers on, as if it were down for them
+        self.silent_on = None  # or a test of a panel id: True keeps it silent there (scenarios_v3's stuck panel)
 
     def _take(self, pid: int) -> bool:
-        if pid in self.mute:
+        if pid in self.mute or (self.silent_on is not None and self.silent_on(pid)):
             self.finished.add(pid)
             return False
         return super()._take(pid)
@@ -243,7 +271,7 @@ class Net(Run):
         self.anyone = self.account("anyone")
         self.fund(self.reporter.address, 1_000_000)
         self.minter.send(self.chain.coin(), "approve(address,uint256)", self.chain.registry, 2**255)
-        self.minter.send(self.chain.coin(), "mint(address,uint256)", self.minter.address, 1_000 * COIN)
+        self.fund(self.minter.address, 1_000)  # its pokes' top-ups (`fund`: the mock minted, or another coin sent)
         self.t0 = self.chain.now()
         self.open_panels: set = set()
         self.seen_panels = 0
@@ -253,6 +281,12 @@ class Net(Run):
         self.names: dict = {}
         self.next_index = 1
         self.rad_nodes: dict = {}  # name -> its Radicle node key (32 bytes); the spike sets its nodes' real keys
+        self.watches: list = []  # called at each step of `drive`: a watcher re-filing a lapsed challenge (#251 L25)
+        self.last_calls: set = set()  # submissions whose watcher gets a turn LAST_CALL before their window closes
+        # validators run outside the harness (#251 L18 item 3): the clock waits for their seats (`held_by_external`)
+        self.external = {a.strip().lower() for a in os.environ.get("POF_V3_EXTERNAL", "").split(",") if a.strip()}
+        self.external_wait_s = float(os.environ.get("POF_V3_EXTERNAL_WAIT", EXTERNAL_WAIT_S))
+        self.external_waits: dict = {}
 
     def account(self, name: str) -> Wallet:
         w = Wallet(self.rpc, int.from_bytes(crypto.keccak256(f"pof devnet v3 e2e {name}".encode()), "big") % crypto.N or 1,
@@ -323,6 +357,48 @@ class Net(Run):
             inside |= {"0x" + log["topics"][2][-40:].lower() for log in self.evs(self.chain.panels, v3.SEATED, pid)}
         return [name for name, node in self.nodes.items()
                 if self.drawable(node.address) and node.address.lower() not in inside]
+
+    def watch(self, watcher, s: int) -> None:
+        """`watcher` re-files `s`'s challenge after a lapse (`rechallenge`), and the clock stops LAST_CALL before
+        `s`'s window closes so it can."""
+        self.last_calls.add(s)
+        self.watches.append(lambda: self.rechallenge(watcher, s))
+
+    def rechallenge(self, watcher, s: int) -> bool:
+        """#251 L25: a challenge with no panel by CHALLENGE_DEADLINE lapses (the verdict stands; the keeper settles
+        the lapse and the stake and cover come back). The watcher files it again once a fresh challenge panel could
+        be drawn (enough validators outside the panel and its auditors), while the verdict still passes, is open to a
+        challenge and has had fewer than MAX_REDRAWS lapses; and, at the latest, LAST_CALL before its window closes,
+        so the challenge holds the window while the network grows to judge it (else the wrong pass would be final).
+        Before this last call, a random audit that sat a third validator out of a k = 1 verdict's challenge left
+        too few to judge it until after its window: the wrong pass became final (one run in ten, #256)."""
+        c = self.chain
+        v = c.verdict(s)
+        if v["challengeOpen"] or not v["lapses"] or not v["pass"] or v["status"] not in (v3.HELD, v3.WINDOW):
+            return False
+        if self.live_values is None:
+            self.live_values = c.liveness()
+        if v["lapses"] >= self.live_values["maxRedraws"] or (v["status"] == v3.WINDOW and c.now() >= v["finalAt"]):
+            return False
+        need = self.rpc.view(c.panels, "challengeRange(uint256)", ["uint256", "uint256"], v["k"])[1]
+        # its audits still to be drawn take validators from outside the panel too (a k = 1 verdict gets K1_AUDITS)
+        due = v["auditsDue"] if v["auditDecided"] else (2 if v["k"] == 1 else 0)
+        ready = len(self.outside(s)) >= need + max(0, due - v["auditsDrawn"])
+        last_call = v["status"] == v3.WINDOW and v["finalAt"] - c.now() <= LAST_CALL
+        if not (ready or last_call):
+            return False
+        if v["filedLapsed"]:
+            try:
+                self.anyone.send(c.race, "settleLapse(uint256)", s)  # its stake and cover first (a keeper's call)
+            except Reverted:
+                pass
+        watcher.challenge(s, force=True)
+        when = (f"once a fresh panel of {need} could be drawn" if ready else
+                f"before its window closed, so it holds while the network grows: no fresh panel of {need} could be "
+                f"drawn yet ({len(self.outside(s))} outside its panel and auditors)")
+        print(f"    (its challenge lapsed at CHALLENGE_DEADLINE {v['lapses']} time(s), with no panel; the stake came "
+              f"back; {self.name(watcher.address)} filed it again {when})", flush=True)
+        return True
 
     def drawable(self, key: str) -> bool:
         return self.rpc.view(self.chain.registry, "isDrawable(address)", ["bool"], key)[0]
@@ -460,8 +536,8 @@ class Net(Run):
                 self.open_panels.discard(pid)
                 continue
             targets += [p["sealBy"] + 1, p["revealBy"] + 1]
-            if p["seats"] < p["k"] and p["kind"] in (v3.COUNTED, v3.AUDIT):
-                targets.append(p["revealBy"] + grace + 1)  # replacements exhausted: released then (L19)
+            if p["seats"] < p["k"] and p["kind"] in (v3.COUNTED, v3.AUDIT, v3.CHALLENGE):
+                targets.append(p["revealBy"] + grace + 1)  # replacements exhausted: released then (L19, L25)
         for s in list(c.live):
             v = c.verdict(s)
             st = v["status"]
@@ -470,12 +546,18 @@ class Net(Run):
                 blocks_only |= v["auditBlock"] + 1 >= block and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"])
                 blocks_only |= (v["challengeOpen"] and v["challengePid"] == 0 and v["challengeEpoch"] == 0
                                 and v["challengeBlock"] + 1 >= block)
+            if st in (v3.HELD, v3.WINDOW) and v["challengeOpen"] and v["challengePid"] == 0:
+                targets.append(v["challengeBy"] + 1)  # no panel by its deadline: it lapses then (L25)
+                if v["challengeEpoch"]:
+                    targets.append(v["challengeRetryAt"])  # a waiting challenge's scheduled redraw (L25)
             if st == v3.WAITING and v["retryAt"]:
                 targets.append(v["retryAt"])  # its scheduled redraw (L19's RETRY_DELAY, L16's capacity hour)
             if st == v3.WINDOW and v["auditStuckAt"] and v["auditsDrawn"] < v["auditsDue"]:
                 targets.append(v["auditStuckAt"] + grace + 1)  # audits nobody can take: released then (L19)
             if v["status"] == v3.WINDOW and not v["challengeOpen"]:
                 targets.append(v["finalAt"])
+                if s in self.last_calls:
+                    targets.append(v["finalAt"] - LAST_CALL)  # its watcher's last call (`rechallenge`)
             elif v["status"] == v3.FINAL:
                 if c.submission(s)["done"]:
                     del c.live[s]
@@ -491,27 +573,94 @@ class Net(Run):
             return True
         if not ahead:
             return False
+        hold = self.held_by_external(now)
+        if hold is not None and min(ahead) > hold:
+            time.sleep(2)  # an outside validator's seat is open: wall time, not the moved clock, until it acts
+            return True
         self.warp(min(ahead) - now)
         self.jumps += 1
         return True
+
+    def held_by_external(self, now: int):
+        """The earliest deadline an outside validator (POF_V3_EXTERNAL, comma-separated addresses) still has to act
+        by, or None: each of its open seats holds the clock for at most EXTERNAL_WAIT_S of wall time (then it is
+        missed, as a silent seat is)."""
+        if not self.external:
+            return None
+        c, seats = self.chain, []
+        for pid in sorted(self.open_panels):
+            p = c.panel(pid)
+            keys = c.judges(pid)
+            if not any(k and k.lower() in self.external for k in keys):
+                continue
+            rows = [c.seat(pid, i) for i in range(len(keys))]
+            for i, (k, s) in enumerate(zip(keys, rows)):
+                if k:
+                    seats.append({"pid": pid, "slot": i, "key": k, "sealBy": p["sealBy"], "revealBy": p["revealBy"],
+                                  "allSealed": p["nSealed"] >= p["seats"], "hasSeal": s["hasSeal"],
+                                  "revealed": s["revealed"], "closed": p["closed"] or p["counted"]})
+        wall, due = time.time(), []
+        for pid, slot, phase, deadline in external_hold(seats, self.external, now):
+            first = self.external_waits.setdefault((pid, slot, phase), wall)
+            if wall - first < self.external_wait_s:
+                due.append(deadline)
+        return min(due) if due else None
 
     def poke(self) -> None:
         """Changes the registry's epoch (a 1 micro-coin top-up of the genesis bond, by anyone): a waiting draw is
         retried only after the registry changes."""
         self.minter.send(self.chain.registry, "topUp(address,uint256)", self.nodes["genesis"].address, 1)
 
+    def history(self, s: int) -> str:
+        """Submission `s`'s life on-chain, for a run that stopped: its verdict now, then its panels, audits,
+        challenges and lapses in chain-time order (hours since the deployment)."""
+        c = self.chain
+        v = c.verdict(s)
+        keys = ("status", "k", "pass", "lapses", "challengeOpen", "challengePid", "challengeBy", "filedLapsed",
+                "auditDecided", "auditsDue", "auditsDrawn", "auditsDone", "finalAt")
+        now = {k: (v3.STATUS[v[k]] if k == "status" else v.get(k)) for k in keys}
+        rows = []
+        for contract, sig in ((c.panels, "Drawn(uint256,uint256,uint8,uint256,bytes32)"),
+                              (c.panels, "Audited(uint256,uint256,address,bool)"),
+                              (c.panels, "ChallengeOpened(uint256,address,bytes32)"),
+                              (c.panels, "ChallengeWaits(uint256)"), (c.panels, "SecondDraw(uint256,uint256)"),
+                              (c.panels, "ChallengeLapsed(uint256,uint256)"),
+                              (c.panels, "ChallengeReleased(uint256,uint256,bool)"),
+                              (c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)"),
+                              (c.panels, "WindowStarted(uint256,uint256)"), (c.panels, "Final(uint256,bool)"),
+                              (c.race, "ChallengeFiled(uint256,address)"),
+                              (c.race, "ChallengeSettled(uint256,uint256,bool)"),
+                              (c.race, "ChallengeLapsed(uint256,address,uint256)")):
+            for log in self.evs(contract, sig, s):
+                extra = ""
+                if sig.startswith("Drawn"):
+                    kind, k, _ = abi.decode(["uint8", "uint256", "bytes32"], abi.hexdata(log["data"]))
+                    extra = f" panel {int(log['topics'][2], 16)} {v3.KINDS[kind]} k={k}"
+                elif sig.startswith("Audited"):
+                    extra = (f" by {self.name('0x' + log['topics'][3][-40:])} agrees="
+                             f"{abi.decode(['bool'], abi.hexdata(log['data']))[0]}")
+                rows.append((int(log["blockNumber"], 16), self.when(log), sig.split("(")[0] + extra))
+        rows.sort()
+        lines = [f"submission {s} now: {now}; chain time now {hours(c.now() - self.t0)}"]
+        lines += [f"  {hours(t - self.t0):>10} block {b}: {what}" for b, t, what in rows]
+        return "\n".join(lines)
+
     def drive(self, until, what: str, steps: int = 20000, idle_max: int = 40, poke: bool = False,
-              strict: bool = True, only=None, feed=None) -> bool:
+              strict: bool = True, only=None, feed=None, explain=()) -> bool:
         """Ticks every node; when none makes progress, jumps to the next deadline. With no deadline ahead the network
-        is idle: `feed`, if given, is called for more work (new registrations; it returns False when it has no more);
+        is idle: `feed`, if given, is called for more work (new registrations; it returns False when it has no more),
+        and at least every FEED_EVERY of chain time anyway;
         otherwise the clock moves on a little (half an hour; with `poke`, six blocks and a change of the registry's
         epoch, so a draw that waits for a registry change is retried). After `idle_max` idle moments in a row with
         no deadline reached in between it gives up: an error when `strict`, else False. `only`: the nodes that run
         meanwhile (default: all)."""
         stalls = 0
+        fed = self.chain.now()
         for _ in range(steps):
             if until():
                 return True
+            for watch in self.watches:
+                watch()
             if any([n.tick(self.start) for name, n in self.nodes.items() if only is None or name in only]):
                 continue
             before = self.jumps
@@ -521,6 +670,11 @@ class Net(Run):
                     break
                 self.warp(12)
                 continue
+            if feed is not None and self.chain.now() - fed >= FEED_EVERY and feed():
+                # work keeps coming while the clock moves: a challenge waiting for validators to qualify (#251
+                # L25) has a retry deadline every RETRY_DELAY, so the network is never idle and is otherwise never fed
+                fed = self.chain.now()
+                continue
             if self.jump():
                 stalls = 0 if self.jumps > before else stalls
                 continue
@@ -528,12 +682,15 @@ class Net(Run):
             if stalls > idle_max:
                 break
             if feed is not None and feed():
+                fed = self.chain.now()
                 continue
             if poke:
                 self.poke()
                 self.pokes += 1
             self.warp(12 if poke else 1800)
         if strict:
+            for s in explain:  # what the run was waiting on, for a stop that is hard to reproduce
+                print(self.history(s), flush=True)
             raise AssertionError(f"not reached: {what}")
         return False
 
@@ -584,14 +741,25 @@ def heal_times(n: Net, s: int) -> dict:
     """The chain times of a wrong verdict's life: counted, challenged, its challenge panel drawn, reversed, settled."""
     c = n.chain
     counted = n.evs(c.panels, "Counted(uint256,uint256,bool,uint256,uint8)", s)[0]
-    filed = n.evs(c.race, "ChallengeFiled(uint256,address)", s)[0]
+    filings = n.evs(c.race, "ChallengeFiled(uint256,address)", s)
+    first, filed = filings[0], filings[-1]  # a challenge that lapsed (L25) was filed again
     cpid, kc, drawn = panels_of(n, s, v3.CHALLENGE)[-1]
+    # the challenge that panel judged: the last opened before its draw, filed at the race or opened by an auditor's
+    # mismatch (#251 L25 lapses either; a watcher re-files)
+    opened = [o for o in n.evs(c.panels, "ChallengeOpened(uint256,address,bytes32)", s)
+              if int(o["blockNumber"], 16) <= int(drawn["blockNumber"], 16)]
     resolved = n.evs(c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)", s)[-1]
     settled = n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s)
-    t = {"counted": n.when(counted), "filed": n.when(filed), "drawn": n.when(drawn), "resolved": n.when(resolved)}
-    return {"submission": s, "challengePanel": cpid, "challengeK": kc,
+    if opened:
+        filed = opened[-1]
+    by = "filed" if any(int(x["topics"][2], 16) == cpid for x in settled) else "auditor"
+    t = {"counted": n.when(counted), "first": n.when(first), "filed": n.when(filed), "drawn": n.when(drawn),
+         "resolved": n.when(resolved)}
+    return {"submission": s, "challengePanel": cpid, "challengeK": kc, "reversedBy": by,
             "wrongPassToReversal_s": t["resolved"] - t["counted"],
-            "wrongPassToChallenge_s": t["filed"] - t["counted"],
+            "wrongPassToChallenge_s": t["first"] - t["counted"],
+            "lapsedChallenges": len(n.evs(c.panels, "ChallengeLapsed(uint256,uint256)", s)),
+            "lapsedUntilRefiled_s": t["filed"] - t["first"],
             "challengeWaitedForAPanel_s": t["drawn"] - t["filed"],
             "panelDrawnToReversal_s": t["resolved"] - t["drawn"],
             "reversalToSettlement_s": (n.when(settled[-1]) - t["resolved"]) if settled else None}
@@ -600,7 +768,9 @@ def heal_times(n: Net, s: int) -> dict:
 def say_heal(what: str, h: dict) -> None:
     print(f"time to heal ({what}): {hours(h['wrongPassToReversal_s'])} of chain time from the wrong pass to its "
           f"reversal\n  = {hours(h['wrongPassToChallenge_s'])} until a watcher challenged it"
-          f"\n  + {hours(h['challengeWaitedForAPanel_s'])} the challenge waited for a panel of {h['challengeK']} "
+          + (f"\n  + {hours(h['lapsedUntilRefiled_s'])} until it filed again after {h['lapsedChallenges']} lapse(s) at "
+             f"CHALLENGE_DEADLINE (no panel could be drawn yet, #251 L25)" if h["lapsedChallenges"] else "")
+          + f"\n  + {hours(h['challengeWaitedForAPanel_s'])} the challenge waited for a panel of {h['challengeK']} "
           f"to exist (validators qualifying)"
           f"\n  + {hours(h['panelDrawnToReversal_s'])} from the panel's draw to its verdict (the seal window, then the "
           f"reveals)", flush=True)
@@ -610,7 +780,8 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     started = time.time()
     n = Net(rpc, record, work, verbose)
     c, P = n.chain, n.panel
-    out: dict = {"chainId": c.chain_id(), "race": c.race, "besideV2": record.get("besideV2")}
+    out: dict = {"chainId": c.chain_id(), "race": c.race, "besideV2": record.get("besideV2"),
+                 "windowsKind": record.get("windowsKind"), "panelRules": record.get("panelRules")}
     v2_code = rpc.call("eth_getCode", [record["besideV2"], "latest"]) if int(record.get("besideV2", "0x0"), 16) else "0x"
     check(len(v2_code) > 2 and record.get("testOnly") is True and "simulated" in record.get("proofTypes", []),
           f"v3 is deployed beside v2 (RaceV2 at {record.get('besideV2')}) on chain {c.chain_id()}; its record is "
@@ -664,6 +835,7 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     check(evidence is not None and c.verdict(s_w)["challengeOpen"],
           f"a watcher (v3, still a candidate) re-ran the check, disagreed and challenged it, staking "
           f"{held_stake / COIN:,.2f}")
+    n.watch(watcher, s_w)  # L25: re-filed if it lapses before a panel exists
     n.drive(lambda: c.verdict(s_w)["challengeEpoch"] != 0, "the challenge's draw tried")
     check(c.verdict(s_w)["challengePid"] == 0,
           "its challenge waits: no fresh panel of 3 exists while the genesis validator is the only one active")
@@ -748,15 +920,9 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
           f"bounty {b1} opened from the final registration, was funded, and a fix was sealed at {judged / COIN:,.2f}: "
           f"above k = 1's limit ({limit1 / COIN:,.2f}), and only the genesis validator's bond covers it (a bond of "
           f"{need / COIN:,.2f} is needed)")
-    s_h = 0
-    if heal:
-        n.funder.send(c.race, "pledge(uint256,uint256)", b2, 200 * COIN)
-        # on the good fix, as a solver building on a pending fix would: the good fix's merge at its finality moves the
-        # one head there (#251 L9); this one is reversed before its own finality and never merged
-        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False, base=v2.commit_word(n.fix_sha("a good fix")),
-                                      solver=healer)
-        for name in ("v1", "v2"):
-            n.nodes[name].lies.add(s_h)  # the two validators that will sit with the genesis validator lie on it
+    s_h = 0  # the heal step's bad fix (step 8): submitted once the network can judge its challenge (#251 L25)
+    if heal:  # funded now, while pledges are open (L6's active solvers lapse with time): about $85 at step 8's price
+        n.funder.send(c.race, "pledge(uint256,uint256)", b2, 100 * COIN)
     n.drive(lambda: c.verdict(s_b)["status"] == v3.WAITING and n.quiet(s_b), "the fix waits, its shadows settled")
     shadows = P.shadows(s_b)
     sp = c.verdict(s_b)["shadowPid"]
@@ -770,8 +936,7 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     topped_at = c.now()
     check(n.eligible(judged) == 3, f"v1 and v2 topped their bonds up to {need / COIN:,.2f}: three validators are now "
                                    f"eligible for it, so k = 3 is reached")
-    n.drive(lambda: c.verdict(s_b)["status"] in (v3.WINDOW, v3.FINAL) and c.submission(s_b)["paid"]
-            and (not heal or (c.verdict(s_h)["status"] in (v3.WINDOW, v3.FINAL) and c.submission(s_h)["paid"])),
+    n.drive(lambda: c.verdict(s_b)["status"] in (v3.WINDOW, v3.FINAL) and c.submission(s_b)["paid"],
             "the waiting fix drawn and judged")
     pid, k, drawn_log = panels_of(n, s_b, v3.COUNTED)[0]
     check(k == 3 and set(P.drawn(s_b)) == {genesis.address, n.nodes["v1"].address, n.nodes["v2"].address}
@@ -797,14 +962,6 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     out["waitingBounty"] = {"submission": s_b, "judgedAt": judged, "k1Limit": limit1, "k": k,
                             "waitedForTopUpsSeconds": topped_at - waited_at,
                             "topUpsToDrawSeconds": n.when(drawn_log) - topped_at}
-    if heal:
-        check(c.verdict(s_h)["pass"] and c.verdict(s_h)["k"] == 3 and n.bounty_state(b2) == WON,
-              f"a second wrong verdict passed: a bad fix (its tests fail) was passed 2 to 1 by a panel of 3 with two "
-              f"lying judges (submission {s_h}), and won bounty {b2}")
-        n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b2, *opening_h)
-        n.fund(genesis.address, 1_000)
-        check(genesis.challenge(s_h) is not None and c.verdict(s_h)["challengeOpen"] and n.bounty_state(b2) == CLAIMED,
-              "its solver claimed it; the outvoted judge (genesis) re-ran the check and challenged it inside its window")
 
     # ---------- 4. a silent judge is replaced ----------
     print("\n== 4. a silent validator is replaced (scenario 4) ==", flush=True)
@@ -861,7 +1018,9 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     for x in (s1, s_w):  # every auditor seated sits out of the verdict's challenge: it may take more validators
         n.drive(lambda: c.verdict(x)["auditDecided"] and c.verdict(x)["auditsDrawn"] == c.verdict(x)["auditsDue"],
                 "the k = 1 verdict's audits drawn", poke=True)
-        while len(n.outside(x)) < 3 and (c.verdict(x)["status"] == v3.HELD or c.verdict(x)["challengeOpen"]):
+        # held, challenged, or (the wrong pass) still passing in its window: its challenge needs three outside
+        while len(n.outside(x)) < 3 and (c.verdict(x)["status"] == v3.HELD or c.verdict(x)["challengeOpen"] or (
+                x == s_w and c.verdict(x)["pass"] and c.verdict(x)["status"] == v3.WINDOW)):
             extra = n.join_next()
             made = n.grow([extra], 12, f"{extra} qualifies")
             print(f"    ({extra} registered and qualified after {made} more checks: submission {x} had only "
@@ -912,9 +1071,19 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
 
     # ---------- 7. the challenged k = 1 verdict is reversed ----------
     print("\n== 7. the challenged k = 1 verdict is reversed by a fresh panel of 3 ==", flush=True)
-    n.drive(lambda: not c.verdict(s_w)["challengeOpen"]
-            and n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_w) != [],
-            "the k = 1 verdict's challenge judged and settled", poke=True)
+    def judged_w() -> bool:  # the watcher's challenge settled, or an auditor's challenge reversed it (no race filing)
+        v = c.verdict(s_w)
+        if v["challengeOpen"]:
+            return False
+        settled_w = n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_w)
+        if v["pass"]:
+            return settled_w != []
+        # filed at the race (its ChallengeFiled in the same block), or opened by an auditor's mismatch; the watcher
+        # may be that auditor, so the opener's address doesn't tell
+        opened = int(n.evs(c.panels, "ChallengeOpened(uint256,address,bytes32)", s_w)[-1]["blockNumber"], 16)
+        filed = any(int(x["blockNumber"], 16) == opened for x in n.evs(c.race, "ChallengeFiled(uint256,address)", s_w))
+        return not filed or settled_w != []  # a filed one: its settlement at the race too
+    n.drive(judged_w, "the k = 1 verdict's challenge judged and settled", poke=True, explain=(s_w,))
     h = heal_times(n, s_w)
     cpid = h["challengePanel"]
     resolved = n.evs(c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)", s_w)[-1]
@@ -928,14 +1097,25 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     check(upheld and not now_pass and not c.verdict(s_w)["pass"],
           f"the panel reversed the verdict: pass -> fail (a false receipt found: {'yes' if false_receipt else 'no'}; "
           f"the judges disagreed on the outcome)")
-    settled = n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_w)[-1]
-    check(abi.decode(["bool"], abi.hexdata(settled["data"]))[0] and c.owed(watcher.address) >= held_stake,
-          f"the challenge was upheld: the watcher's stake and cover ({held_stake / COIN:,.2f}) are credited back to it")
+    settled = n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_w)
+    if h["reversedBy"] == "filed":
+        check(abi.decode(["bool"], abi.hexdata(settled[-1]["data"]))[0] and c.owed(watcher.address) >= held_stake,
+              f"the challenge was upheld: the watcher's stake and cover ({held_stake / COIN:,.2f}) are credited back to "
+              f"it")
+    else:
+        check(not settled and c.owed(watcher.address) >= held_stake,
+              f"the reversing challenge was an auditor's (its mismatch opened it; the race holds no stake for it): the "
+              f"watcher's own challenge had lapsed, and its stake and cover ({held_stake / COIN:,.2f}) came back")
     n.drive(lambda: c.verdict(s_w)["status"] == v3.FINAL, "the reversed verdict final", poke=True)
     n.anyone.send(c.race, "openBounty(uint256)", issue_w)
     check(c.issue(issue_w)["state"] == FORFEITED and c.issue(issue_w)["bounty"] == 0,
           f"registration {issue_w} ended forfeited: no bounty was ever opened on the wrong verdict")
     say_heal("a wrong k = 1 verdict of the lone genesis validator", h)
+    vw = c.verdict(s_w)
+    print(f"  ({vw['auditsDone']} audits of it (K1_AUDITS 2, and a random one if due), each auditor sitting out of its "
+          f"challenge; {vw['lapses']} lapse(s); reversed by {'the watcher' if h['reversedBy'] == 'filed' else 'an auditor'}"
+          f"'s challenge)", flush=True)
+    h.update(audits=vw["auditsDone"], lapses=vw["lapses"])
     scores = rpc.view(c.panels, "scores()", ["address"])[0]
     barred = rpc.view(scores, "isBarred(bytes32)", ["bool"], v3.name_id(FAMILIES[0]))[0]
     lost = c.validator(genesis.address)["slashed"]
@@ -948,21 +1128,44 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     # ---------- 8. time to heal for a paid fix ----------
     if heal:
         print("\n== 8. time to heal: a wrongly passed fix, reversed by a fresh panel of 5 ==", flush=True)
+        # #251 L25: a challenge is judged by CHALLENGE_DEADLINE or lapses, the wrong pass standing; before batch 4 this
+        # fix's challenge waited, its window frozen, while validators qualified for a fresh panel of 5. So the network
+        # that can draw that panel is grown first: every validator qualified, only four bonded for the bounty (a panel
+        # of 3 from them, of which three lie); the others top up once it's claimed and challenged.
+        while n.next_index <= 8:
+            extra = n.join_next()
+            made = n.grow([extra], 12, f"{extra} qualifies")
+            print(f"    ({extra} registered and qualified after {made} more checks)", flush=True)
+        for name in ("v1", "v2", "v3"):  # bonded for the bounty, as in step 3 (a silence may have cost one 5.00)
+            n.top_up(name, n.bond_for(85 * COIN))
+        # on the good fix, as a solver building on a pending fix would: the good fix's merge at its finality moves the
+        # one head there (#251 L9); this one is reversed before its own finality and never merged
+        s_h, opening_h = n.submit_fix(b2, issue3h, "a bad fix", good=False, base=v2.commit_word(n.fix_sha("a good fix")),
+                                      solver=healer)
         need_h = n.bond_for(c.verdict(s_h)["bounty"])
-        for name in list(n.nodes):
+        bonded = [name for name in n.nodes if c.validator(n.nodes[name].address)["bond"] >= need_h]
+        for name in bonded:
             if name != "genesis":
-                n.top_up(name, need_h)
-        check(c.verdict(s_h)["challengePid"] == 0,
-              f"its challenge waited meanwhile: a panel of 5 outside its three judges needs 5 more validators bonded "
-              f"for the bounty ({need_h / COIN:,.2f} each)")
-        while len(n.nodes) - 1 - 2 < 5 + c.verdict(s_h)["auditsDue"] and n.next_index <= 8:
-            n.join_next(bond=need_h // COIN)
-        feed, made = n.feeder(12, 20)
+                n.nodes[name].lies.add(s_h)  # every bonded validator but the genesis one lies on it
+        check(n.eligible(c.verdict(s_h)["bounty"]) == len(bonded) == 4,
+              f"{len(n.active())} validators are active, four of them ({', '.join(bonded)}) bonded for the bounty "
+              f"({need_h / COIN:,.2f}): a panel of 3, at least two of them lying")
+        n.drive(lambda: c.verdict(s_h)["status"] in (v3.WINDOW, v3.FINAL) and c.submission(s_h)["paid"],
+                "the bad fix drawn and judged", poke=True)
+        check(c.verdict(s_h)["pass"] and c.verdict(s_h)["k"] == 3 and n.bounty_state(b2) == WON,
+              f"a wrong verdict passed: a bad fix (its tests fail) was passed by a panel of 3 ({n.named(P.drawn(s_h))}) "
+              f"with lying judges (submission {s_h}), and won bounty {b2}")
+        n.solver.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b2, *opening_h)
+        for name in list(n.nodes):
+            n.top_up(name, need_h)
+        n.fund(genesis.address, 1_000)
+        n.watch(genesis, s_h)  # L25: re-filed if it lapses before a panel exists
+        check(genesis.challenge(s_h) is not None and c.verdict(s_h)["challengeOpen"] and n.bounty_state(b2) == CLAIMED,
+              "its solver claimed it; the others topped up for the bounty, and an honest validator (genesis) re-ran "
+              "the check and challenged it inside its window")
         n.drive(lambda: not c.verdict(s_h)["challengeOpen"]
                 and n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_h) != [],
-                "more candidates qualified and the fix's challenge was judged and settled", feed=feed, poke=True)
-        check(True, f"more candidates qualified ({len(n.active())} validators active, after {made[0]} more checks) "
-                    f"and the challenge was judged")
+                "the fix's challenge judged and settled", poke=True)
         hh = heal_times(n, s_h)
         resolved = n.evs(c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)", s_h)[-1]
         upheld, now_pass, false_receipt = abi.decode(["bool", "bool", "bool"], abi.hexdata(resolved["data"]))
@@ -974,9 +1177,9 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
         check(earned == 0 and n.bounty_state(b2) == OPEN and c.submission(s_h)["outcome"] == FAIL,
               f"the award was clawed back with nothing earned (no instalment starts before finality), and bounty {b2} "
               f"is open again")
-        say_heal("a bad fix passed 2 to 1 by a panel of 3", hh)
+        say_heal("a bad fix passed by a panel of 3 with lying judges", hh)
         hh["falseReceiptFound"] = false_receipt
-        print(f"  no receipt was found false ({'yes' if false_receipt else 'no'}): the two lying judges keep their bonds, "
+        print(f"  no receipt was found false ({'yes' if false_receipt else 'no'}): the lying judges keep their bonds, "
               f"and the solver's only loss is the award it never received", flush=True)
         out["healFix"] = hh
 

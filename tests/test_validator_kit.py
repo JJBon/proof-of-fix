@@ -377,7 +377,7 @@ class FakeBot:
 
 
 class SeatsWatcherTest(unittest.TestCase):
-    """The seats host's watcher (#152, platform#219): six seats on one instance, its API key from SSM, and the bot
+    """The seats host's watcher (#152, infra#219): six seats on one instance, its API key from SSM, and the bot
     service's work behind BOT_WORK (#210, PR #211's D7). The kit's own tests above run the same code unchanged."""
 
     def test_a_draw_of_any_of_the_seats_starts_the_host(self):

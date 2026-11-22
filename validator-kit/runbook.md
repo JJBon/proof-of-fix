@@ -467,9 +467,9 @@ child process gets a key: git gets an environment of its own with the token in a
 from its output, and fails if one shows up there, in any process's command line (sampled every 2 seconds), in the files
 it writes, in the seats' node logs, or in the issues, comments and pull requests it wrote.
 
-## The seats' host on AWS (#152, platform#219)
+## The seats' host on AWS (#152, infra#219)
 
-For the deployment's owner. platform#219 moves the 6 role seats' nodes (`oracle-0..4`, `joiner-0`) off your PC onto
+For the deployment's owner. infra#219 moves the 6 role seats' nodes (`oracle-0..4`, `joiner-0`) off your PC onto
 one on-demand host in the platform account, and later the bot service (#210) beside them. Like the kit's node, it's
 normally stopped: a watcher Lambda (this kit's `lambda/watcher.py`, with several seats) starts it when there's work,
 and it powers off when every node is idle, at its maximum run time, or at the devnet's 01:00 stop. Platform's module
@@ -598,7 +598,7 @@ funder's and the solver's own steps, the maintainer's merge and the clock's warp
 - **the seats' registration check:** the six role seats' nodes, with `ORACLE_REGISTRATION_CHECK=on` (and
   `ORACLE_REPO_ID` set to the record's `repo`), sign RaceV2's `accept` for a registration that a labelled issue claims,
   with the fake judge at `ORACLE_REGISTER_WEIGHT` (120), and one of them relays it at quorum. Seat 6's kit leaves it off;
-- **the bot:** `pofctl bot watch --until-idle 600`, its own container on the seats host (platform#219), with its own
+- **the bot:** `pofctl bot watch --until-idle 600`, its own container on the seats host (infra#219), with its own
   key. It links the opened bounty to the claiming issue, settles a bounty whose outcome is final, calls `timeOut`,
   `mergeExpired` and `sunset` once they're due, closes the issue of a bounty that ended, and posts one hint on a labelled
   issue that doesn't name a valid registration. Its only transactions are `settle`, `timeOut`, `mergeExpired` and

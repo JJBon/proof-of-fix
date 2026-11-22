@@ -134,7 +134,8 @@ class RadSync(unittest.TestCase):
     """`rad sync <RID>`: positional, and its errors no longer hidden (design L11, condition 4)."""
 
     FILES = ["oracle/radicle.py", "scripts/radicle-spike.sh", "tests/integration/radicle.py", "spikes/radicle/gate.sh",
-             "spikes/radicle/v3_spike.py", "pofctl/v3cli.py", "oracle/radicle_v3.py"]
+             "spikes/radicle/v3_spike.py", "pofctl/v3cli.py", "oracle/radicle_v3.py",
+             "tests/integration/suite_v3_radicle.py", "tests/integration/seed_radicle.py"]
 
     def test_no_caller_uses_the_rid_flag_or_hides_the_error(self):
         for name in self.FILES:

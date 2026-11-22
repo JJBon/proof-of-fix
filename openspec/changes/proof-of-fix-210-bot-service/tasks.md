@@ -53,10 +53,10 @@
 
   The new selectors are checked against keccak256 of their signatures.
 
-## 4. The image and the hand-over to platform#219
+## 4. The image and the hand-over to infra#219
 
 - [x] 4.1 `oracle/Dockerfile` copies `pofctl/` (it came with #212), so one digest runs the nodes and the bot. Verify: the built image runs `python3 -m pofctl bot watch --help` and `python3 -m oracle info` (overriding the entrypoint for the first).
-- [ ] 4.2 _(the coordinator hands it over with platform PR #221; the settings' names are in bot/service.py's ENV_DOC)_ Hand D9 to platform#219: a comment on platform#219 (or its follow-up issue, if its change has merged) listing the container, the three parameters, the configuration, the idle rule, the watcher's settings with D8's wake conditions, and the log group. Verify: the comment links this change and lists all six items.
+- [ ] 4.2 _(the coordinator hands it over with platform PR #221; the settings' names are in bot/service.py's ENV_DOC)_ Hand D9 to infra#219: a comment on infra#219 (or its follow-up issue, if its change has merged) listing the container, the three parameters, the configuration, the idle rule, the watcher's settings with D8's wake conditions, and the log group. Verify: the comment links this change and lists all six items.
 - [x] 4.3 `validator-kit/runbook.md`, "The AWS devnet", covers:
   - the bot's keys and token;
   - how the reporter claims a registration;
@@ -82,7 +82,7 @@
 ## 6. On the devnet (owner)
 
 - [ ] 6.1 `devnet-keys.sh init` for `bot-service`, devnet gas for its address, and `keys.sh add pof-bot`. Verify: `pofctl --as bot-service balances` shows its gas, and its address isn't an oracle key.
-- [ ] 6.2 platform#219's host runs the bot (D9), from an image digest that includes groups 1 to 4. Verify: `seats.sh status` shows the bot's container, and a labelled, registered `pof-sandbox` issue is linked with the host started by the watcher. The first runs' backlog of stale deadlines is worked through within the write fuse, and the runs' logs show it.
+- [ ] 6.2 infra#219's host runs the bot (D9), from an image digest that includes groups 1 to 4. Verify: `seats.sh status` shows the bot's container, and a labelled, registered `pof-sandbox` issue is linked with the host started by the watcher. The first runs' backlog of stale deadlines is worked through within the write fuse, and the runs' logs show it.
 - [ ] 6.3 #210's last box, as corrected on PR #211: a labelled `pof-sandbox` issue goes to paid and closed with only the reporter's, funder's and solver's own steps (plus the maintainer's merge and the clock's warps). Verify: 5.4's AWS run, and its report linked on #210.
 
 ## 7. Check

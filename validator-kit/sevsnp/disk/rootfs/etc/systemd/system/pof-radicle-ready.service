@@ -1,0 +1,15 @@
+[Unit]
+Description=proof-of-fix: this validator's Radicle node synced with the seed, and its working copy made
+Requires=pof-radicle.service
+After=pof-radicle.service
+Before=pof-node.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/lib/pof/pof-radicle.sh ready
+TimeoutStartSec=120
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

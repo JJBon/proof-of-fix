@@ -53,7 +53,9 @@ def good_rc(**changes) -> dict:
     rc = {"format": ds.RC_FORMAT, "tag": "test", "commit": head_commit(), "result": "passed",
           "checks": {"integration": {"command": "scripts/integration.sh --release-candidate x",
                                      "runs": ["passed", "passed", "passed"]},
-                     "productionWindows": "passed", "sevSnpValidator": "passed", "realModelRun": "passed"},
+                     "productionWindows": "passed", "sevSnpValidator": "passed", "realModelRun": "passed",
+                     "attestedImages": "passed"},
+          "panelRules": ds.panel_rules(),  # the defaults, as a deploy without the rules' flags asks (#251 batch 4)
           "bytecode": {n: "0x" + "cd" * 32 for n in ds.CONTRACTS}}
     rc.update(changes)
     return rc
@@ -65,16 +67,23 @@ def good_plan() -> dict:
                                  "level": 1, "attestation": "0x" + "66" * 32, "image": IMAGE, "host": "0x" + "77" * 32}}
 
 
+PANEL_RULES_SEL = "0x" + ds.keccak256(b"panelRules()")[:4].hex()
+
+
 class Chain(BaseHTTPRequestHandler):
-    """A JSON-RPC endpoint answering eth_chainId, eth_getCode and eth_call (the race's chainId()); it records methods."""
+    """A JSON-RPC endpoint answering eth_chainId, eth_getCode and eth_call (the race's chainId(), and Panels'
+    panelRules() as `rules`, five words); it records methods."""
     chain = 1
     calls: list = []
+    rules = (0, 0, 0, 7, 0)
 
     def do_POST(self):  # noqa: N802
         req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         type(self).calls.append(req["method"])
-        result = {"eth_chainId": hex(self.chain), "eth_getCode": "0x6080",
-                  "eth_call": "0x" + f"{self.chain:064x}"}.get(req["method"])
+        call = "0x" + f"{self.chain:064x}"
+        if req["method"] == "eth_call" and req["params"][0].get("data") == PANEL_RULES_SEL:
+            call = "0x" + "".join(f"{w:064x}" for w in self.rules)
+        result = {"eth_chainId": hex(self.chain), "eth_getCode": "0x6080", "eth_call": call}.get(req["method"])
         body = json.dumps({"jsonrpc": "2.0", "id": req["id"], "result": result}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -92,7 +101,8 @@ from pathlib import Path
 script = sys.argv[-1]
 Path(os.environ["FAKE_DOCKER_LOG"]).write_text(json.dumps({"argv": sys.argv[1:], "stdin": sys.stdin.read(),
     "mint": os.environ.get("DEPLOY_GENESIS_MINT"), "mintTo": os.environ.get("DEPLOY_GENESIS_MINT_TO"),
-    "radNode": os.environ.get("DEPLOY_GENESIS_RAD_NODE")}))
+    "radNode": os.environ.get("DEPLOY_GENESIS_RAD_NODE"), "caps": os.environ.get("DEPLOY_PANEL_CAPS"),
+    "kTop": os.environ.get("DEPLOY_K_TOP"), "size": os.environ.get("DEPLOY_CHALLENGE_SIZE")}))
 if os.environ.get("FAKE_DOCKER_FAIL"):
     print("Error: script failed: " + os.environ["FAKE_DOCKER_FAIL"])
     sys.exit(1)
@@ -100,9 +110,15 @@ root, cid = Path(os.environ["FAKE_ROOT"]), os.environ["FAKE_CHAIN"]
 broadcast = "--broadcast" in script
 rec = root / "contracts" / "deployments" / os.environ["DEPLOY_RECORD"]
 rec.parent.mkdir(parents=True, exist_ok=True)
-rec.write_text(json.dumps({"chainId": int(cid), "deployer": os.environ["DEPLOY_DEPLOYER"],
+cap = "strict" if os.environ["DEPLOY_PANEL_CAPS"] == "strict" else "off"
+rules = {"operatorCap": cap, "hostCap": cap, "teeCap": cap, "kTop": int(os.environ["DEPLOY_K_TOP"]),
+         "challengeSize": os.environ["DEPLOY_CHALLENGE_SIZE"]}
+if os.environ.get("FAKE_RULES_OFF"):
+    rules["kTop"] = 5
+rec.write_text(json.dumps({"chainId": int(cid), "deployer": os.environ["DEPLOY_DEPLOYER"], "panelRules": rules,
                            "limit": "a fork can remove both checks", "rid": os.environ["DEPLOY_RID"],
-                           "addresses": {"race": "0x" + "11" * 20, "pool": "0x" + "22" * 20},
+                           "addresses": {"race": "0x" + "11" * 20, "pool": "0x" + "22" * 20,
+                                         "panels": "0x" + "44" * 20},
                            "constructorArgs": {"Validators": {"validators": {
                                "radNode": os.environ.get("FAKE_RAD_NODE") or os.environ["DEPLOY_GENESIS_RAD_NODE"]}}},
                            "testCoin": {"genesisMint": {"total": int(os.environ["DEPLOY_GENESIS_MINT"])
@@ -254,6 +270,16 @@ class TestReleaseCandidate(unittest.TestCase):
         with self.assertRaises(ds.Refused):
             ds.load_release_candidate("/nonexistent/rc.json")
 
+    def test_attested_images_is_a_check(self):
+        # L21 (task 3.16): the record must show the measured checker disk's check passed, or the deploy is refused,
+        # naming it. The checks come before the commit's, so this needs no checkout.
+        self.assertIn("attestedImages", ds.RC_CHECKS)
+        checks = good_rc(commit="ab" * 20)["checks"]
+        without = {k: v for k, v in checks.items() if k != "attestedImages"}
+        self.refused(good_rc(checks=without), "attestedImages check didn't pass (None)")
+        self.refused(good_rc(checks={**checks, "attestedImages": "failed"}), "attestedImages check didn't pass")
+        self.assertIn('"attestedImages": "passed"', (ROOT / "scripts/deploy_sepolia.py").read_text())
+
     @outside_sandbox(NEEDS_HEAD)
     def test_refusals(self):
         self.refused("not json", "isn't JSON")
@@ -271,6 +297,42 @@ class TestReleaseCandidate(unittest.TestCase):
         self.refused(good_rc(bytecode={**code, "Other": "0x" + "00" * 32}), "exactly these contracts")
         self.refused(good_rc(bytecode={k: v for k, v in code.items() if k != "Panels"}), "exactly these contracts")
         self.refused(good_rc(bytecode={**code, "Panels": "0x1234"}), "Panels isn't 32 bytes")
+        rules = good_rc()["panelRules"]
+        self.refused(good_rc(panelRules=None), "every panel rule")
+        self.refused(good_rc(panelRules={k: v for k, v in rules.items() if k != "kTop"}), "every panel rule")
+
+    @outside_sandbox(NEEDS_HEAD)
+    def test_a_record_that_ran_with_other_rules_is_refused(self):
+        """#251 batch 4: the release candidate must have run with the rules being deployed (they aren't in the
+        bytecode the hashes cover)."""
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "rc.json"
+            p.write_text(json.dumps(good_rc(panelRules=ds.panel_rules("launch", 3, "same"))), encoding="utf-8")
+            self.assertEqual(ds.load_release_candidate(str(p), rules=ds.panel_rules("launch", 3, "same"))["result"],
+                             "passed")
+            with self.assertRaises(ds.Refused) as e:
+                ds.load_release_candidate(str(p), rules=ds.panel_rules())
+            self.assertIn("ran with other panel rules", str(e.exception))
+
+
+class TestPanelRules(unittest.TestCase):
+    """The panel rules' flags (#251 contract batch 4, task 3.25; design L23, L24)."""
+
+    def test_the_defaults_are_strict_7_and_larger(self):
+        self.assertEqual(ds.panel_rules(), {"operatorCap": "strict", "hostCap": "strict", "teeCap": "strict",
+                                            "kTop": 7, "challengeSize": "larger"})
+        a = ds.parser().parse_args(["deploy", "--plan", "p", "--release-candidate", "r"])
+        self.assertEqual((a.panel_caps, a.k_top, a.challenge_size), ("strict", 7, "larger"))
+
+    def test_the_sepolia_launchs(self):
+        self.assertEqual(ds.panel_rules("launch", 3, "same"), {"operatorCap": "off", "hostCap": "off",
+                                                               "teeCap": "off", "kTop": 3, "challengeSize": "same"})
+
+    def test_refusals(self):
+        for args in (("loose", 7, "larger"), ("strict", 0, "larger"), ("strict", 4, "larger"),
+                     ("strict", 9, "larger"), ("strict", 7, "smaller")):
+            with self.assertRaises(ds.Refused):
+                ds.panel_rules(*args)
 
 
 class TestPlan(unittest.TestCase):
@@ -331,15 +393,17 @@ class TestDeploy(unittest.TestCase):
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
 
     def run_deploy(self, *extra, chain=11_155_111, head=HEAD, url=None, fail="", mint_off=0, rad_node=RAD_DID,
-                   record_node=""):
+                   record_node="", rules_off=False, chain_rules=(0, 0, 0, 7, 0)):
         Chain.chain = chain
+        Chain.rules = chain_rules
         if head:
             self.snap.write_text(snapshot(head), encoding="utf-8")
         rad = f"{sys.executable} {ROOT / 'tests' / 'fake_radicle.py'} {self.snap}"
         env = {k: v for k, v in os.environ.items() if not k.startswith("DEPLOY_")}
         env.update({"PATH": f"{self.bin}:{env['PATH']}", "DEPLOY_FORGE_CONTAINER": "fake-anvil",
                     "FAKE_DOCKER_LOG": str(self.docker_log), "FAKE_ROOT": str(ROOT), "FAKE_CHAIN": str(chain),
-                    "FAKE_DOCKER_FAIL": fail, "FAKE_MINT_OFF": str(mint_off), "FAKE_RAD_NODE": record_node})
+                    "FAKE_DOCKER_FAIL": fail, "FAKE_MINT_OFF": str(mint_off), "FAKE_RAD_NODE": record_node,
+                    "FAKE_RULES_OFF": "1" if rules_off else ""})
         node = ["--genesis-rad-node", rad_node] if rad_node is not None else []
         return subprocess.run([sys.executable, str(ROOT / "scripts" / "deploy_sepolia.py"), "deploy", "--rpc-url",
                                url or self.url, "--plan", str(self.plan), "--release-candidate", str(self.rc),
@@ -413,6 +477,45 @@ class TestDeploy(unittest.TestCase):
         self.assertIn("eth_call", Chain.calls)
         rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
         self.assertFalse(rec["dryRun"])
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_the_panel_rules_go_to_forge_and_into_the_record(self):
+        """#251 batch 4: --panel-caps, --k-top and --challenge-size reach forge, and the record names the rules; the
+        defaults are strict, 7 and larger."""
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ran = json.loads(self.docker_log.read_text())
+        self.assertEqual((ran["caps"], ran["kTop"], ran["size"]), ("strict", "7", "larger"))
+        launch = ds.panel_rules("launch", 3, "same")
+        self.rc.write_text(json.dumps(good_rc(panelRules=launch)), encoding="utf-8")
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", "--panel-caps", "launch", "--k-top", "3",
+                            "--challenge-size", "same", "--broadcast-sepolia", chain_rules=(1, 1, 1, 3, 1))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ran = json.loads(self.docker_log.read_text())
+        self.assertEqual((ran["caps"], ran["kTop"], ran["size"]), ("launch", "3", "same"))
+        rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
+        self.assertEqual(rec["panelRules"], launch)
+
+    @outside_sandbox(NEEDS_HEAD)
+    def test_a_release_candidate_with_other_rules_is_refused(self):
+        self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, "--panel-caps", "launch", "--k-top", "3",
+                                            "--challenge-size", "same"), "ran with other panel rules")
+
+    def test_bad_rules_are_refused_before_any_call(self):
+        self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, "--k-top", "4"), "odd number", rpc=())
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_a_record_whose_rules_differ_is_refused(self):
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", rules_off=True)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("the record's panel rules", r.stderr)
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_a_chain_whose_rules_differ_is_refused(self):
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", "--broadcast-sepolia",
+                            chain_rules=(1, 1, 1, 3, 1))
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("the deployed Panels has other panel rules", r.stderr)
 
     @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_genesis_mint_goes_to_forge_with_its_defaults(self):

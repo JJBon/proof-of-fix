@@ -242,12 +242,13 @@ contract PanelLivenessV3Test is RaceV3Setup {
         vm.warp(pn.submission(id).auditStuckAt + pn.STUCK_GRACE() + 1);
         vm.expectRevert(Panels.WrongStatus.selector);
         pn.releaseAudits(id);
-        address[] memory fresh = _network(3, FAMILIES, 3);
-        for (uint256 i; i < 3; ++i) {
+        // six: three challengers and room for its audits (#290), which the hold now counts
+        address[] memory fresh = _network(6, FAMILIES, 3);
+        for (uint256 i; i < 6; ++i) {
             vm.prank(fresh[i]);
             pn.setCapacity(fresh[i], 0); // paused, from CAP_DELAY blocks on
         }
-        pn.startWindow(id); // its three challengers have room until then
+        pn.startWindow(id); // its challengers have room until then
         assertEq(pn.submission(id).auditStuckAt, block.timestamp); // the stuck clock restarts with the window
         vm.roll(vm.getBlockNumber() + pn.CAP_DELAY());
         _tryAudits(id);
@@ -275,7 +276,7 @@ contract PanelLivenessV3Test is RaceV3Setup {
         assertTrue(rc.award(b, 1).closed);
         assertEq(rc.award(b, 1).earned, 0);
         assertEq(uint256(rc.bounty(b).state), uint256(RaceV3Base.State.Refunded));
-        for (uint256 i; i < 3; ++i) {
+        for (uint256 i; i < 6; ++i) {
             assertEq(_bond(fresh[i]), FULL_BOND); // paused: skipped, never slashed
             assertEq(reg.progress(fresh[i]).misses, 0);
         }
@@ -512,8 +513,8 @@ contract CapacityV3Test is PanelsSetup {
     /// A paused validator isn't counted among a k = 1 verdict's challengers: a hold doesn't end on validators that
     /// couldn't take its challenge.
     function test_pausedValidatorsArentChallengers() public {
-        address[] memory ks = _network(3, FAMILIES, 3);
-        for (uint256 i; i < 3; ++i) {
+        address[] memory ks = _network(6, FAMILIES, 3); // three challengers and room for its audits (#290)
+        for (uint256 i; i < 6; ++i) {
             vm.prank(ks[i]);
             pn.setCapacity(ks[i], 0);
         }
@@ -525,7 +526,7 @@ contract CapacityV3Test is PanelsSetup {
         assertEq(uint256(pn.submission(id).status), uint256(Status.Held));
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
-        for (uint256 i; i < 3; ++i) {
+        for (uint256 i; i < 6; ++i) {
             vm.prank(ks[i]);
             pn.setCapacity(ks[i], 5);
         }

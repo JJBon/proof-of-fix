@@ -97,7 +97,7 @@ Appeals have no such path.
 Whatever is chosen, the layout precondition stands. A panel of 7 needs ≥ 3 hosts, ≥ 3 TEE types (≤ 3 each) and one operator account per validator. Otherwise the launch runs at k = 3 or k = 1, and the k = 1 hold's readiness check, which ignores the caps, lets windows start whose challenges can't be drawn.
 
 ## Decided (owner, 2026-11-20)
-The owner decided on all three questions the same day. The rules are in `openspec/changes/proof-of-fix-251-testnet-launch/design.md` L23–L25, in the specs (`deployment-binding`, `judge-panels`, `panel-liveness`), and in tasks 3.22–3.27. No contract has changed yet.
+The owner decided on all three questions the same day. The rules are in `openspec/changes/proof-of-fix-251-testnet-launch/design.md` L23–L25, in the specs (`deployment-binding`, `judge-panels`, `panel-liveness`), and in tasks 3.22–3.27. No contract had changed then; contract batch 4 built them (the last section).
 - **L23, caps as deployment settings, loose on Sepolia.**
   - The operator, host and TEE-type caps become `PanelRules` constructor settings, each `Strict` or `Off`. They are fixed at deploy, keyless and in the record. Mainnet defaults to `Strict`; Sepolia sets them `Off`.
   - The family cap is unchanged.
@@ -114,3 +114,28 @@ The owner decided on all three questions the same day. The rules are in `openspe
   - A stuck challenge panel is released as L19 releases counted panels.
   - A waiting challenge is retried at `RETRY_DELAY`.
   - L19's invariant is restated to include challenges.
+
+## After contract batch 4: the cases again, tested (2026-11-20)
+Contract batch 4 (tasks 3.22–3.27) built L23–L25. Every case above is now a Foundry test, at 7 and 15 validators bonded $250 (spread: each its own operator account and host, three TEE types), bounties of $10, $25, $50 and $125, and 1, 2 and 3 families (3 before and after all are known), under the strict settings (#132's: every cap `Strict`, `kTop` 7, `Larger`) and the launch's (every cap `Off`, `kTop` 3, `Same`): `contracts/test/v3/DrawabilityCasesV3.t.sol`, one `CASE` line a case in the log (`scripts/contracts.sh test --match-contract DrawabilityCasesV3Test -vv`). The table below is regenerated from those lines; the 64 lines are identical with production windows and with `POF_TEST_WINDOWS=minutes`. The bounty made no difference in any case, so each row stands for its four bounties.
+
+| n | Families (known) | Rules | k | Challenge | Test dispute | Appeal k |
+|---|---|---|---|---|---|---|
+| 7 | 1 (1) | strict | 7 | D27's second draw, counted | second draw, counted | 7 |
+| 7 | 2 (2) | strict | 7 | second draw, counted | second draw, counted | 7 |
+| 7 | 3 (2 known) | strict | 7 | second draw, counted | second draw, counted | 7 |
+| 7 | 3 (3 known) | strict | 7 | no panel: **lapses at CHALLENGE_DEADLINE** (before: waited forever) | lapses | 7 |
+| 7 | 1, 2, 3 (any) | launch | 3 | a fresh panel of 3 from the 4 outside, counted | fresh 3, counted | 3 |
+| 15 | 1, 2, 3 (any) | strict | 7 | fresh 7, counted | fresh 7, counted | 7 |
+| 15 | 1, 2, 3 (any) | launch | 3 | fresh 3 from the 12 outside, counted | fresh 3, counted | 3 |
+
+Every challenge and dispute ended (counted or lapsed); none stayed open. No random audit fell due on these 64 verdicts (their seeds); audits are tested on their own below.
+
+**The "tested" marks of sections 2 and 4, checked against the decisions:**
+- *7 validators, 1–2 families, the second draw* (tested): unchanged under the strict rules (D27, the fallback); under the launch's rules the challenge gets a fresh panel of 3 instead.
+- *7 validators, one paused, the challenge waits; un-pausing didn't redraw it* (tested): now redrawn at its retry time (`PanelRulesV3Test.test_aValidatorUnpauses`, scenario "A validator un-pauses").
+- *7 validators, 3 families all known, waits forever* (tested): lapses at CHALLENGE_DEADLINE, the verdict standing and its window resumed (`test_noPanelByTheDeadline`, and the table above).
+- *15 validators* (tested): every case drew a fresh panel; where a sample fails, the retry clock redraws it with a fresh seed (`_endChallenge`), and a challenge with no panel lapses at its deadline.
+- *A silent judge on a second-draw panel at 7, never released* (tested): released at its reveal deadline plus STUCK_GRACE, the silent seat slashed; before the deadline the challenge waits again, after it it lapses (`test_aSilentJudgeOnAChallengePanelWithNoReplacement`).
+- *The layout precondition* (tested): with every cap `Off`, one operator account, one host value and one TEE type give a panel of `kTop` (`test_theOwnersValidatorsFillPanelsOnSepolia`); with every cap `Strict`, one host or one operator account still gives k = 1 and one TEE type k = 3, but the k = 1 hold now counts challengers under the caps, so the verdict stays held instead of starting a window its challenge can't be drawn for (`test_theOwnersValidatorsOnAStrictDeployment`, `test_oneHostLayout`, `test_oneTeeTypeLayout`).
+- *Audits at n = 7* (finding 9): with panels of 3, an audit that falls due is drawn from the 4 outside (`test_theSepoliaLaunchAt7Validators`), and an audited verdict's challenge falls to D27's second draw when one of the 3 left can't sit (`test_anAuditedVerdictsChallenge`).
+- *L19's invariant with challenges*: `LivenessInvariantV3`'s `ChallengeLiveness{Strict,Launch}{7,15}Test` apply challenges, test disputes, silences, pauses, joins and leaves in any order and check the restated invariant at every step, and that every submission ends final or refunded with no challenge outliving its deadline without a panel.

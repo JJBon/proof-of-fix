@@ -214,7 +214,9 @@ class FakeChain:
         self.priced = [FAMILY]
         self.bounties: dict = {}  # b -> the race's bounty, beyond {"issue": 1}
         self.awards: dict = {}  # (b, epoch) -> award
-        self.live = {"stuckGrace": 86400, "retryDelay": 86400, "maxRedraws": 3, "capWindow": 3600}
+        self.live = {"stuckGrace": 86400, "retryDelay": 86400, "maxRedraws": 3, "capWindow": 3600,
+                     "challengeDeadline": 120 * 3600}
+        self.settled_lapses: list = []
 
     # ----- test helpers -----
 
@@ -516,10 +518,41 @@ class FakeChain:
             return False
         p["closed"] = True
         v = self.verdicts[p["id"]]
+        if p["kind"] == v3.CHALLENGE:  # L25: back to waiting before the deadline, a lapse after it
+            v["challengePid"] = 0
+            if self.time > v["challengeBy"]:
+                self._lapse(v)
+            else:
+                v.update(challengeEpoch=self.epoch() + 1, challengeRetryAt=self.time + self.live["retryDelay"])
+            return True
         v["redraws"] += 1
         v.update(status=v3.RELEASED if v["redraws"] >= self.live["maxRedraws"] else v3.WAITING, pid=0,
                  retryAt=self.time + self.live["retryDelay"])
         return True
+
+    def lapseChallenge(self, sender, s):  # noqa: N802 (the contract's name)
+        v = self.verdicts[s]
+        if not v["challengeOpen"] or v["challengePid"]:
+            _fail("WrongStatus()")
+        if self.time <= v["challengeBy"]:
+            _fail("TooEarly()")
+        self._lapse(v)
+
+    def _lapse(self, v):
+        v.update(challengeOpen=False, challengePid=0, challengeEpoch=0, lapses=v.get("lapses", 0) + 1,
+                 filedLapsed=True)
+
+    def settleLapse(self, sender, s):  # noqa: N802 (the contract's name)
+        """RaceV3.settleLapse: once per lapse of a filed challenge."""
+        if not self.verdicts[s].get("filedLapsed") or (s, self.verdicts[s]["lapses"]) in self.settled_lapses:
+            _fail("Refused()")
+        self.settled_lapses.append((s, self.verdicts[s]["lapses"]))
+
+    def payPanel(self, sender, pid):  # noqa: N802 (the contract's name)
+        p = self.panels_[pid]
+        if p.get("paid") or not (p["counted"] or (p["closed"] and p["kind"] == v3.CHALLENGE)):
+            _fail("Refused()")
+        p["paid"] = True
 
     def releaseAudits(self, sender, s):  # noqa: N802 (the contract's name)
         v = self.verdicts[s]
@@ -987,6 +1020,91 @@ class KeeperTableChallenge(unittest.TestCase):
             c.height += 6
             keeper.tick(0)
         self.assertEqual(c.names().count("drawChallenge"), 3 * node_v3.CHALLENGE_TRIES)
+
+    def _waiting_challenge(self, net):
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.verdicts[1].update(challengeOpen=True, challengeBlock=c.height, challengeEpoch=c.epoch() + 1,
+                             challengeRetryAt=c.time + c.live["retryDelay"], filedLapsed=False, lapses=0,
+                             challengeBy=c.time + c.live["challengeDeadline"])
+        return c
+
+    def test_the_keeper_starts_a_held_window_only_once_its_challenge_closed(self):
+        """#256's flake: Panels' startWindow on a held k = 1 verdict whose challenge is open leaves the window's frozen
+        rest at 0, so the challenge's lapse resumed the window with nothing left and the verdict was final at once.
+        The keeper starts the window only once the challenge is closed: held, the verdict can't be final anyway."""
+        net = Net(self.tmp)
+        c = self._waiting_challenge(net)
+        self.assertEqual(c.verdicts[1]["status"], v3.HELD)
+        started = []
+
+        def start(sender, s):
+            if c.verdicts[s]["status"] != v3.HELD:
+                raise Reverted("WrongStatus()")
+            started.append(s)
+            c.verdicts[s]["status"] = v3.WINDOW
+        c.startWindow = start
+        keeper = net.node(3, keeper=True)
+        for _ in range(3):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(started, [])  # its challenge is open: the hold goes on
+        c.verdicts[1]["challengeOpen"] = False
+        keeper.tick(0)
+        self.assertEqual(started, [1])
+
+    def test_the_keeper_redraws_a_waiting_challenge_at_its_retry_time(self):
+        """#251 L25: a waiting challenge is drawn again at its retry time even with no registry change (an un-pause
+        isn't one); before it, the keeper doesn't call."""
+        net = Net(self.tmp)
+        c = self._waiting_challenge(net)
+        keeper = net.node(3, keeper=True)
+        for _ in range(4):
+            c.height += 6
+            keeper.tick(0)
+        self.assertNotIn("drawChallenge", c.names())  # it waits: same registry, before its retry time
+        c.time = c.verdicts[1]["challengeRetryAt"]
+        c.height += 6
+        keeper.tick(0)
+        self.assertEqual(c.names().count("drawChallenge"), 1)
+
+    def test_the_keeper_lapses_a_challenge_past_its_deadline(self):
+        """#251 L25: past CHALLENGE_DEADLINE with no panel the challenge lapses (once), and the race returns a filed
+        challenge's stake and cover (settleLapse, once per lapse)."""
+        net = Net(self.tmp)
+        c = self._waiting_challenge(net)
+        keeper = net.node(3, keeper=True)
+        c.time = c.verdicts[1]["challengeBy"]
+        keeper.tick(0)
+        self.assertNotIn("lapseChallenge", c.names())  # at the deadline, not past it
+        c.warp(1)
+        for _ in range(4):
+            keeper.tick(0)
+        self.assertEqual(c.names().count("lapseChallenge"), 1)
+        self.assertFalse(c.verdicts[1]["challengeOpen"])
+        self.assertEqual(c.names().count("settleLapse"), 1)
+        self.assertEqual(c.settled_lapses, [(1, 1)])
+
+    def test_the_keeper_releases_a_stuck_challenge_panel(self):
+        """#251 L25: a challenge panel whose replacements are exhausted is released STUCK_GRACE after its reveal
+        deadline (the challenge waits again, before its deadline), and its revealed seats are paid."""
+        net = Net(self.tmp)
+        c = self._waiting_challenge(net)
+        c.verdicts[1].update(challengeEpoch=0)
+        cpid = c.add_panel(1, v3.CHALLENGE, net.addresses(1, 2, 3), ex=1)
+        c.verdicts[1]["challengePid"] = cpid
+        c.panels_[cpid]["seats"] = 2
+        keeper = net.node(3, keeper=True)
+        c.time = c.panels_[cpid]["revealBy"] + c.live["stuckGrace"] + 1
+        keeper.tick(0)
+        self.assertTrue(c.panels_[cpid]["closed"])
+        self.assertEqual(c.verdicts[1]["challengePid"], 0)
+        self.assertTrue(c.verdicts[1]["challengeOpen"])  # before its deadline: waiting again
+        self.assertEqual(c.verdicts[1]["challengeRetryAt"], c.time + c.live["retryDelay"])
+        keeper.tick(0)
+        self.assertEqual(c.names().count("payPanel"), 1)
+        self.assertTrue(c.panels_[cpid]["paid"])
 
     def test_a_challenge_is_filed_only_on_a_disagreement(self):
         net = Net(self.tmp, exit_code=1)

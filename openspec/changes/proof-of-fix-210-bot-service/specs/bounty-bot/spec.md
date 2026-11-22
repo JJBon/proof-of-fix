@@ -211,7 +211,7 @@ With the bot's work on, the watcher SHALL start the stopped host, and again ever
 - **THEN** the watcher drops it and doesn't start the host for it
 
 ### Requirement: The bot runs on the seats host beside the nodes
-On platform#219's host, the bot SHALL run as its own container from the nodes' pinned image, without the Docker socket. Only its own secrets SHALL be mounted, read-only, as files. No node's secret SHALL be in it, and none of its secrets in a node's container. The host SHALL power off only when every node and the bot have exited, or at its maximum run time.
+On infra#219's host, the bot SHALL run as its own container from the nodes' pinned image, without the Docker socket. Only its own secrets SHALL be mounted, read-only, as files. No node's secret SHALL be in it, and none of its secrets in a node's container. The host SHALL power off only when every node and the bot have exited, or at its maximum run time.
 
 #### Scenario: The bot's container
 - **WHEN** the bot's container is inspected on the host

@@ -6,6 +6,8 @@
 #   scripts/test-image.sh                      build this machine's platform, load it, check the digest, print it
 #   scripts/test-image.sh --twice              build it twice without Docker's cache first: the digest must repeat
 #   scripts/test-image.sh --platform arm64     another platform (amd64 or arm64; under emulation if it isn't this one)
+#   scripts/test-image.sh --save FILE          also keep the build's OCI archive in FILE (the measured disk carries it:
+#                                              scripts/checker-disk.sh, #251 L21)
 #
 # It prints `TEST_IMAGE (<platform>) = pof-test-image@sha256:...` and exits 0 only when the build's digest is the one
 # oracle/sandbox.py pins (TEST_IMAGES). An image already loaded under that digest isn't built again (unless --twice).
@@ -22,14 +24,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 DOCKERFILE=oracle/test-image/Dockerfile
 EPOCH=1793827419  # 2026-11-04T21:23:39Z: the Dockerfile's SNAPSHOT, which the check below holds it to
-platform="" twice=""
+platform="" twice="" save=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --twice) twice=1 ;;
+    --save) save=${2:-}; [[ -n "$save" ]] || usage; shift ;;
     --platform) platform=${2:-}; shift ;;
     -h | --help) usage ;;
     *) usage ;;
@@ -45,7 +48,7 @@ when=$(python3 -c "import datetime as d; print(d.datetime.fromtimestamp($EPOCH, 
 [[ "$when" == "$snapshot" ]] ||
   { echo "test-image: EPOCH ($EPOCH) isn't the Dockerfile's SNAPSHOT ($snapshot)" >&2; exit 1; }
 
-if [[ -z "$twice" ]] && docker image inspect "$pinned" >/dev/null 2>&1; then
+if [[ -z "$twice" && -z "$save" ]] && docker image inspect "$pinned" >/dev/null 2>&1; then
   echo "TEST_IMAGE ($platform) = $pinned (already loaded)"
   exit 0
 fi
@@ -81,6 +84,7 @@ fi
 built=pof-test-image@$(oci_digest "$WORK/image.tar")
 [[ "$built" == "$pinned" ]] ||
   { echo "test-image: the build is $built, not the pinned $pinned (oracle/sandbox.py TEST_IMAGES)" >&2; exit 1; }
+if [[ -n "$save" ]]; then cp "$WORK/image.tar" "$save"; fi
 docker load -q -i "$WORK/image.tar" >/dev/null
 docker image inspect "$pinned" >/dev/null 2>&1 ||
   { echo "test-image: loaded, but Docker doesn't know $pinned" >&2; exit 1; }

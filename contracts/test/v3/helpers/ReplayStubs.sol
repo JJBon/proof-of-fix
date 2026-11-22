@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
+import {PanelRules, PanelRulesLib} from "../../../src/v3/PanelRules.sol";
 import {IValidators} from "../../../src/v3/IValidators.sol";
 import {Status, Kind, Submission, Panel, Seat} from "../../../src/v3/PanelsBase.sol";
 
@@ -68,6 +69,12 @@ contract ReplayPanels {
 
     function bind() external {
         race = msg.sender;
+    }
+
+    /// #132's panel rules (the replays' simulation drew up to 7 judges, with D4's larger challenges): RaceV3 prices a
+    /// check's deposit and a challenge's cover from them (#251 batch 4).
+    function panelRules() external pure returns (PanelRules memory) {
+        return PanelRulesLib.strict();
     }
 
     function open(uint256 id, bytes32 commitment, uint256 bounty) external {

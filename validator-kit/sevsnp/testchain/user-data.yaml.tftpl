@@ -1,0 +1,31 @@
+#cloud-config
+# proof-of-fix's test chain for the release candidate (#251 task 7.0): rc-remote.sh written to the host, Docker's
+# settings (the containerd image store, so the sandbox's test image keeps its pinned digest when loaded), the hard
+# stop scheduled at every boot, then the first boot's install (rc-remote.sh install: Docker and git from the AL2023
+# repository locked to the AMI's release). The run itself comes over SSM: scripts/rc-aws.sh.
+write_files:
+  - path: /opt/pof/rc-remote.sh
+    permissions: "0755"
+    encoding: gz+b64
+    content: ${rc_remote}
+  - path: /etc/docker/daemon.json
+    permissions: "0644"
+    encoding: gz+b64
+    content: ${daemon_json}
+  - path: /etc/systemd/system/pof-autostop.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=proof-of-fix test chain: the hard stop, ${autostop_minutes} minutes after each boot
+      After=multi-user.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/sbin/shutdown -h +${autostop_minutes} "proof-of-fix test chain: the auto-stop's hours are up"
+
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - [systemctl, daemon-reload]
+  - [systemctl, enable, --now, pof-autostop.service]
+  - [bash, /opt/pof/rc-remote.sh, install]

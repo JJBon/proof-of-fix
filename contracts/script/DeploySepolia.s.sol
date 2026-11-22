@@ -18,6 +18,7 @@ import {RaceV3Annex} from "../src/v3/RaceV3Annex.sol";
 import {RaceV3Endings} from "../src/v3/RaceV3Endings.sol";
 import {RaceV3Base} from "../src/v3/RaceV3Base.sol";
 import {Windows, WindowsLib} from "../src/v3/Windows.sol";
+import {PanelRules, PanelRulesLib, Cap, ChallengeSize} from "../src/v3/PanelRules.sol";
 import {TestCoin} from "../src/v3/TestCoin.sol";
 import {CoinFaucet} from "../src/v3/CoinFaucet.sol";
 import {RegistryMaker} from "./RegistryMaker.sol";
@@ -66,6 +67,12 @@ import {RegistryMaker} from "./RegistryMaker.sol";
 ///   DEPLOY_GENESIS_SIG           its signature over the registration digest for the registry's address (printed as
 ///                                GENESIS_DIGEST); or, on a local endpoint only, DEPLOY_GENESIS_PK, a test key, to sign
 ///                                here (the wrapper refuses it for any other endpoint)
+///   DEPLOY_PANEL_CAPS            the operator, host and TEE-type caps (#251 batch 4, L23): "strict" (default, each
+///                                `Strict`) or "launch" (each `Off`, the Sepolia record's)
+///   DEPLOY_K_TOP                 the largest issue-tier panel (L24): an odd number from 1 to 7 (default 7; Sepolia 3)
+///   DEPLOY_CHALLENGE_SIZE        "larger" (default, D4) or "same" (L24, the Sepolia record's)
+/// The panel rules are Panels' constructor argument, not its creation code, so the record names every field
+/// (`panelRules`), and the wrapper checks them against the release-candidate record's.
 contract DeploySepoliaScript is Script {
     uint256 internal constant SEPOLIA = 11_155_111;
     /// The test coin's genesis mint by default: 5,000 coins (L17, 2026-11-20): 15 launch validators' $250 bonds
@@ -117,6 +124,7 @@ contract DeploySepoliaScript is Script {
         bytes32[] images;
         string genesisTee;
         Windows windows;
+        PanelRules rules;
         uint256 genesisMint;
         address genesisMintTo;
     }
@@ -227,10 +235,24 @@ contract DeploySepoliaScript is Script {
         p.images = vm.envBytes32("DEPLOY_IMAGES", ",");
         p.genesisTee = vm.envString("DEPLOY_GENESIS_TEE_TYPE");
         p.windows = WindowsLib.production();
+        p.rules = rulesFromEnv();
         p.genesisMint = vm.envOr("DEPLOY_GENESIS_MINT", GENESIS_MINT);
         if (p.genesisMint < GENESIS_BOND) revert("the genesis mint is less than the genesis bond (250 coins)");
         p.genesisMintTo = vm.envOr("DEPLOY_GENESIS_MINT_TO", p.deployer);
         if (p.genesisMintTo == address(0)) revert("no recipient for the genesis mint");
+    }
+
+    /// The panel rules from DEPLOY_PANEL_CAPS, DEPLOY_K_TOP and DEPLOY_CHALLENGE_SIZE (defaults: #132's, all strict, 7,
+    /// larger). Panels' constructor checks `kTop`.
+    function rulesFromEnv() public view returns (PanelRules memory r) {
+        r = PanelRulesLib.strict();
+        bytes32 caps = keccak256(bytes(vm.envOr("DEPLOY_PANEL_CAPS", string("strict"))));
+        if (caps == keccak256("launch")) (r.operatorCap, r.hostCap, r.teeCap) = (Cap.Off, Cap.Off, Cap.Off);
+        else if (caps != keccak256("strict")) revert("DEPLOY_PANEL_CAPS: strict or launch");
+        r.kTop = vm.envOr("DEPLOY_K_TOP", uint256(7));
+        bytes32 size = keccak256(bytes(vm.envOr("DEPLOY_CHALLENGE_SIZE", string("larger"))));
+        if (size == keccak256("same")) r.challengeSize = ChallengeSize.Same;
+        else if (size != keccak256("larger")) revert("DEPLOY_CHALLENGE_SIZE: larger or same");
     }
 
     function _registration(Plan memory p) internal view returns (IValidators.Registration memory r) {
@@ -308,7 +330,7 @@ contract DeploySepoliaScript is Script {
         d.scores = new PanelScores();
         d.fees = new FeesV3(IFeesV3Validators(address(d.reg)), d.scores, _fees(d.coin, p));
         d.panels = new Panels(
-            IPanelsRegistry(address(d.reg)), IPanelsFees(address(d.fees)), IPanelScores(address(d.scores)), p.teeTypes, p.windows
+            IPanelsRegistry(address(d.reg)), IPanelsFees(address(d.fees)), IPanelScores(address(d.scores)), p.teeTypes, p.windows, p.rules
         );
         d.start = block.timestamp;
         RaceV3Base.Config memory c = _config(address(d.pool));
@@ -401,6 +423,7 @@ contract DeploySepoliaScript is Script {
         vm.serializeString(o, "proofTypes", "tee");
         vm.serializeString(o, "windowsKind", "production");
         vm.serializeString(o, "windows", _windowsJson(p.windows));
+        vm.serializeString(o, "panelRules", rulesJson(d.panels.panelRules()));
         vm.serializeUint(o, "unbondingDelay", d.reg.UNBONDING_DELAY());
         vm.serializeUint(o, "genesisBond", GENESIS_BOND);
         vm.serializeString(o, "judgesFee", _judgesFee());
@@ -634,8 +657,11 @@ contract DeploySepoliaScript is Script {
         vm.serializeAddress(o, "scores", address(d.scores));
         vm.serializeBytes32(o, "teeTypes", p.teeTypes);
         vm.serializeString(o, "windows", _windowsJson(p.windows));
+        vm.serializeString(o, "rules", rulesJson(p.rules));
         return vm.serializeBytes(
-            o, "encoded", abi.encode(address(d.reg), address(d.fees), address(d.scores), p.teeTypes, p.windows)
+            o,
+            "encoded",
+            abi.encode(address(d.reg), address(d.fees), address(d.scores), p.teeTypes, p.windows, p.rules)
         );
     }
 
@@ -727,6 +753,24 @@ contract DeploySepoliaScript is Script {
         return vm.serializeUint(o, "judgeFee", c.judgeFee);
     }
 
+    /// The panel rules as the record names them (L23, L24): each cap "strict" or "off", kTop, and the challenge size
+    /// "larger" or "same"; the same names `deploy-sepolia.sh` and the release-candidate record use.
+    function rulesJson(PanelRules memory r) public pure returns (string memory) {
+        return string.concat(
+            '{"operatorCap": "',
+            r.operatorCap == Cap.Strict ? "strict" : "off",
+            '", "hostCap": "',
+            r.hostCap == Cap.Strict ? "strict" : "off",
+            '", "teeCap": "',
+            r.teeCap == Cap.Strict ? "strict" : "off",
+            '", "kTop": ',
+            vm.toString(r.kTop),
+            ', "challengeSize": "',
+            r.challengeSize == ChallengeSize.Same ? "same" : "larger",
+            '"}'
+        );
+    }
+
     /// The windows in seconds, as NodeV3Local records them: "challenge" is [[A k=1,3,5,7], [B ...], [C ...]].
     function _windowsJson(Windows memory w) internal pure returns (string memory j) {
         j = string.concat('{"seal": ', vm.toString(w.seal), ', "reveal": ', vm.toString(w.reveal), ', "challenge": [');
@@ -757,6 +801,8 @@ contract DeploySepoliaScript is Script {
             vm.toString(w.appeal),
             ', "active": ',
             vm.toString(w.active),
+            ', "challengeDeadline": ',
+            vm.toString(w.challengeDeadline),
             "}"
         );
     }

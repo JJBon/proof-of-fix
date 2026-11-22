@@ -1,0 +1,35 @@
+# This validator's Radicle node (#251 L11, L12; task 4.9): radicle-node as the user pof (uid 10001, the node
+# container's), its key and storage on the data volume, outbound only to the seed the user data names. It starts in
+# parallel with the images' load and the attestation: pof-radicle-setup.service before it (the key, the config, the
+# policy), pof-radicle-ready.service after it (the sync, the working copy), and the node (pof-node.service) after
+# that. Its own log goes to the journal only, so the serial console keeps the attestation's lines.
+[Unit]
+Description=proof-of-fix: this validator's Radicle node (outbound only, to the seed)
+Requires=pof-radicle-setup.service
+After=pof-radicle-setup.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pof
+Group=pof
+Environment=RAD_HOME=/data/state/radicle HOME=/data/state/radicle
+ExecStart=/usr/lib/pof/radicle/bin/radicle-node --log-level info
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/data/state/radicle
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

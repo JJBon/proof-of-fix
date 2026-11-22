@@ -68,6 +68,7 @@ class FakeRpc:
             "activeCount": lambda to, *a: [0], "ACTIVE_WINDOW": lambda to, *a: [26 * 7 * 86400],
             "bounty": lambda to, *a: [(1, 1, 0, False, 0, 0, 0, 0, 0, 0, 0, 0)],
             "held": lambda to, *a: [0],
+            "panelRules": lambda to, *a: [(0, 0, 0, 7, 0)],  # #251 batch 4: the strict defaults, kTop 7
         }
         self.answers.update(over)
 

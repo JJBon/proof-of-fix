@@ -20,6 +20,11 @@ pragma solidity 0.8.37;
 /// The solver-side windows (#251 contract batch 3; ADR 0007): `appeal` (APPEAL_WINDOW, 72 h: a rejected fix's one
 /// appeal is filed within it of its counted panel's reveal deadline, #132 D24) and `active` (ACTIVE_WINDOW, 26 weeks: an
 /// identity counts as an active solver for this long after its last merged fix or upheld test dispute, launch L6).
+///
+/// The challenges' deadline (#251 contract batch 4, design L25): `challengeDeadline` (CHALLENGE_DEADLINE, 120 h,
+/// decided (owner, 2026-11-20)) from a challenge's opening; past it a challenge with no panel lapses. At least
+/// `maxRedraws × retryDelay + seal + reveal + stuckGrace` (99 h in production), so a challenge gets its scheduled
+/// retries and one full round with its grace before it can lapse.
 struct Windows {
     uint256 seal;
     uint256 reveal;
@@ -33,6 +38,7 @@ struct Windows {
     uint256 capWindow; // the trailing window of MAX_CHECKS_PER_HOUR (L16)
     uint256 appeal; // APPEAL_WINDOW (D24)
     uint256 active; // ACTIVE_WINDOW (L6)
+    uint256 challengeDeadline; // CHALLENGE_DEADLINE (L25)
 }
 
 /// The windows' checks and their packed, immutable form (Panels' `Env`).
@@ -45,7 +51,8 @@ library WindowsLib {
     /// The constructor's order check (deployment-binding, "Windows are checked for order at construction"): every
     /// window nonzero and below 2^32 s; at each level a smaller panel's challenge window at least a larger panel's;
     /// level B's at least level A's and level C's at least level B's for each panel size; k = 1's at least `k1Min`,
-    /// which is nonzero; the liveness and solver-side times nonzero and below 2^32 s, and MAX_REDRAWS from 1 to 255.
+    /// which is nonzero; the liveness and solver-side times nonzero and below 2^32 s, and MAX_REDRAWS from 1 to 255;
+    /// CHALLENGE_DEADLINE below 2^32 s and at least MAX_REDRAWS × RETRY_DELAY + seal + reveal + STUCK_GRACE (L25).
     function check(Windows memory w) internal pure {
         _ok(w.stuckGrace);
         _ok(w.retryDelay);
@@ -53,6 +60,8 @@ library WindowsLib {
         _ok(w.appeal);
         _ok(w.active);
         if (w.maxRedraws == 0 || w.maxRedraws > type(uint8).max) revert BadWindows();
+        _ok(w.challengeDeadline);
+        if (w.challengeDeadline < w.maxRedraws * w.retryDelay + w.seal + w.reveal + w.stuckGrace) revert BadWindows();
         _ok(w.seal);
         _ok(w.reveal);
         _ok(w.adr);
@@ -120,12 +129,13 @@ library WindowsLib {
         w.capWindow = 1 hours;
         w.appeal = 72 hours;
         w.active = 26 weeks;
+        w.challengeDeadline = 120 hours; // L25, decided (owner, 2026-11-20)
     }
 
     /// The production values with every hour read as a minute (a k = 1 level A verdict waits 168 minutes): the local
     /// devnets' and the Foundry suite's short run (#251, L4), the liveness times too (L19's grace and retry, and the
-    /// capacity's hour), and the appeal's 72 h and the active solvers' 26 weeks. MAX_REDRAWS stays 3 and the unbonding
-    /// margin 7 days.
+    /// capacity's hour), the appeal's 72 h, the active solvers' 26 weeks and the challenges' 120 h deadline (L25).
+    /// MAX_REDRAWS stays 3 and the unbonding margin 7 days.
     function inMinutes() internal pure returns (Windows memory w) {
         w = production();
         w.seal /= 60;
@@ -143,6 +153,7 @@ library WindowsLib {
         w.capWindow /= 60;
         w.appeal /= 60;
         w.active /= 60;
+        w.challengeDeadline /= 60;
     }
 
     function _ok(uint256 x) private pure {

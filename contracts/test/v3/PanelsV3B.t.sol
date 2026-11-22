@@ -178,6 +178,7 @@ contract PanelsV3BTest is PanelsSetup {
         assertTrue(pn.submission(id).lastUpheld);
         assertFalse(pn.submission(id).pass);
         assertEq(_bond(genesisKey), FULL_BOND); // a wrong verdict with a valid receipt isn't slashed
+        _network3(3); // three more: with its audits still due, three challengers left (#290)
         pn.startWindow(id);
         _finalize(id);
         assertFalse(pn.submission(id).pass);
@@ -186,6 +187,8 @@ contract PanelsV3BTest is PanelsSetup {
 
     /// Scenario "A challenge with too few validators": against a panel of 3 with only 3 others eligible, the challenge
     /// waits for a panel of 5, the verdict isn't final and its window doesn't run out; two more validators let it draw.
+    /// (#251 batch 4, L25: the wait is now bounded by CHALLENGE_DEADLINE, so the registry change comes within it, not
+    /// 30 days later, and a repeat call is refused only before the challenge's retry time.)
     function test_aChallengeWithTooFewValidators() public {
         _knowFamilies(7); // three or more families seated: no second draw (#132 D27), the challenge waits
         _network(2, 3, 3);
@@ -197,11 +200,11 @@ contract PanelsV3BTest is PanelsSetup {
         Submission memory s = pn.submission(id);
         uint256 left = s.finalAt - vm.getBlockTimestamp();
         assertEq(_challenge(id, challenger), 0);
-        vm.warp(s.finalAt + 30 days);
+        vm.expectRevert(Panels.NothingChanged.selector); // no registry change, before its retry time
+        pn.drawChallenge(id);
+        vm.warp(s.finalAt + 1); // past the window's end, within CHALLENGE_DEADLINE
         vm.expectRevert(Panels.NotReady.selector);
         pn.finalize(id);
-        vm.expectRevert(Panels.NothingChanged.selector);
-        pn.drawChallenge(id);
         _network3(2);
         pn.drawChallenge(id); // the registry changed: a fresh seed block and snapshot
         uint256 cpid = _drawChallenge(id);
@@ -324,15 +327,16 @@ contract PanelsV3BTest is PanelsSetup {
     }
 
     /// Scenario "One auditor misses a bad fix": one auditor agrees, the other's mismatch opens a challenge before the
-    /// verdict can be final.
+    /// verdict can be final. (#251 batch 4, L23: the lone verdict is drawn while the genesis validator is alone, and
+    /// five validators on hosts of their own join before its count, so challengers exist that could sit together;
+    /// before batch 4 they shared the genesis host, and under `Strict` caps that verdict is now held.)
     function test_oneAuditorMissesABadFix() public {
-        bytes32 host = keccak256("host-genesis");
-        for (uint256 i = 1; i <= 5; ++i) {
-            _add(host, _family(i), _tee(i % 3), 1, FULL_BOND); // one host: k steps down to 1, challengers exist
-        }
         uint256 id = _id();
         uint256 pid = _openAndDraw(id, 40e6);
         assertEq(pn.submission(id).k, 1);
+        for (uint256 i = 1; i <= 6; ++i) { // three challengers and room for its audits (#290; five before)
+            _add(keccak256(abi.encode("host", i)), _family(i), _tee(i % 3), 1, FULL_BOND);
+        }
         _judgeOne(pid, true);
         assertEq(uint256(pn.submission(id).status), uint256(Status.Window));
         _drawAudits(id);
@@ -610,7 +614,7 @@ contract PanelsV3BTest is PanelsSetup {
         assertEq(reg.progress(c2).agreed, 1);
         assertEq(reg.progress(c1).scored, 1);
         // later the verdict becomes final: the shadows aren't scored again
-        _network(3, 7, 3);
+        _network(6, 7, 3); // three challengers and room for its audits (#290)
         pn.startWindow(id);
         _finalize(id);
         assertEq(reg.progress(c1).scored, 1);
@@ -619,16 +623,16 @@ contract PanelsV3BTest is PanelsSetup {
     }
 
     /// Scenario "Challengers already eligible": a k = 1 verdict whose window starts at its reveal scores its shadows
-    /// against its final outcome.
+    /// against its final outcome. (#251 batch 4, L23: the four validators join on hosts of their own after the lone
+    /// draw, before the count; before batch 4 they shared the genesis host, which under `Strict` caps now holds it.)
     function test_challengersAlreadyEligible() public {
-        bytes32 host = keccak256("host-genesis");
-        for (uint256 i = 1; i <= 4; ++i) {
-            _add(host, _family(i), _tee(i % 3), 1, FULL_BOND);
-        }
         address c1 = _addCandidate(keccak256("c1"), _family(5), SEV_SNP, 1, 100e6);
         uint256 id = _id();
         uint256 pid = _openAndDraw(id, 40e6);
         assertEq(pn.submission(id).k, 1);
+        for (uint256 i = 1; i <= 6; ++i) { // three challengers and room for its audits (#290; four before)
+            _add(keccak256(abi.encode("host", i)), _family(i), _tee(i % 3), 1, FULL_BOND);
+        }
         uint256 spid = pn.submission(id).shadowPid;
         assertTrue(_contains(pn.judges(spid), c1));
         bool[] memory sv = new bool[](pn.panel(spid).k);

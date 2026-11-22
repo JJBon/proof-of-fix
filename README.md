@@ -15,6 +15,7 @@ proof-of-fix is **research**: a mechanism, its simulations and a reference imple
 - **No token sale, no promise of earnings.** Test bounties and fees are paid in the project's own **test coin**, "proof-of-fix test coin" (`POFTEST`), which has no value: nobody sells it and there is no market for it. Nothing in this repository is financial advice or an offer of anything of value.
 - **Where the test coin comes from.** A fixed genesis mint at deployment (the launch validators' bonds and a few seed bounties), then only a keyless faucet contract: 20 coins a claim, one claim per address every 2 hours, anyone for itself (`pofctl faucet`). Addresses are free, so a bot can claim from many; spam on the testnet is bounded by the validators' capacity and spending caps, not by the coin, a known risk ([ADR 0007](docs/adr/0007-solver-side-parameters.md), trust point 6).
 - **Not audited.** The contracts haven't had an external security audit. Don't put real money in them.
+- **Amounts in dollars** (bonds, fees, bounty tiers, the simulations' results) are the design's units: on the testnet each dollar is one test coin, which is worth nothing.
 
 ## Where it stands
 
@@ -22,8 +23,8 @@ proof-of-fix is **research**: a mechanism, its simulations and a reference imple
 |---|---|
 | **v2** | **Running** on a private Ethereum devnet with a test coin: 7 seats, 3 drawn per fix, 2 must agree. No contract has an owner, an admin, an upgrade or a pause. [ADR 0002](docs/adr/0002-architecture-v2.md) |
 | **v3, open validators** | **Contracts built and tested, not deployed:** anyone can register a validator. The node, the validator kit and the devnet run are next (#139, #140). [ADR 0004](docs/adr/0004-open-validators.md), [`reports/contract-v3.md`](reports/contract-v3.md) |
-| **Real money** | **None.** Test coin only, and no token in v2. No real funds until the owner decides to go public (rule 1 in `openspec/config.yaml`). |
-| **Access** | Private, for invited engineers. |
+| **Real money** | **None.** Test coin only, and no token. The Sepolia deployment uses the test coin, POFTEST, which has no value ([intended use](#intended-use)). |
+| **Access** | The code is public. The v2 devnet is private, for invited engineers. |
 
 ### What has run for real
 
@@ -212,7 +213,7 @@ flowchart TB
   KR --> Forgejo
   KE --> Forgejo
 ```
-The devnet is about $15 a month (platform#199, #200). Its stack is planned and applied through Forgejo's pipeline (platform-211).
+The devnet is about $15 a month (infra#199, #200). Its stack is planned and applied through Forgejo's pipeline (platform-211).
 
 ## How v3 works
 
@@ -337,7 +338,9 @@ stateDiagram-v2
 
 ## Take part
 
-Invited engineers: read [`docs/participate.md`](docs/participate.md). You need an API key from the organiser and an AWS account of your own.
+On the Sepolia testnet, once it's deployed (test coin only): [fund an issue](docs/guides/fund-an-issue.md), [submit a fix as a Radicle patch](docs/guides/submit-a-fix.md), [run a validator](docs/guides/run-a-validator.md).
+
+The private v2 devnet: invited engineers read [`docs/participate.md`](docs/participate.md). You need an API key from the organiser and an AWS account of your own.
 
 ## Running it
 
@@ -367,7 +370,7 @@ Python 3.9 or later, standard library only. A real bounty on the AWS devnet: the
 - `validator-kit/`: run a validator in your own AWS account ([README](validator-kit/README.md), [runbook](validator-kit/runbook.md), [costs](validator-kit/COSTS.md)).
 - `pofctl/` and `scripts/pofctl`: play every role against a devnet ([README](pofctl/README.md)).
 - `bot/`: links issues and pull requests to bounties; the repository hosts are `bot/forge.py` (Forgejo or GitHub, per repository) and `bot/github.py`.
-- `scripts/`: `devnet.sh`, `devnet-seats.sh` and `first-bounty.sh` for the devnet, the end-to-end rigs, `integration.sh`, the integration suite's seven scenarios on a throwaway local devnet (#152; `tests/integration/`), `check.sh`, `github_snapshot.py`, which refreshes the scrubbed private GitHub copies, and `github_issues.py`, which mirrors the tracker's issues there, scrubbed and with the same numbers (#178).
+- `scripts/`: `devnet.sh`, `devnet-seats.sh` and `first-bounty.sh` for the devnet, the end-to-end rigs, `integration.sh`, the integration suite's seven scenarios on a throwaway local devnet (#152; `tests/integration/`), `check.sh`, `github_snapshot.py`, which refreshes the scrubbed GitHub copies and makes the public Radicle snapshot (`--target radicle`), and `github_issues.py`, which mirrors the tracker's issues there, scrubbed and with the same numbers (#178).
 - `pof/`: the mechanism and `pof/sim/`, including `pof/sim/openval/` for v3.
 - `reports/`: simulation, contract and experiment reports. `experiments/`: the experiments' code and results.
 - `openspec/`: specs and changes (spec-driven; rules in `openspec/config.yaml`). `openspec/changes/proof-of-fix-132-open-validators/` is v3.

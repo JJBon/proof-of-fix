@@ -10,6 +10,8 @@ it."""
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -42,8 +44,10 @@ def frames(*parts):
 class FakeDocker:
     """A Docker daemon on a Unix socket that records each call; enough of the API for one sandboxed run."""
 
-    def __init__(self, have_image=True, exit_code=0, wait_s=0.0, pull_error="", warnings=None, drop=(), info=None):
+    def __init__(self, have_image=True, exit_code=0, wait_s=0.0, pull_error="", warnings=None, drop=(), info=None,
+                 image_info=None):
         self.info = info or {"MemoryLimit": True, "CpuCfsQuota": True, "PidsLimit": True, "CgroupDriver": "systemd"}
+        self.image_info = image_info or {}  # what GET /images/<name>/json answers (its Id, RepoDigests)
         self.calls, self.have_image, self.exit_code, self.wait_s, self.pull_error = [], have_image, exit_code, wait_s, pull_error
         self.warnings, self.drop, self.created = warnings, drop, None  # what a daemon that discards limits does
         self.release = threading.Event()
@@ -72,7 +76,7 @@ class FakeDocker:
                 if p == "info":
                     return self.reply(200, json.dumps(fake.info).encode())
                 if p.startswith("images/") and p.endswith("/json"):
-                    return self.reply(200 if fake.have_image else 404, b"{}")
+                    return self.reply(200 if fake.have_image else 404, json.dumps(fake.image_info).encode())
                 if p.startswith("images/create"):
                     lines = [{"status": "Pulling"}] + ([{"error": fake.pull_error}] if fake.pull_error else [])
                     return self.reply(200, "\n".join(json.dumps(x) for x in lines).encode())
@@ -241,6 +245,139 @@ class DockerApiRunner(unittest.TestCase):
     def test_it_runs_specs_not_cli_argvs(self):
         with self.assertRaises(TypeError):
             DockerApi()(["docker", "run"])
+
+
+LISTED = {"format": sandbox.IMAGES_FORMAT, "platform": "amd64",
+          "images": [{"name": "node", "ref": "pof-oracle-node@sha256:" + "11" * 32},
+                     {"name": "test", "ref": TEST_IMAGE}]}
+
+
+class AttestedMode(unittest.TestCase):
+    """#251 L21 (task 4.9): on the measured disk the node runs only the images its images.json lists, never pulls, and
+    a refusal is a setup error that stops the node."""
+
+    def fake(self, **kw):
+        kw.setdefault("image_info", {"Id": TEST_IMAGE.partition("@")[2], "RepoDigests": [TEST_IMAGE]})
+        fake = FakeDocker(**kw)
+        self.addCleanup(fake.close)
+        return fake
+
+    def api(self, fake, doc=LISTED):
+        return DockerApi(fake.path, attested=sandbox.AttestedImages.parse(doc))
+
+    def test_a_listed_image_runs(self):
+        fake = self.fake()
+        run = run_tests(Path("."), runner=self.api(fake))
+        self.assertTrue(run.passed)
+        self.assertEqual(fake.created["Image"], TEST_IMAGE)
+        self.assertFalse([c for c in fake.paths() if c[1].startswith("/v1.41/images/create")])
+
+    def test_the_listed_digest_may_be_a_repository_digest(self):
+        fake = self.fake(image_info={"Id": "sha256:" + "99" * 32, "RepoDigests": [TEST_IMAGE]})
+        self.assertTrue(run_tests(Path("."), runner=self.api(fake)).passed)
+
+    def test_an_unlisted_image_is_refused_before_anything_starts(self):
+        fake = self.fake(image_info={"Id": "sha256:" + "ab" * 32})
+        image = "python@sha256:" + "ab" * 32  # pinned, present, but not on the disk's list
+        with self.assertRaisesRegex(sandbox.ImageRefused, "isn't on the measured disk's list"):
+            self.api(fake).run_spec(spec_for(Path("."), image=image, env={}))
+        self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
+        self.assertFalse([c for c in fake.paths() if c[1].startswith("/v1.41/images/")])
+
+    def test_a_missing_listed_image_is_refused_never_pulled(self):
+        fake = self.fake(have_image=False)
+        with self.assertRaisesRegex(sandbox.ImageRefused, "isn't loaded"):
+            self.api(fake).run_spec(spec_for(Path("."), env={}))
+        self.assertFalse([c for c in fake.paths() if c[1].startswith("/v1.41/images/create")])
+        self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
+
+    def test_a_listed_name_with_another_image_behind_it_is_refused(self):
+        fake = self.fake(image_info={"Id": "sha256:" + "cd" * 32, "RepoDigests": ["pof-test-image@sha256:" + "cd" * 32]})
+        with self.assertRaisesRegex(sandbox.ImageRefused, "not the listed digest"):
+            self.api(fake).run_spec(spec_for(Path("."), env={}))
+        self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
+
+    def test_no_pull_load_or_build_call_leaves_it(self):
+        fake = self.fake()
+        api = self.api(fake)
+        for path in ("/images/create?fromImage=python&tag=latest", "/images/load", "/build?t=x"):
+            with self.assertRaisesRegex(sandbox.ImageRefused, "never POST"):
+                api._call("POST", path)
+        self.assertEqual(fake.calls, [])  # refused before the daemon heard of it
+
+    def test_a_refusal_is_a_setup_error_not_a_failed_run(self):
+        # Not a test failure the judge would see: it propagates out of run_tests, past the node's per-seat handling
+        # (Reverted, ModelError, NotReady), to oracle/__main__.py, which stops the node.
+        from oracle import evidence, models, rpc
+
+        self.assertFalse(issubclass(sandbox.ImageRefused, (rpc.Reverted, models.ModelError, evidence.NotReady)))
+        fake = self.fake(have_image=False)
+        with self.assertRaises(sandbox.ImageRefused):
+            run_tests(Path("."), runner=self.api(fake))
+
+    def test_the_node_stops_on_a_refusal(self):
+        from oracle import __main__ as cli
+
+        def refused(argv):
+            raise sandbox.ImageRefused("attested mode: the image x isn't on the measured disk's list")
+
+        out = io.StringIO()
+        with unittest.mock.patch.object(cli, "command", refused), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["oracle", "run"]), 1)
+        self.assertIn("oracle: setup error, stopping: attested mode", out.getvalue())
+
+    def test_the_disk_s_self_test(self):
+        # `oracle attested-check`, which the measured disk runs at every boot (validator-kit/sevsnp/disk).
+        from oracle import __main__ as cli
+
+        fake = self.fake()
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "images.json"
+            path.write_text(json.dumps({**LISTED, "images": [{"name": "test", "ref": TEST_IMAGE}]}))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = cli.attested_check({"ORACLE_ATTESTED_IMAGES": str(path), "DOCKER_SOCKET": fake.path})
+            self.assertEqual(code, 0)
+            result = json.loads(out.getvalue())
+            self.assertEqual((result["listed"], result["unlisted_refused"]), ([TEST_IMAGE], True))
+            self.assertNotIn(("POST", "/v1.41/containers/create"), fake.paths())
+            missing = self.fake(have_image=False)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.attested_check({"ORACLE_ATTESTED_IMAGES": str(path),
+                                                     "DOCKER_SOCKET": missing.path}), 1)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.attested_check({"DOCKER_SOCKET": fake.path}), 1)
+
+    def test_the_list_s_format_is_checked(self):
+        for bad in ({}, {"format": "other", "images": LISTED["images"]}, {**LISTED, "images": []},
+                    {**LISTED, "images": [{"ref": "pof-test-image:latest"}]},
+                    {**LISTED, "images": [{"ref": "pof-test-image@sha256:" + "zz" * 32}]}):
+            with self.assertRaises(sandbox.ImageRefused):
+                sandbox.AttestedImages.parse(bad)
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "images.json"
+            path.write_text(json.dumps(LISTED))
+            self.assertEqual(sandbox.AttestedImages.load(str(path)).refs, (LISTED["images"][0]["ref"], TEST_IMAGE))
+            with self.assertRaisesRegex(sandbox.ImageRefused, "can't read"):
+                sandbox.AttestedImages.load(str(Path(d) / "missing.json"))
+
+    def test_the_runner_from_the_environment(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "images.json"
+            path.write_text(json.dumps(LISTED))
+            runner = default_runner({"ORACLE_ATTESTED_IMAGES": str(path), "DOCKER_SOCKET": "/x.sock"})
+            self.assertIsInstance(runner, DockerApi)
+            self.assertEqual((runner.socket_path, runner.attested.refs[1]), ("/x.sock", TEST_IMAGE))
+            with self.assertRaisesRegex(sandbox.ImageRefused, "Docker socket only"):
+                default_runner({"ORACLE_ATTESTED_IMAGES": str(path), "ORACLE_SANDBOX": "cli"})
+
+    def test_outside_attested_mode_nothing_changes(self):
+        self.assertIsNone(DockerApi("/x.sock").attested)
+        with unittest.mock.patch("shutil.which", return_value=None):
+            self.assertIsNone(default_runner({}).attested)
+        fake = self.fake(have_image=False)  # another pinned image is still pulled, as before
+        DockerApi(fake.path).run_spec(spec_for(Path("."), image="python@sha256:" + "ab" * 32, env={}))
+        self.assertIn(("POST", "/v1.41/images/create"), fake.paths())
 
 
 class TwoRuns(unittest.TestCase):

@@ -1,0 +1,32 @@
+# The proof-of-fix Radicle seed (#251 design L14): radicle-node as the seed's own user, with the config and the one
+# seeding policy seed-setup.sh wrote. Logs go to the journal (journalctl -u radicle-seed).
+[Unit]
+Description=proof-of-fix Radicle seed node
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/var/lib/radicle
+
+[Service]
+Type=simple
+User=radicle
+Group=radicle
+Environment=RAD_HOME=/var/lib/radicle/home
+ExecStart=/usr/local/bin/radicle-node --log-level info
+Restart=always
+RestartSec=10
+LimitNOFILE=8192
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/radicle
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

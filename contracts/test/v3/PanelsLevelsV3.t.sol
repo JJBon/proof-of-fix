@@ -329,7 +329,7 @@ contract PanelsLevelsV3Test is PanelsSetup {
         }
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
-        for (uint256 i = 1; i <= 3; ++i) {
+        for (uint256 i = 1; i <= 6; ++i) { // three challengers and room for its audits (#290)
             _add(keccak256(abi.encode("tee", i)), _family(i + 3), _tee(i % 3), 2, FULL_BOND);
         }
         pn.startWindow(id);

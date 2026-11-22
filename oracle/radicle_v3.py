@@ -364,3 +364,16 @@ def from_env(env, chain, address: str, sign=None, log=print) -> tuple:
         seat = SeatAdapter(r, chain, address, seat_nodes(env, chain, rid), sign=sign, log=log,
                            every=float(env.get("ORACLE_RADICLE_EVERY", "30")))
     return fixes, fetcher, seat
+
+
+def attach(node, env, chain, address: str, sign=None) -> None:
+    """A v3 node's Radicle parts, as the environment configures them (`from_env`), set on `node`: the fix source and
+    its fetcher, the registrations' issues on the same Radicle node (task 4.3), and the seat's adapter. What
+    `python3 -m oracle run` does, and the devnet suite on Radicle with it (tests/integration/suite_v3_radicle.py, task
+    4.6). Raises ValueError on a configuration that can't be right."""
+    fixes, fetcher, seat = from_env(env, chain, address, sign=sign, log=node.log)
+    if fixes is not None:
+        node.fixes = fixes
+        node.claims = RadicleIssues(fixes.radicle)
+        node.fetcher = fetcher if env.get("ORACLE_FETCH", "1") != "0" else None
+    node.radicle_seat = seat

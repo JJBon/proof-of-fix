@@ -10,9 +10,14 @@
                                            run didn't finish; the kit's watcher starts the node again (#166)
     python3 -m oracle withdraw-fees [--to ADDRESS]
                                            v2: pull this key's check fees (its credit in the fee coin) to its address
-    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host (platform#219): the command
+    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host (infra#219): the command
                                            with devnet-seats.sh's settings and the seat's secrets from files
                                            (oracle/seat.py)
+    python3 -m oracle snp-report --data HEX [--out FILE] [--certs-dir DIR]
+                                           this SEV-SNP guest's attestation report over 64 bytes of report data
+                                           (oracle/snp.py; the measured disk's boot attestation). Needs no chain
+    python3 -m oracle attested-check       attested mode's self-test (ORACLE_ATTESTED_IMAGES): every listed image is
+                                           loaded at its digest, and an unlisted image is refused. Needs no chain
     python3 -m oracle model-check          one small PAID call to the direct judge's model (ORACLE_JUDGE=direct:...),
                                            at most 64 tokens out, no retry; prints the answer, the provider's usage, the
                                            endpoint and the request ID. Needs no chain
@@ -50,8 +55,10 @@ Configuration (environment):
     ORACLE_RACE      the Race contract (RaceV2 for v2: Verdicts and the meter are read from it)
     ORACLE_VERSION   1, 2 or 3 (default 1 for info; run and withdraw-fees are v2 unless it says 3)
     ORACLE_KEYS      "dstack" (inside a Phala dstack CVM, or DSTACK_SIMULATOR_ENDPOINT), "env" (ORACLE_PRIVATE_KEY:
-                     the validator's own key; devnet chains only) or "local:<i>" (INSECURE, local chains only:
-                     forge's makeAddrAndKey("oracle<i>"))
+                     the validator's own key; devnet chains only), "snp" (an AMD SEV-SNP guest, the kit's
+                     validator-kit/sevsnp: ORACLE_PRIVATE_KEY, quoted by SEV-SNP reports from /dev/sev-guest or
+                     ORACLE_SNP_DEVICE; register with --proof tee --tee-type amd-sev-snp) or "local:<i>" (INSECURE,
+                     local chains only: forge's makeAddrAndKey("oracle<i>"))
   run only:
     ORACLE_REPO      owner/name of the repository whose pull requests claim the submissions
     ORACLE_REPOS     the repository host config (bot/forge.py's repos.json; GitHub by default, with GITHUB_TOKEN)
@@ -64,9 +71,14 @@ Configuration (environment):
                      as a header, never logged
     ORACLE_FETCH_MAX_MB, ORACLE_FETCH_TIMEOUT
                      one fetch's limits (default 200 MB, 120 s)
+    <NAME>_SECRET_ARN  for ORACLE_PRIVATE_KEY, RPC_API_KEY, MODEL_API_KEY, ORACLE_GIT_TOKEN: read that secret from AWS
+                     Secrets Manager with the instance role into this process (oracle/awssecret.py; the SEV-SNP kit)
     ORACLE_SANDBOX   how the fixes' tests are started: "cli" (the Docker CLI) or "api" (the Docker socket,
                      DOCKER_SOCKET, default /var/run/docker.sock); by default the CLI when installed (#116).
                      ORACLE_SANDBOX_USER runs them as that user (e.g. 65534:65534)
+    ORACLE_ATTESTED_IMAGES  the measured checker disk's images.json (#251 L21; validator-kit/sevsnp): attested mode,
+                     the socket only; only the listed images run, nothing is pulled, and an unlisted image stops the
+                     node (a setup error, exit 1)
     ORACLE_EXCHANGE_TRANSPORT  how the drawn judges exchange seals, reveals and signatures (#117; oracle/transport.py):
                      folder, http, onchain (v3 only: the contracts themselves), p2p (interface only), or several
                      comma-separated (posted to each, read from all: none is required). Default: onchain on v3; on v2
@@ -81,6 +93,9 @@ Configuration (environment):
                      direct providers: bedrock (Converse, the instance role's credentials via IMDSv2 or AWS_* in the
                      environment, AWS_REGION; ORACLE_MODEL_ALLOW required), anthropic, openai (any OpenAI-compatible
                      server with ORACLE_MODEL_URL), gemini; MODEL_API_KEY or MODEL_API_KEY_FILE, sent as a header only
+    ORACLE_SPEND_DAILY_USD, ORACLE_SPEND_MONTHLY_USD, ORACLE_SPEND_LEDGER, ORACLE_PRICE_PER_MTOK, ORACLE_SPEND_PAUSE
+                     v3, a direct judge: the node's own model-spending caps across runs ($0.50 a day, $5 a month by
+                     default; 0 turns them off) and the on-chain pause when one is reached (oracle/spend.py, #253)
     ORACLE_MODEL_ALLOW, ORACLE_MODEL_URL, ORACLE_MAX_TOKENS (default 4000 per verdict), ORACLE_MAX_CALLS (20 per run),
     ORACLE_MAX_RUN_TOKENS (500000 per run), ORACLE_MODEL_TIMEOUT (120 s), ORACLE_MODEL_RETRIES (2)
                      the direct judge's allowlist, endpoint and spending guards (oracle/models.py)
@@ -157,6 +172,10 @@ def keys_from_env(chain_id: int, race: str):
         return LocalDevKeys(int(spec.split(":", 1)[1]))
     if spec == "env":
         return EnvKeys()
+    if spec == "snp":  # an AMD SEV-SNP guest (validator-kit/sevsnp, #253): the key from the environment, SNP reports
+        from .snp import SnpKeys
+
+        return SnpKeys()
     return DstackKeys(f"pof/oracle/{chain_id}/{race.lower()}")
 
 
@@ -269,15 +288,23 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
                   sources=sources)
     if host is not None:
         node.fetcher = fetch.from_env(env, repo, host, log=node.log)
-    try:  # Radicle (#251 tasks 4.1, 4.2): patches as the fix source, and model (a)'s seat on this node's Radicle node
-        fixes, rad_fetcher, seat = radicle_v3.from_env(env, chain, me, sign=keys.sign, log=node.log)
+    if isinstance(judge, DirectJudge):  # the node's own spending caps and pause (#253; oracle/spend.py)
+        from . import spend
+
+        try:
+            node.spend = spend.from_env(env)
+        except ConfigError as e:
+            raise SystemExit(f"oracle: {e}") from None
+        judge.client.spend = node.spend
+    if env.get("ORACLE_ATTESTED_IMAGES"):  # attested mode (#251 L21): a bad list stops the node now, not at a check
+        from .sandbox import default_runner
+
+        node.runner = default_runner(env)
+    try:  # Radicle (#251 tasks 4.1-4.3): patches as the fix source, the registrations' issues on the same node, and
+        # model (a)'s seat on this node's Radicle node
+        radicle_v3.attach(node, env, chain, me, sign=keys.sign)
     except ValueError as e:
         raise SystemExit(f"oracle: {e}") from None
-    if fixes is not None:
-        node.fixes = fixes
-        node.claims = radicle_v3.RadicleIssues(fixes.radicle)  # the registrations' issues on the same node (task 4.3)
-        node.fetcher = rad_fetcher if env.get("ORACLE_FETCH", "1") != "0" else None
-    node.radicle_seat = seat
     rpc.log = node.log
     if hasattr(judge, "log"):
         judge.log = node.log
@@ -377,21 +404,109 @@ def model_check(env) -> int:
     return 0
 
 
+def snp_report(args: list) -> int:
+    """`oracle snp-report --data HEX [--out FILE]`: this SEV-SNP guest's report over 64 bytes of report data (the
+    measured disk's boot attestation, validator-kit/sevsnp); prints its fields as JSON, writes the report to FILE."""
+    import argparse
+    import json
+
+    from . import snp
+
+    ap = argparse.ArgumentParser(prog="oracle snp-report")
+    ap.add_argument("--data", required=True, help="the report data: 64 bytes as 128 hex digits")
+    ap.add_argument("--out", help="where to write the report (1,184 bytes)")
+    ap.add_argument("--certs-dir", help="also ask for the host's certificates (the VLEK or VCEK that signs the "
+                                        "report) and write each as <name>.der here")
+    a = ap.parse_args(args)
+    try:
+        data = bytes.fromhex(a.data)
+    except ValueError:
+        data = b""
+    if len(data) != 64:
+        print("oracle snp-report: --data is 64 bytes, as 128 hex digits")
+        return 2
+    device = os.environ.get("ORACLE_SNP_DEVICE") or snp.DEVICE
+    try:
+        if a.certs_dir:
+            raw, certs = snp.request_ext_report(data, device)
+        else:
+            raw, certs = snp.request_report(data, device), {}
+    except RuntimeError as e:
+        print(f"oracle snp-report: {e}")
+        return 1
+    if a.out:
+        Path(a.out).write_bytes(raw)
+    if a.certs_dir:
+        Path(a.certs_dir).mkdir(parents=True, exist_ok=True)
+        for name, der in certs.items():
+            (Path(a.certs_dir) / f"{name}.der").write_bytes(der)
+    print(json.dumps(snp.parse(raw).summary(), sort_keys=True))
+    return 0
+
+
+UNLISTED_PROBE = "pof-unlisted-probe@sha256:" + "0" * 64  # an image no images.json lists
+
+
+def attested_check(env) -> int:
+    """`oracle attested-check`: attested mode's self-test on the measured disk (#251 L21): every image
+    ORACLE_ATTESTED_IMAGES lists is in the daemon under its listed digest, and an unlisted one is refused before the
+    daemon is asked anything. Prints JSON; exit 0 only if both hold."""
+    import json
+
+    from .sandbox import ImageRefused, default_runner, spec_for
+
+    try:
+        runner = default_runner({**env, "ORACLE_SANDBOX": "api"})
+        if runner.attested is None:
+            raise ImageRefused("set ORACLE_ATTESTED_IMAGES to the measured disk's images.json")
+        for ref in runner.attested.refs:
+            runner.ensure_image(ref)
+    except (ImageRefused, OSError, RuntimeError) as e:
+        print(json.dumps({"listed": False, "error": str(e)}))
+        return 1
+    try:
+        runner.run_spec(spec_for(Path("/nonexistent"), image=UNLISTED_PROBE, env={}))
+        refused = ""
+    except ImageRefused as e:
+        refused = str(e)
+    print(json.dumps({"listed": list(runner.attested.refs), "unlisted_refused": bool(refused), "refusal": refused},
+                     sort_keys=True))
+    return 0 if refused else 1
+
+
 def main(argv: list) -> int:
     if len(argv) > 1 and argv[1] == "seat":  # a role seat on the AWS devnet's seats host (oracle/seat.py, #152)
         from .seat import main as seat_main
 
         return seat_main(argv[1:], main)
+    from .sandbox import ImageRefused
+
     try:
         return command(argv)
     except Unavailable as e:
         print(f"oracle: {e}; the run didn't finish", flush=True)
         return EXIT_UNFINISHED
+    except ImageRefused as e:  # attested mode (#251 L21): an unlisted image or a pull is a setup error; the node stops
+        print(f"oracle: setup error, stopping: {e}", flush=True)
+        return 1
 
 
 def command(argv: list) -> int:
+    if any(os.environ.get(f"{n}_SECRET_ARN") for n in ("ORACLE_PRIVATE_KEY", "RPC_API_KEY", "MODEL_API_KEY",
+                                                        "ORACLE_GIT_TOKEN")):
+        from . import awssecret  # the SEV-SNP kit's node reads its own secrets (no AWS CLI on the measured disk)
+
+        try:
+            awssecret.resolve(os.environ)
+        except awssecret.SecretError as e:
+            print(f"oracle: {e}", flush=True)
+            return 1
     if len(argv) > 1 and argv[1] == "model-check":
         return model_check(os.environ)
+    if len(argv) > 1 and argv[1] == "snp-report":
+        return snp_report(argv[2:])
+    if len(argv) > 1 and argv[1] == "attested-check":
+        return attested_check(os.environ)
     if "ORACLE_RPC" not in os.environ or "ORACLE_RACE" not in os.environ:
         print(__doc__)
         return 2

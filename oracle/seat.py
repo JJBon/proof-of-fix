@@ -1,4 +1,4 @@
-"""A role seat's node on the AWS devnet's seats host (proof-of-fix#152, platform#219): `python3 -m oracle seat <command>`
+"""A role seat's node on the AWS devnet's seats host (proof-of-fix#152, infra#219): `python3 -m oracle seat <command>`
 in the node's image, e.g. `seat run --until-idle 600` or `seat info`.
 
 It sets up what `scripts/devnet-seats.sh` sets up for each seat on the owner's laptop, then runs the node's own command

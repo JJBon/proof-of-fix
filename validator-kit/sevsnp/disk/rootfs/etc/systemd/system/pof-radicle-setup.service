@@ -1,0 +1,15 @@
+[Unit]
+Description=proof-of-fix: this validator's Radicle key (made once), outbound-only config and seeding policy
+Requires=pof-data.service
+After=pof-data.service pof-config.service
+Wants=pof-config.service
+Before=pof-radicle.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/pof/pof-radicle.sh setup
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

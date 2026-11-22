@@ -1,0 +1,13 @@
+[Unit]
+Description=proof-of-fix: the user data, read as data (the node's settings and the host's)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/lib/pof/pof-config.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

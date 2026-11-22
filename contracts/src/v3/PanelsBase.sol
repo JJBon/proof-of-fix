@@ -76,6 +76,11 @@ struct Submission {
     uint8 redraws; // rounds released so far: stuck panels and audits that couldn't be drawn (#251, L19)
     uint64 retryAt; // while waiting: when it's drawn again even if the registry didn't change (L19, L16)
     uint64 auditStuckAt; // when its audits first found no auditor since the last one was drawn (0: not stuck)
+    uint64 challengeBy; // its open challenge's CHALLENGE_DEADLINE: past it with no panel, the challenge lapses (L25)
+    uint64 challengeRetryAt; // while its challenge waits: when it's drawn again even if the registry didn't change (L25)
+    uint8 lapses; // challenges lapsed so far (L25): at MAX_REDRAWS, no new challenge is accepted
+    bool chalFiled; // its open (or last) challenge was filed by the race, not opened by an auditor
+    bool filedLapsed; // the race's last filed challenge lapsed: the race returns its stake and cover (settleLapse)
 }
 
 struct Panel {
@@ -141,6 +146,12 @@ struct Env {
     uint256 retryDelay; // RETRY_DELAY
     uint256 maxRedraws; // MAX_REDRAWS
     uint256 capWindow; // the capacity's trailing window (L16)
+    uint256 challengeDeadline; // CHALLENGE_DEADLINE (L25)
+    bool opCap; // the operator cap is Strict (#251 batch 4, L23)
+    bool hostCap; // the host cap is Strict
+    bool teeCap; // the TEE-type cap is Strict
+    uint256 kTop; // the largest issue-tier panel (L24)
+    bool sameSize; // a challenge of k >= 3 draws a fresh panel of k (L24's `Same`), not CHALLENGE_K[k]
 }
 
 library PanelsBase {
@@ -224,14 +235,17 @@ library PanelsBase {
         c.tier = PanelsDraw.tierOf(bounty);
         c.pid = pid;
         c.exPid = exPid;
-        c.teeFrom = teeCapFrom(e);
+        c.teeFrom = e.teeCap ? teeCapFrom(e) : type(uint256).max; // Off: no k reaches it (L23)
+        c.opCap = e.opCap;
+        c.hostCap = e.hostCap;
         c.teeOnly = st.subs[id].teeOnly;
         c.members = new PanelsDraw.Member[](K_MAX);
         c.capWindow = e.capWindow;
         c.famCap = e.scores.capApplies(sn.blockNo);
     }
 
-    /// The counted panel a submission's draw seats with `seed` (K_MAX exactly at the constitution tier).
+    /// The counted panel a submission's draw seats with `seed`: up to the deployment's `kTop` at the issue tier (L24),
+    /// K_MAX exactly at the constitution tier.
     function drawCounted(Store storage st, Env memory e, uint256 id, bytes32 seed)
         internal
         view
@@ -240,7 +254,7 @@ library PanelsBase {
         Submission storage s = st.subs[id];
         bool con = s.tier != Tier.Issue;
         c = ctx(st, e, id, s.bounty, seed, s.snap, st.panelCount + 1, 0);
-        c.kTop = K_MAX;
+        c.kTop = con ? K_MAX : e.kTop;
         c.kMin = con ? K_MAX : 1;
         c.limits = !con;
         c.k1Cap = true;
@@ -335,6 +349,13 @@ library PanelsBase {
     /// CHALLENGE_K[k]: k=1→3 · k=3→5 · k=5→7 · k=7→7.
     function challengeK(uint256 k) internal pure returns (uint256) {
         return k == 1 ? 3 : k == 3 ? 5 : 7;
+    }
+
+    /// A challenge panel's first k and its smallest (L24): with `Same`, k fresh judges for a verdict of k >= 3, no
+    /// step-down; otherwise D4's CHALLENGE_K[k] down to k + 2 (K_MAX for K_MAX), which also keeps a lone verdict's 3.
+    function challengeRange(Env memory e, uint256 k) internal pure returns (uint256 top, uint256 min) {
+        if (e.sameSize && k > 1) return (k, k);
+        return (challengeK(k), k == K_MAX ? K_MAX : k + 2);
     }
 
     /// What a judge seals: its vote, its mask (a challenge judge's false receipts) and a secret salt, bound to this

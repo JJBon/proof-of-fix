@@ -402,7 +402,7 @@ contract RaceV3Test is RaceV3Setup {
         assertEq(rc.earned(b, 1), 0);
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
-        _network(3, FAMILIES, 3); // three more, not parties
+        _network(6, FAMILIES, 3); // six more, not parties: three challengers and room for its audits (#290)
         pn.startWindow(id);
         _finalAndMerge(b, id);
         _toDay(rc.day() + 28);
@@ -550,7 +550,7 @@ contract RaceV3Test is RaceV3Setup {
         _judge(pid, _votes(1, 1));
         _reportAll(pid);
         rc.result(id);
-        _network(3, FAMILIES, 3);
+        _network(6, FAMILIES, 3); // three challengers and room for its audits (#290)
         pn.startWindow(id);
         uint256 before = pn.panelCount();
         _runAudits(id, true);
@@ -905,11 +905,11 @@ contract RaceV3Test is RaceV3Setup {
     /// No owner, admin, setter or pause: every state-changing function is a race action anyone may call.
     function test_noPrivilegedCall() public view {
         string memory json = vm.readFile("out/RaceV3.sol/RaceV3.json");
-        string[30] memory writers = [
+        string[31] memory writers = [
             "register", "withdrawIssue", "openBounty", "pledge", "sunset", "attempt", "stop", "commit", "report",
             "result", "claim", "merge", "release", "claimInstalments", "settle", "appeal", "withdraw", "timeOut",
             "mergeExpired", "dispute", "close",
-            "challenge", "settleChallenge", "sync", "payPanel", "payShadow", "signal", "finish",
+            "challenge", "settleChallenge", "settleLapse", "sync", "payPanel", "payShadow", "signal", "finish",
             // Baskets: refunds, credits and swaps
             "claimRefund", "check"
         ];
@@ -934,7 +934,7 @@ contract RaceV3Test is RaceV3Setup {
             assertTrue(ok, string.concat("unexpected state-changing function: ", name));
             ++n;
         }
-        assertEq(n, 34); // two named withdraw: the race's and Baskets' credit withdrawal
+        assertEq(n, 35); // two named withdraw: the race's and Baskets' credit withdrawal; settleLapse since batch 4
     }
 
     /// The annex's actions run only in a race's storage, through its DELEGATECALL; and a race refuses an annex built
@@ -1006,6 +1006,9 @@ contract RaceV3Test is RaceV3Setup {
         assertEq(_word(s, 7), ps.pass ? 1 : 0);
         assertEq(_word(s, 15), ps.finalAt);
         assertEq(_word(s, 16), ps.pid);
+        assertEq(_word(s, 41), ps.redraws);
+        assertEq(_word(s, 48), ps.filedLapsed ? 1 : 0); // #251 batch 4 (L25): the race's lapse check
+        assertEq(_word(s, 44), ps.challengeBy);
         bytes memory p = abi.encode(pn.panel(pid));
         Panel memory pp = pn.panel(pid);
         assertEq(_word(p, 0), pp.id);
@@ -1015,6 +1018,7 @@ contract RaceV3Test is RaceV3Setup {
         assertEq(_word(p, 9), pp.passes);
         assertEq(_word(p, 11), pp.counted ? 1 : 0);
         assertEq(_word(p, 12), uint256(pp.kind));
+        assertEq(_word(p, 13), pp.closed ? 1 : 0); // a released challenge panel (L25)
         bytes memory x = abi.encode(pn.seat(pid, 0));
         Seat memory xx = pn.seat(pid, 0);
         assertEq(_word(x, 0), uint256(uint160(xx.key)));

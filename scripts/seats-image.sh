@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The AWS devnet's seats host's images (#152, platform#219): linux/arm64 builds from a clean commit, pushed to the host's
+# The AWS devnet's seats host's images (#152, infra#219): linux/arm64 builds from a clean commit, pushed to the host's
 # private ECR repositories, and their digests printed for platform's variables. The owner runs it, with Docker (buildx)
 # and an administrator's AWS profile for the platform account. Nothing else pushes them.
 #

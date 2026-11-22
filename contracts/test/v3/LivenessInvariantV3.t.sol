@@ -5,11 +5,14 @@ import {Test} from "forge-std/Test.sol";
 import {IValidators} from "../../src/v3/IValidators.sol";
 import {Status, Kind, Submission, Panel, Seat} from "../../src/v3/PanelsBase.sol";
 import {PanelsSetup} from "./helpers/PanelsSetup.sol";
+import {PanelRulesLib} from "../../src/v3/PanelRules.sol";
 
 /// Random sequences of draws, silences, joins, leaves, pauses and time on the real Panels (proof-of-fix#251, task
 /// 3.13; specs/panel-liveness, "No submission is ever stuck"). Honest validators seal, reveal and post receipts when
 /// drawn; silent ones never do. A keeper makes every call anyone may make. The handler deploys its own version (the
-/// signing helpers are PanelsSetup's).
+/// signing helpers are PanelsSetup's). Since contract batch 4 (task 3.24, L25) also challenges and test disputes,
+/// on 7 or 15 validators under the strict or the launch's panel rules (`ChallengeLiveness*` below); the keeper then
+/// draws, redraws and lapses challenges and releases stuck challenge panels too.
 contract LivenessHandler is PanelsSetup {
     address[] public keys; // every validator ever added (the genesis one first)
     mapping(address => bool) public silent;
@@ -19,13 +22,25 @@ contract LivenessHandler is PanelsSetup {
     uint256 public releases;
     uint256 public redrawn;
     uint256 public finals;
+    // challenges (batch 4)
+    uint256 public challenges;
+    uint256 public lapsed;
+    uint256 public challengeDraws;
+    /// A keeper pass left a challenge with no panel past its CHALLENGE_DEADLINE (it must lapse at once).
+    bool public overdue;
+    uint256 internal joinMax;
+    address internal challenger = makeAddr("challenger");
 
-    constructor() {
+    /// `extra` validators beside the genesis one, the launch's rules or the strict ones. The original run: 3, strict,
+    /// up to 9 joins; the challenge runs: 6 or 14 (7 or 15 validators), up to 6 joins.
+    constructor(uint256 extra, bool launch) {
+        rules = launch ? PanelRulesLib.launch() : PanelRulesLib.strict();
         _deployVersion(3, false);
         keys.push(genesisKey);
-        for (uint256 i; i < 3; ++i) {
+        for (uint256 i; i < extra; ++i) {
             keys.push(_addSpread(++added, FAMILIES, 3));
         }
+        joinMax = extra == 3 ? 9 : extra + 6;
     }
 
     function idCount() external view returns (uint256) {
@@ -47,7 +62,7 @@ contract LivenessHandler is PanelsSetup {
     }
 
     function join(uint256 seed) external {
-        if (added >= 9) return;
+        if (added >= joinMax) return;
         address k = _addSpread(++added, FAMILIES, 3);
         keys.push(k);
         silent[k] = seed % 3 == 0;
@@ -70,6 +85,23 @@ contract LivenessHandler is PanelsSetup {
         address k = keys[seed % keys.length];
         vm.prank(k);
         try pn.setCapacity(k, (seed >> 8) % 2 == 0 ? 0 : 5) {} catch {}
+    }
+
+    /// A challenge (or, `test`, a D21 dispute: the same path in Panels) of a counted verdict in its window or held.
+    function challenge(uint256 seed) external {
+        _file(seed, keccak256("evidence"));
+    }
+
+    function dispute(uint256 seed) external {
+        _file(seed, keccak256("a failing test"));
+    }
+
+    function _file(uint256 seed, bytes32 evidence) internal {
+        if (ids.length == 0) return;
+        uint256 id = ids[seed % ids.length];
+        try race.challenge(id, challenger, evidence) {
+            ++challenges;
+        } catch {}
     }
 
     function passTime(uint256 seed) external {
@@ -129,6 +161,22 @@ contract LivenessHandler is PanelsSetup {
             _try(abi.encodeCall(pn.draw, (id)));
             s = pn.submission(id);
             if (s.status == Status.Judging && s.redraws != 0) ++redrawn;
+        }
+        if ((s.status == Status.Held || s.status == Status.Window) && s.challengeOpen && s.challengePid == 0) {
+            // a challenge waiting for a panel: drawn from its seed block, redrawn at a registry change or its retry
+            // time, lapsed past its deadline (L25)
+            bool waits = s.challengeEpoch != 0 && reg.epoch() + 1 == s.challengeEpoch
+                && block.timestamp < s.challengeRetryAt;
+            for (uint256 t; t < 2 && !waits; ++t) {
+                s = pn.submission(id);
+                if (!s.challengeOpen || s.challengePid != 0) break;
+                if (s.challengeEpoch == 0) _rollPast(s.challengeBlock);
+                _try(abi.encodeCall(pn.drawChallenge, (id)));
+                if (pn.submission(id).challengePid != 0) ++challengeDraws;
+            }
+            if (_try(abi.encodeCall(pn.lapseChallenge, (id)))) ++lapsed;
+            s = pn.submission(id);
+            if (s.challengeOpen && s.challengePid == 0 && block.timestamp > s.challengeBy) overdue = true;
         }
         if (s.status == Status.Held) {
             _try(abi.encodeCall(pn.startWindow, (id)));
@@ -240,7 +288,7 @@ contract LivenessInvariantV3Test is Test {
     LivenessHandler handler;
 
     function setUp() public {
-        handler = new LivenessHandler();
+        handler = new LivenessHandler(3, false);
         bytes4[] memory sel = new bytes4[](7);
         sel[0] = LivenessHandler.open.selector;
         sel[1] = LivenessHandler.join.selector;
@@ -261,9 +309,17 @@ contract LivenessInvariantV3Test is Test {
     }
 
     function _check() internal view {
-        PanelsLike pn = PanelsLike(handler.panelsAddress());
-        for (uint256 j; j < handler.idCount(); ++j) {
-            uint256 id = handler.ids(j);
+        _checkLiveness(handler);
+    }
+
+    /// L19's invariant as L25 restates it: also, a counted verdict frozen by one challenge has that challenge drawn
+    /// with a live deadline (its panel open), or waiting with a scheduled redraw (RETRY_DELAY at most), or about to
+    /// be drawn from its seed block; every challenge has its CHALLENGE_DEADLINE; and a verdict has at most MAX_REDRAWS
+    /// lapsed challenges.
+    function _checkLiveness(LivenessHandler h) internal view {
+        PanelsLike pn = PanelsLike(h.panelsAddress());
+        for (uint256 j; j < h.idCount(); ++j) {
+            uint256 id = h.ids(j);
             Submission memory s = pn.submission(id);
             Status st = s.status;
             if (st == Status.Sealed) {
@@ -283,6 +339,21 @@ contract LivenessInvariantV3Test is Test {
                 assertTrue(st == Status.Final || st == Status.Released, "final or refunded");
             }
             assertLe(s.redraws, 3, "at most MAX_REDRAWS released rounds");
+            assertLe(s.lapses, 3, "at most MAX_REDRAWS lapsed challenges");
+            if (!s.challengeOpen) continue;
+            assertTrue(st == Status.Held || st == Status.Window, "a challenge freezes a counted verdict");
+            assertGt(s.challengeBy, 0, "a challenge has a deadline");
+            if (s.challengePid != 0) {
+                Panel memory cp = pn.panel(s.challengePid);
+                assertEq(uint256(cp.kind), uint256(Kind.Challenge));
+                assertTrue(!cp.closed && !cp.counted, "a challenge panel: live");
+                assertGt(cp.revealBy, 0, "a challenge panel: a deadline");
+            } else if (s.challengeEpoch != 0) {
+                assertGt(s.challengeRetryAt, 0, "a waiting challenge: a scheduled redraw");
+                assertLe(s.challengeRetryAt, block.timestamp + 24 hours, "within RETRY_DELAY");
+            } else {
+                assertGt(s.challengeBlock, 0, "a challenge before its draw: a seed block");
+            }
         }
     }
 
@@ -292,6 +363,7 @@ contract LivenessInvariantV3Test is Test {
         handler.settleAll();
         _check();
         assertTrue(handler.allDone(), "every submission final or refunded");
+        assertFalse(handler.overdue(), "no challenge outlived its deadline without a panel");
     }
 
     /// A scripted run reaching the paths: an honest panel's verdict final; then, with two validators silent, stuck
@@ -331,4 +403,138 @@ interface PanelsLike {
     function submission(uint256 id) external view returns (Submission memory);
     function panel(uint256 pid) external view returns (Panel memory);
     function REVEAL_WINDOW() external view returns (uint256);
+}
+
+/// The restated invariant with challenges, test disputes, silences, pauses, joins and leaves (proof-of-fix#251, contract
+/// batch 4, task 3.24; specs/panel-liveness, "Any sequence with challenges"): on 7 or 15 validators, under the strict
+/// rules (#132's: a challenge of a panel of 7 at 7 validators can't be drawn fresh, and lapses) and the launch's
+/// (panels of 3, same-size fresh challenges). Every challenge ends, and every submission ends final or refunded.
+abstract contract ChallengeLivenessBase is Test {
+    LivenessHandler handler;
+
+    function _setUpWith(uint256 extra, bool launch) internal {
+        handler = new LivenessHandler(extra, launch);
+        bytes4[] memory sel = new bytes4[](9);
+        sel[0] = LivenessHandler.open.selector;
+        sel[1] = LivenessHandler.join.selector;
+        sel[2] = LivenessHandler.leave.selector;
+        sel[3] = LivenessHandler.goSilent.selector;
+        sel[4] = LivenessHandler.pause.selector;
+        sel[5] = LivenessHandler.passTime.selector;
+        sel[6] = LivenessHandler.keep.selector;
+        sel[7] = LivenessHandler.challenge.selector;
+        sel[8] = LivenessHandler.dispute.selector;
+        targetContract(address(handler));
+        targetSelector(FuzzSelector(address(handler), sel));
+    }
+
+    function invariant_noSubmissionOrChallengeIsStuck() public view {
+        LivenessChecks.check(handler);
+    }
+
+    function afterInvariant() public {
+        handler.settleAll();
+        LivenessChecks.check(handler);
+        assertTrue(handler.allDone(), "every submission final or refunded");
+        assertFalse(handler.overdue(), "no challenge outlived its deadline without a panel");
+    }
+
+    /// A scripted run reaching the challenge paths: verdicts, then challenges and disputes with a third of the
+    /// validators silent and one paused; the invariant after each step; then everything ends.
+    function test_theHandlerReachesTheChallengePaths() public {
+        uint256 hour = PanelsLike(handler.panelsAddress()).REVEAL_WINDOW();
+        for (uint256 i; i < 4; ++i) {
+            handler.open(i * 37);
+        }
+        handler.keep();
+        handler.passTime(3 * hour);
+        handler.keep();
+        for (uint256 i; i < 4; ++i) {
+            handler.challenge(i);
+            handler.dispute(i + 1);
+        }
+        handler.goSilent(1);
+        handler.goSilent(2);
+        handler.pause(3);
+        for (uint256 i; i < 30; ++i) {
+            handler.passTime(8 * hour);
+            handler.keep();
+            LivenessChecks.check(handler);
+        }
+        handler.settleAll();
+        LivenessChecks.check(handler);
+        assertTrue(handler.allDone());
+        assertGt(handler.challenges(), 0, "challenges filed");
+        assertFalse(handler.overdue());
+    }
+}
+
+/// The invariant's checks, shared by every run.
+library LivenessChecks {
+    function check(LivenessHandler h) internal view {
+        PanelsLike pn = PanelsLike(h.panelsAddress());
+        for (uint256 j; j < h.idCount(); ++j) {
+            Submission memory s = pn.submission(h.ids(j));
+            Status st = s.status;
+            if (st == Status.Sealed) {
+                require(s.seedBlock > 0, "sealed: a seed block");
+            } else if (st == Status.Waiting) {
+                require(s.retryAt > 0 && s.retryAt <= block.timestamp + 24 hours, "waiting: a scheduled redraw");
+            } else if (st == Status.Judging) {
+                Panel memory p = pn.panel(s.pid);
+                require(p.id == h.ids(j) && !p.closed && !p.counted && p.revealBy > 0, "judging: a live panel");
+            } else if (st == Status.Held || st == Status.Window) {
+                require(pn.panel(s.pid).counted, "counted");
+                require(st != Status.Window || s.finalAt > 0, "a window's end");
+            } else {
+                require(st == Status.Final || st == Status.Released, "final or refunded");
+            }
+            require(s.redraws <= 3 && s.lapses <= 3, "at most MAX_REDRAWS released rounds and lapsed challenges");
+            if (!s.challengeOpen) continue;
+            require(st == Status.Held || st == Status.Window, "a challenge freezes a counted verdict");
+            require(s.challengeBy > 0, "a challenge has a deadline");
+            if (s.challengePid != 0) {
+                Panel memory cp = pn.panel(s.challengePid);
+                require(cp.kind == Kind.Challenge && !cp.closed && !cp.counted && cp.revealBy > 0, "a live panel");
+            } else if (s.challengeEpoch != 0) {
+                require(
+                    s.challengeRetryAt > 0 && s.challengeRetryAt <= block.timestamp + 24 hours, "a scheduled redraw"
+                );
+            } else {
+                require(s.challengeBlock > 0, "a challenge before its draw: a seed block");
+            }
+        }
+    }
+}
+
+/// forge-config: default.invariant.runs = 12
+/// forge-config: default.invariant.depth = 40
+contract ChallengeLivenessStrict7Test is ChallengeLivenessBase {
+    function setUp() public {
+        _setUpWith(6, false);
+    }
+}
+
+/// forge-config: default.invariant.runs = 12
+/// forge-config: default.invariant.depth = 40
+contract ChallengeLivenessLaunch7Test is ChallengeLivenessBase {
+    function setUp() public {
+        _setUpWith(6, true);
+    }
+}
+
+/// forge-config: default.invariant.runs = 8
+/// forge-config: default.invariant.depth = 40
+contract ChallengeLivenessStrict15Test is ChallengeLivenessBase {
+    function setUp() public {
+        _setUpWith(14, false);
+    }
+}
+
+/// forge-config: default.invariant.runs = 8
+/// forge-config: default.invariant.depth = 40
+contract ChallengeLivenessLaunch15Test is ChallengeLivenessBase {
+    function setUp() public {
+        _setUpWith(14, true);
+    }
 }
