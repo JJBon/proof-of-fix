@@ -1,0 +1,84 @@
+{
+ "bridge_bytes_down": 3879938,
+ "bridge_bytes_up": 62735047,
+ "call": {
+  "answer": "PASS",
+  "cost_usd": 1.6400000000000002e-06,
+  "error_body": null,
+  "input_tokens": 35,
+  "latency_ms": 1130,
+  "output_tokens": 3,
+  "reasoning_blocks": 0,
+  "stop_reason": "end_turn"
+ },
+ "date": "2026-11-03T15:26:37Z",
+ "event": "result",
+ "family": "Google",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "gemma-3-4b",
+ "model_id": "google.gemma-3-4b-it",
+ "notary": "pse-demo",
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "prover_exit": 0,
+ "public": {
+  "credential_free": true,
+  "results": 4,
+  "revealed_chars": 860,
+  "signed": false,
+  "type": "session_completed"
+ },
+ "public_ws_s": 19.973,
+ "result": {
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    257,
+    1277
+   ],
+   [
+    1294,
+    1561
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "prove_s": 1.844,
+  "recv_len": 392,
+  "response_body": "{\"metrics\":{\"latencyMs\":1130},\"output\":{\"message\":{\"content\":[{\"text\":\"PASS\\n\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"inputTokens\":35,\"outputTokens\":3,\"serverToolUsage\":{},\"totalTokens\":38}}",
+  "revealed_recv": [
+   [
+    0,
+    392
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    257
+   ],
+   [
+    1277,
+    1294
+   ],
+   [
+    1561,
+    1755
+   ]
+  ],
+  "sent_len": 1755,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 13.818,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 5.29,
+  "tls_version": "V1_2",
+  "total_s": 21.199,
+  "verifier_bytes_down": 3879938,
+  "verifier_bytes_up": 62735047
+ },
+ "run": "call-pse-demo-mpc-gemma-3-4b",
+ "verifier": "wss://demo.tlsnotary.org",
+ "wall_s": 21.211
+}

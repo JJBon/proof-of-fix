@@ -1,0 +1,15 @@
+{
+ "date": "2026-11-03T15:31:05Z",
+ "error": "The TLS exchange finished (the prover logged 'Proxy TLS done' at 15:31:10Z), then the proof step produced no result within the run's 420 s timeout, which killed the run before it saved this file (written by hand from the logs). The public verifier ends sessions after 120 s. The cause wasn't investigated; the same request proved locally in 4.8 s.",
+ "kind": "free",
+ "notary": "pse-demo",
+ "ok": false,
+ "pad": 16000,
+ "result": {
+  "max_recv": 4096,
+  "max_sent": 65536,
+  "mode": "proxy",
+  "sent_len": 16203
+ },
+ "run": "free-pse-demo-proxy-s65536-r4096-pad16000"
+}

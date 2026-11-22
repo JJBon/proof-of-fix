@@ -1,0 +1,623 @@
+{
+  "seeds": 100,
+  "sweep_seeds": 20,
+  "weeks": 8,
+  "passed": true,
+  "failures": [],
+  "criteria": {
+    "bluffer_gain": {
+      "mean": 6.26,
+      "standard_error": 15.73,
+      "seeds": 100
+    },
+    "crowd_out_base": {
+      "mean": 61.29,
+      "standard_error": 0.79,
+      "seeds": 100
+    },
+    "crowd_out_flood": {
+      "mean": 55.86,
+      "standard_error": 0.73,
+      "seeds": 100
+    },
+    "farm_gain": {
+      "mean": -26.65,
+      "standard_error": 12.57,
+      "seeds": 100
+    },
+    "flood": {
+      "mean": -497.1,
+      "standard_error": 0.33,
+      "seeds": 100
+    },
+    "funded_share_change": {
+      "mean": 0.6888,
+      "standard_error": 0.007,
+      "seeds": 100
+    },
+    "funder_cost_change": {
+      "mean": -7.83,
+      "standard_error": 4.4,
+      "seeds": 100
+    },
+    "lowballer_gain": {
+      "mean": -107.32,
+      "standard_error": 20.4,
+      "seeds": 100
+    },
+    "no_show": {
+      "mean": -370.48,
+      "standard_error": 7.12,
+      "seeds": 100
+    },
+    "owner_gain": {
+      "mean": -2.55,
+      "standard_error": 3.98,
+      "seeds": 100
+    },
+    "pledged_paid_change": {
+      "mean": 14.18,
+      "standard_error": 0.44,
+      "seeds": 100
+    },
+    "reporter": {
+      "mean": 8.93,
+      "standard_error": 0.16,
+      "seeds": 100
+    },
+    "solver": {
+      "mean": 47.84,
+      "standard_error": 1.62,
+      "seeds": 600
+    },
+    "spam_solver": {
+      "mean": -124.68,
+      "standard_error": 13.72,
+      "seeds": 100
+    },
+    "treasury_junk": {
+      "mean": 840.19,
+      "standard_error": 38.41,
+      "seeds": 100
+    },
+    "validator": {
+      "mean": 29.91,
+      "standard_error": 0.34,
+      "seeds": 600
+    },
+    "crowd_out_ratio": {
+      "mean": 0.9114
+    },
+    "defective:bluffer": {
+      "mean_per_contribution": -6.0678,
+      "standard_error": 6.6494,
+      "n": 68,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:flood": {
+      "mean_per_contribution": -49.7536,
+      "standard_error": 0.0,
+      "n": 215,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "defective:lowballer": {
+      "mean_per_contribution": -2.5268,
+      "standard_error": 5.3889,
+      "n": 119,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:solver": {
+      "mean_per_contribution": -8.5702,
+      "standard_error": 0.5172,
+      "n": 12177,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:spam_solver": {
+      "mean_per_contribution": -7.9433,
+      "standard_error": 0.7856,
+      "n": 2172,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "ring@2": {
+      "mean_gain": 8.55,
+      "standard_error": 24.1,
+      "seeds": 100
+    },
+    "ring@3": {
+      "mean_gain": -8.23,
+      "standard_error": 23.47,
+      "seeds": 100
+    },
+    "ring@4": {
+      "mean_gain": 83.86,
+      "standard_error": 31.74,
+      "seeds": 100
+    },
+    "ring@6": {
+      "mean_gain": 46.69,
+      "standard_error": 32.41,
+      "seeds": 100
+    },
+    "ring_gains_from": 4
+  },
+  "elasticity_verdicts": {
+    "0.0": {
+      "seeds": 100,
+      "passed": true,
+      "failed_criteria": [],
+      "solver_net_of_effort": 46.1,
+      "validator": 30.51,
+      "spam_solver": -93.64,
+      "no_show": -370.02,
+      "ring_gains_from": 6,
+      "reporter": 8.8,
+      "funder_cost_change": -8.47,
+      "funded_share_change": 0.6896,
+      "crowd_out_ratio": 0.916
+    },
+    "1.0": {
+      "seeds": 100,
+      "passed": true,
+      "failed_criteria": [],
+      "solver_net_of_effort": 48.75,
+      "validator": 29.57,
+      "spam_solver": -132.35,
+      "no_show": -370.95,
+      "ring_gains_from": null,
+      "reporter": 9.05,
+      "funder_cost_change": -2.67,
+      "funded_share_change": 0.6918,
+      "crowd_out_ratio": 0.9069
+    }
+  },
+  "returns": {
+    "hunter": 14.12,
+    "owner": 84.9,
+    "pledger": -28.81,
+    "reporter": 7.91,
+    "solver": 37.56,
+    "validator": 22.6
+  },
+  "market": {
+    "bounties": {
+      "open": 0.01,
+      "paid": 43.01,
+      "refunded": 23.87,
+      "unsolved": 48.12
+    },
+    "issues": {
+      "pledged": 48.56,
+      "treasury": 66.45,
+      "unfunded": 6.03
+    },
+    "price_to_cost": 1.6858,
+    "mean_price": 73.16,
+    "treasury_spend": 9145.99,
+    "deliveries": {
+      "bids": 189.07,
+      "assigned": 52.17,
+      "delivered": 47.58,
+      "delivery_failed": 4.6
+    },
+    "flood_treasury_junk": 840.19,
+    "issue_stakes": {
+      "posted": 0.06,
+      "rewarded": 43.01,
+      "returned": 77.97,
+      "forfeited": 0
+    },
+    "finder_fees": 158.16,
+    "matched": 569.95,
+    "funder_cost_per_paid_bounty": 76.78
+  },
+  "sweeps": {
+    "cost per line": {
+      "500000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 87.22,
+        "validator": 32.41,
+        "spam_solver": -77.52,
+        "no_show": -378.16,
+        "ring_gains_from": null,
+        "reporter": 10.23,
+        "funder_cost_change": 10.83,
+        "funded_share_change": 0.68,
+        "crowd_out_ratio": 0.8859
+      },
+      "1000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "2000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "owner can't gain by defecting"
+        ],
+        "solver_net_of_effort": 23.12,
+        "validator": 26.21,
+        "spam_solver": -174.24,
+        "no_show": -386.48,
+        "ring_gains_from": null,
+        "reporter": 6.78,
+        "funder_cost_change": -19.92,
+        "funded_share_change": 0.7042,
+        "crowd_out_ratio": 0.9202
+      }
+    },
+    "pledged share": {
+      "2000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 25.71,
+        "validator": 25.71,
+        "spam_solver": -94.23,
+        "no_show": -394.75,
+        "ring_gains_from": null,
+        "reporter": 6.74,
+        "funder_cost_change": -11.73,
+        "funded_share_change": 0.7221,
+        "crowd_out_ratio": 0.8634
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 57.4,
+        "validator": 31.51,
+        "spam_solver": -143.77,
+        "no_show": -360.55,
+        "ring_gains_from": null,
+        "reporter": 9.43,
+        "funder_cost_change": 11.51,
+        "funded_share_change": 0.6971,
+        "crowd_out_ratio": 0.9791
+      }
+    },
+    "treasury junk detection": {
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "crowd-out bounded"
+        ],
+        "solver_net_of_effort": 45.1,
+        "validator": 29.9,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.6444
+      },
+      "8500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "9500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.05,
+        "validator": 30.06,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9492
+      }
+    },
+    "bond (stake share)": {
+      "2000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 43.9,
+        "validator": 26.91,
+        "spam_solver": -109.34,
+        "no_show": -207.75,
+        "ring_gains_from": 6,
+        "reporter": 8.37,
+        "funder_cost_change": -10.87,
+        "funded_share_change": 0.675,
+        "crowd_out_ratio": 0.8881
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 51.0,
+        "validator": 31.38,
+        "spam_solver": -164.3,
+        "no_show": -469.42,
+        "ring_gains_from": 4,
+        "reporter": 9.36,
+        "funder_cost_change": -21.44,
+        "funded_share_change": 0.698,
+        "crowd_out_ratio": 0.8658
+      }
+    },
+    "delivery days": {
+      "7": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 41.68,
+        "validator": 29.78,
+        "spam_solver": -132.18,
+        "no_show": -461.64,
+        "ring_gains_from": 4,
+        "reporter": 8.8,
+        "funder_cost_change": -13.6,
+        "funded_share_change": 0.7033,
+        "crowd_out_ratio": 0.9315
+      },
+      "14": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "28": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 48.21,
+        "validator": 29.85,
+        "spam_solver": -149.81,
+        "no_show": -265.6,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      }
+    },
+    "market fee": {
+      "1000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 55.1,
+        "validator": 18.31,
+        "spam_solver": -105.36,
+        "no_show": -381.61,
+        "ring_gains_from": null,
+        "reporter": 9.84,
+        "funder_cost_change": 3.94,
+        "funded_share_change": 0.6914,
+        "crowd_out_ratio": 0.8632
+      },
+      "2000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "3000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 38.15,
+        "validator": 38.79,
+        "spam_solver": -94.95,
+        "no_show": -360.96,
+        "ring_gains_from": null,
+        "reporter": 8.17,
+        "funder_cost_change": -18.79,
+        "funded_share_change": 0.7108,
+        "crowd_out_ratio": 0.8884
+      }
+    },
+    "issue stake": {
+      "2000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 46.71,
+        "validator": 30.31,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.8556
+      },
+      "5000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "20000000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 44.73,
+        "validator": 29.97,
+        "spam_solver": -149.84,
+        "no_show": -356.14,
+        "ring_gains_from": null,
+        "reporter": 9.15,
+        "funder_cost_change": -10.79,
+        "funded_share_change": 0.7064,
+        "crowd_out_ratio": 0.9509
+      }
+    },
+    "finder's fee": {
+      "250": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 51.51,
+        "validator": 30.81,
+        "spam_solver": -130.89,
+        "no_show": -366.51,
+        "ring_gains_from": 6,
+        "reporter": 4.65,
+        "funder_cost_change": -12.98,
+        "funded_share_change": 0.6774,
+        "crowd_out_ratio": 0.9483
+      },
+      "500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "1000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 40.8,
+        "validator": 27.54,
+        "spam_solver": -95.96,
+        "no_show": -381.49,
+        "ring_gains_from": null,
+        "reporter": 16.41,
+        "funder_cost_change": -10.62,
+        "funded_share_change": 0.698,
+        "crowd_out_ratio": 0.8596
+      }
+    },
+    "matching share": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "match farming doesn't pay",
+          "matching gets more pledged issues fixed"
+        ],
+        "solver_net_of_effort": 26.4,
+        "validator": 24.75,
+        "spam_solver": -140.04,
+        "no_show": -354.24,
+        "ring_gains_from": null,
+        "reporter": 6.98,
+        "funder_cost_change": 0.0,
+        "funded_share_change": 0.0,
+        "crowd_out_ratio": 1.0206
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 47.1,
+        "validator": 29.93,
+        "spam_solver": -149.81,
+        "no_show": -356.77,
+        "ring_gains_from": null,
+        "reporter": 9.18,
+        "funder_cost_change": -10.28,
+        "funded_share_change": 0.7052,
+        "crowd_out_ratio": 0.9266
+      },
+      "10000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 10.54,
+        "validator": 12.43,
+        "spam_solver": -43.64,
+        "no_show": -381.47,
+        "ring_gains_from": null,
+        "reporter": 3.34,
+        "funder_cost_change": -24.09,
+        "funded_share_change": 0.6853,
+        "crowd_out_ratio": null
+      }
+    }
+  }
+}

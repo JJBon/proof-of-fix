@@ -1,0 +1,14 @@
+[Unit]
+Description=proof-of-fix: the data volume (persistent state; scratch wiped at each boot)
+DefaultDependencies=no
+After=local-fs.target systemd-udevd.service
+Before=containerd.service docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/pof/pof-data.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

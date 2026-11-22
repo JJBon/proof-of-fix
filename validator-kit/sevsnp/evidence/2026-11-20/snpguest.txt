@@ -1,0 +1,14 @@
+# snpguest 0.11.0 (rust:1 container): fetch ca pem DIR milan --endorser vlek; verify certs DIR; verify attestation DIR report.bin
+snpguest 0.11.0
+ark.pem
+asvk.pem
+report.bin
+vlek.pem
+The AMD ARK was self-signed!
+The AMD ASVK was signed by the AMD ARK!
+The VLEK was signed by the AMD ASVK!
+Reported TCB Boot Loader from certificate matches the attestation report.
+Reported TCB TEE from certificate matches the attestation report.
+Reported TCB SNP from certificate matches the attestation report.
+Reported TCB Microcode from certificate matches the attestation report.
+VEK signed the Attestation Report!

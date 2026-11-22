@@ -1,0 +1,27 @@
+{
+ "id": "02-slugify-bad",
+ "label": "bad",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "slugify() drops accented letters instead of transliterating them: slugify('Café au lait') gives 'caf-au-lait', expected 'cafe-au-lait'. The same goes for any accented Latin letter (ñ, ü, ç, å, ...): titles in Spanish, German or French lose letters.",
+ "commit": "Keep accented letters in slugify()",
+ "diff": "--- a/text.py\n+++ b/text.py\n@@ -4,5 +4,4 @@\n def slugify(title):\n     \"\"\"A URL slug: lower case, words joined by hyphens.\"\"\"\n     title = title.lower()\n-    title = re.sub(r\"[^a-z0-9\\s-]\", \"\", title)\n     return re.sub(r\"[\\s-]+\", \"-\", title).strip(\"-\")\n",
+ "context": [
+  {
+   "path": "text.py",
+   "text": "    1 import re\n    2 \n    3 \n    4 def slugify(title):\n    5     \"\"\"A URL slug: lower case, words joined by hyphens.\"\"\"\n    6     title = title.lower()\n    7     title = re.sub(r\"[^a-z0-9\\s-]\", \"\", title)\n    8     return re.sub(r\"[\\s-]+\", \"-\", title).strip(\"-\")"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 1,
+  "results_sha256": "2618b95f1f6be6bfde8537756f85b83845d039001563135b9d59d817446733eb",
+  "logs_sha256": "71f8640d94e5782cec08c42b811ab10b1ca6943e4c33aa2a32e1096c6c267926"
+ }
+}

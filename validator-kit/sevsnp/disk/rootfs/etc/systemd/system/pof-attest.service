@@ -1,0 +1,14 @@
+[Unit]
+Description=proof-of-fix: attest this boot (SEV-SNP report, NitroTPM document) and self-test attested mode
+Requires=pof-images.service pof-config.service
+After=pof-images.service pof-config.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/pof/pof-attest.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

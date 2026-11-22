@@ -1,0 +1,5 @@
+# containerd keeps the images (Docker's containerd image store) and the containers' snapshots on the scratch disk,
+# wiped at each boot (pof-data.sh); nothing of it persists. No registry is configured: nothing is pulled.
+version = 2
+root = "/data/scratch/containerd"
+state = "/run/containerd"

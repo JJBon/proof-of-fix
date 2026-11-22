@@ -1,0 +1,60 @@
+{
+ "bridge_bytes_down": 3395238,
+ "bridge_bytes_up": 61885383,
+ "date": "2026-11-03T15:15:49Z",
+ "event": "result",
+ "kind": "free",
+ "notary": "pse-demo",
+ "ok": true,
+ "prover_exit": 0,
+ "public": {
+  "credential_free": true,
+  "results": 3,
+  "revealed_chars": 342,
+  "signed": false,
+  "type": "session_completed"
+ },
+ "public_ws_s": 19.472,
+ "result": {
+  "hidden_sent": [
+   [
+    132,
+    156
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "prove_s": 0.503,
+  "recv_len": 187,
+  "response_body": "<UnknownOperationException/>\n",
+  "revealed_recv": [
+   [
+    0,
+    187
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    132
+   ],
+   [
+    156,
+    179
+   ]
+  ],
+  "sent_len": 179,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 19.085,
+  "status": "HTTP/1.1 404 Not Found",
+  "tls_exchange_s": 4.318,
+  "tls_version": "V1_2",
+  "total_s": 24.167,
+  "verifier_bytes_down": 3395238,
+  "verifier_bytes_up": 61885383
+ },
+ "run": "free-pse-demo-mpc-s4096-r4096",
+ "verifier": "wss://demo.tlsnotary.org",
+ "wall_s": 24.193
+}

@@ -1,0 +1,954 @@
+{
+  "seeds": 100,
+  "sweep_seeds": 20,
+  "weeks": 8,
+  "passed": true,
+  "failures": [],
+  "criteria": {
+    "bluffer_gain": {
+      "mean": 12.2,
+      "standard_error": 13.0,
+      "seeds": 100
+    },
+    "bond_change": {
+      "mean": -4.41,
+      "standard_error": 0.63,
+      "seeds": 100
+    },
+    "crowd_out_base": {
+      "mean": 61.64,
+      "standard_error": 0.7,
+      "seeds": 100
+    },
+    "crowd_out_flood": {
+      "mean": 58.01,
+      "standard_error": 0.64,
+      "seeds": 100
+    },
+    "farm_split_unfunded": {
+      "mean": 1,
+      "standard_error": 0.0,
+      "seeds": 100
+    },
+    "flood": {
+      "mean": -494.87,
+      "standard_error": 3.54,
+      "seeds": 100
+    },
+    "funded_share_change": {
+      "mean": 0.4396,
+      "standard_error": 0.0095,
+      "seeds": 100
+    },
+    "funder_cost_change": {
+      "mean": -3.38,
+      "standard_error": 5.77,
+      "seeds": 99
+    },
+    "lowballer_gain": {
+      "mean": -85.93,
+      "standard_error": 18.61,
+      "seeds": 100
+    },
+    "no_show": {
+      "mean": -400.66,
+      "standard_error": 6.64,
+      "seeds": 100
+    },
+    "owner_gain": {
+      "mean": -0.9,
+      "standard_error": 3.3,
+      "seeds": 100
+    },
+    "pledged_paid_change": {
+      "mean": 8.37,
+      "standard_error": 0.41,
+      "seeds": 100
+    },
+    "rep_farmer": {
+      "mean": -231.73,
+      "standard_error": 10.51,
+      "seeds": 100
+    },
+    "reporter": {
+      "mean": 7.26,
+      "standard_error": 0.14,
+      "seeds": 100
+    },
+    "solver": {
+      "mean": 32.38,
+      "standard_error": 1.54,
+      "seeds": 600
+    },
+    "spam_solver": {
+      "mean": -118.62,
+      "standard_error": 12.69,
+      "seeds": 100
+    },
+    "treasury_junk": {
+      "mean": 556.14,
+      "standard_error": 38.25,
+      "seeds": 100
+    },
+    "validator": {
+      "mean": 25.05,
+      "standard_error": 0.3,
+      "seeds": 600
+    },
+    "weak_base": {
+      "mean": 61.64,
+      "standard_error": 0.7,
+      "seeds": 100
+    },
+    "weak_flood": {
+      "mean": 56.15,
+      "standard_error": 0.74,
+      "seeds": 100
+    },
+    "crowd_out_ratio_weak_detection": {
+      "mean": 0.9109
+    },
+    "crowd_out_ratio": {
+      "mean": 0.9411
+    },
+    "defective:bluffer": {
+      "mean_per_contribution": -4.0939,
+      "standard_error": 8.1655,
+      "n": 54,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:flood": {
+      "mean_per_contribution": -49.7197,
+      "standard_error": 0.7425,
+      "n": 393,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "defective:lowballer": {
+      "mean_per_contribution": -12.2966,
+      "standard_error": 4.4826,
+      "n": 103,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:solver": {
+      "mean_per_contribution": -7.9239,
+      "standard_error": 0.4394,
+      "n": 12849,
+      "verdict": "ok",
+      "attacker": false
+    },
+    "defective:spam_solver": {
+      "mean_per_contribution": -8.4759,
+      "standard_error": 0.9211,
+      "n": 1788,
+      "verdict": "ok",
+      "attacker": true
+    },
+    "ring@2": {
+      "mean_gain": 32.05,
+      "standard_error": 22.7,
+      "seeds": 100
+    },
+    "ring@3": {
+      "mean_gain": 31.75,
+      "standard_error": 23.82,
+      "seeds": 100
+    },
+    "ring@4": {
+      "mean_gain": -2.0,
+      "standard_error": 32.82,
+      "seeds": 100
+    },
+    "ring@6": {
+      "mean_gain": 72.35,
+      "standard_error": 31.8,
+      "seeds": 100
+    },
+    "ring_gains_from": 6
+  },
+  "elasticity_verdicts": {
+    "0.0": {
+      "seeds": 100,
+      "passed": true,
+      "failed_criteria": [],
+      "solver_net_of_effort": 29.69,
+      "validator": 26.13,
+      "spam_solver": -116.23,
+      "no_show": -398.13,
+      "ring_gains_from": 3,
+      "reporter": 7.31,
+      "funder_cost_change": -4.24,
+      "funded_share_change": 0.4477,
+      "crowd_out_ratio": 0.9515,
+      "crowd_out_weak": 0.9131,
+      "rep_farmer": -229.1,
+      "bond_change": -4.13,
+      "farm_gain": null,
+      "farm_split_unfunded": 1
+    },
+    "1.0": {
+      "seeds": 100,
+      "passed": false,
+      "failed_criteria": [
+        "bidding your cost is best"
+      ],
+      "solver_net_of_effort": 31.55,
+      "validator": 24.67,
+      "spam_solver": -127.0,
+      "no_show": -400.17,
+      "ring_gains_from": null,
+      "reporter": 7.23,
+      "funder_cost_change": -2.0,
+      "funded_share_change": 0.4404,
+      "crowd_out_ratio": 0.9311,
+      "crowd_out_weak": 0.9047,
+      "rep_farmer": -225.2,
+      "bond_change": -4.57,
+      "farm_gain": null,
+      "farm_split_unfunded": 1
+    }
+  },
+  "returns": {
+    "hunter": 12.48,
+    "owner": 73.04,
+    "pledger": -27.19,
+    "reporter": 7.1,
+    "solver": 31.85,
+    "validator": 20.5
+  },
+  "market": {
+    "bounties": {
+      "paid": 40.09,
+      "refunded": 24.27,
+      "unsolved": 48.18
+    },
+    "issues": {
+      "pledged": 48.45,
+      "treasury": 64.09,
+      "unfunded": 7.66
+    },
+    "price_to_cost": 1.66,
+    "mean_price": 70.98,
+    "treasury_spend": 8805.32,
+    "deliveries": {
+      "bids": 188.03,
+      "assigned": 48.47,
+      "delivered": 44.36,
+      "delivery_failed": 4.1
+    },
+    "flood_treasury_junk": 693.68,
+    "issue_stakes": {
+      "posted": 0.06,
+      "rewarded": 40.09,
+      "returned": 80.05,
+      "forfeited": 0
+    },
+    "finder_fees": 142.07,
+    "matched": 641.31,
+    "funder_cost_per_paid_bounty": 77.67
+  },
+  "sweeps": {
+    "cost per line": {
+      "500000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 61.46,
+        "validator": 27.0,
+        "spam_solver": -90.73,
+        "no_show": -424.92,
+        "ring_gains_from": null,
+        "reporter": 8.47,
+        "funder_cost_change": -12.23,
+        "funded_share_change": 0.4293,
+        "crowd_out_ratio": 0.9858,
+        "crowd_out_weak": 0.9414,
+        "rep_farmer": -270.52,
+        "bond_change": -4.81,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "1000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 19.93,
+        "validator": 22.68,
+        "spam_solver": -216.12,
+        "no_show": -433.37,
+        "ring_gains_from": null,
+        "reporter": 6.2,
+        "funder_cost_change": -29.1,
+        "funded_share_change": 0.4361,
+        "crowd_out_ratio": 0.9363,
+        "crowd_out_weak": 0.8597,
+        "rep_farmer": -236.61,
+        "bond_change": -1.75,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "pledged share": {
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 24.43,
+        "validator": 22.51,
+        "spam_solver": -156.77,
+        "no_show": -439.38,
+        "ring_gains_from": null,
+        "reporter": 6.37,
+        "funder_cost_change": 36.47,
+        "funded_share_change": 0.3611,
+        "crowd_out_ratio": 0.9931,
+        "crowd_out_weak": 0.8975,
+        "rep_farmer": -284.67,
+        "bond_change": -3.61,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 33.57,
+        "validator": 25.56,
+        "spam_solver": -158.91,
+        "no_show": -391.47,
+        "ring_gains_from": null,
+        "reporter": 7.51,
+        "funder_cost_change": 18.41,
+        "funded_share_change": 0.4692,
+        "crowd_out_ratio": 1.0654,
+        "crowd_out_weak": 1.0251,
+        "rep_farmer": -269.98,
+        "bond_change": -4.13,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "treasury junk detection": {
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 33.08,
+        "validator": 26.02,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9065,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "8500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "9500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 34.34,
+        "validator": 25.75,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9476,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "bond (stake share)": {
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "honest mistakes don't pay"
+        ],
+        "solver_net_of_effort": 30.74,
+        "validator": 22.05,
+        "spam_solver": -81.71,
+        "no_show": -215.82,
+        "ring_gains_from": null,
+        "reporter": 7.01,
+        "funder_cost_change": -4.09,
+        "funded_share_change": 0.4235,
+        "crowd_out_ratio": 0.8829,
+        "crowd_out_weak": 0.9086,
+        "rep_farmer": -107.32,
+        "bond_change": -2.21,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "4000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "6000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 33.21,
+        "validator": 26.67,
+        "spam_solver": -86.28,
+        "no_show": -479.98,
+        "ring_gains_from": null,
+        "reporter": 7.76,
+        "funder_cost_change": -19.63,
+        "funded_share_change": 0.3859,
+        "crowd_out_ratio": 0.9424,
+        "crowd_out_weak": 0.9043,
+        "rep_farmer": -308.06,
+        "bond_change": -6.47,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "delivery days": {
+      "7": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 27.81,
+        "validator": 24.97,
+        "spam_solver": -91.1,
+        "no_show": -483.71,
+        "ring_gains_from": null,
+        "reporter": 7.08,
+        "funder_cost_change": -8.41,
+        "funded_share_change": 0.4344,
+        "crowd_out_ratio": 0.9647,
+        "crowd_out_weak": 0.9022,
+        "rep_farmer": -400.68,
+        "bond_change": -3.52,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "14": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "28": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.5,
+        "validator": 26.02,
+        "spam_solver": -146.53,
+        "no_show": -271.59,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -165.0,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "market fee": {
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "bidding your cost is best"
+        ],
+        "solver_net_of_effort": 41.21,
+        "validator": 15.1,
+        "spam_solver": -104.32,
+        "no_show": -417.48,
+        "ring_gains_from": 6,
+        "reporter": 8.1,
+        "funder_cost_change": -0.21,
+        "funded_share_change": 0.4148,
+        "crowd_out_ratio": 0.964,
+        "crowd_out_weak": 0.9272,
+        "rep_farmer": -263.24,
+        "bond_change": -9.24,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "3000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 28.73,
+        "validator": 32.84,
+        "spam_solver": -104.36,
+        "no_show": -363.88,
+        "ring_gains_from": null,
+        "reporter": 6.12,
+        "funder_cost_change": -16.18,
+        "funded_share_change": 0.4272,
+        "crowd_out_ratio": 0.9377,
+        "crowd_out_weak": 0.8899,
+        "rep_farmer": -178.14,
+        "bond_change": -5.23,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "issue stake": {
+      "2000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 31.95,
+        "validator": 26.02,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9121,
+        "crowd_out_weak": 0.9105,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "20000000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 30.24,
+        "validator": 25.78,
+        "spam_solver": -156.18,
+        "no_show": -396.19,
+        "ring_gains_from": 2,
+        "reporter": 7.46,
+        "funder_cost_change": 4.43,
+        "funded_share_change": 0.4202,
+        "crowd_out_ratio": 0.9103,
+        "crowd_out_weak": 0.8655,
+        "rep_farmer": -248.52,
+        "bond_change": -2.65,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "finder's fee": {
+      "250": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 38.09,
+        "validator": 26.26,
+        "spam_solver": -100.84,
+        "no_show": -396.39,
+        "ring_gains_from": null,
+        "reporter": 3.98,
+        "funder_cost_change": -1.79,
+        "funded_share_change": 0.408,
+        "crowd_out_ratio": 0.9099,
+        "crowd_out_weak": 0.9244,
+        "rep_farmer": -229.14,
+        "bond_change": -5.37,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "1000": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 31.4,
+        "validator": 24.57,
+        "spam_solver": -139.45,
+        "no_show": -397.69,
+        "ring_gains_from": null,
+        "reporter": 14.2,
+        "funder_cost_change": 4.13,
+        "funded_share_change": 0.4157,
+        "crowd_out_ratio": 0.8816,
+        "crowd_out_weak": 0.9098,
+        "rep_farmer": -240.96,
+        "bond_change": -6.88,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "matching share": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "matching gets more pledged issues fixed"
+        ],
+        "solver_net_of_effort": 29.58,
+        "validator": 24.34,
+        "spam_solver": -186.18,
+        "no_show": -372.54,
+        "ring_gains_from": null,
+        "reporter": 6.77,
+        "funder_cost_change": 0.0,
+        "funded_share_change": 0.0,
+        "crowd_out_ratio": 1.0268,
+        "crowd_out_weak": 0.9732,
+        "rep_farmer": -220.54,
+        "bond_change": -4.33,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "10000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "attackers lose",
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 7.29,
+        "validator": 8.49,
+        "spam_solver": -19.68,
+        "no_show": -389.84,
+        "ring_gains_from": null,
+        "reporter": 1.98,
+        "funder_cost_change": -27.63,
+        "funded_share_change": 0.4353,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": -267.97,
+        "bond_change": -1.93,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    },
+    "trust floor": {
+      "1000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 19.92,
+        "validator": 22.05,
+        "spam_solver": -146.28,
+        "no_show": -381.49,
+        "ring_gains_from": null,
+        "reporter": 6.3,
+        "funder_cost_change": -6.74,
+        "funded_share_change": 0.1222,
+        "crowd_out_ratio": 0.9454,
+        "crowd_out_weak": 0.9004,
+        "rep_farmer": -259.44,
+        "bond_change": -2.83,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "2500": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 50.65,
+        "validator": 29.05,
+        "spam_solver": -109.63,
+        "no_show": -421.82,
+        "ring_gains_from": 4,
+        "reporter": 9.66,
+        "funder_cost_change": -15.59,
+        "funded_share_change": 0.6823,
+        "crowd_out_ratio": 1.009,
+        "crowd_out_weak": 0.9114,
+        "rep_farmer": -309.84,
+        "bond_change": -2.31,
+        "farm_gain": 10.8,
+        "farm_split_unfunded": 0
+      }
+    },
+    "bond discount": {
+      "0": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "proven solvers lock less"
+        ],
+        "solver_net_of_effort": 27.35,
+        "validator": 25.72,
+        "spam_solver": -137.17,
+        "no_show": -377.61,
+        "ring_gains_from": null,
+        "reporter": 7.36,
+        "funder_cost_change": -15.75,
+        "funded_share_change": 0.4112,
+        "crowd_out_ratio": 0.9566,
+        "crowd_out_weak": 0.9003,
+        "rep_farmer": -239.46,
+        "bond_change": 0.0,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "5000": {
+        "seeds": 20,
+        "passed": false,
+        "failed_criteria": [
+          "collusion measured"
+        ],
+        "solver_net_of_effort": 32.09,
+        "validator": 26.05,
+        "spam_solver": -146.53,
+        "no_show": -398.27,
+        "ring_gains_from": 2,
+        "reporter": 7.49,
+        "funder_cost_change": 4.62,
+        "funded_share_change": 0.4238,
+        "crowd_out_ratio": 0.9371,
+        "crowd_out_weak": 0.9065,
+        "rep_farmer": -254.06,
+        "bond_change": -3.02,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      },
+      "7500": {
+        "seeds": 20,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 28.87,
+        "validator": 25.33,
+        "spam_solver": -101.46,
+        "no_show": -414.51,
+        "ring_gains_from": null,
+        "reporter": 7.55,
+        "funder_cost_change": 0.72,
+        "funded_share_change": 0.4252,
+        "crowd_out_ratio": 0.9646,
+        "crowd_out_weak": 0.9011,
+        "rep_farmer": -254.97,
+        "bond_change": -7.4,
+        "farm_gain": null,
+        "farm_split_unfunded": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "preferredSeeds": [],
+  "cli": {"hints": false},
+  "node": {
+    "alias": "@ALIAS@",
+    "listen": [],
+    "peers": {"type": "static"},
+    "connect": [@CONNECT@],
+    "externalAddresses": [],
+    "network": "@NETWORK@",
+    "relay": "auto",
+    "seedingPolicy": {"default": "block"}
+  }
+}

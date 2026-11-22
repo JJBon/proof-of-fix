@@ -1,0 +1,27 @@
+{
+ "id": "03-duration-good",
+ "label": "good",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "parse_duration() rejects combined durations such as '1h30m' or '2m15s' with ValueError. They should be summed: '1h30m' is 5400 seconds. Malformed input (e.g. '1h30x', '5 minutes') must still raise ValueError, since config files rely on it to catch typos.",
+ "commit": "Accept combined durations like 1h30m",
+ "diff": "--- a/durations.py\n+++ b/durations.py\n@@ -4,8 +4,8 @@\n \n \n def parse_duration(text):\n-    \"\"\"Seconds in a duration such as '90s', '15m' or '2h'. Raises ValueError on anything else.\"\"\"\n-    m = re.fullmatch(r\"(\\d+)([hms])\", text.strip())\n-    if not m:\n+    \"\"\"Seconds in a duration such as '90s', '15m', '2h' or '1h30m'. Raises ValueError on anything else.\"\"\"\n+    text = text.strip()\n+    if not re.fullmatch(r\"(?:\\d+[hms])+\", text):\n         raise ValueError(f\"bad duration: {text!r}\")\n-    return int(m.group(1)) * UNITS[m.group(2)]\n+    return sum(int(n) * UNITS[u] for n, u in re.findall(r\"(\\d+)([hms])\", text))\n",
+ "context": [
+  {
+   "path": "durations.py",
+   "text": "    1 import re\n    2 \n    3 UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}\n    4 \n    5 \n    6 def parse_duration(text):\n    7     \"\"\"Seconds in a duration such as '90s', '15m' or '2h'. Raises ValueError on anything else.\"\"\"\n    8     m = re.fullmatch(r\"(\\d+)([hms])\", text.strip())\n    9     if not m:\n   10         raise ValueError(f\"bad duration: {text!r}\")\n   11     return int(m.group(1)) * UNITS[m.group(2)]"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "3e867bda39f6fd14f5cadda02372a7ead3c64e4de7093cbf2b2e08b153306b6d"
+ }
+}

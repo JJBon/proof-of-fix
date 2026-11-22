@@ -1,0 +1,150 @@
+# Spec Delta
+
+## Purpose
+
+Fixes, at construction, what one deployment of the contracts serves and where it runs: one repository, one chain, its waiting windows and its accepted proof types, so that nobody can widen them afterwards.
+
+## ADDED Requirements
+
+### Requirement: One repository, fixed at construction
+A deployment SHALL take exactly one repository id, `keccak256(RID)` of a Radicle repository, and that repository's genesis head as constructor arguments. Both SHALL be immutable. Construction SHALL fail if either is zero.
+
+#### Scenario: Deployed for proof-of-fix
+- **WHEN** the contracts are deployed with proof-of-fix's repository id and the commit of its Radicle `main` at that moment
+- **THEN** the head registry lists exactly that repository, with that commit as its genesis head, and no function adds another
+
+#### Scenario: No repository given
+- **WHEN** a deployment is attempted with a zero repository id or a zero genesis head
+- **THEN** the constructor reverts and nothing is deployed
+
+### Requirement: Other repositories are refused
+The contracts SHALL refuse to register an issue, open a bounty or take a pledge for any repository but the one fixed at construction, including an issue with no repository.
+
+#### Scenario: An issue for another repository
+- **WHEN** anyone registers an issue naming a repository id other than the deployment's
+- **THEN** the call reverts, and no fee or stake is taken
+
+#### Scenario: An issue with no repository
+- **WHEN** anyone registers an issue with a zero repository id
+- **THEN** the call reverts, so no bounty can be won without moving the head
+
+### Requirement: Sepolia only
+The constructor SHALL revert unless `block.chainid` is Sepolia's (11155111), or one of the published local test chain ids if the owner accepts them (design L2). The deployment's chain id SHALL be readable from the contracts.
+
+#### Scenario: Deploying on Sepolia
+- **WHEN** the contracts are deployed on Sepolia
+- **THEN** construction succeeds and the contracts report chain id 11155111
+
+#### Scenario: Deploying on mainnet or another public chain
+- **WHEN** the same bytecode is deployed on Ethereum mainnet or any public chain other than Sepolia
+- **THEN** the constructor reverts
+
+### Requirement: The deploy script refuses any chain but Sepolia
+The public deploy script SHALL read the RPC endpoint's chain id before sending anything and SHALL stop, sending no transaction, unless it is 11155111. It SHALL also stop unless the Radicle repository it is given exists and its canonical `main` is the genesis head passed to the constructor.
+
+#### Scenario: Pointed at mainnet
+- **WHEN** the deploy script is run against an endpoint that reports chain id 1
+- **THEN** it exits with an error naming the chain id, and no transaction is signed or sent
+
+#### Scenario: The repository doesn't exist yet
+- **WHEN** the deploy script is run before the Radicle repository has been published, or with a genesis head that isn't its canonical `main`
+- **THEN** it exits with an error, and no transaction is sent
+
+### Requirement: The binding is stated as a limit of this deployment
+The deployment record, the README and the paper SHALL state that the repository and chain checks bind this deployment only, and that the open code can be deployed elsewhere without them.
+
+#### Scenario: Reading the deployment record
+- **WHEN** anyone reads the published deployment record
+- **THEN** it names the repository id and its RID, the chain id, and says in plain words that a fork can remove both checks
+
+### Requirement: The waiting windows are set at construction
+The seal window, the reveal window and the challenge window for each panel size and proof level SHALL be constructor parameters, immutable afterwards, readable from the contracts and listed in the deployment record. The unbonding delay SHALL be derived from them.
+
+#### Scenario: A test deployment with short windows
+- **WHEN** a devnet deployment is constructed with windows in minutes
+- **THEN** its verdicts become final after those minutes, and its unbonding delay is the longest of them plus the published margin
+
+#### Scenario: No change after deployment
+- **WHEN** anyone tries to change a window after construction
+- **THEN** there is no function that does it
+
+### Requirement: Windows are checked for order at construction
+The constructor SHALL revert unless every window is nonzero, a smaller panel's challenge window is at least a larger panel's at the same level, level B's is at least level A's for the same panel size, and k = 1's is at least the published minimum for the deployment.
+
+#### Scenario: Windows out of order
+- **WHEN** a deployment is constructed with k = 3's window longer than k = 1's at level A
+- **THEN** the constructor reverts
+
+### Requirement: Only TEE proof types in this deployment
+A deployment constructed as TEE-only SHALL accept only TEE proof types (levels A and B), at genesis and by any later ADR. The zkTLS proof type (level C) and the simulated type SHALL be refused on Sepolia.
+
+#### Scenario: A zkTLS registration
+- **WHEN** a validator registers on the Sepolia deployment with a zkTLS proof
+- **THEN** the registration reverts
+
+#### Scenario: An ADR that adds zkTLS
+- **WHEN** an ADR adding the zkTLS proof type passes its panel on the Sepolia deployment
+- **THEN** applying it reverts, and the accepted proof types are unchanged
+
+### Requirement: Only a tested release candidate is deployed
+The Sepolia deploy script SHALL deploy only contracts whose bytecode hashes match a committed release-candidate record, produced by the v3 integration suite passing on that exact commit (design L18). It SHALL refuse when the record is missing, failed, or names other bytecode.
+
+#### Scenario: A contract changed after the run
+- **WHEN** the deploy script builds a contract whose bytecode hash differs from the passing release-candidate record
+- **THEN** it refuses before signing anything, and names the contract that differs
+
+#### Scenario: No passing record
+- **WHEN** the deploy script finds no release-candidate record for the commit, or one whose run failed
+- **THEN** it refuses before signing anything
+
+#### Scenario: Runs resumed after a restart
+- **WHEN** the release-candidate run is resumed after a restart (`--resume`) from a record that names the same commit and the same bytecode hashes, and that record lists a failed run followed by 3 passed runs
+- **THEN** the failed run stays in the record, and the deploy script accepts the integration item, because the last 3 runs passed with no failure after them
+
+#### Scenario: Resuming another build
+- **WHEN** the release-candidate run is resumed from a record whose commit or bytecode hashes differ from the commit's as computed now
+- **THEN** it refuses to resume, and runs nothing
+
+### Requirement: The fee coin is a test coin with no key
+On Sepolia the fee coin SHALL be the project's own test coin (design L17, owner 2026-11-20): an ERC-20 with 6 decimals whose name and symbol never say "USD" or "USDC". Its supply SHALL come only from one genesis mint at construction, named in the deployment record, and from its faucet, its only minter. It SHALL have no owner, admin, pause, setter or upgrade, and SHALL be constructed only on Sepolia and the local test ids.
+
+#### Scenario: Anyone else mints
+- **WHEN** any address but the faucet, the deployer included, calls the token's mint
+- **THEN** the call reverts, and the supply is unchanged
+
+#### Scenario: The genesis mint
+- **WHEN** the deployment is constructed with a genesis mint of 5,000 coins
+- **THEN** the genesis validator's bond is in the registry, the rest is held by the recipient named at deploy, the supply is 5,000 coins, and the deployment record names both and the faucet's rule
+
+#### Scenario: Deploying the coin on mainnet
+- **WHEN** the token or the faucet is deployed on Ethereum mainnet or any chain but Sepolia and the local test ids
+- **THEN** the constructor reverts
+
+### Requirement: The faucet's rule is fixed
+The faucet SHALL mint a fixed amount (20 coins) to the address that claims, at most once per address every fixed interval (2 hours); anyone MAY claim for itself. The amount and the interval SHALL be constants, and the faucet SHALL have no owner, admin, pause, setter or upgrade.
+
+#### Scenario: A first claim
+- **WHEN** an address that has never claimed calls the faucet's claim
+- **THEN** it receives 20 coins and can read the time of its next claim, 2 hours later
+
+#### Scenario: A claim too soon
+- **WHEN** the same address claims again before 2 hours have passed
+- **THEN** the call reverts with the time of its next claim, and no coin is minted
+
+### Requirement: The panel caps are set at construction
+The operator, host and TEE-type caps SHALL each be a constructor setting, `Strict` (today's rule) or `Off`, immutable, readable and listed in the deployment record. The deploy script's default SHALL be `Strict` for all three, and the Sepolia record SHALL set all three `Off` (design L23). The family cap SHALL be unchanged.
+
+#### Scenario: The owner's validators fill panels on Sepolia
+- **WHEN** 7 validators of one operator account, on one host value and one TEE type, are eligible on a deployment with every cap `Off`
+- **THEN** a panel of `kTop` is drawn
+
+#### Scenario: No change after deployment
+- **WHEN** anyone tries to change a cap setting after construction
+- **THEN** there is no function that does it
+
+### Requirement: The k = 1 hold counts challengers under the caps
+Under `Strict` caps, a k = 1 verdict's hold SHALL end only when a challenge panel of 3 could be drawn under the operator, host and TEE-type caps.
+
+#### Scenario: The owner's validators on a strict deployment
+- **WHEN** 7 validators of one operator account are eligible on a deployment with every cap `Strict`
+- **THEN** panels are k = 1, and a k = 1 verdict stays held, since no challenge panel of 3 could be drawn

@@ -1,0 +1,107 @@
+# Upstream clones and build output stay out of the repository (openspec/config.yaml rule 4).
+/upstream/
+/target/
+__pycache__/
+*.pyc
+.venv/
+
+# Foundry build output and the downloaded solc (scripts/contracts.sh, proof-of-fix#56).
+/contracts/out/
+/contracts/cache/
+/contracts/.cache/
+
+# The local bounty loop's scratch clones and forge's broadcast records (scripts/bounty-loop.sh, proof-of-fix#56).
+/.loop/
+/contracts/broadcast/
+
+# B1's rebuilt set of fixes and its download cache (scripts/judge-set.sh, proof-of-fix#85): only the manifest is kept.
+/data/judges/cache/
+/data/judges/cases.jsonl
+/data/judges/cases-more.jsonl
+/data/judges/cases-pbw.jsonl
+/data/judges/fake/
+/data/judges/fake-v2/
+
+# The private devnet's chain state (scripts/devnet.sh, proof-of-fix#93). Its deployment record is committed.
+/.devnet/
+
+# pofctl's end-to-end run: its throwaway devnet's state and records (scripts/pofctl-e2e.sh, proof-of-fix#104).
+/.devnet-e2e/
+/contracts/deployments/e2e/
+# Its v3 mode (scripts/pofctl-e2e.sh --version 3, #251 task 4.4): the chain's scratch, the repository and the stand-in
+# Radicle node, and the throwaway deployment's record.
+/.pofctl-v3-e2e/
+/contracts/deployments/pofctl-v3-e2e/
+
+# The engineers' demo end to end: its throwaway devnet, records and the nodes' scratch (scripts/demo-e2e.sh, #104),
+# and a v2 node's default receipts, exchange and checkouts (python3 -m oracle run).
+/.devnet-demo/
+/.demo-e2e/
+/contracts/deployments/demo/
+.oracle-receipts/
+.oracle-exchange/
+.oracle-src/
+
+# The integration suite: its throwaway devnet, records and the nodes' scratch (scripts/integration.sh, #152).
+/.devnet-integration/
+/.integration/
+/contracts/deployments/integration/
+
+# The remote mode's end-to-end run: its throwaway proxy's files and records (scripts/devnet-remote-e2e.sh, #150). The AWS
+# devnet's own record, contracts/deployments/devnet-aws-v2.json, is committed once the owner has deployed, like devnet.json.
+/.devnet-remote-e2e/
+/contracts/deployments/remote-e2e/
+
+# The first real run (#150): the role seats' nodes' working directory (scripts/devnet-seats.sh) and its end-to-end rig.
+/.devnet-seats/
+/.first-run-e2e/
+/contracts/deployments/first-run-e2e/
+
+# The Radicle spike's node logs and results (scripts/radicle-spike.sh, proof-of-fix#190).
+/.radicle-spike/
+# The seed's test on the internal network: its results, node logs and test publication record
+# (scripts/radicle-spike.sh --seed, #251 task 5.3).
+/.seed-radicle/
+# The Radicle target's publish test and the onboarding guides' test (scripts/radicle-spike.sh --publish and
+# --guides, #251 tasks 5.1 and 5.7).
+/.publish-radicle/
+/.guides-radicle/
+/contracts/deployments/guides-radicle/
+# OpenTofu's working directories (the lock files are committed).
+.terraform/
+# The v3 integration suite on Radicle: its results and node logs, and its throwaway deployment's record
+# (scripts/integration.sh --version 3 --radicle, #251 task 4.6).
+/.integration-radicle-v3/
+/contracts/deployments/integration-radicle-v3/
+# The SEV-SNP kit's Radicle node on the internal network: results, node logs, throwaway record (scripts/kit-radicle.sh,
+# #251 task 4.9).
+/.kit-radicle/
+/contracts/deployments/kit-radicle/
+# One validator run outside the harness (the release candidate's external set, #251 task 7.0): results, node logs,
+# throwaway record (scripts/integration.sh --version 3 --external).
+/.external-v3/
+/contracts/deployments/external-v3/
+
+# The v3 node's local-chain run: its scratch and its throwaway deployment's record (scripts/node-v3-e2e.sh, #139), and
+# a v3 node's default rounds on disk (python3 -m oracle run).
+/.node-v3-e2e/
+/contracts/deployments/node-v3-e2e/
+.oracle-rounds/
+
+# v3 on a throwaway local devnet: its state, records and the nodes' scratch (scripts/devnet-v3-e2e.sh,
+# scripts/time-to-heal.sh, #140).
+/.devnet-v3-e2e/
+/.v3-e2e/
+/contracts/deployments/v3-e2e/
+/.devnet-heal/
+/.heal/
+/contracts/deployments/heal/
+
+# The Sepolia deploy script's local rehearsals and dry runs (scripts/deploy-sepolia.sh, scripts/deploy-sepolia-e2e.sh,
+# #251 task 3.9). The Sepolia deployment's own record, contracts/deployments/sepolia-v3.json, is not ignored (L15).
+/contracts/deployments/sepolia-local/
+/contracts/deployments/sepolia-v3.dry-run.json
+
+# The measured checker disk's build output (scripts/checker-disk.sh, #251 L21): disk.raw is GiBs; the manifest is
+# what a release records.
+/validator-kit/sevsnp/out/

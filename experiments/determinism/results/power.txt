@@ -1,0 +1,19 @@
+GPU power per run (nvidia-smi every 2 s during the runs; python3 power.py <log> <tags>). The log started at 09:47, after the first stage's runs (vllm-d-*), so those have no samples.
+| Run | Case calls | Seconds | Mean GPU watts | GPU Wh per case call |
+|---|---|---|---|---|
+| vllm-d-restart1 | 60 | 110 | 292 | 0.149 |
+| vllm-d-restart2 | 60 | 113 | 288 | 0.151 |
+| vllm-dnopc-seq | 150 | 286 | 295 | 0.157 |
+| vllm-dnopc-c32 | 90 | 80 | 347 | 0.086 |
+| vllm-bi-seq | 150 | 673 | 232 | 0.289 |
+| vllm-bi-c8 | 90 | 201 | 247 | 0.153 |
+| vllm-bi-c32 | 90 | 120 | 271 | 0.101 |
+| vllm-bi-seed-seq | 90 | 440 | 232 | 0.315 |
+| vllm-bi-seed-c32 | 90 | 117 | 264 | 0.095 |
+| vllm-bi-restart1 | 60 | 253 | 239 | 0.279 |
+| vllm-bi-nonce | 600 | 254 | 267 | 0.031 |
+| llama-gpu-q8_0 | 90 | 97 | 262 | 0.079 |
+| llama-gpu-q8_0-nocache | 90 | 95 | 285 | 0.083 |
+| llama-gpu-q8_0-seed | 60 | 67 | 277 | 0.086 |
+| llama-gpu-q4_k_m | 30 | 32 | 221 | 0.065 |
+| llama-gpu-q4_k_m-nocache | 30 | 22 | 300 | 0.062 |

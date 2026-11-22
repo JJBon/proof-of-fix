@@ -1,0 +1,27 @@
+{
+ "id": "07-config-good",
+ "label": "good",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "parse_config() truncates values that contain '=': 'url = https://x.test/?a=1&b=2' gives 'https://x.test/?a' instead of the whole URL. Only the first '=' separates the key from the value.",
+ "commit": "Split config lines on the first '=' only",
+ "diff": "--- a/config.py\n+++ b/config.py\n@@ -5,6 +5,6 @@\n         line = line.strip()\n         if not line or line.startswith(\"#\"):\n             continue\n-        parts = line.split(\"=\")\n-        out[parts[0].strip()] = parts[1].strip()\n+        key, _, value = line.partition(\"=\")\n+        out[key.strip()] = value.strip()\n     return out\n",
+ "context": [
+  {
+   "path": "config.py",
+   "text": "    1 def parse_config(text):\n    2     \"\"\"`key = value` lines into a dict; blank lines and lines starting with '#' are skipped.\"\"\"\n    3     out = {}\n    4     for line in text.splitlines():\n    5         line = line.strip()\n    6         if not line or line.startswith(\"#\"):\n    7             continue\n    8         parts = line.split(\"=\")\n    9         out[parts[0].strip()] = parts[1].strip()\n   10     return out"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "018d4cc4905ba0347dc23cc5991ab94423a213472aa4a09f1ff6d8bd2e1c6d00"
+ }
+}

@@ -1,0 +1,37 @@
+# The local contract prototype (proof-of-fix#56, design D1). Run it with scripts/contracts.sh, never on the host:
+# the pinned Foundry image, the pinned solc mounted read-only, and no network but the container's loopback.
+[profile.default]
+src = "src"
+test = "test"
+libs = ["lib"]
+out = "out"
+cache_path = "cache"
+# Mounted by scripts/contracts.sh (sha256 checked); offline, so forge never downloads a compiler.
+solc = "/opt/solc/solc"
+offline = true
+optimizer = true
+optimizer_runs = 200
+# The IR pipeline (#93): with it and the oracle check in the linked library OracleAuth, Race fits EIP-170's 24,576
+# bytes (27,079 before, 23,065 now). The tests, the invariants and the replay (exact to the micro-credit) run on this
+# build.
+via_ir = true
+evm_version = "cancun"
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+]
+# Tests read simulation exports (design D7) and the compiled ABI (the no-privileged-call test); the devnet's deploy
+# script writes its record and the scenarios read it (#93). Nothing else.
+fs_permissions = [
+    { access = "read", path = "./test/data" },
+    { access = "read", path = "./out" },
+    { access = "read-write", path = "./deployments" },
+]
+
+[fuzz]
+runs = 256
+
+[invariant]
+runs = 64
+depth = 64
+fail_on_revert = false

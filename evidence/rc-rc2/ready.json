@@ -1,0 +1,21 @@
+{
+  "format": "pof-external-ready/1",
+  "mode": "aws",
+  "external": "0xd18bC11711f2DBADD00Da81207c9B02A666DeDc3",
+  "chainId": 31337,
+  "rpc": "http://10.82.0.145:8545",
+  "race": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "registry": "0xaF79b9F48d2939529B9Eae7aBd0B8D3440807E40",
+  "rid": "rad:zNsFr9mCKJVTwosBXmGvBumup5g9",
+  "seed": "z6MkgJBSPd8ofuRuG6P1Y8jFvfhCATgxJC1jBWEShMd6wja5@10.82.0.145:8776",
+  "family": "fake-6",
+  "image": "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b",
+  "bond": 250,
+  "proof": "tee",
+  "teeType": "amd-sev-snp",
+  "windowsKind": "production",
+  "acceptedImages": [
+    "0x4d5decb4510662eeec5233e778a24db2fb19026fdc18e88476409b7f4b099a8b",
+    "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b"
+  ]
+}

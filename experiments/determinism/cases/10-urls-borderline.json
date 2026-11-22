@@ -1,0 +1,27 @@
+{
+ "id": "10-urls-borderline",
+ "label": "borderline",
+ "note": "side effect: collapses every '//' in the whole URL, so a path or query that contains '//' (e.g. '?next=//x') is changed too",
+ "repo": "local/sample",
+ "issue": "join_url() doubles the slash when the base ends with '/' or the path starts with one: join_url('https://api.test/', '/v1/items') gives 'https://api.test///v1/items'.",
+ "commit": "Join URLs with exactly one slash",
+ "diff": "--- a/urls.py\n+++ b/urls.py\n@@ -1,6 +1,9 @@\n def join_url(base, path):\n     \"\"\"`base` with `path` appended, one slash between them.\"\"\"\n-    return base + \"/\" + path\n+    scheme, _, rest = (base + \"/\" + path).partition(\"://\")\n+    while \"//\" in rest:\n+        rest = rest.replace(\"//\", \"/\")\n+    return scheme + \"://\" + rest\n \n \n def strip_fragment(url):\n",
+ "context": [
+  {
+   "path": "urls.py",
+   "text": "    1 def join_url(base, path):\n    2     \"\"\"`base` with `path` appended, one slash between them.\"\"\"\n    3     return base + \"/\" + path\n    4 \n    5 \n    6 def strip_fragment(url):\n    7     \"\"\"`url` without its '#fragment'.\"\"\"\n    8     return url.split(\"#\", 1)[0]"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "3e867bda39f6fd14f5cadda02372a7ead3c64e4de7093cbf2b2e08b153306b6d"
+ }
+}

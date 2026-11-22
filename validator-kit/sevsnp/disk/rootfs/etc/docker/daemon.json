@@ -1,0 +1,8 @@
+{
+  "data-root": "/data/scratch/docker",
+  "features": {"containerd-snapshotter": true},
+  "log-driver": "journald",
+  "registry-mirrors": [],
+  "insecure-registries": [],
+  "live-restore": false
+}

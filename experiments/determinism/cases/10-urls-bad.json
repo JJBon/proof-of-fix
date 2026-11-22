@@ -1,0 +1,27 @@
+{
+ "id": "10-urls-bad",
+ "label": "bad",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "join_url() doubles the slash when the base ends with '/' or the path starts with one: join_url('https://api.test/', '/v1/items') gives 'https://api.test///v1/items'.",
+ "commit": "Join URLs with exactly one slash",
+ "diff": "--- a/urls.py\n+++ b/urls.py\n@@ -1,6 +1,6 @@\n def join_url(base, path):\n     \"\"\"`base` with `path` appended, one slash between them.\"\"\"\n-    return base + \"/\" + path\n+    return base.rstrip(\"/\") + path\n \n \n def strip_fragment(url):\n",
+ "context": [
+  {
+   "path": "urls.py",
+   "text": "    1 def join_url(base, path):\n    2     \"\"\"`base` with `path` appended, one slash between them.\"\"\"\n    3     return base + \"/\" + path\n    4 \n    5 \n    6 def strip_fragment(url):\n    7     \"\"\"`url` without its '#fragment'.\"\"\"\n    8     return url.split(\"#\", 1)[0]"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 1,
+  "results_sha256": "2618b95f1f6be6bfde8537756f85b83845d039001563135b9d59d817446733eb",
+  "logs_sha256": "01812d9500fa1c960df1abb5e85ccb808c84eb202546907ea95569c1fb6214fe"
+ }
+}

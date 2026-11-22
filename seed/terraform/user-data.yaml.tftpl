@@ -1,0 +1,32 @@
+#cloud-config
+# proof-of-fix's Radicle seed (#251 design L14): seed/radicle/ written to the host, its settings as data, then the
+# install (seed/radicle/install.sh): the data volume, the pinned Radicle release by checksum, seed-setup.sh, the service.
+write_files:
+  - path: /usr/local/lib/radicle-seed/install.sh
+    permissions: "0755"
+    encoding: gz+b64
+    content: ${install_sh}
+  - path: /usr/local/lib/radicle-seed/seed-setup.sh
+    permissions: "0755"
+    encoding: gz+b64
+    content: ${seed_setup_sh}
+  - path: /usr/local/lib/radicle-seed/config.json
+    permissions: "0644"
+    encoding: gz+b64
+    content: ${config_json}
+  - path: /usr/local/lib/radicle-seed/radicle-seed.service
+    permissions: "0644"
+    encoding: gz+b64
+    content: ${unit}
+  - path: /etc/radicle-seed/seed.env
+    permissions: "0644"
+    content: |
+      RADICLE_VERSION=${radicle_version}
+      RADICLE_TARGET=${radicle_target}
+      RADICLE_SHA256=${radicle_sha256}
+      DATA_VOLUME_ID=${data_volume_id}
+      SEED_RID=${rid}
+      SEED_ALIAS=${alias}
+      SEED_EXTERNAL_ADDRESS=${external_address}
+runcmd:
+  - [bash, /usr/local/lib/radicle-seed/install.sh]

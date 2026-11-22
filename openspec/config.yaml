@@ -1,0 +1,37 @@
+schema: spec-driven
+
+context: |
+  Repository proof-of-fix (it-ops#14): incentivized, self-healing maintenance of a popular open-source app.
+  Contributors stake on their pull requests, which ship in a beta build with payment held in escrow; staked
+  validators challenge with objective proof during a window; every release pays contributors, validators,
+  the upstream author's escrowed share, infrastructure and the owner. Target upstream for the PoC:
+  storytold/gridcraft (Rust spreadsheet, MIT OR Apache-2.0), formula core only at first.
+
+  Rules (owner, 2026-10-23); a change may only break one with a documented exception in its proposal:
+  1. Everything is simulated until the owner reviews the PoC: no real chain, tokens, wallets or money; no
+     public posts; no pull requests on the upstream project. The ledger and the actors are simulated.
+     Exception (owner, 2026-10-23): issues on the upstream project are part of development. Only for a
+     bug reproduced in a container, after searching for duplicates (a duplicate gets at most a comment
+     with new evidence), factual, with exact reproduction steps, and saying it was found with automated
+     tooling. One issue per bug; nothing that promotes this project.
+  2. Respect the upstream author: keep their license, NOTICE and attribution on anything taken from them;
+     never use their names or logos in a way that suggests endorsement; fixes are offered back upstream.
+     The author's share is escrowed until a maintainer claims it with a verifiable proof; never assign or
+     guess a wallet address for anyone.
+  3. The owner's stake is aligned by design: any owner benefit must be disclosed, capped and free of
+     voting, validating or payout discretion, and the simulation must show the owner can't gain by acting
+     against contributors or users.
+  4. Upstream code is untrusted: build and test it only in a container, never on the host or the CI host.
+  5. Every change starts from a Forgejo ticket; the change name starts with its key (it-ops-14-...,
+     proof-of-fix-N-...). No personal data or secrets in the repository; data about real people (GitHub
+     authors of sampled PRs) is aggregated, never stored per person.
+
+rules:
+  proposal:
+    - Link the ticket and state what is out of scope.
+    - Say which actors, incentives or attack scenarios the change affects.
+  design:
+    - Give the parameters (stakes, windows, splits) as named values with their rationale, and how the
+      simulation will test them.
+  tasks:
+    - Each task that changes the mechanism or the simulation includes its test; end with "run the check".

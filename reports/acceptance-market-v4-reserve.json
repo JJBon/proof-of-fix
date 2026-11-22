@@ -1,0 +1,185 @@
+{
+  "rows": [
+    {
+      "bluffer_gain": {
+        "mean": -18.74,
+        "seeds": 100,
+        "standard_error": 15.35
+      },
+      "bond_change": {
+        "mean": -2.48,
+        "seeds": 100,
+        "standard_error": 0.58
+      },
+      "bounties_paid": 39.54,
+      "bounties_unsolved": 47.94,
+      "failed_criteria": [],
+      "hunt_elasticity": 0.0,
+      "passed": true,
+      "reserve_bps": 10000,
+      "rings": {
+        "2": {
+          "mean_gain": -13.61,
+          "seeds": 100,
+          "standard_error": 21.79
+        },
+        "3": {
+          "mean_gain": 14.35,
+          "seeds": 100,
+          "standard_error": 26.02
+        },
+        "4": {
+          "mean_gain": 10.32,
+          "seeds": 100,
+          "standard_error": 26.43
+        },
+        "6": {
+          "mean_gain": 48.54,
+          "seeds": 100,
+          "standard_error": 31.34
+        }
+      },
+      "solver_net_of_effort": {
+        "mean": 31.51,
+        "seeds": 600,
+        "standard_error": 1.41
+      }
+    },
+    {
+      "bluffer_gain": {
+        "mean": -6.86,
+        "seeds": 100,
+        "standard_error": 14.75
+      },
+      "bond_change": {
+        "mean": -2.53,
+        "seeds": 100,
+        "standard_error": 0.63
+      },
+      "bounties_paid": 39.41,
+      "bounties_unsolved": 49.55,
+      "failed_criteria": [],
+      "hunt_elasticity": 0.5,
+      "passed": true,
+      "reserve_bps": 10000,
+      "rings": {
+        "2": {
+          "mean_gain": 1.24,
+          "seeds": 100,
+          "standard_error": 22.15
+        },
+        "3": {
+          "mean_gain": -37.95,
+          "seeds": 100,
+          "standard_error": 28.77
+        },
+        "4": {
+          "mean_gain": 4.96,
+          "seeds": 100,
+          "standard_error": 26.01
+        },
+        "6": {
+          "mean_gain": 59.22,
+          "seeds": 100,
+          "standard_error": 32.22
+        }
+      },
+      "solver_net_of_effort": {
+        "mean": 33.76,
+        "seeds": 600,
+        "standard_error": 1.39
+      }
+    },
+    {
+      "bluffer_gain": {
+        "mean": -14.85,
+        "seeds": 100,
+        "standard_error": 13.93
+      },
+      "bond_change": {
+        "mean": -2.15,
+        "seeds": 100,
+        "standard_error": 0.62
+      },
+      "bounties_paid": 39.53,
+      "bounties_unsolved": 48.63,
+      "failed_criteria": [],
+      "hunt_elasticity": 1.0,
+      "passed": true,
+      "reserve_bps": 10000,
+      "rings": {
+        "2": {
+          "mean_gain": 0.35,
+          "seeds": 100,
+          "standard_error": 24.03
+        },
+        "3": {
+          "mean_gain": -7.3,
+          "seeds": 100,
+          "standard_error": 25.72
+        },
+        "4": {
+          "mean_gain": -16.68,
+          "seeds": 100,
+          "standard_error": 26.33
+        },
+        "6": {
+          "mean_gain": 60.53,
+          "seeds": 100,
+          "standard_error": 34.09
+        }
+      },
+      "solver_net_of_effort": {
+        "mean": 31.22,
+        "seeds": 600,
+        "standard_error": 1.41
+      }
+    },
+    {
+      "bluffer_gain": {
+        "mean": 28.57,
+        "seeds": 100,
+        "standard_error": 15.66
+      },
+      "bond_change": {
+        "mean": -2.63,
+        "seeds": 100,
+        "standard_error": 0.64
+      },
+      "bounties_paid": 37.34,
+      "bounties_unsolved": 50.01,
+      "failed_criteria": [],
+      "hunt_elasticity": 0.5,
+      "passed": true,
+      "reserve_bps": 9000,
+      "rings": {
+        "2": {
+          "mean_gain": 11.24,
+          "seeds": 100,
+          "standard_error": 19.88
+        },
+        "3": {
+          "mean_gain": 25.79,
+          "seeds": 100,
+          "standard_error": 20.88
+        },
+        "4": {
+          "mean_gain": 9.6,
+          "seeds": 100,
+          "standard_error": 30.63
+        },
+        "6": {
+          "mean_gain": 45.89,
+          "seeds": 100,
+          "standard_error": 33.61
+        }
+      },
+      "solver_net_of_effort": {
+        "mean": 27.11,
+        "seeds": 600,
+        "standard_error": 1.24
+      }
+    }
+  ],
+  "seeds": 100
+}

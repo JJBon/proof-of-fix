@@ -1,0 +1,81 @@
+# The nightly integration run (proof-of-fix#152's third box): scripts/integration.sh, every scenario, against a
+# throwaway local devnet on the test runner (anvil's public test keys, the fake judge, each fix's tests in the Docker
+# sandbox), then scripts/nightly_report.py: a short summary in the job log (and the job summary file when the runner
+# sets one; Forgejo doesn't display it, so the log is where to read it), and the one tracking issue, "Nightly
+# integration run failing" (label type/bug): a failure opens it, or comments on it (reopening it if it was closed), and
+# the next pass comments and closes it. Not a required check. The on-demand run is integration.yml.
+#
+# When: 03:00 UTC, 22:00 America/Bogota. The test runner (platform modules/ci, prod stack ci) runs 09:00-01:00 Bogota
+# (14:00-06:00 UTC; stop_cron 01:00, owner, infra#160), so this starts 3 hours before it stops and finishes, even at
+# the 60-minute timeout, before the module's older 23:00 default; a run outside the window just waits for the runner.
+# Late in the evening so the suite (about 15-25 minutes) rarely queues in front of pof / check on the runner's one slot.
+# Forgejo's scheduler reads cron in the server's time zone, UTC (the forgejo container sets none).
+#
+# Not run: scenario 8, Radicle merges (--radicle, #201). The pinned Radicle build (spikes/radicle/Dockerfile, heartwood
+# 1.10.3) is x86_64 only and this runner is arm64; the run says so in its log and summary.
+#
+# Credentials: none for the suite. The report uses the workflow's own github.token, which can write this repository's
+# issues (Forgejo gives it write access to the repository for every run but a fork's pull request; platform's plan
+# workflow comments on pull requests with it). It's passed in an environment variable and sent only in a header.
+#
+# Not here, the owner's to decide: a nightly run against the AWS devnet (scripts/integration.sh --target aws). It
+# would need:
+#   - secrets (tests/integration/aws.py's top; validator-kit/runbook.md, "The integration suite on the AWS devnet"):
+#     DEVNET_RPC_URL and DEVNET_RPC_AUTH (the devnet's RPC credential), FIRST_BOUNTY_TOKEN (write:repository and
+#     write:issue on pof-sandbox) and FIRST_BOUNTY_USER, optionally POFCTL_KEY_ENGINEER (seat 6's key); and the role
+#     keys, which the suite reads from OpenBao after an interactive OIDC login (bao login -method=oidc role=admin), so
+#     CI would need a non-interactive way in (an OpenBao role for this repository's jobs, platform openbao_config's
+#     auth/forgejo) or the keys as secrets: the owner's keys in CI, which no workflow here has today;
+#   - a runner allowed to hold them: the test runner holds no credentials by design, and the tofu runner's jobs are
+#     plans and applies;
+#   - hosts up: the pof-devnet host (01:00-09:00 Bogota stopped, platform modules/pof_devnet) and the seats' validator
+#     nodes (scripts/devnet-seats.sh up, the owner's seat on demand), so a schedule inside both windows;
+#   - --preflight first, and a run that never overlaps a manual one (the devnet and pof-sandbox are shared).
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: # to try the nightly job, report and issue included, without waiting for the night
+
+jobs:
+  nightly:
+    runs-on: test
+    timeout-minutes: 60
+    env:
+      NOT_RUN: "not run: scenario 8, Radicle merges (--radicle): the pinned Radicle build is x86_64 only, this runner is"
+    steps:
+      - name: checkout
+        id: checkout
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          auth="http.extraHeader=Authorization: Basic $(printf 'x:%s' "$TOKEN" | base64 -w0)"
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git init -q .
+          git -c "$auth" fetch -q --depth 1 "$url" "$GITHUB_SHA" || git -c "$auth" fetch -q "$url" "$GITHUB_REF"
+          git checkout -q -f --detach "$GITHUB_SHA"
+          git clean -qffdx
+          git log -1 --oneline
+      # The steps' timeouts add up to less than the job's, so a hung step still leaves time for the report. The suite
+      # takes about 15-25 minutes; the toolchain is cached on the runner after the first run.
+      - name: toolchain
+        timeout-minutes: 8
+        run: scripts/contracts.sh setup
+      - name: integration
+        id: integration
+        timeout-minutes: 45
+        run: |
+          set -o pipefail
+          echo "nightly: scenarios 1-7 on the throwaway local devnet; $NOT_RUN $(uname -m)"
+          scripts/integration.sh 2>&1 | tee nightly-integration.log
+      - name: report
+        # Not when the run is cancelled (that's no failure of the suite); a timed-out suite is reported as failed.
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+        env:
+          TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.integration.outcome }}
+        run: |
+          python3 scripts/nightly_report.py --log nightly-integration.log --outcome "${OUTCOME:-skipped}" --issue \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_NUMBER" \
+            --note "$NOT_RUN $(uname -m)"

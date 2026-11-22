@@ -1,0 +1,30 @@
+{
+ "date": "2026-11-03T15:22:40Z",
+ "error": "HTTP 403 SignatureDoesNotMatch: the signed request included the hop-by-hop Connection header, which Bedrock canonicalises as empty. Not billed (no model ran). The 403 message echoes the canonical request, including the X-Amz-Security-Token, and the whole response had been revealed, so the response, the presentation and the receipt were deleted; only these timings are kept.",
+ "family": "Anthropic",
+ "kind": "call",
+ "model": "claude-haiku-4.5",
+ "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+ "notary": "self-a",
+ "ok": false,
+ "proof_ok": true,
+ "result": {
+  "attest_s": 0.009,
+  "attestation_bytes": 533,
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "present_s": 0.0,
+  "presentation_bytes": 7826,
+  "prove_s": 0.391,
+  "recv_len": 2208,
+  "sent_len": 1791,
+  "setup_s": 1.17,
+  "tls_exchange_s": 2.191,
+  "tls_version": "V1_2",
+  "total_s": 3.861,
+  "verifier_bytes_down": 4073123,
+  "verifier_bytes_up": 63010160
+ },
+ "run": "call-self-a-mpc-claude-haiku-4.5"
+}

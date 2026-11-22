@@ -1,0 +1,12 @@
+[Unit]
+Description=proof-of-fix: one on-demand validator run, then power off
+Wants=pof-attest.service pof-radicle-ready.service
+After=pof-attest.service pof-radicle-ready.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/pof/pof-node.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

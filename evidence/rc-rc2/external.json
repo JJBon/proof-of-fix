@@ -1,0 +1,62 @@
+{
+  "format": "pof-external-run/1",
+  "mode": "aws",
+  "result": "passed",
+  "chainId": 31337,
+  "race": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "registry": "0xaF79b9F48d2939529B9Eae7aBd0B8D3440807E40",
+  "windowsKind": "production",
+  "acceptedImages": [
+    "0x4d5decb4510662eeec5233e778a24db2fb19026fdc18e88476409b7f4b099a8b",
+    "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b"
+  ],
+  "rid": "rad:zNsFr9mCKJVTwosBXmGvBumup5g9",
+  "seed": "z6MkgJBSPd8ofuRuG6P1Y8jFvfhCATgxJC1jBWEShMd6wja5@10.82.0.145:8776",
+  "rpc": "http://10.82.0.145:8545",
+  "registration": {
+    "key": "0xd18bC11711f2DBADD00Da81207c9B02A666DeDc3",
+    "proofType": "tee",
+    "teeType": "amd-sev-snp",
+    "image": "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b",
+    "family": "fake-6",
+    "level": 1,
+    "attestation": "0x7d7f9168290ec4665208b3a0bc3ebb06fddd4f1aa4f038b77a199fc1d284c04b",
+    "bond": 250000000,
+    "radNode": "z6MkndSSawVcJAPRY96cRcTzG5mBTM46fhgXYb8jMwFdBEG8",
+    "waitedSeconds": 72
+  },
+  "qualification": {
+    "checks": 6,
+    "seats": 31,
+    "revealed": 31,
+    "wallSeconds": 245,
+    "holds": 46
+  },
+  "judged": {
+    "submission": 56,
+    "bounty": 1,
+    "fix": "10a4dc66251d28db32c30cd7438530f4faa7f40a",
+    "patch": "addcb311b17906f781d7244e3542b57054665e95",
+    "pid": 154,
+    "slot": 0,
+    "kind": "Counted",
+    "sealed": true,
+    "revealed": true,
+    "counted": true,
+    "receipted": true,
+    "pass": true,
+    "status": "Window",
+    "wallSeconds": 9,
+    "holds": 49
+  },
+  "results": {
+    "S": "PASS",
+    "X": "PASS",
+    "Q": "PASS",
+    "F": "PASS",
+    "R": "PASS",
+    "I": "PASS"
+  },
+  "wallSeconds": 558,
+  "commit": "8d4b217b44cf356102b1893c21a9d6196890c3f8"
+}

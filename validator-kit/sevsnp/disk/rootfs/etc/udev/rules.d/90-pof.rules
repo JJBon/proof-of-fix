@@ -1,0 +1,2 @@
+# The node (uid 10001, group pof) asks the AMD Secure Processor for SEV-SNP reports through the guest driver.
+KERNEL=="sev-guest", GROUP="pof", MODE="0660"

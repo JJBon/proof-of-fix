@@ -1,0 +1,95 @@
+{
+ "call": {
+  "answer": "PASS",
+  "cost_usd": 6.82e-05,
+  "error_body": null,
+  "input_tokens": 37,
+  "latency_ms": 499,
+  "output_tokens": 5,
+  "reasoning_blocks": 0,
+  "stop_reason": "end_turn"
+ },
+ "date": "2026-11-03T15:24:31Z",
+ "event": "result",
+ "family": "Anthropic",
+ "kind": "call",
+ "max_tokens": 20,
+ "model": "claude-haiku-4.5",
+ "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+ "notary": "self-a",
+ "notary_events": [
+  {
+   "attestation_bytes": 533,
+   "event": "attested",
+   "mode": "mpc",
+   "seconds": 4.113042118
+  }
+ ],
+ "offline": {
+  "no_network_namespace": true,
+  "notary_address": "0xCA5064d5dA7A391f1FEd7dAbE591d502B59d7944",
+  "python_ok": true,
+  "python_s": 0.013,
+  "recv_revealed": 499,
+  "rust_ok": true,
+  "rust_output": "verified offline in 0.000 s: server bedrock-runtime.us-east-1.amazonaws.com, V1_2, time 1793719468, sent 1780 B (493 revealed), received 499 B; notary key 0242e14f9b5eddcb6dce3579ae82eb9e59a13f6b3e3561074272c30621c1ad3cf5 (k256)",
+  "rust_wall_s": 0.003,
+  "sent_revealed": 493
+ },
+ "ok": true,
+ "prompt": "Answer with one word, PASS or FAIL: does the Python test `assert 2 + 2 == 4` pass?",
+ "result": {
+  "attest_s": 0.012,
+  "attestation_bytes": 533,
+  "hidden_recv": [],
+  "hidden_sent": [
+   [
+    282,
+    1302
+   ],
+   [
+    1319,
+    1586
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 4096,
+  "mode": "mpc",
+  "present_s": 0.0,
+  "presentation_bytes": 6117,
+  "prove_s": 0.256,
+  "recv_len": 499,
+  "response_body": "{\"metrics\":{\"latencyMs\":499},\"output\":{\"message\":{\"content\":[{\"text\":\"PASS\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":37,\"outputTokens\":5,\"serverToolUsage\":{},\"totalTokens\":42}}",
+  "revealed_recv": [
+   [
+    0,
+    499
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    282
+   ],
+   [
+    1302,
+    1319
+   ],
+   [
+    1586,
+    1780
+   ]
+  ],
+  "sent_len": 1780,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 1.181,
+  "status": "HTTP/1.1 200 OK",
+  "tls_exchange_s": 2.569,
+  "tls_version": "V1_2",
+  "total_s": 4.113,
+  "verifier_bytes_down": 4009139,
+  "verifier_bytes_up": 62830788
+ },
+ "run": "call-self-a-mpc-claude-haiku-4.5-2",
+ "wall_s": 4.124
+}

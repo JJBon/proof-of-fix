@@ -1,0 +1,27 @@
+{
+ "id": "08-money-good",
+ "label": "good",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "round_cents(2.675) returns 2.67; invoices round halves away from zero, so it must be 2.68 (and 1.005 must be 1.01). round() works on the float's binary value (2.67499999...) and rounds halves to even. Amounts go up to hundreds of millions on large invoices.",
+ "commit": "Round invoice amounts half away from zero with Decimal",
+ "diff": "--- a/money.py\n+++ b/money.py\n@@ -1,3 +1,6 @@\n+from decimal import ROUND_HALF_UP, Decimal\n+\n+\n def round_cents(amount):\n     \"\"\"An amount in euros rounded to the cent, halves away from zero, as invoices require.\"\"\"\n-    return round(amount, 2)\n+    return float(Decimal(str(amount)).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP))\n",
+ "context": [
+  {
+   "path": "money.py",
+   "text": "    1 def round_cents(amount):\n    2     \"\"\"An amount in euros rounded to the cent, halves away from zero, as invoices require.\"\"\"\n    3     return round(amount, 2)"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 0,
+  "results_sha256": "124fd50cb6d223cdd18fedc166d00af7254199b6e6dedf9be82f71db87af6d01",
+  "logs_sha256": "018d4cc4905ba0347dc23cc5991ab94423a213472aa4a09f1ff6d8bd2e1c6d00"
+ }
+}

@@ -1,0 +1,3437 @@
+{
+"about": "proof-of-fix#160's clean verdicts as pass (1), fail (0) or invalid (null) per seat: no issue or patch text. Plan 52d9fbf5273570e1; reports/judges-v2.md. Read by pof/sim/openval/measured.py (#236).",
+"cases": {
+"astropy__astropy-13033:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-13033:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-13398:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-13977:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-13977:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-14182:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"astropy__astropy-14182:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-14369:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-14369:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-14508:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"astropy__astropy-14598:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"astropy__astropy-14598:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": null
+}
+},
+"astropy__astropy-8707:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-10554:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-10999:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-10999:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": null,
+"qwen": 0
+}
+},
+"django__django-11087:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11133:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-11149:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11265:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11292:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11292:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-11292:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 0,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-11400:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11400:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": null,
+"qwen": 1
+}
+},
+"django__django-11433:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11433:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11749:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11790:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11820:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11820:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-11880:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-12125:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-12193:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": null,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-12209:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-12209:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"django__django-12209:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"django__django-12273:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-12304:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-12325:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-12663:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-12663:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-12663:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-12708:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": null
+}
+},
+"django__django-12858:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"django__django-12858:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-13012:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-13028:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-13112:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13121:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13158:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-13158:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13195:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13195:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-13279:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-13794:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13933:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-13933:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14017:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14034:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14034:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-14140:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14311:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"django__django-14534:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14539:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"django__django-14725:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-14771:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15022:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15037:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15037:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15104:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-15161:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": null,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15268:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15268:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-15382:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-15695:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15695:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-15863:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16100:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16560:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"django__django-16560:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16661:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16661:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16877:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": null
+}
+},
+"django__django-16877:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16950:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-16950:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-17084:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"django__django-7530:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-14623:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-20676:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-20859:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-21568:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-21568:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-23299:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"matplotlib__matplotlib-23299:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"matplotlib__matplotlib-24870:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-24870:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-25122:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-25479:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": null,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-25775:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-26208:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"matplotlib__matplotlib-26466:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"matplotlib__matplotlib-26466:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"mwaskom__seaborn-3069:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"mwaskom__seaborn-3187:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"mwaskom__seaborn-3187:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-1724:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-1724:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-1766:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-1766:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-2317:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"psf__requests-2317:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": null,
+"qwen": 1
+}
+},
+"psf__requests-2317:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"psf__requests-5414:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-2905:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-3993:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pydata__xarray-3993:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pydata__xarray-4094:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"pydata__xarray-4629:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-4629:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-4687:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-4687:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-7229:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-7229:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pydata__xarray-7393:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pylint-dev__pylint-4551:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pylint-dev__pylint-4604:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pylint-dev__pylint-4661:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pylint-dev__pylint-4661:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"pylint-dev__pylint-8898:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-10356:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-10356:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-5787:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-5787:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-7236:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"pytest-dev__pytest-7324:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-7324:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"pytest-dev__pytest-7521:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 0,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"pytest-dev__pytest-7521:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"scikit-learn__scikit-learn-12973:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"scikit-learn__scikit-learn-14496:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"scikit-learn__scikit-learn-25102:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"scikit-learn__scikit-learn-25102:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"scikit-learn__scikit-learn-25102:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": null,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-10435:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": null,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-10435:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-10614:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-10673:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sphinx-doc__sphinx-10673:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-11445:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-11510:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7440:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7462:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7590:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7748:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7748:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-7985:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8056:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8056:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8120:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8265:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8265:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sphinx-doc__sphinx-8548:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-8593:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sphinx-doc__sphinx-8593:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9229:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9258:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9461:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9461:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9602:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sphinx-doc__sphinx-9602:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sphinx-doc__sphinx-9658:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-12096:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-12096:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-12096:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-12419:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13031:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13091:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13091:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13372:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-13372:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": null,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13615:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-13615:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13757:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13798:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": null,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13798:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13877:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13877:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13877:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-13878:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-13974:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-14248:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-14711:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15017:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15017:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15017:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15599:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-15875:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15976:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": null,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-15976:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-16597:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-17318:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-17318:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-17630:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-18199:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-18199:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-19346:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-19346:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 0,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-19495:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-19783:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+},
+"sympy__sympy-20428:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-20801:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 0,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-20801:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 0,
+"mistral": 1,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-20916:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": null,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-20916:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-21379:bad": {
+"arm": "v1",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-21379:good": {
+"arm": "v1",
+"label": "good",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 0,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-21596:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": null,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-21612:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 1,
+"google-gemma": 0,
+"mistral": 0,
+"nvidia": 0,
+"openai": 1,
+"openai-oss": 0,
+"qwen": 0
+}
+},
+"sympy__sympy-22080:bad": {
+"arm": "more",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 1,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-22456:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-22456:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-22456:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 0,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-22714:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 1,
+"deepseek": 1,
+"google": 1,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-24443:pbw:CodeStory": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 0
+}
+},
+"sympy__sympy-24443:pbw:LearnByInteract": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 1,
+"google": 0,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": null,
+"openai": 0,
+"openai-oss": 1,
+"qwen": 1
+}
+},
+"sympy__sympy-24443:pbw:OpenHands": {
+"arm": "pbw",
+"label": "bad",
+"votes": {
+"anthropic": 0,
+"deepseek": 0,
+"google": null,
+"google-gemma": 1,
+"mistral": 1,
+"nvidia": 1,
+"openai": 0,
+"openai-oss": 0,
+"qwen": 1
+}
+}
+},
+"plan": "52d9fbf5273570e1",
+"seats": [
+"anthropic",
+"openai",
+"google",
+"deepseek",
+"qwen",
+"mistral",
+"nvidia",
+"google-gemma",
+"openai-oss"
+]
+}

@@ -1,0 +1,27 @@
+{
+ "id": "01-median-bad",
+ "label": "bad",
+ "note": "",
+ "repo": "local/sample",
+ "issue": "median() is wrong for an even count: median([4, 1, 3, 2]) returns 3, but the median of an even number of values is the mean of the two middle values (2.5).",
+ "commit": "Fix the median of an even count",
+ "diff": "--- a/stats.py\n+++ b/stats.py\n@@ -7,4 +7,4 @@\n \n def median(xs):\n     s = sorted(xs)\n-    return s[len(s) // 2]  # the issue: for an even count this isn't the middle of the two middle values\n+    return s[(len(s) - 1) // 2]  # a wrong fix: the lower middle value, still not the median of an even count\n",
+ "context": [
+  {
+   "path": "stats.py",
+   "text": "    1 \"\"\"A tiny library, the loop's test repository (proof-of-fix#56 task 3.3).\"\"\"\n    2 \n    3 \n    4 def mean(xs):\n    5     return sum(xs) / len(xs)\n    6 \n    7 \n    8 def median(xs):\n    9     s = sorted(xs)\n   10     return s[len(s) // 2]  # the issue: for an even count this isn't the middle of the two middle values"
+  }
+ ],
+ "tests": {
+  "image": "local python 3.13 (experiment, no sandbox)",
+  "command": [
+   "python",
+   "-m",
+   "unittest",
+   "-q"
+  ],
+  "exit_code": 1,
+  "results_sha256": "2618b95f1f6be6bfde8537756f85b83845d039001563135b9d59d817446733eb",
+  "logs_sha256": "5437c9b598ebcf2be16ed5a72eaf76ed44ffd3cba57df15cd5c3d08427fcdd01"
+ }
+}

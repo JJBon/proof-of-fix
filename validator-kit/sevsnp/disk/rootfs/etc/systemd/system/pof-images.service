@@ -1,0 +1,13 @@
+[Unit]
+Description=proof-of-fix: load the measured disk's images into the empty store (nothing pulled)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/pof/pof-images.sh
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

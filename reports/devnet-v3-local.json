@@ -1,0 +1,104 @@
+{
+  "chainId": 7193,
+  "race": "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
+  "besideV2": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "qualification": {
+    "checks": 27,
+    "chainSecondsToThreeActive": 32436
+  },
+  "waitingBounty": {
+    "submission": 30,
+    "judgedAt": 84147896,
+    "k1Limit": 50000000,
+    "k": 3,
+    "waitedForTopUpsSeconds": 10803,
+    "topUpsToDrawSeconds": 12
+  },
+  "silent": {
+    "validator": "v3",
+    "slashed": 5000000,
+    "belowFloor": true
+  },
+  "k5": {
+    "submission": 57,
+    "active": 6
+  },
+  "k1Hold": {
+    "submission": 1,
+    "heldSeconds": 25221,
+    "audits": 2,
+    "validatorsBesideGenesisAtRelease": 3,
+    "auditorsDrawnBeforeRelease": 0,
+    "auditsJudgedWhileHeld": 0,
+    "windowSeconds": 604800,
+    "countedToFinalSeconds": 630022
+  },
+  "healK1": {
+    "submission": 3,
+    "challengePanel": 190,
+    "challengeK": 3,
+    "wrongPassToReversal_s": 1321291,
+    "wrongPassToChallenge_s": 3600,
+    "challengeWaitedForAPanel_s": 1310489,
+    "panelDrawnToReversal_s": 7202,
+    "reversalToSettlement_s": 0,
+    "liarSlashed": 0,
+    "liarFamilyBarred": true
+  },
+  "healFix": {
+    "submission": 31,
+    "challengePanel": 288,
+    "challengeK": 5,
+    "wrongPassToReversal_s": 1738901,
+    "wrongPassToChallenge_s": 1,
+    "challengeWaitedForAPanel_s": 1731698,
+    "panelDrawnToReversal_s": 7202,
+    "reversalToSettlement_s": 1,
+    "falseReceiptFound": false
+  },
+  "validators": {
+    "genesis": {
+      "state": "Active",
+      "bond": 1250000000,
+      "slashed": 0
+    },
+    "v1": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    },
+    "v2": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    },
+    "v3": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 5000000
+    },
+    "v4": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    },
+    "v5": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    },
+    "v6": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    },
+    "v7": {
+      "state": "Active",
+      "bond": 250000000,
+      "slashed": 0
+    }
+  },
+  "panels": 288,
+  "chainSeconds": 1882987,
+  "wallSeconds": 337
+}

@@ -1,0 +1,73 @@
+{
+ "date": "2026-11-03T15:22:20Z",
+ "event": "result",
+ "kind": "free",
+ "max_sent_records": null,
+ "notary": "self-a",
+ "notary_events": [
+  {
+   "attestation_bytes": 517,
+   "event": "attested",
+   "mode": "proxy",
+   "seconds": 3.660215863
+  }
+ ],
+ "offline": {
+  "no_network_namespace": true,
+  "notary_address": "0xCA5064d5dA7A391f1FEd7dAbE591d502B59d7944",
+  "python_ok": true,
+  "python_s": 0.015,
+  "recv_revealed": 187,
+  "rust_ok": true,
+  "rust_output": "verified offline in 0.000 s: server bedrock-runtime.us-east-1.amazonaws.com, V1_2, time 1793719337, sent 20203 B (20179 revealed), received 187 B; notary key 0242e14f9b5eddcb6dce3579ae82eb9e59a13f6b3e3561074272c30621c1ad3cf5 (k256)",
+  "rust_wall_s": 0.002,
+  "sent_revealed": 20179
+ },
+ "ok": true,
+ "pad": 20000,
+ "result": {
+  "attest_s": 0.034,
+  "attestation_bytes": 517,
+  "hidden_sent": [
+   [
+    133,
+    157
+   ]
+  ],
+  "max_recv": 4096,
+  "max_sent": 65536,
+  "mode": "proxy",
+  "present_s": 0.0,
+  "presentation_bytes": 25443,
+  "prove_s": 2.333,
+  "recv_len": 187,
+  "response_body": "<UnknownOperationException/>\n",
+  "revealed_recv": [
+   [
+    0,
+    187
+   ]
+  ],
+  "revealed_sent": [
+   [
+    0,
+    133
+   ],
+   [
+    157,
+    20203
+   ]
+  ],
+  "sent_len": 20203,
+  "server_name": "bedrock-runtime.us-east-1.amazonaws.com",
+  "setup_s": 0.763,
+  "status": "HTTP/1.1 404 Not Found",
+  "tls_exchange_s": 0.512,
+  "tls_version": "V1_2",
+  "total_s": 3.66,
+  "verifier_bytes_down": 2636407,
+  "verifier_bytes_up": 2685977
+ },
+ "run": "free-self-a-proxy-s65536-r4096-pad20000",
+ "wall_s": 3.667
+}

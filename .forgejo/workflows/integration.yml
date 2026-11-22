@@ -1,0 +1,37 @@
+# The integration suite (proof-of-fix#152), on demand: scripts/integration.sh against a throwaway local devnet on the
+# runner, the fake judge and each fix's tests in the Docker sandbox. Not a required check, and never on a schedule
+# here: the nightly run is nightly.yml (#152's third box). It needs Docker on the runner, and the pinned
+# Foundry image and solc (scripts/contracts.sh setup pulls them). No credentials: anvil's public test keys only.
+name: integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "scenarios, comma-separated (1-7); empty for all"
+        required: false
+        default: ""
+
+jobs:
+  integration:
+    runs-on: test
+    timeout-minutes: 60
+    steps:
+      - name: checkout
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          auth="http.extraHeader=Authorization: Basic $(printf 'x:%s' "$TOKEN" | base64 -w0)"
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git init -q .
+          git -c "$auth" fetch -q --depth 1 "$url" "$GITHUB_SHA" || git -c "$auth" fetch -q "$url" "$GITHUB_REF"
+          git checkout -q -f --detach "$GITHUB_SHA"
+          git clean -qffdx
+          git log -1 --oneline
+      - name: toolchain
+        run: scripts/contracts.sh setup
+      - name: integration
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          if [ -n "$ONLY" ]; then scripts/integration.sh --only "$ONLY"; else scripts/integration.sh; fi

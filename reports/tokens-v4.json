@@ -1,0 +1,4263 @@
+{
+  "seeds": 40,
+  "weeks": 8,
+  "prices": [
+    0.0,
+    0.01,
+    0.05,
+    0.2
+  ],
+  "emission_per_period": 10000.0,
+  "without": {
+    "passed": true,
+    "failed_criteria": [],
+    "criteria": {
+      "bluffer_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "caught_share": {
+        "mean": 0.9972,
+        "standard_error": 0.0028,
+        "seeds": 40
+      },
+      "check_cheat_gain": {
+        "mean": -12.56,
+        "standard_error": 0.51,
+        "seeds": 40
+      },
+      "check_copy_gain": {
+        "mean": -333.38,
+        "standard_error": 22.49,
+        "seeds": 40
+      },
+      "check_craft_gain": {
+        "mean": -367.65,
+        "standard_error": 23.83,
+        "seeds": 40
+      },
+      "check_half_gain": {
+        "mean": -250.58,
+        "standard_error": 23.27,
+        "seeds": 40
+      },
+      "check_herd_gain": {
+        "mean": -2.56,
+        "standard_error": 0.51,
+        "seeds": 40
+      },
+      "check_lazy_gain": {
+        "mean": -13.12,
+        "standard_error": 1.58,
+        "seeds": 40
+      },
+      "check_plant_gain": {
+        "mean": -356.54,
+        "standard_error": 27.21,
+        "seeds": 40
+      },
+      "check_sock_gain": {
+        "mean": -37.59,
+        "standard_error": 22.24,
+        "seeds": 40
+      },
+      "check_split_gain": {
+        "mean": -366.52,
+        "standard_error": 24.76,
+        "seeds": 40
+      },
+      "ci_validators_caught_change": {
+        "mean": -0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "ci_validators_funder_cost_change": {
+        "mean": -0.99,
+        "standard_error": 3.82,
+        "seeds": 40
+      },
+      "ci_validators_solver_change": {
+        "mean": 1.31,
+        "standard_error": 4.32,
+        "seeds": 40
+      },
+      "crowd_out_base": {
+        "mean": 54.42,
+        "standard_error": 1.17,
+        "seeds": 40
+      },
+      "crowd_out_flood": {
+        "mean": 52.65,
+        "standard_error": 0.89,
+        "seeds": 40
+      },
+      "detection_change": {
+        "mean": 0.7334,
+        "standard_error": 0.0257,
+        "seeds": 40
+      },
+      "escalated_share": {
+        "mean": 0.2769,
+        "standard_error": 0.0151,
+        "seeds": 40
+      },
+      "evaluator": {
+        "mean": 2.12,
+        "standard_error": 0.13,
+        "seeds": 40
+      },
+      "farm_gain": {
+        "mean": 5.08,
+        "standard_error": 4.78,
+        "seeds": 40
+      },
+      "farm_split_unfunded": {
+        "mean": 0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "flood": {
+        "mean": -496.35,
+        "standard_error": 0.4,
+        "seeds": 40
+      },
+      "fresh_days_change": {
+        "mean": -0.08,
+        "standard_error": 0.33,
+        "seeds": 40
+      },
+      "fresh_funder_cost_change": {
+        "mean": -0.12,
+        "standard_error": 4.11,
+        "seeds": 40
+      },
+      "fresh_paid_change": {
+        "mean": 0.55,
+        "standard_error": 0.67,
+        "seeds": 40
+      },
+      "fresh_price_change": {
+        "mean": -1.11,
+        "standard_error": 2.02,
+        "seeds": 40
+      },
+      "fresh_solver_change": {
+        "mean": 3.35,
+        "standard_error": 5.17,
+        "seeds": 40
+      },
+      "funded_share_change": {
+        "mean": 0.0597,
+        "standard_error": 0.0147,
+        "seeds": 40
+      },
+      "funder_cost_change": {
+        "mean": -9.94,
+        "standard_error": 5.75,
+        "seeds": 40
+      },
+      "good_failed_share": {
+        "mean": 0.1351,
+        "standard_error": 0.0224,
+        "seeds": 40
+      },
+      "half_without_challenge_gain": {
+        "mean": -220.42,
+        "standard_error": 23.54,
+        "seeds": 40
+      },
+      "herd_agreement_gain": {
+        "mean": 3.04,
+        "standard_error": 1.07,
+        "seeds": 40
+      },
+      "lowballer_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "mode_fake_gain": {
+        "mean": 21.95,
+        "standard_error": 18.74,
+        "seeds": 40
+      },
+      "mode_inflate_gain": {
+        "mean": -444.69,
+        "standard_error": 42.7,
+        "seeds": 40
+      },
+      "mode_pad_gain": {
+        "mean": -128.37,
+        "standard_error": 26.78,
+        "seeds": 40
+      },
+      "mode_variant_gain": {
+        "mean": 9.17,
+        "standard_error": 19.77,
+        "seeds": 40
+      },
+      "no_show": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "owner_gain": {
+        "mean": 0.05,
+        "standard_error": 0.05,
+        "seeds": 40
+      },
+      "pledged_paid_change": {
+        "mean": 2.3,
+        "standard_error": 0.79,
+        "seeds": 40
+      },
+      "quality_premium": {
+        "mean": 0.0287,
+        "standard_error": 0.0075,
+        "seeds": 40
+      },
+      "rep_farmer": {
+        "mean": -3.42,
+        "standard_error": 5.58,
+        "seeds": 40
+      },
+      "reporter": {
+        "mean": 26.09,
+        "standard_error": 0.9,
+        "seeds": 40
+      },
+      "solver": {
+        "mean": 64.67,
+        "standard_error": 1.74,
+        "seeds": 240
+      },
+      "spam_solver": {
+        "mean": -325.38,
+        "standard_error": 9.78,
+        "seeds": 40
+      },
+      "tiers_good_failed_change": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "tiers_solver_change": {
+        "mean": -0.3,
+        "standard_error": 0.1,
+        "seeds": 40
+      },
+      "treasury_junk": {
+        "mean": 426.07,
+        "standard_error": 48.93,
+        "seeds": 40
+      },
+      "validator": {
+        "mean": 27.08,
+        "standard_error": 0.55,
+        "seeds": 240
+      },
+      "validator_net": {
+        "mean": 24.81,
+        "standard_error": 0.67,
+        "seeds": 40
+      },
+      "weak_base": {
+        "mean": 54.42,
+        "standard_error": 1.17,
+        "seeds": 40
+      },
+      "weak_flood": {
+        "mean": 49.67,
+        "standard_error": 1.0,
+        "seeds": 40
+      },
+      "who_pays_funder_cost_change": {
+        "mean": 0.57,
+        "standard_error": 5.32,
+        "seeds": 40
+      },
+      "who_pays_paid_change": {
+        "mean": -1.07,
+        "standard_error": 0.9,
+        "seeds": 40
+      },
+      "who_pays_price_change": {
+        "mean": 5.52,
+        "standard_error": 2.24,
+        "seeds": 40
+      },
+      "who_pays_solver_change": {
+        "mean": 5.85,
+        "standard_error": 4.75,
+        "seeds": 40
+      },
+      "crowd_out_ratio_weak_detection": {
+        "mean": 0.9127
+      },
+      "crowd_out_ratio": {
+        "mean": 0.9675
+      },
+      "defective:flood": {
+        "mean_per_contribution": -50.8641,
+        "standard_error": 1.4963,
+        "n": 5,
+        "verdict": "ok",
+        "attacker": true
+      },
+      "defective:solver": {
+        "mean_per_contribution": -18.5157,
+        "standard_error": 2.0055,
+        "n": 315,
+        "verdict": "ok",
+        "attacker": false
+      },
+      "ring@2": {
+        "mean_gain": -18.83,
+        "standard_error": 23.29,
+        "seeds": 40
+      },
+      "ring_cost@2": {
+        "outsiders": 0.41,
+        "outsiders_se": 3.65,
+        "funders": -0.94,
+        "funders_se": 1.42
+      },
+      "ring@3": {
+        "mean_gain": 6.81,
+        "standard_error": 21.64,
+        "seeds": 40
+      },
+      "ring_cost@3": {
+        "outsiders": -2.05,
+        "outsiders_se": 3.53,
+        "funders": -2.41,
+        "funders_se": 2.39
+      },
+      "ring@4": {
+        "mean_gain": 76.03,
+        "standard_error": 48.63,
+        "seeds": 40
+      },
+      "ring_cost@4": {
+        "outsiders": 9.0,
+        "outsiders_se": 6.85,
+        "funders": 0.04,
+        "funders_se": 4.46
+      },
+      "ring@6": {
+        "mean_gain": 27.81,
+        "standard_error": 42.16,
+        "seeds": 40
+      },
+      "ring_cost@6": {
+        "outsiders": -5.49,
+        "outsiders_se": 4.77,
+        "funders": -1.55,
+        "funders_se": 3.56
+      },
+      "ring_gains_from": null
+    },
+    "metrics": {
+      "bounties_paid": {
+        "mean": 35.75,
+        "standard_error": 0.89,
+        "seeds": 40
+      },
+      "funder_cost_per_paid_bounty": {
+        "mean": 119.53,
+        "standard_error": 3.11,
+        "seeds": 40
+      },
+      "solver_earnings": {
+        "mean": 60.66,
+        "standard_error": 4.04,
+        "seeds": 40
+      },
+      "reporter_earnings": {
+        "mean": 26.09,
+        "standard_error": 0.9,
+        "seeds": 40
+      },
+      "days_to_fix": {
+        "mean": 12.52,
+        "standard_error": 0.35,
+        "seeds": 40
+      },
+      "wasted_share": {
+        "mean": 0.5339,
+        "standard_error": 0.0224,
+        "seeds": 40
+      },
+      "treasury_spend": {
+        "mean": 8745.38,
+        "standard_error": 89.42,
+        "seeds": 40
+      }
+    }
+  },
+  "at": {
+    "0.0": {
+      "passed": false,
+      "failures": [
+        {
+          "criterion": "award-mode attacks don't gain",
+          "scenario": "mode_variant",
+          "seed": "all",
+          "detail": "gains +98.19 \u00b1 35.88 against honest"
+        },
+        {
+          "criterion": "award-mode attacks don't gain",
+          "scenario": "mode_fake",
+          "seed": "all",
+          "detail": "gains +118.32 \u00b1 49.64 against honest"
+        }
+      ],
+      "failed_criteria": [
+        "award-mode attacks don't gain"
+      ],
+      "headline": {
+        "seeds": 40,
+        "passed": false,
+        "failed_criteria": [
+          "award-mode attacks don't gain"
+        ],
+        "solver_net_of_effort": 96.78,
+        "validator": 31.54,
+        "spam_solver": -332.73,
+        "no_show": 0.0,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 21.84,
+          "3": -20.54,
+          "4": 7.27,
+          "6": 42.73
+        },
+        "bluffer_gain": 0.0,
+        "lowballer_gain": 0.0,
+        "caught_share": 0.9963,
+        "detection_change": 0.7711,
+        "good_failed_share": 0.1308,
+        "escalated_share": 0.2773,
+        "evaluator": 2.09,
+        "check_gains": {
+          "lazy": -10.26,
+          "herd": -2.92,
+          "copy": -375.36,
+          "craft": -353.66,
+          "plant": -376.4,
+          "sock": 0.4,
+          "half": -242.85,
+          "split": -327.35,
+          "cheat": -12.92
+        },
+        "herd_agreement_gain": 2.5,
+        "half_without_challenge_gain": -287.58,
+        "fresh_round": {
+          "days_change": 0.28,
+          "funder_cost_change": -1.02,
+          "paid_change": 0.97,
+          "price_change": 0.84,
+          "solver_change": 11.12
+        },
+        "ci_vs_validators": {
+          "caught_change": -0.0,
+          "funder_cost_change": -1.88,
+          "solver_change": -6.97
+        },
+        "solver_pays_vs_bounty": {
+          "funder_cost_change": -0.18,
+          "paid_change": 0.5,
+          "price_change": 5.45,
+          "solver_change": 18.91
+        },
+        "quality_premium": 0.0304,
+        "tiers_vs_flat": {
+          "good_failed_change": 0.0,
+          "solver_change": -0.27
+        },
+        "bounties_paid": 37.08,
+        "bounties_unsolved": 70.17,
+        "reporter": 31.68,
+        "funder_cost_change": -13.45,
+        "funded_share_change": 0.0675,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": 15.51,
+        "bond_change": null,
+        "farm_gain": 4.75,
+        "farm_split_unfunded": 0.03
+      },
+      "criteria": {
+        "bluffer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "caught_share": {
+          "mean": 0.9963,
+          "standard_error": 0.0026,
+          "seeds": 40
+        },
+        "check_cheat_gain": {
+          "mean": -12.92,
+          "standard_error": 0.59,
+          "seeds": 40
+        },
+        "check_copy_gain": {
+          "mean": -375.36,
+          "standard_error": 36.06,
+          "seeds": 40
+        },
+        "check_craft_gain": {
+          "mean": -353.66,
+          "standard_error": 39.65,
+          "seeds": 40
+        },
+        "check_half_gain": {
+          "mean": -242.85,
+          "standard_error": 37.43,
+          "seeds": 40
+        },
+        "check_herd_gain": {
+          "mean": -2.92,
+          "standard_error": 0.59,
+          "seeds": 40
+        },
+        "check_lazy_gain": {
+          "mean": -10.26,
+          "standard_error": 1.63,
+          "seeds": 40
+        },
+        "check_plant_gain": {
+          "mean": -376.4,
+          "standard_error": 33.97,
+          "seeds": 40
+        },
+        "check_sock_gain": {
+          "mean": 0.4,
+          "standard_error": 30.72,
+          "seeds": 40
+        },
+        "check_split_gain": {
+          "mean": -327.35,
+          "standard_error": 34.23,
+          "seeds": 40
+        },
+        "ci_validators_caught_change": {
+          "mean": -0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "ci_validators_funder_cost_change": {
+          "mean": -1.88,
+          "standard_error": 3.75,
+          "seeds": 40
+        },
+        "ci_validators_solver_change": {
+          "mean": -6.97,
+          "standard_error": 7.84,
+          "seeds": 40
+        },
+        "crowd_out_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "crowd_out_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "detection_change": {
+          "mean": 0.7711,
+          "standard_error": 0.023,
+          "seeds": 40
+        },
+        "escalated_share": {
+          "mean": 0.2773,
+          "standard_error": 0.0148,
+          "seeds": 40
+        },
+        "evaluator": {
+          "mean": 2.09,
+          "standard_error": 0.11,
+          "seeds": 40
+        },
+        "farm_gain": {
+          "mean": 4.75,
+          "standard_error": 3.1,
+          "seeds": 38
+        },
+        "farm_split_unfunded": {
+          "mean": 0.03,
+          "standard_error": 0.02,
+          "seeds": 40
+        },
+        "flood": {
+          "mean": -496.69,
+          "standard_error": 0.48,
+          "seeds": 40
+        },
+        "fresh_days_change": {
+          "mean": 0.28,
+          "standard_error": 0.21,
+          "seeds": 40
+        },
+        "fresh_funder_cost_change": {
+          "mean": -1.02,
+          "standard_error": 4.17,
+          "seeds": 40
+        },
+        "fresh_paid_change": {
+          "mean": 0.97,
+          "standard_error": 0.87,
+          "seeds": 40
+        },
+        "fresh_price_change": {
+          "mean": 0.84,
+          "standard_error": 2.63,
+          "seeds": 40
+        },
+        "fresh_solver_change": {
+          "mean": 11.12,
+          "standard_error": 6.59,
+          "seeds": 40
+        },
+        "funded_share_change": {
+          "mean": 0.0675,
+          "standard_error": 0.014,
+          "seeds": 40
+        },
+        "funder_cost_change": {
+          "mean": -13.45,
+          "standard_error": 5.42,
+          "seeds": 40
+        },
+        "good_failed_share": {
+          "mean": 0.1308,
+          "standard_error": 0.0188,
+          "seeds": 40
+        },
+        "half_without_challenge_gain": {
+          "mean": -287.58,
+          "standard_error": 44.46,
+          "seeds": 40
+        },
+        "herd_agreement_gain": {
+          "mean": 2.5,
+          "standard_error": 0.94,
+          "seeds": 40
+        },
+        "lowballer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "mode_fake_gain": {
+          "mean": 118.32,
+          "standard_error": 49.64,
+          "seeds": 40
+        },
+        "mode_inflate_gain": {
+          "mean": -367.12,
+          "standard_error": 57.86,
+          "seeds": 40
+        },
+        "mode_pad_gain": {
+          "mean": -149.95,
+          "standard_error": 36.77,
+          "seeds": 40
+        },
+        "mode_variant_gain": {
+          "mean": 98.19,
+          "standard_error": 35.88,
+          "seeds": 40
+        },
+        "no_show": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "owner_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "pledged_paid_change": {
+          "mean": 3.12,
+          "standard_error": 0.72,
+          "seeds": 40
+        },
+        "quality_premium": {
+          "mean": 0.0304,
+          "standard_error": 0.0089,
+          "seeds": 40
+        },
+        "rep_farmer": {
+          "mean": 15.51,
+          "standard_error": 10.45,
+          "seeds": 40
+        },
+        "reporter": {
+          "mean": 31.68,
+          "standard_error": 0.97,
+          "seeds": 40
+        },
+        "solver": {
+          "mean": 96.78,
+          "standard_error": 2.66,
+          "seeds": 240
+        },
+        "spam_solver": {
+          "mean": -332.73,
+          "standard_error": 11.95,
+          "seeds": 40
+        },
+        "tiers_good_failed_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "tiers_solver_change": {
+          "mean": -0.27,
+          "standard_error": 0.09,
+          "seeds": 40
+        },
+        "treasury_junk": {
+          "mean": 493.35,
+          "standard_error": 55.16,
+          "seeds": 40
+        },
+        "validator": {
+          "mean": 31.54,
+          "standard_error": 0.55,
+          "seeds": 240
+        },
+        "validator_net": {
+          "mean": 29.06,
+          "standard_error": 0.72,
+          "seeds": 40
+        },
+        "weak_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "weak_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "who_pays_funder_cost_change": {
+          "mean": -0.18,
+          "standard_error": 4.62,
+          "seeds": 40
+        },
+        "who_pays_paid_change": {
+          "mean": 0.5,
+          "standard_error": 1.01,
+          "seeds": 40
+        },
+        "who_pays_price_change": {
+          "mean": 5.45,
+          "standard_error": 2.78,
+          "seeds": 40
+        },
+        "who_pays_solver_change": {
+          "mean": 18.91,
+          "standard_error": 6.34,
+          "seeds": 40
+        },
+        "defective:flood": {
+          "mean_per_contribution": -47.3728,
+          "standard_error": 2.4938,
+          "n": 3,
+          "verdict": "ok",
+          "attacker": true
+        },
+        "defective:solver": {
+          "mean_per_contribution": -10.2254,
+          "standard_error": 2.8036,
+          "n": 320,
+          "verdict": "ok",
+          "attacker": false
+        },
+        "ring@2": {
+          "mean_gain": 21.84,
+          "standard_error": 21.74,
+          "seeds": 40
+        },
+        "ring_cost@2": {
+          "outsiders": 1.49,
+          "outsiders_se": 5.21,
+          "funders": -0.41,
+          "funders_se": 2.81
+        },
+        "ring@3": {
+          "mean_gain": -20.54,
+          "standard_error": 39.94,
+          "seeds": 40
+        },
+        "ring_cost@3": {
+          "outsiders": -1.75,
+          "outsiders_se": 4.46,
+          "funders": 4.59,
+          "funders_se": 3.74
+        },
+        "ring@4": {
+          "mean_gain": 7.27,
+          "standard_error": 49.91,
+          "seeds": 40
+        },
+        "ring_cost@4": {
+          "outsiders": 0.56,
+          "outsiders_se": 6.13,
+          "funders": -1.62,
+          "funders_se": 3.67
+        },
+        "ring@6": {
+          "mean_gain": 42.73,
+          "standard_error": 55.98,
+          "seeds": 40
+        },
+        "ring_cost@6": {
+          "outsiders": -1.23,
+          "outsiders_se": 7.07,
+          "funders": -2.91,
+          "funders_se": 3.9
+        },
+        "ring_gains_from": null,
+        "owner_supply_share:market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "owner_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "owner_supply_share": {
+        "market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "metrics": {
+        "bounties_paid": {
+          "mean": 37.08,
+          "standard_error": 0.84,
+          "seeds": 40
+        },
+        "funder_cost_per_paid_bounty": {
+          "mean": 119.99,
+          "standard_error": 3.29,
+          "seeds": 40
+        },
+        "solver_earnings": {
+          "mean": 94.16,
+          "standard_error": 5.71,
+          "seeds": 40
+        },
+        "reporter_earnings": {
+          "mean": 31.68,
+          "standard_error": 0.97,
+          "seeds": 40
+        },
+        "days_to_fix": {
+          "mean": 12.06,
+          "standard_error": 0.17,
+          "seeds": 40
+        },
+        "wasted_share": {
+          "mean": 0.5541,
+          "standard_error": 0.0178,
+          "seeds": 40
+        },
+        "treasury_spend": {
+          "mean": 8749.17,
+          "standard_error": 92.02,
+          "seeds": 40
+        },
+        "zero_coin_opened": {
+          "mean": 11.4,
+          "standard_error": 1.41,
+          "seeds": 40
+        },
+        "zero_coin_fixed": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "zero_coin_fixed_share": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 36
+        },
+        "supply": {
+          "mean": 76612.8,
+          "standard_error": 925.68,
+          "seeds": 40
+        },
+        "owner_supply_share": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "honest_forfeited_share": 0.0081,
+        "tokens_conserved": true,
+        "tokens_by_weight": true,
+        "kinds": {
+          "reporter": {
+            "tokens_share": {
+              "mean": 0.1487,
+              "standard_error": 0.0004,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.1482,
+              "standard_error": 0.0008,
+              "seeds": 40
+            }
+          },
+          "solver": {
+            "tokens_share": {
+              "mean": 0.8513,
+              "standard_error": 0.0004,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.8518,
+              "standard_error": 0.0008,
+              "seeds": 40
+            }
+          }
+        }
+      },
+      "token_self": {
+        "tokens_per_effort": {
+          "mean": 43.9175,
+          "standard_error": 10.7568,
+          "seeds": 14
+        },
+        "earnings_per_effort": {
+          "mean": 2.1234,
+          "standard_error": 0.483,
+          "seeds": 14
+        },
+        "twin_tokens_per_effort": {
+          "mean": 24.4867,
+          "standard_error": 4.8313,
+          "seeds": 24
+        },
+        "twin_earnings_per_effort": {
+          "mean": 1.8724,
+          "standard_error": 0.3835,
+          "seeds": 24
+        },
+        "gain_against_twin": {
+          "mean": 22.42,
+          "standard_error": 27.96,
+          "seeds": 40
+        }
+      },
+      "token_inflate": {
+        "7000": {
+          "inflater_forfeited_share": 0.1,
+          "honest_forfeited_share": 0.0046,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.7265,
+            "standard_error": 0.2614,
+            "seeds": 37
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 12.2633,
+            "standard_error": 1.1391,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -2.68,
+            "standard_error": 1.34,
+            "seeds": 40
+          }
+        },
+        "9000": {
+          "inflater_forfeited_share": 0.1111,
+          "honest_forfeited_share": 0.0046,
+          "extra_tokens_per_true_weight": {
+            "mean": 0.9458,
+            "standard_error": 0.2306,
+            "seeds": 37
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 12.2633,
+            "standard_error": 1.1391,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -3.1,
+            "standard_error": 1.39,
+            "seeds": 40
+          }
+        },
+        "9900": {
+          "inflater_forfeited_share": 0.1444,
+          "honest_forfeited_share": 0.0046,
+          "extra_tokens_per_true_weight": {
+            "mean": 0.7728,
+            "standard_error": 0.2114,
+            "seeds": 37
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 12.2633,
+            "standard_error": 1.1391,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -4.96,
+            "standard_error": 2.02,
+            "seeds": 40
+          }
+        },
+        "9000@150%": {
+          "inflater_forfeited_share": 0.7692,
+          "honest_forfeited_share": 0.1769,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.7469,
+            "standard_error": 0.8963,
+            "seeds": 26
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 12.3942,
+            "standard_error": 1.1742,
+            "seeds": 37
+          },
+          "gain_against_twin": {
+            "mean": -27.9,
+            "standard_error": 4.83,
+            "seeds": 40
+          }
+        },
+        "9000@200%": {
+          "inflater_forfeited_share": 0.4444,
+          "honest_forfeited_share": 0.047,
+          "extra_tokens_per_true_weight": {
+            "mean": 2.6031,
+            "standard_error": 1.5045,
+            "seeds": 32
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 12.4768,
+            "standard_error": 1.177,
+            "seeds": 37
+          },
+          "gain_against_twin": {
+            "mean": -16.78,
+            "standard_error": 2.83,
+            "seeds": 40
+          }
+        }
+      },
+      "rings": {
+        "2": {
+          "ring_gain": {
+            "mean": 21.84,
+            "standard_error": 21.74,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 1.49,
+            "standard_error": 5.21,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.41,
+            "standard_error": 2.81,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": -0.33,
+            "standard_error": 0.6,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.07,
+            "standard_error": 0.11,
+            "seeds": 40
+          }
+        },
+        "3": {
+          "ring_gain": {
+            "mean": -20.54,
+            "standard_error": 39.94,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -1.75,
+            "standard_error": 4.46,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": 4.59,
+            "standard_error": 3.74,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.35,
+            "standard_error": 0.74,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.41,
+            "standard_error": 0.2,
+            "seeds": 40
+          }
+        },
+        "4": {
+          "ring_gain": {
+            "mean": 7.27,
+            "standard_error": 49.91,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 0.56,
+            "standard_error": 6.13,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -1.62,
+            "standard_error": 3.67,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": -0.55,
+            "standard_error": 0.99,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.29,
+            "standard_error": 0.15,
+            "seeds": 40
+          }
+        },
+        "6": {
+          "ring_gain": {
+            "mean": 42.73,
+            "standard_error": 55.98,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -1.23,
+            "standard_error": 7.07,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -2.91,
+            "standard_error": 3.9,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.72,
+            "standard_error": 1.08,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.31,
+            "standard_error": 0.21,
+            "seeds": 40
+          }
+        }
+      },
+      "token_launch": {
+        "share": {
+          "owner_supply_share": {
+            "mean": 0.0659,
+            "standard_error": 0.0089,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0583,
+            0.0664,
+            0.0559,
+            0.0648,
+            0.0649,
+            0.0743,
+            0.073,
+            0.0845,
+            0.0921,
+            0.0664
+          ],
+          "owner_earnings": {
+            "mean": 194.13,
+            "standard_error": 26.44,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.95,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 37
+          }
+        },
+        "genesis": {
+          "owner_supply_share": {
+            "mean": 0.2775,
+            "standard_error": 0.007,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.6975,
+            0.5463,
+            0.4465,
+            0.3887,
+            0.3434,
+            0.316,
+            0.2885,
+            0.2759,
+            0.2643,
+            0.2284
+          ],
+          "owner_earnings": {
+            "mean": 194.13,
+            "standard_error": 26.44,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.95,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 37
+          }
+        },
+        "both": {
+          "owner_supply_share": {
+            "mean": 0.2848,
+            "standard_error": 0.007,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.7005,
+            0.5508,
+            0.4521,
+            0.3948,
+            0.35,
+            0.3229,
+            0.2956,
+            0.2832,
+            0.2716,
+            0.2361
+          ],
+          "owner_earnings": {
+            "mean": 194.13,
+            "standard_error": 26.44,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.95,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 37
+          }
+        },
+        "none": {
+          "owner_supply_share": {
+            "mean": 0.0565,
+            "standard_error": 0.009,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0488,
+            0.0569,
+            0.0463,
+            0.0553,
+            0.0554,
+            0.065,
+            0.0637,
+            0.0752,
+            0.083,
+            0.057
+          ],
+          "owner_earnings": {
+            "mean": 194.13,
+            "standard_error": 26.44,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.95,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 37
+          }
+        },
+        "share_5pct (tokens-v1)": {
+          "owner_supply_share": {
+            "mean": 0.1037,
+            "standard_error": 0.0086,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0964,
+            0.1041,
+            0.094,
+            0.1025,
+            0.1027,
+            0.1118,
+            0.1105,
+            0.1215,
+            0.1288,
+            0.1041
+          ],
+          "owner_earnings": {
+            "mean": 194.13,
+            "standard_error": 26.44,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.95,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 37
+          }
+        }
+      }
+    },
+    "0.01": {
+      "passed": true,
+      "failures": [],
+      "failed_criteria": [],
+      "headline": {
+        "seeds": 40,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 113.7,
+        "validator": 31.7,
+        "spam_solver": -393.66,
+        "no_show": 0.0,
+        "ring_gains_from": null,
+        "rings": {
+          "2": -2.28,
+          "3": -64.65,
+          "4": 90.48,
+          "6": 74.24
+        },
+        "bluffer_gain": 0.0,
+        "lowballer_gain": 0.0,
+        "caught_share": 1.0,
+        "detection_change": 0.7532,
+        "good_failed_share": 0.1355,
+        "escalated_share": 0.2727,
+        "evaluator": 2.22,
+        "check_gains": {
+          "lazy": -12.6,
+          "herd": -2.94,
+          "copy": -424.95,
+          "craft": -437.24,
+          "plant": -416.07,
+          "sock": 38.61,
+          "half": -340.98,
+          "split": -454.83,
+          "cheat": -12.94
+        },
+        "herd_agreement_gain": 2.91,
+        "half_without_challenge_gain": -361.2,
+        "fresh_round": {
+          "days_change": 0.28,
+          "funder_cost_change": -4.74,
+          "paid_change": 0.97,
+          "price_change": 0.07,
+          "solver_change": 14.98
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -2.51,
+          "solver_change": -8.89
+        },
+        "solver_pays_vs_bounty": {
+          "funder_cost_change": -3.98,
+          "paid_change": -0.35,
+          "price_change": 2.48,
+          "solver_change": 13.3
+        },
+        "quality_premium": 0.0312,
+        "tiers_vs_flat": {
+          "good_failed_change": 0.0,
+          "solver_change": -0.31
+        },
+        "bounties_paid": 39.65,
+        "bounties_unsolved": 67.1,
+        "reporter": 38.25,
+        "funder_cost_change": -11.23,
+        "funded_share_change": 0.0683,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": 37.94,
+        "bond_change": null,
+        "farm_gain": 1.23,
+        "farm_split_unfunded": 0
+      },
+      "criteria": {
+        "bluffer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "caught_share": {
+          "mean": 1.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "check_cheat_gain": {
+          "mean": -12.94,
+          "standard_error": 0.57,
+          "seeds": 40
+        },
+        "check_copy_gain": {
+          "mean": -424.95,
+          "standard_error": 31.24,
+          "seeds": 40
+        },
+        "check_craft_gain": {
+          "mean": -437.24,
+          "standard_error": 40.73,
+          "seeds": 40
+        },
+        "check_half_gain": {
+          "mean": -340.98,
+          "standard_error": 40.81,
+          "seeds": 40
+        },
+        "check_herd_gain": {
+          "mean": -2.94,
+          "standard_error": 0.57,
+          "seeds": 40
+        },
+        "check_lazy_gain": {
+          "mean": -12.6,
+          "standard_error": 1.59,
+          "seeds": 40
+        },
+        "check_plant_gain": {
+          "mean": -416.07,
+          "standard_error": 35.92,
+          "seeds": 40
+        },
+        "check_sock_gain": {
+          "mean": 38.61,
+          "standard_error": 33.64,
+          "seeds": 40
+        },
+        "check_split_gain": {
+          "mean": -454.83,
+          "standard_error": 42.05,
+          "seeds": 40
+        },
+        "ci_validators_caught_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "ci_validators_funder_cost_change": {
+          "mean": -2.51,
+          "standard_error": 3.46,
+          "seeds": 40
+        },
+        "ci_validators_solver_change": {
+          "mean": -8.89,
+          "standard_error": 7.27,
+          "seeds": 40
+        },
+        "crowd_out_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "crowd_out_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "detection_change": {
+          "mean": 0.7532,
+          "standard_error": 0.02,
+          "seeds": 40
+        },
+        "escalated_share": {
+          "mean": 0.2727,
+          "standard_error": 0.0156,
+          "seeds": 40
+        },
+        "evaluator": {
+          "mean": 2.22,
+          "standard_error": 0.1,
+          "seeds": 40
+        },
+        "farm_gain": {
+          "mean": 1.23,
+          "standard_error": 3.29,
+          "seeds": 40
+        },
+        "farm_split_unfunded": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "flood": {
+          "mean": -495.8,
+          "standard_error": 0.45,
+          "seeds": 40
+        },
+        "fresh_days_change": {
+          "mean": 0.28,
+          "standard_error": 0.24,
+          "seeds": 40
+        },
+        "fresh_funder_cost_change": {
+          "mean": -4.74,
+          "standard_error": 5.74,
+          "seeds": 40
+        },
+        "fresh_paid_change": {
+          "mean": 0.97,
+          "standard_error": 0.71,
+          "seeds": 40
+        },
+        "fresh_price_change": {
+          "mean": 0.07,
+          "standard_error": 3.36,
+          "seeds": 40
+        },
+        "fresh_solver_change": {
+          "mean": 14.98,
+          "standard_error": 8.0,
+          "seeds": 40
+        },
+        "funded_share_change": {
+          "mean": 0.0683,
+          "standard_error": 0.0155,
+          "seeds": 40
+        },
+        "funder_cost_change": {
+          "mean": -11.23,
+          "standard_error": 6.02,
+          "seeds": 40
+        },
+        "good_failed_share": {
+          "mean": 0.1355,
+          "standard_error": 0.0151,
+          "seeds": 40
+        },
+        "half_without_challenge_gain": {
+          "mean": -361.2,
+          "standard_error": 40.04,
+          "seeds": 40
+        },
+        "herd_agreement_gain": {
+          "mean": 2.91,
+          "standard_error": 1.12,
+          "seeds": 40
+        },
+        "lowballer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "mode_fake_gain": {
+          "mean": 38.1,
+          "standard_error": 43.14,
+          "seeds": 40
+        },
+        "mode_inflate_gain": {
+          "mean": -393.64,
+          "standard_error": 49.83,
+          "seeds": 40
+        },
+        "mode_pad_gain": {
+          "mean": -238.17,
+          "standard_error": 44.75,
+          "seeds": 40
+        },
+        "mode_variant_gain": {
+          "mean": 35.79,
+          "standard_error": 34.34,
+          "seeds": 40
+        },
+        "no_show": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "owner_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "pledged_paid_change": {
+          "mean": 2.25,
+          "standard_error": 0.77,
+          "seeds": 40
+        },
+        "quality_premium": {
+          "mean": 0.0312,
+          "standard_error": 0.0095,
+          "seeds": 40
+        },
+        "rep_farmer": {
+          "mean": 37.94,
+          "standard_error": 16.91,
+          "seeds": 40
+        },
+        "reporter": {
+          "mean": 38.25,
+          "standard_error": 1.02,
+          "seeds": 40
+        },
+        "solver": {
+          "mean": 113.7,
+          "standard_error": 3.88,
+          "seeds": 240
+        },
+        "spam_solver": {
+          "mean": -393.66,
+          "standard_error": 18.07,
+          "seeds": 40
+        },
+        "tiers_good_failed_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "tiers_solver_change": {
+          "mean": -0.31,
+          "standard_error": 0.1,
+          "seeds": 40
+        },
+        "treasury_junk": {
+          "mean": 470.93,
+          "standard_error": 59.5,
+          "seeds": 40
+        },
+        "validator": {
+          "mean": 31.7,
+          "standard_error": 0.55,
+          "seeds": 240
+        },
+        "validator_net": {
+          "mean": 29.37,
+          "standard_error": 0.79,
+          "seeds": 40
+        },
+        "weak_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "weak_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "who_pays_funder_cost_change": {
+          "mean": -3.98,
+          "standard_error": 5.02,
+          "seeds": 40
+        },
+        "who_pays_paid_change": {
+          "mean": -0.35,
+          "standard_error": 1.1,
+          "seeds": 40
+        },
+        "who_pays_price_change": {
+          "mean": 2.48,
+          "standard_error": 2.88,
+          "seeds": 40
+        },
+        "who_pays_solver_change": {
+          "mean": 13.3,
+          "standard_error": 8.76,
+          "seeds": 40
+        },
+        "defective:flood": {
+          "mean_per_contribution": -48.6197,
+          "standard_error": 3.7407,
+          "n": 2,
+          "verdict": "ok",
+          "attacker": true
+        },
+        "defective:solver": {
+          "mean_per_contribution": -10.7462,
+          "standard_error": 2.5297,
+          "n": 351,
+          "verdict": "ok",
+          "attacker": false
+        },
+        "ring@2": {
+          "mean_gain": -2.28,
+          "standard_error": 24.82,
+          "seeds": 40
+        },
+        "ring_cost@2": {
+          "outsiders": -2.74,
+          "outsiders_se": 3.42,
+          "funders": -0.74,
+          "funders_se": 2.65
+        },
+        "ring@3": {
+          "mean_gain": -64.65,
+          "standard_error": 49.12,
+          "seeds": 40
+        },
+        "ring_cost@3": {
+          "outsiders": 16.98,
+          "outsiders_se": 5.8,
+          "funders": -0.37,
+          "funders_se": 3.92
+        },
+        "ring@4": {
+          "mean_gain": 90.48,
+          "standard_error": 68.65,
+          "seeds": 40
+        },
+        "ring_cost@4": {
+          "outsiders": 5.04,
+          "outsiders_se": 7.85,
+          "funders": -2.94,
+          "funders_se": 4.27
+        },
+        "ring@6": {
+          "mean_gain": 74.24,
+          "standard_error": 77.16,
+          "seeds": 40
+        },
+        "ring_cost@6": {
+          "outsiders": 7.81,
+          "outsiders_se": 10.86,
+          "funders": 7.06,
+          "funders_se": 3.48
+        },
+        "ring_gains_from": null,
+        "owner_supply_share:market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "owner_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "owner_supply_share": {
+        "market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "metrics": {
+        "bounties_paid": {
+          "mean": 39.65,
+          "standard_error": 0.95,
+          "seeds": 40
+        },
+        "funder_cost_per_paid_bounty": {
+          "mean": 116.69,
+          "standard_error": 3.93,
+          "seeds": 40
+        },
+        "solver_earnings": {
+          "mean": 109.68,
+          "standard_error": 8.35,
+          "seeds": 40
+        },
+        "reporter_earnings": {
+          "mean": 38.25,
+          "standard_error": 1.02,
+          "seeds": 40
+        },
+        "days_to_fix": {
+          "mean": 12.11,
+          "standard_error": 0.18,
+          "seeds": 40
+        },
+        "wasted_share": {
+          "mean": 0.5568,
+          "standard_error": 0.0163,
+          "seeds": 40
+        },
+        "treasury_spend": {
+          "mean": 8743.75,
+          "standard_error": 108.86,
+          "seeds": 40
+        },
+        "zero_coin_opened": {
+          "mean": 11.88,
+          "standard_error": 1.51,
+          "seeds": 40
+        },
+        "zero_coin_fixed": {
+          "mean": 0.6,
+          "standard_error": 0.23,
+          "seeds": 40
+        },
+        "zero_coin_fixed_share": {
+          "mean": 0.0731,
+          "standard_error": 0.0309,
+          "seeds": 36
+        },
+        "supply": {
+          "mean": 77230.84,
+          "standard_error": 963.59,
+          "seeds": 40
+        },
+        "owner_supply_share": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "honest_forfeited_share": 0.0076,
+        "tokens_conserved": true,
+        "tokens_by_weight": true,
+        "kinds": {
+          "reporter": {
+            "tokens_share": {
+              "mean": 0.1491,
+              "standard_error": 0.0004,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.1493,
+              "standard_error": 0.0003,
+              "seeds": 40
+            }
+          },
+          "solver": {
+            "tokens_share": {
+              "mean": 0.8509,
+              "standard_error": 0.0004,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.8507,
+              "standard_error": 0.0003,
+              "seeds": 40
+            }
+          }
+        }
+      },
+      "token_self": {
+        "tokens_per_effort": {
+          "mean": 45.9035,
+          "standard_error": 12.3646,
+          "seeds": 15
+        },
+        "earnings_per_effort": {
+          "mean": 3.8463,
+          "standard_error": 0.8181,
+          "seeds": 15
+        },
+        "twin_tokens_per_effort": {
+          "mean": 28.4297,
+          "standard_error": 6.0657,
+          "seeds": 26
+        },
+        "twin_earnings_per_effort": {
+          "mean": 1.881,
+          "standard_error": 0.2471,
+          "seeds": 26
+        },
+        "gain_against_twin": {
+          "mean": 10.48,
+          "standard_error": 41.09,
+          "seeds": 40
+        }
+      },
+      "token_inflate": {
+        "7000": {
+          "inflater_forfeited_share": 0.1316,
+          "honest_forfeited_share": 0.0066,
+          "extra_tokens_per_true_weight": {
+            "mean": 2.0848,
+            "standard_error": 0.7671,
+            "seeds": 35
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.8998,
+            "standard_error": 0.4545,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": 24.03,
+            "standard_error": 17.96,
+            "seeds": 40
+          }
+        },
+        "9000": {
+          "inflater_forfeited_share": 0.1754,
+          "honest_forfeited_share": 0.0066,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.5488,
+            "standard_error": 0.785,
+            "seeds": 35
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.8998,
+            "standard_error": 0.4545,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": 21.22,
+            "standard_error": 17.94,
+            "seeds": 40
+          }
+        },
+        "9900": {
+          "inflater_forfeited_share": 0.1754,
+          "honest_forfeited_share": 0.0066,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.1684,
+            "standard_error": 0.7428,
+            "seeds": 35
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.8998,
+            "standard_error": 0.4545,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": 20.59,
+            "standard_error": 17.98,
+            "seeds": 40
+          }
+        },
+        "9000@150%": {
+          "inflater_forfeited_share": 0.6348,
+          "honest_forfeited_share": 0.1765,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.1395,
+            "standard_error": 0.6664,
+            "seeds": 32
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 8.2536,
+            "standard_error": 0.4929,
+            "seeds": 37
+          },
+          "gain_against_twin": {
+            "mean": -5.46,
+            "standard_error": 18.15,
+            "seeds": 40
+          }
+        },
+        "9000@200%": {
+          "inflater_forfeited_share": 0.4298,
+          "honest_forfeited_share": 0.0529,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.14,
+            "standard_error": 0.606,
+            "seeds": 34
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.9426,
+            "standard_error": 0.4739,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": 6.67,
+            "standard_error": 17.94,
+            "seeds": 40
+          }
+        }
+      },
+      "rings": {
+        "2": {
+          "ring_gain": {
+            "mean": -2.28,
+            "standard_error": 24.82,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -2.74,
+            "standard_error": 3.42,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.74,
+            "standard_error": 2.65,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.72,
+            "standard_error": 0.42,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.08,
+            "standard_error": 0.09,
+            "seeds": 40
+          }
+        },
+        "3": {
+          "ring_gain": {
+            "mean": -64.65,
+            "standard_error": 49.12,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 16.98,
+            "standard_error": 5.8,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.37,
+            "standard_error": 3.92,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.38,
+            "standard_error": 0.61,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.28,
+            "standard_error": 0.17,
+            "seeds": 40
+          }
+        },
+        "4": {
+          "ring_gain": {
+            "mean": 90.48,
+            "standard_error": 68.65,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 5.04,
+            "standard_error": 7.85,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -2.94,
+            "standard_error": 4.27,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": -0.6,
+            "standard_error": 0.93,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.06,
+            "standard_error": 0.16,
+            "seeds": 40
+          }
+        },
+        "6": {
+          "ring_gain": {
+            "mean": 74.24,
+            "standard_error": 77.16,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 7.81,
+            "standard_error": 10.86,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": 7.06,
+            "standard_error": 3.48,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.68,
+            "standard_error": 0.87,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.03,
+            "standard_error": 0.15,
+            "seeds": 40
+          }
+        }
+      },
+      "token_launch": {
+        "share": {
+          "owner_supply_share": {
+            "mean": 0.0722,
+            "standard_error": 0.0113,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0714,
+            0.0605,
+            0.0632,
+            0.0603,
+            0.0634,
+            0.0708,
+            0.065,
+            0.0689,
+            0.067,
+            0.0664
+          ],
+          "owner_earnings": {
+            "mean": 257.16,
+            "standard_error": 35.87,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.93,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 40
+          }
+        },
+        "genesis": {
+          "owner_supply_share": {
+            "mean": 0.28,
+            "standard_error": 0.0095,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.7014,
+            0.5431,
+            0.4505,
+            0.3855,
+            0.3422,
+            0.3133,
+            0.2823,
+            0.2635,
+            0.2439,
+            0.2284
+          ],
+          "owner_earnings": {
+            "mean": 450.85,
+            "standard_error": 35.94,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.93,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 40
+          }
+        },
+        "both": {
+          "owner_supply_share": {
+            "mean": 0.2872,
+            "standard_error": 0.0094,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.7044,
+            0.5477,
+            0.456,
+            0.3916,
+            0.3487,
+            0.3202,
+            0.2895,
+            0.2709,
+            0.2515,
+            0.2361
+          ],
+          "owner_earnings": {
+            "mean": 457.16,
+            "standard_error": 35.87,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.93,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 40
+          }
+        },
+        "none": {
+          "owner_supply_share": {
+            "mean": 0.0629,
+            "standard_error": 0.0114,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0621,
+            0.051,
+            0.0538,
+            0.0508,
+            0.054,
+            0.0614,
+            0.0556,
+            0.0595,
+            0.0575,
+            0.057
+          ],
+          "owner_earnings": {
+            "mean": 250.85,
+            "standard_error": 35.94,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.93,
+            "standard_error": 0.39,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 40
+          }
+        },
+        "share_5pct (tokens-v1)": {
+          "owner_supply_share": {
+            "mean": 0.1108,
+            "standard_error": 0.011,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.109,
+            0.0985,
+            0.1011,
+            0.0983,
+            0.1013,
+            0.1084,
+            0.1023,
+            0.1068,
+            0.1047,
+            0.1041
+          ],
+          "owner_earnings": {
+            "mean": 280.56,
+            "standard_error": 36.1,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 14.88,
+            "standard_error": 0.4,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0,
+            "standard_error": 0.0,
+            "seeds": 40
+          }
+        }
+      }
+    },
+    "0.05": {
+      "passed": true,
+      "failures": [],
+      "failed_criteria": [],
+      "headline": {
+        "seeds": 40,
+        "passed": true,
+        "failed_criteria": [],
+        "solver_net_of_effort": 175.2,
+        "validator": 32.23,
+        "spam_solver": -587.16,
+        "no_show": 0.0,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 80.52,
+          "3": -34.8,
+          "4": -121.72,
+          "6": 231.32
+        },
+        "bluffer_gain": 0.0,
+        "lowballer_gain": 0.0,
+        "caught_share": 1.0,
+        "detection_change": 0.7588,
+        "good_failed_share": 0.1146,
+        "escalated_share": 0.2692,
+        "evaluator": 2.78,
+        "check_gains": {
+          "lazy": -14.31,
+          "herd": -3.3,
+          "copy": -555.2,
+          "craft": -524.85,
+          "plant": -588.22,
+          "sock": -47.67,
+          "half": -530.45,
+          "split": -527.55,
+          "cheat": -13.3
+        },
+        "herd_agreement_gain": 4.33,
+        "half_without_challenge_gain": -451.06,
+        "fresh_round": {
+          "days_change": -0.41,
+          "funder_cost_change": -3.91,
+          "paid_change": 0.68,
+          "price_change": -2.94,
+          "solver_change": 16.46
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": -0.92,
+          "solver_change": -1.33
+        },
+        "solver_pays_vs_bounty": {
+          "funder_cost_change": 1.23,
+          "paid_change": 1.07,
+          "price_change": 5.8,
+          "solver_change": 22.59
+        },
+        "quality_premium": 0.0324,
+        "tiers_vs_flat": {
+          "good_failed_change": 0.0,
+          "solver_change": -0.46
+        },
+        "bounties_paid": 49.5,
+        "bounties_unsolved": 57.6,
+        "reporter": 64.96,
+        "funder_cost_change": -3.25,
+        "funded_share_change": 0.0311,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": 71.84,
+        "bond_change": null,
+        "farm_gain": 3.63,
+        "farm_split_unfunded": 0
+      },
+      "criteria": {
+        "bluffer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "caught_share": {
+          "mean": 1.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "check_cheat_gain": {
+          "mean": -13.3,
+          "standard_error": 0.78,
+          "seeds": 40
+        },
+        "check_copy_gain": {
+          "mean": -555.2,
+          "standard_error": 66.69,
+          "seeds": 40
+        },
+        "check_craft_gain": {
+          "mean": -524.85,
+          "standard_error": 58.21,
+          "seeds": 40
+        },
+        "check_half_gain": {
+          "mean": -530.45,
+          "standard_error": 59.95,
+          "seeds": 40
+        },
+        "check_herd_gain": {
+          "mean": -3.3,
+          "standard_error": 0.78,
+          "seeds": 40
+        },
+        "check_lazy_gain": {
+          "mean": -14.31,
+          "standard_error": 1.45,
+          "seeds": 40
+        },
+        "check_plant_gain": {
+          "mean": -588.22,
+          "standard_error": 52.06,
+          "seeds": 40
+        },
+        "check_sock_gain": {
+          "mean": -47.67,
+          "standard_error": 46.61,
+          "seeds": 40
+        },
+        "check_split_gain": {
+          "mean": -527.55,
+          "standard_error": 57.89,
+          "seeds": 40
+        },
+        "ci_validators_caught_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "ci_validators_funder_cost_change": {
+          "mean": -0.92,
+          "standard_error": 4.68,
+          "seeds": 40
+        },
+        "ci_validators_solver_change": {
+          "mean": -1.33,
+          "standard_error": 17.64,
+          "seeds": 40
+        },
+        "crowd_out_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "crowd_out_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "detection_change": {
+          "mean": 0.7588,
+          "standard_error": 0.0232,
+          "seeds": 40
+        },
+        "escalated_share": {
+          "mean": 0.2692,
+          "standard_error": 0.0155,
+          "seeds": 40
+        },
+        "evaluator": {
+          "mean": 2.78,
+          "standard_error": 0.15,
+          "seeds": 40
+        },
+        "farm_gain": {
+          "mean": 3.63,
+          "standard_error": 2.57,
+          "seeds": 40
+        },
+        "farm_split_unfunded": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "flood": {
+          "mean": -496.93,
+          "standard_error": 0.35,
+          "seeds": 40
+        },
+        "fresh_days_change": {
+          "mean": -0.41,
+          "standard_error": 0.28,
+          "seeds": 40
+        },
+        "fresh_funder_cost_change": {
+          "mean": -3.91,
+          "standard_error": 4.51,
+          "seeds": 40
+        },
+        "fresh_paid_change": {
+          "mean": 0.68,
+          "standard_error": 0.79,
+          "seeds": 40
+        },
+        "fresh_price_change": {
+          "mean": -2.94,
+          "standard_error": 2.27,
+          "seeds": 40
+        },
+        "fresh_solver_change": {
+          "mean": 16.46,
+          "standard_error": 12.35,
+          "seeds": 40
+        },
+        "funded_share_change": {
+          "mean": 0.0311,
+          "standard_error": 0.0149,
+          "seeds": 40
+        },
+        "funder_cost_change": {
+          "mean": -3.25,
+          "standard_error": 3.65,
+          "seeds": 40
+        },
+        "good_failed_share": {
+          "mean": 0.1146,
+          "standard_error": 0.0175,
+          "seeds": 40
+        },
+        "half_without_challenge_gain": {
+          "mean": -451.06,
+          "standard_error": 53.95,
+          "seeds": 40
+        },
+        "herd_agreement_gain": {
+          "mean": 4.33,
+          "standard_error": 1.32,
+          "seeds": 40
+        },
+        "lowballer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "mode_fake_gain": {
+          "mean": 63.34,
+          "standard_error": 66.06,
+          "seeds": 40
+        },
+        "mode_inflate_gain": {
+          "mean": -402.13,
+          "standard_error": 89.13,
+          "seeds": 40
+        },
+        "mode_pad_gain": {
+          "mean": -406.55,
+          "standard_error": 57.8,
+          "seeds": 40
+        },
+        "mode_variant_gain": {
+          "mean": -33.46,
+          "standard_error": 72.52,
+          "seeds": 40
+        },
+        "no_show": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "owner_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "pledged_paid_change": {
+          "mean": 1.3,
+          "standard_error": 0.73,
+          "seeds": 40
+        },
+        "quality_premium": {
+          "mean": 0.0324,
+          "standard_error": 0.0095,
+          "seeds": 40
+        },
+        "rep_farmer": {
+          "mean": 71.84,
+          "standard_error": 26.39,
+          "seeds": 40
+        },
+        "reporter": {
+          "mean": 64.96,
+          "standard_error": 0.94,
+          "seeds": 40
+        },
+        "solver": {
+          "mean": 175.2,
+          "standard_error": 8.68,
+          "seeds": 240
+        },
+        "spam_solver": {
+          "mean": -587.16,
+          "standard_error": 31.51,
+          "seeds": 40
+        },
+        "tiers_good_failed_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "tiers_solver_change": {
+          "mean": -0.46,
+          "standard_error": 0.12,
+          "seeds": 40
+        },
+        "treasury_junk": {
+          "mean": 493.35,
+          "standard_error": 48.53,
+          "seeds": 40
+        },
+        "validator": {
+          "mean": 32.23,
+          "standard_error": 0.51,
+          "seeds": 240
+        },
+        "validator_net": {
+          "mean": 30.72,
+          "standard_error": 0.66,
+          "seeds": 40
+        },
+        "weak_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "weak_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "who_pays_funder_cost_change": {
+          "mean": 1.23,
+          "standard_error": 4.01,
+          "seeds": 40
+        },
+        "who_pays_paid_change": {
+          "mean": 1.07,
+          "standard_error": 1.01,
+          "seeds": 40
+        },
+        "who_pays_price_change": {
+          "mean": 5.8,
+          "standard_error": 2.25,
+          "seeds": 40
+        },
+        "who_pays_solver_change": {
+          "mean": 22.59,
+          "standard_error": 21.72,
+          "seeds": 40
+        },
+        "defective:flood": {
+          "mean_per_contribution": -22.4395,
+          "standard_error": 22.4395,
+          "n": 2,
+          "verdict": "ok",
+          "attacker": true
+        },
+        "defective:solver": {
+          "mean_per_contribution": -6.2404,
+          "standard_error": 2.8581,
+          "n": 405,
+          "verdict": "ok",
+          "attacker": false
+        },
+        "ring@2": {
+          "mean_gain": 80.52,
+          "standard_error": 62.22,
+          "seeds": 40
+        },
+        "ring_cost@2": {
+          "outsiders": -0.76,
+          "outsiders_se": 6.94,
+          "funders": -0.24,
+          "funders_se": 2.8
+        },
+        "ring@3": {
+          "mean_gain": -34.8,
+          "standard_error": 92.57,
+          "seeds": 40
+        },
+        "ring_cost@3": {
+          "outsiders": -1.58,
+          "outsiders_se": 10.27,
+          "funders": -1.2,
+          "funders_se": 3.07
+        },
+        "ring@4": {
+          "mean_gain": -121.72,
+          "standard_error": 124.45,
+          "seeds": 40
+        },
+        "ring_cost@4": {
+          "outsiders": -4.62,
+          "outsiders_se": 16.4,
+          "funders": -0.1,
+          "funders_se": 3.86
+        },
+        "ring@6": {
+          "mean_gain": 231.32,
+          "standard_error": 159.6,
+          "seeds": 40
+        },
+        "ring_cost@6": {
+          "outsiders": 27.4,
+          "outsiders_se": 19.3,
+          "funders": 1.87,
+          "funders_se": 2.94
+        },
+        "ring_gains_from": null,
+        "owner_supply_share:market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "owner_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "owner_supply_share": {
+        "market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "metrics": {
+        "bounties_paid": {
+          "mean": 49.5,
+          "standard_error": 0.91,
+          "seeds": 40
+        },
+        "funder_cost_per_paid_bounty": {
+          "mean": 108.6,
+          "standard_error": 3.07,
+          "seeds": 40
+        },
+        "solver_earnings": {
+          "mean": 173.79,
+          "standard_error": 19.18,
+          "seeds": 40
+        },
+        "reporter_earnings": {
+          "mean": 64.96,
+          "standard_error": 0.94,
+          "seeds": 40
+        },
+        "days_to_fix": {
+          "mean": 11.69,
+          "standard_error": 0.23,
+          "seeds": 40
+        },
+        "wasted_share": {
+          "mean": 0.5399,
+          "standard_error": 0.0156,
+          "seeds": 40
+        },
+        "treasury_spend": {
+          "mean": 8645.09,
+          "standard_error": 116.84,
+          "seeds": 40
+        },
+        "zero_coin_opened": {
+          "mean": 12.75,
+          "standard_error": 1.46,
+          "seeds": 40
+        },
+        "zero_coin_fixed": {
+          "mean": 3.52,
+          "standard_error": 0.52,
+          "seeds": 40
+        },
+        "zero_coin_fixed_share": {
+          "mean": 0.3233,
+          "standard_error": 0.0427,
+          "seeds": 37
+        },
+        "supply": {
+          "mean": 80942.16,
+          "standard_error": 884.7,
+          "seeds": 40
+        },
+        "owner_supply_share": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "honest_forfeited_share": 0.0066,
+        "tokens_conserved": true,
+        "tokens_by_weight": true,
+        "kinds": {
+          "reporter": {
+            "tokens_share": {
+              "mean": 0.1496,
+              "standard_error": 0.0002,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.1496,
+              "standard_error": 0.0002,
+              "seeds": 40
+            }
+          },
+          "solver": {
+            "tokens_share": {
+              "mean": 0.8504,
+              "standard_error": 0.0002,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.8504,
+              "standard_error": 0.0002,
+              "seeds": 40
+            }
+          }
+        }
+      },
+      "token_self": {
+        "tokens_per_effort": {
+          "mean": 27.265,
+          "standard_error": 7.3467,
+          "seeds": 26
+        },
+        "earnings_per_effort": {
+          "mean": 1.9863,
+          "standard_error": 0.4076,
+          "seeds": 26
+        },
+        "twin_tokens_per_effort": {
+          "mean": 11.9417,
+          "standard_error": 1.9585,
+          "seeds": 35
+        },
+        "twin_earnings_per_effort": {
+          "mean": 1.3862,
+          "standard_error": 0.1829,
+          "seeds": 35
+        },
+        "gain_against_twin": {
+          "mean": -19.87,
+          "standard_error": 50.61,
+          "seeds": 40
+        }
+      },
+      "token_inflate": {
+        "7000": {
+          "inflater_forfeited_share": 0.1324,
+          "honest_forfeited_share": 0.0059,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.8481,
+            "standard_error": 0.9042,
+            "seeds": 38
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.9165,
+            "standard_error": 0.7719,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -46.25,
+            "standard_error": 42.48,
+            "seeds": 40
+          }
+        },
+        "9000": {
+          "inflater_forfeited_share": 0.163,
+          "honest_forfeited_share": 0.0061,
+          "extra_tokens_per_true_weight": {
+            "mean": 1.1004,
+            "standard_error": 0.8873,
+            "seeds": 38
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.9165,
+            "standard_error": 0.7719,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -56.5,
+            "standard_error": 41.93,
+            "seeds": 40
+          }
+        },
+        "9900": {
+          "inflater_forfeited_share": 0.1926,
+          "honest_forfeited_share": 0.0061,
+          "extra_tokens_per_true_weight": {
+            "mean": 0.8844,
+            "standard_error": 0.8867,
+            "seeds": 38
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.9165,
+            "standard_error": 0.7719,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -60.98,
+            "standard_error": 43.48,
+            "seeds": 40
+          }
+        },
+        "9000@150%": {
+          "inflater_forfeited_share": 0.7185,
+          "honest_forfeited_share": 0.1791,
+          "extra_tokens_per_true_weight": {
+            "mean": 0.8517,
+            "standard_error": 1.0742,
+            "seeds": 34
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 8.3163,
+            "standard_error": 0.8371,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -90.33,
+            "standard_error": 43.93,
+            "seeds": 40
+          }
+        },
+        "9000@200%": {
+          "inflater_forfeited_share": 0.5259,
+          "honest_forfeited_share": 0.0598,
+          "extra_tokens_per_true_weight": {
+            "mean": 0.4775,
+            "standard_error": 0.7879,
+            "seeds": 37
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.9572,
+            "standard_error": 0.7761,
+            "seeds": 38
+          },
+          "gain_against_twin": {
+            "mean": -83.13,
+            "standard_error": 43.5,
+            "seeds": 40
+          }
+        }
+      },
+      "rings": {
+        "2": {
+          "ring_gain": {
+            "mean": 80.52,
+            "standard_error": 62.22,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -0.76,
+            "standard_error": 6.94,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.24,
+            "standard_error": 2.8,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.33,
+            "standard_error": 0.68,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.01,
+            "standard_error": 0.12,
+            "seeds": 40
+          }
+        },
+        "3": {
+          "ring_gain": {
+            "mean": -34.8,
+            "standard_error": 92.57,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -1.58,
+            "standard_error": 10.27,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -1.2,
+            "standard_error": 3.07,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": -0.4,
+            "standard_error": 0.93,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.03,
+            "standard_error": 0.22,
+            "seeds": 40
+          }
+        },
+        "4": {
+          "ring_gain": {
+            "mean": -121.72,
+            "standard_error": 124.45,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -4.62,
+            "standard_error": 16.4,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.1,
+            "standard_error": 3.86,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.05,
+            "standard_error": 1.16,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.53,
+            "standard_error": 0.21,
+            "seeds": 40
+          }
+        },
+        "6": {
+          "ring_gain": {
+            "mean": 231.32,
+            "standard_error": 159.6,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 27.4,
+            "standard_error": 19.3,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": 1.87,
+            "standard_error": 2.94,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 1.55,
+            "standard_error": 1.26,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.4,
+            "standard_error": 0.21,
+            "seeds": 40
+          }
+        }
+      },
+      "token_launch": {
+        "share": {
+          "owner_supply_share": {
+            "mean": 0.1147,
+            "standard_error": 0.0126,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0259,
+            0.0577,
+            0.0939,
+            0.1037,
+            0.0993,
+            0.1004,
+            0.1023,
+            0.1057,
+            0.1479
+          ],
+          "owner_earnings": {
+            "mean": 667.31,
+            "standard_error": 65.14,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 16.15,
+            "standard_error": 0.31,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0101,
+            "standard_error": 0.0039,
+            "seeds": 39
+          }
+        },
+        "genesis": {
+          "owner_supply_share": {
+            "mean": 0.3066,
+            "standard_error": 0.0102,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.6863,
+            0.5411,
+            0.4678,
+            0.4131,
+            0.3666,
+            0.3346,
+            0.3103,
+            0.2924,
+            0.3097
+          ],
+          "owner_earnings": {
+            "mean": 1636.84,
+            "standard_error": 65.63,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 16.18,
+            "standard_error": 0.31,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0101,
+            "standard_error": 0.0039,
+            "seeds": 39
+          }
+        },
+        "both": {
+          "owner_supply_share": {
+            "mean": 0.3134,
+            "standard_error": 0.0101,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.6895,
+            0.5457,
+            0.4732,
+            0.419,
+            0.373,
+            0.3413,
+            0.3172,
+            0.2993,
+            0.3159
+          ],
+          "owner_earnings": {
+            "mean": 1667.31,
+            "standard_error": 65.14,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 16.15,
+            "standard_error": 0.31,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0101,
+            "standard_error": 0.0039,
+            "seeds": 39
+          }
+        },
+        "none": {
+          "owner_supply_share": {
+            "mean": 0.1059,
+            "standard_error": 0.0127,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.016,
+            0.0482,
+            0.0848,
+            0.0946,
+            0.0901,
+            0.0913,
+            0.0932,
+            0.0969,
+            0.1401
+          ],
+          "owner_earnings": {
+            "mean": 636.84,
+            "standard_error": 65.63,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 16.18,
+            "standard_error": 0.31,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0101,
+            "standard_error": 0.0039,
+            "seeds": 39
+          }
+        },
+        "share_5pct (tokens-v1)": {
+          "owner_supply_share": {
+            "mean": 0.1502,
+            "standard_error": 0.012,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0652,
+            0.0958,
+            0.1306,
+            0.1399,
+            0.1356,
+            0.1367,
+            0.1386,
+            0.1412,
+            0.1808
+          ],
+          "owner_earnings": {
+            "mean": 790.73,
+            "standard_error": 63.42,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 16.15,
+            "standard_error": 0.31,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0092,
+            "standard_error": 0.0039,
+            "seeds": 39
+          }
+        }
+      }
+    },
+    "0.2": {
+      "passed": false,
+      "failures": [
+        {
+          "criterion": "matching gets more pledged issues fixed",
+          "scenario": "market",
+          "seed": "all",
+          "detail": "funded share change +0.0218 \u00b1 0.0182"
+        }
+      ],
+      "failed_criteria": [
+        "matching gets more pledged issues fixed"
+      ],
+      "headline": {
+        "seeds": 40,
+        "passed": false,
+        "failed_criteria": [
+          "matching gets more pledged issues fixed"
+        ],
+        "solver_net_of_effort": 583.65,
+        "validator": 33.2,
+        "spam_solver": -1027.5,
+        "no_show": 0.0,
+        "ring_gains_from": null,
+        "rings": {
+          "2": 109.87,
+          "3": -144.41,
+          "4": 122.27,
+          "6": 411.19
+        },
+        "bluffer_gain": 0.0,
+        "lowballer_gain": 0.0,
+        "caught_share": 0.9988,
+        "detection_change": 0.7568,
+        "good_failed_share": 0.1107,
+        "escalated_share": 0.2782,
+        "evaluator": 3.61,
+        "check_gains": {
+          "lazy": -13.82,
+          "herd": -4.82,
+          "copy": -1213.54,
+          "craft": -1435.12,
+          "plant": -1409.64,
+          "sock": 102.08,
+          "half": -1453.04,
+          "split": -1483.86,
+          "cheat": -14.82
+        },
+        "herd_agreement_gain": 5.48,
+        "half_without_challenge_gain": -1305.88,
+        "fresh_round": {
+          "days_change": -0.39,
+          "funder_cost_change": 2.75,
+          "paid_change": -0.42,
+          "price_change": 0.62,
+          "solver_change": 44.64
+        },
+        "ci_vs_validators": {
+          "caught_change": 0.0,
+          "funder_cost_change": 5.25,
+          "solver_change": -55.64
+        },
+        "solver_pays_vs_bounty": {
+          "funder_cost_change": -1.87,
+          "paid_change": -1.3,
+          "price_change": 2.28,
+          "solver_change": -3.07
+        },
+        "quality_premium": 0.0316,
+        "tiers_vs_flat": {
+          "good_failed_change": 0.0,
+          "solver_change": -0.58
+        },
+        "bounties_paid": 63.52,
+        "bounties_unsolved": 43.48,
+        "reporter": 161.26,
+        "funder_cost_change": -8.75,
+        "funded_share_change": 0.0218,
+        "crowd_out_ratio": null,
+        "crowd_out_weak": null,
+        "rep_farmer": 222.27,
+        "bond_change": null,
+        "farm_gain": -3.03,
+        "farm_split_unfunded": 0
+      },
+      "criteria": {
+        "bluffer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "caught_share": {
+          "mean": 0.9988,
+          "standard_error": 0.0013,
+          "seeds": 40
+        },
+        "check_cheat_gain": {
+          "mean": -14.82,
+          "standard_error": 0.79,
+          "seeds": 40
+        },
+        "check_copy_gain": {
+          "mean": -1213.54,
+          "standard_error": 110.56,
+          "seeds": 40
+        },
+        "check_craft_gain": {
+          "mean": -1435.12,
+          "standard_error": 97.75,
+          "seeds": 40
+        },
+        "check_half_gain": {
+          "mean": -1453.04,
+          "standard_error": 100.79,
+          "seeds": 40
+        },
+        "check_herd_gain": {
+          "mean": -4.82,
+          "standard_error": 0.79,
+          "seeds": 40
+        },
+        "check_lazy_gain": {
+          "mean": -13.82,
+          "standard_error": 1.47,
+          "seeds": 40
+        },
+        "check_plant_gain": {
+          "mean": -1409.64,
+          "standard_error": 102.0,
+          "seeds": 40
+        },
+        "check_sock_gain": {
+          "mean": 102.08,
+          "standard_error": 130.16,
+          "seeds": 40
+        },
+        "check_split_gain": {
+          "mean": -1483.86,
+          "standard_error": 93.67,
+          "seeds": 40
+        },
+        "ci_validators_caught_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "ci_validators_funder_cost_change": {
+          "mean": 5.25,
+          "standard_error": 2.59,
+          "seeds": 40
+        },
+        "ci_validators_solver_change": {
+          "mean": -55.64,
+          "standard_error": 31.78,
+          "seeds": 40
+        },
+        "crowd_out_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "crowd_out_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "detection_change": {
+          "mean": 0.7568,
+          "standard_error": 0.0161,
+          "seeds": 40
+        },
+        "escalated_share": {
+          "mean": 0.2782,
+          "standard_error": 0.0126,
+          "seeds": 40
+        },
+        "evaluator": {
+          "mean": 3.61,
+          "standard_error": 0.14,
+          "seeds": 40
+        },
+        "farm_gain": {
+          "mean": -3.03,
+          "standard_error": 1.4,
+          "seeds": 40
+        },
+        "farm_split_unfunded": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "flood": {
+          "mean": -496.42,
+          "standard_error": 0.35,
+          "seeds": 40
+        },
+        "fresh_days_change": {
+          "mean": -0.39,
+          "standard_error": 0.18,
+          "seeds": 40
+        },
+        "fresh_funder_cost_change": {
+          "mean": 2.75,
+          "standard_error": 3.65,
+          "seeds": 40
+        },
+        "fresh_paid_change": {
+          "mean": -0.42,
+          "standard_error": 0.9,
+          "seeds": 40
+        },
+        "fresh_price_change": {
+          "mean": 0.62,
+          "standard_error": 1.64,
+          "seeds": 40
+        },
+        "fresh_solver_change": {
+          "mean": 44.64,
+          "standard_error": 32.84,
+          "seeds": 40
+        },
+        "funded_share_change": {
+          "mean": 0.0218,
+          "standard_error": 0.0182,
+          "seeds": 40
+        },
+        "funder_cost_change": {
+          "mean": -8.75,
+          "standard_error": 4.71,
+          "seeds": 40
+        },
+        "good_failed_share": {
+          "mean": 0.1107,
+          "standard_error": 0.0166,
+          "seeds": 40
+        },
+        "half_without_challenge_gain": {
+          "mean": -1305.88,
+          "standard_error": 130.65,
+          "seeds": 40
+        },
+        "herd_agreement_gain": {
+          "mean": 5.48,
+          "standard_error": 1.97,
+          "seeds": 40
+        },
+        "lowballer_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "mode_fake_gain": {
+          "mean": 79.78,
+          "standard_error": 130.42,
+          "seeds": 40
+        },
+        "mode_inflate_gain": {
+          "mean": -270.66,
+          "standard_error": 165.09,
+          "seeds": 40
+        },
+        "mode_pad_gain": {
+          "mean": -1444.68,
+          "standard_error": 87.94,
+          "seeds": 40
+        },
+        "mode_variant_gain": {
+          "mean": -272.18,
+          "standard_error": 141.09,
+          "seeds": 40
+        },
+        "no_show": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "owner_gain": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "pledged_paid_change": {
+          "mean": 0.12,
+          "standard_error": 0.86,
+          "seeds": 40
+        },
+        "quality_premium": {
+          "mean": 0.0316,
+          "standard_error": 0.0114,
+          "seeds": 40
+        },
+        "rep_farmer": {
+          "mean": 222.27,
+          "standard_error": 55.17,
+          "seeds": 40
+        },
+        "reporter": {
+          "mean": 161.26,
+          "standard_error": 1.49,
+          "seeds": 40
+        },
+        "solver": {
+          "mean": 583.65,
+          "standard_error": 19.01,
+          "seeds": 240
+        },
+        "spam_solver": {
+          "mean": -1027.5,
+          "standard_error": 40.44,
+          "seeds": 40
+        },
+        "tiers_good_failed_change": {
+          "mean": 0.0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "tiers_solver_change": {
+          "mean": -0.58,
+          "standard_error": 0.14,
+          "seeds": 40
+        },
+        "treasury_junk": {
+          "mean": 388.7,
+          "standard_error": 46.91,
+          "seeds": 40
+        },
+        "validator": {
+          "mean": 33.2,
+          "standard_error": 0.45,
+          "seeds": 240
+        },
+        "validator_net": {
+          "mean": 31.78,
+          "standard_error": 0.79,
+          "seeds": 40
+        },
+        "weak_base": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "weak_flood": {
+          "mean": 0,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "who_pays_funder_cost_change": {
+          "mean": -1.87,
+          "standard_error": 3.43,
+          "seeds": 40
+        },
+        "who_pays_paid_change": {
+          "mean": -1.3,
+          "standard_error": 1.06,
+          "seeds": 40
+        },
+        "who_pays_price_change": {
+          "mean": 2.28,
+          "standard_error": 1.59,
+          "seeds": 40
+        },
+        "who_pays_solver_change": {
+          "mean": -3.07,
+          "standard_error": 41.04,
+          "seeds": 40
+        },
+        "defective:bluffer": {
+          "mean_per_contribution": -38.5344,
+          "standard_error": 0.0,
+          "n": 2,
+          "verdict": "ok",
+          "attacker": false
+        },
+        "defective:flood": {
+          "mean_per_contribution": -52.3604,
+          "standard_error": 0.0,
+          "n": 2,
+          "verdict": "ok",
+          "attacker": true
+        },
+        "defective:solver": {
+          "mean_per_contribution": -12.0947,
+          "standard_error": 1.6218,
+          "n": 535,
+          "verdict": "ok",
+          "attacker": false
+        },
+        "ring@2": {
+          "mean_gain": 109.87,
+          "standard_error": 178.2,
+          "seeds": 40
+        },
+        "ring_cost@2": {
+          "outsiders": 13.01,
+          "outsiders_se": 31.44,
+          "funders": 1.27,
+          "funders_se": 3.1
+        },
+        "ring@3": {
+          "mean_gain": -144.41,
+          "standard_error": 233.18,
+          "seeds": 40
+        },
+        "ring_cost@3": {
+          "outsiders": 50.54,
+          "outsiders_se": 29.73,
+          "funders": -2.8,
+          "funders_se": 4.1
+        },
+        "ring@4": {
+          "mean_gain": 122.27,
+          "standard_error": 262.86,
+          "seeds": 40
+        },
+        "ring_cost@4": {
+          "outsiders": -11.87,
+          "outsiders_se": 47.69,
+          "funders": -1.11,
+          "funders_se": 3.22
+        },
+        "ring@6": {
+          "mean_gain": 411.19,
+          "standard_error": 381.45,
+          "seeds": 40
+        },
+        "ring_cost@6": {
+          "outsiders": 35.2,
+          "outsiders_se": 48.24,
+          "funders": -0.36,
+          "funders_se": 2.91
+        },
+        "ring_gains_from": null,
+        "owner_supply_share:market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "owner_supply_share:market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "owner_gain": {
+        "mean": 0.0,
+        "standard_error": 0.0,
+        "seeds": 40
+      },
+      "owner_supply_share": {
+        "market": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        },
+        "market_owner:variant": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40,
+          "max": 0.01
+        }
+      },
+      "metrics": {
+        "bounties_paid": {
+          "mean": 63.52,
+          "standard_error": 0.81,
+          "seeds": 40
+        },
+        "funder_cost_per_paid_bounty": {
+          "mean": 93.34,
+          "standard_error": 2.61,
+          "seeds": 40
+        },
+        "solver_earnings": {
+          "mean": 500.42,
+          "standard_error": 42.27,
+          "seeds": 40
+        },
+        "reporter_earnings": {
+          "mean": 161.26,
+          "standard_error": 1.49,
+          "seeds": 40
+        },
+        "days_to_fix": {
+          "mean": 10.76,
+          "standard_error": 0.16,
+          "seeds": 40
+        },
+        "wasted_share": {
+          "mean": 0.5781,
+          "standard_error": 0.0141,
+          "seeds": 40
+        },
+        "treasury_spend": {
+          "mean": 8595.03,
+          "standard_error": 115.1,
+          "seeds": 40
+        },
+        "zero_coin_opened": {
+          "mean": 9.38,
+          "standard_error": 1.38,
+          "seeds": 40
+        },
+        "zero_coin_fixed": {
+          "mean": 5.6,
+          "standard_error": 0.76,
+          "seeds": 40
+        },
+        "zero_coin_fixed_share": {
+          "mean": 0.6776,
+          "standard_error": 0.0364,
+          "seeds": 34
+        },
+        "supply": {
+          "mean": 84155.92,
+          "standard_error": 796.01,
+          "seeds": 40
+        },
+        "owner_supply_share": {
+          "mean": 0.01,
+          "standard_error": 0.0,
+          "seeds": 40
+        },
+        "honest_forfeited_share": 0.0067,
+        "tokens_conserved": true,
+        "tokens_by_weight": true,
+        "kinds": {
+          "reporter": {
+            "tokens_share": {
+              "mean": 0.1491,
+              "standard_error": 0.0003,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.1491,
+              "standard_error": 0.0003,
+              "seeds": 40
+            }
+          },
+          "solver": {
+            "tokens_share": {
+              "mean": 0.8509,
+              "standard_error": 0.0003,
+              "seeds": 40
+            },
+            "weight_share": {
+              "mean": 0.8509,
+              "standard_error": 0.0003,
+              "seeds": 40
+            }
+          }
+        }
+      },
+      "token_self": {
+        "tokens_per_effort": {
+          "mean": 13.5204,
+          "standard_error": 1.766,
+          "seeds": 32
+        },
+        "earnings_per_effort": {
+          "mean": 3.5468,
+          "standard_error": 0.4504,
+          "seeds": 32
+        },
+        "twin_tokens_per_effort": {
+          "mean": 7.3896,
+          "standard_error": 0.5726,
+          "seeds": 39
+        },
+        "twin_earnings_per_effort": {
+          "mean": 1.9027,
+          "standard_error": 0.1356,
+          "seeds": 39
+        },
+        "gain_against_twin": {
+          "mean": -313.33,
+          "standard_error": 117.6,
+          "seeds": 40
+        }
+      },
+      "token_inflate": {
+        "7000": {
+          "inflater_forfeited_share": 0.1256,
+          "honest_forfeited_share": 0.0074,
+          "extra_tokens_per_true_weight": {
+            "mean": 5.3957,
+            "standard_error": 1.2738,
+            "seeds": 39
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 6.6965,
+            "standard_error": 0.5092,
+            "seeds": 39
+          },
+          "gain_against_twin": {
+            "mean": 166.83,
+            "standard_error": 88.9,
+            "seeds": 40
+          }
+        },
+        "9000": {
+          "inflater_forfeited_share": 0.1608,
+          "honest_forfeited_share": 0.0074,
+          "extra_tokens_per_true_weight": {
+            "mean": 4.5605,
+            "standard_error": 1.2328,
+            "seeds": 39
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 6.6965,
+            "standard_error": 0.5092,
+            "seeds": 39
+          },
+          "gain_against_twin": {
+            "mean": 113.63,
+            "standard_error": 85.72,
+            "seeds": 40
+          }
+        },
+        "9900": {
+          "inflater_forfeited_share": 0.191,
+          "honest_forfeited_share": 0.0074,
+          "extra_tokens_per_true_weight": {
+            "mean": 4.642,
+            "standard_error": 1.3499,
+            "seeds": 39
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 6.6965,
+            "standard_error": 0.5092,
+            "seeds": 39
+          },
+          "gain_against_twin": {
+            "mean": 99.32,
+            "standard_error": 83.7,
+            "seeds": 40
+          }
+        },
+        "9000@150%": {
+          "inflater_forfeited_share": 0.6985,
+          "honest_forfeited_share": 0.1935,
+          "extra_tokens_per_true_weight": {
+            "mean": 4.6503,
+            "standard_error": 1.5785,
+            "seeds": 38
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 7.0172,
+            "standard_error": 0.5593,
+            "seeds": 39
+          },
+          "gain_against_twin": {
+            "mean": 34.27,
+            "standard_error": 85.31,
+            "seeds": 40
+          }
+        },
+        "9000@200%": {
+          "inflater_forfeited_share": 0.4724,
+          "honest_forfeited_share": 0.057,
+          "extra_tokens_per_true_weight": {
+            "mean": 5.0571,
+            "standard_error": 1.3639,
+            "seeds": 39
+          },
+          "twin_tokens_per_true_weight": {
+            "mean": 6.7364,
+            "standard_error": 0.5123,
+            "seeds": 39
+          },
+          "gain_against_twin": {
+            "mean": 63.51,
+            "standard_error": 86.99,
+            "seeds": 40
+          }
+        }
+      },
+      "rings": {
+        "2": {
+          "ring_gain": {
+            "mean": 109.87,
+            "standard_error": 178.2,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 13.01,
+            "standard_error": 31.44,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": 1.27,
+            "standard_error": 3.1,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.75,
+            "standard_error": 1.05,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.18,
+            "standard_error": 0.22,
+            "seeds": 40
+          }
+        },
+        "3": {
+          "ring_gain": {
+            "mean": -144.41,
+            "standard_error": 233.18,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 50.54,
+            "standard_error": 29.73,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -2.8,
+            "standard_error": 4.1,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": -0.33,
+            "standard_error": 1.01,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": 0.41,
+            "standard_error": 0.24,
+            "seeds": 40
+          }
+        },
+        "4": {
+          "ring_gain": {
+            "mean": 122.27,
+            "standard_error": 262.86,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": -11.87,
+            "standard_error": 47.69,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -1.11,
+            "standard_error": 3.22,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.7,
+            "standard_error": 1.26,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.05,
+            "standard_error": 0.17,
+            "seeds": 40
+          }
+        },
+        "6": {
+          "ring_gain": {
+            "mean": 411.19,
+            "standard_error": 381.45,
+            "seeds": 40
+          },
+          "outsider_change": {
+            "mean": 35.2,
+            "standard_error": 48.24,
+            "seeds": 40
+          },
+          "funder_cost_change": {
+            "mean": -0.36,
+            "standard_error": 2.91,
+            "seeds": 40
+          },
+          "bounties_paid_change": {
+            "mean": 0.65,
+            "standard_error": 1.39,
+            "seeds": 40
+          },
+          "days_to_fix_change": {
+            "mean": -0.08,
+            "standard_error": 0.23,
+            "seeds": 40
+          }
+        }
+      },
+      "token_launch": {
+        "share": {
+          "owner_supply_share": {
+            "mean": 0.1984,
+            "standard_error": 0.0137,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.0674,
+            0.0812,
+            0.1124,
+            0.1289,
+            0.1351,
+            0.1519,
+            0.1586,
+            0.1807,
+            0.2411,
+            0.3501
+          ],
+          "owner_earnings": {
+            "mean": 3226.33,
+            "standard_error": 245.48,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 17.2,
+            "standard_error": 0.36,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0356,
+            "standard_error": 0.0078,
+            "seeds": 39
+          }
+        },
+        "genesis": {
+          "owner_supply_share": {
+            "mean": 0.3718,
+            "standard_error": 0.0101,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.6995,
+            0.5522,
+            0.4784,
+            0.4292,
+            0.3914,
+            0.3723,
+            0.3525,
+            0.3518,
+            0.3854,
+            0.4629
+          ],
+          "owner_earnings": {
+            "mean": 7098.8,
+            "standard_error": 245.96,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 17.18,
+            "standard_error": 0.37,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0362,
+            "standard_error": 0.0078,
+            "seeds": 39
+          }
+        },
+        "both": {
+          "owner_supply_share": {
+            "mean": 0.3788,
+            "standard_error": 0.01,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            1.0,
+            0.7025,
+            0.5567,
+            0.4836,
+            0.435,
+            0.3975,
+            0.3786,
+            0.3598,
+            0.3579,
+            0.3909,
+            0.4683
+          ],
+          "owner_earnings": {
+            "mean": 7226.33,
+            "standard_error": 245.48,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 17.2,
+            "standard_error": 0.36,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0356,
+            "standard_error": 0.0078,
+            "seeds": 39
+          }
+        },
+        "none": {
+          "owner_supply_share": {
+            "mean": 0.1894,
+            "standard_error": 0.0139,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.058,
+            0.0719,
+            0.1034,
+            0.1201,
+            0.1263,
+            0.1433,
+            0.1489,
+            0.1729,
+            0.2343,
+            0.3436
+          ],
+          "owner_earnings": {
+            "mean": 3098.8,
+            "standard_error": 245.96,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 17.18,
+            "standard_error": 0.37,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0362,
+            "standard_error": 0.0078,
+            "seeds": 39
+          }
+        },
+        "share_5pct (tokens-v1)": {
+          "owner_supply_share": {
+            "mean": 0.2308,
+            "standard_error": 0.0132,
+            "seeds": 40
+          },
+          "owner_supply_share_by_minting_period": [
+            0.1051,
+            0.1183,
+            0.1482,
+            0.1641,
+            0.17,
+            0.1861,
+            0.1926,
+            0.2138,
+            0.2717,
+            0.3764
+          ],
+          "owner_earnings": {
+            "mean": 3684.27,
+            "standard_error": 244.51,
+            "seeds": 40
+          },
+          "bounties_paid": {
+            "mean": 17.2,
+            "standard_error": 0.36,
+            "seeds": 40
+          },
+          "zero_coin_fixed_share": {
+            "mean": 0.0356,
+            "standard_error": 0.0078,
+            "seeds": 39
+          }
+        }
+      }
+    }
+  }
+}
