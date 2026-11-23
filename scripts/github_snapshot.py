@@ -46,12 +46,21 @@ ROOT = Path(__file__).resolve().parent.parent
 BRANCH = "snapshot"
 DEFAULT_TERMS = "~/.config/proof-of-fix/snapshot-terms"
 GH_CREDENTIALS = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"]
+# What the measured disk (scripts/checker-disk.sh) and its checker image (oracle/Dockerfile's COPY lines) are built
+# from: a directory ends with "/".
+IMAGE_INPUTS = ["oracle/", "pof/", "bot/", "pofctl/", "scripts/judge_run.py", "scripts/checker-disk.sh",
+                "validator-kit/sevsnp/disk/"]
 PRESETS = {
     "proof-of-fix": {
         "paths": [],
         "note": "> A scrubbed snapshot. Development happens on a private Forgejo, which keeps the full history; issue "
                 "numbers (`#123`) refer to its tracker, and example.com and example-org stand in for internal addresses.",
         "check": ["scripts/check.sh"],
+        # The validator's measured disk and its checker image are built from these files, and the deployment accepts
+        # only the image digests it lists: a scrubbed byte would change the digest, so nobody could build the listed
+        # image from the public code (the owner's decision, 2026-11-23, #251). They go across unscrubbed; the scan
+        # still refuses secrets, AWS account ids and denied terms in them, and the run prints what each term kept.
+        "verbatim": IMAGE_INPUTS,
     },
     "pof-devnet-infra": {
         "paths": ["modules/pof_devnet", "modules/compose_host", "modules/schedule", "modules/scripts",
@@ -134,11 +143,24 @@ def shape_of(term: str) -> str:
     return "a phrase" if " " in term else "a word"
 
 
-def scrub(root: Path, replace: list, counts: list | None = None) -> int:
-    """Replaces the terms in every text file; returns how many files changed. `counts`, if given (one [occurrences,
-    files] per replacement), is filled with what each replacement found."""
+def is_verbatim(rel: str, verbatim: list) -> bool:
+    """Whether a path (relative, with "/") is one of `verbatim`'s files or under one of its directories."""
+    return any(rel.startswith(v) if v.endswith("/") else rel == v for v in verbatim)
+
+
+def scrub(root: Path, replace: list, counts: list | None = None, verbatim: list = (),
+          kept: list | None = None) -> int:
+    """Replaces the terms in every text file but `verbatim`'s; returns how many files changed. `counts`, if given (one
+    [occurrences, files] per replacement), is filled with what each replacement found; `kept`, the same shape, with
+    what it left in `verbatim`'s files."""
     changed = 0
     for p, text in text_files(root):
+        if is_verbatim(p.relative_to(root).as_posix(), verbatim):
+            for i, (old, _) in enumerate(replace):
+                if kept is not None and old and old in text:
+                    kept[i][0] += text.count(old)
+                    kept[i][1] += 1
+            continue
         out = text
         for i, (old, new) in enumerate(replace):
             if counts is not None and old and old in out:
@@ -151,14 +173,18 @@ def scrub(root: Path, replace: list, counts: list | None = None) -> int:
     return changed
 
 
-def scan(root: Path, replace: list, deny: list) -> list:
-    """Findings as (file, kind). Never the value: this output may end up anywhere."""
+def scan(root: Path, replace: list, deny: list, verbatim: list = ()) -> list:
+    """Findings as (file, kind). Never the value: this output may end up anywhere. A `verbatim` file may keep the
+    replacements' terms, never a denied term or a secret."""
     found = []
     # A replacement's new text can legitimately contain nothing private, but its old text must be gone.
     literals = [("a private term", old) for old, _ in replace] + [("a denied term", d) for d in deny]
     for p, text in text_files(root):
         rel = str(p.relative_to(root))
+        kept = is_verbatim(p.relative_to(root).as_posix(), verbatim)
         for kind, literal in literals:
+            if kept and kind == "a private term":
+                continue
             if literal in text:
                 found.append((rel, kind))
                 break
@@ -175,12 +201,14 @@ ACCOUNT_WORDING = ("account", "arn:aws:", "access-", "profile", "owner-id", "own
 PLATFORM_PATTERN = r"\bplat" + r"form#\d+|~/dev/" + r"platform\b"  # split, so neither this line nor a scrub term matches it
 
 
-def public_scan(root: Path) -> list:
+def public_scan(root: Path, verbatim: list = ()) -> list:
     """Findings as (file, kind) for what the GitHub scan doesn't look for: an AWS account id written without an ARN,
-    and a reference to the private platform repository (its issues, `infra#123`, or its checkout)."""
+    and a reference to the private platform repository (its issues, `infra#123`, or its checkout), which a
+    `verbatim` file may keep."""
     found = []
     for p, text in text_files(root):
         rel = str(p.relative_to(root))
+        kept = is_verbatim(p.relative_to(root).as_posix(), verbatim)
         for m in re.finditer(r"(?<![\d.])\d{12}(?!\d)", text):
             n = m.group(0)
             if n in FAKE_ACCOUNTS or len(set(n)) == 1:
@@ -188,7 +216,7 @@ def public_scan(root: Path) -> list:
             if any(w in text[max(0, m.start() - 60):m.start()].lower() for w in ACCOUNT_WORDING):
                 found.append((rel, "an AWS account id"))
                 break
-        if re.search(PLATFORM_PATTERN, text):
+        if not kept and re.search(PLATFORM_PATTERN, text):
             found.append((rel, "a platform reference"))
     return found
 
@@ -309,11 +337,13 @@ def radicle_target(a, preset: dict, replace: list, deny: list, kinds: list, sour
         tree = Path(tmp) / "tree"
         tree.mkdir()
         lay_out(tree, source, a.ref, preset)
-        counts = [[0, 0] for _ in replace]
-        print(f"{a.preset} for Radicle: {a.ref} ({sha}): scrubbed {scrub(tree, replace, counts)} file(s)")
-        for i, ((n, files), kind) in enumerate(zip(counts, kinds), 1):
-            print(f"  term {i} ({kind}): replaced {n} time(s) in {files} file(s)")
-        found = scan(tree, replace, deny) + public_scan(tree)
+        counts, kept, verbatim = [[0, 0] for _ in replace], [[0, 0] for _ in replace], preset.get("verbatim", [])
+        print(f"{a.preset} for Radicle: {a.ref} ({sha}): scrubbed {scrub(tree, replace, counts, verbatim, kept)} "
+              "file(s)")
+        for i, ((n, files), (k, kfiles), kind) in enumerate(zip(counts, kept, kinds), 1):
+            print(f"  term {i} ({kind}): replaced {n} time(s) in {files} file(s)"
+                  + (f"; kept {k} time(s) in {kfiles} file(s) the image is built from" if k else ""))
+        found = scan(tree, replace, deny, verbatim) + public_scan(tree, verbatim)
         if found:
             for rel, kind in found:
                 print(f"  FOUND {kind}: {rel}")
@@ -406,8 +436,9 @@ def main(argv=None) -> int:
         tree = Path(tmp) / "tree"
         run(["git", *creds, "clone", "-q", "--branch", BRANCH, "--single-branch", url, str(tree)])
         lay_out(tree, source, a.ref, preset)
-        print(f"{a.preset}: {a.ref} ({sha}): scrubbed {scrub(tree, replace)} file(s)")
-        found = scan(tree, replace, deny)
+        verbatim = preset.get("verbatim", [])
+        print(f"{a.preset}: {a.ref} ({sha}): scrubbed {scrub(tree, replace, verbatim=verbatim)} file(s)")
+        found = scan(tree, replace, deny, verbatim)
         if found:
             for rel, kind in found:
                 print(f"  FOUND {kind}: {rel}")

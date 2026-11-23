@@ -3,7 +3,7 @@ transactions with a key. Standard library only (urllib); no cast, forge or Docke
 a devnet on this machine or one reached over HTTPS (#104's chain on AWS). Shared by pofctl (pofctl.rpc) and the v2
 oracle node.
 
-The chain on AWS sits behind an API key (infra#198): give it as the URL's user info
+The chain on AWS sits behind an API key (platform#198): give it as the URL's user info
 (https://<handle>:<key>@devnet.example, sent as HTTP Basic and never printed) or as a token (sent as
 `Authorization: Bearer <token>`, or under another header name). Nothing here logs a URL with its user info.
 
@@ -11,7 +11,13 @@ Transient failures (proof-of-fix#166): a connection error, a timeout, an answer 
 504 is `Unavailable`. With `retries` (the node asks for some, pofctl for none) a call that's safe to repeat goes again
 with bounded backoff, honouring Retry-After up to the cap. Safe means: a read, or eth_sendRawTransaction, whose bytes
 carry their own nonce and hash, so a second copy is the same transaction. Anything else (eth_sendTransaction, where the
-server picks the nonce; a test node's evm_* calls) gets one try. A revert and any other answer are never retried."""
+server picks the nonce; a test node's evm_* calls) gets one try. A revert and any other answer are never retried.
+
+Event scans (proof-of-fix#312): every public chain's providers bound an eth_getLogs range (on Sepolia, Infura 10,000
+blocks, publicnode 50,000, the free tiers of Alchemy, drpc and 1rpc 10, 100 and 50). `logs` asks in chunks of at most
+`log_range` blocks (the node's ORACLE_LOG_RANGE, default 5,000), with `latest` resolved once per scan so its chunks
+meet; a provider that refuses a chunk as too large gets it halved (or cut to a smaller limit its message names), and
+the smaller size is kept for the client's later scans."""
 
 from __future__ import annotations
 
@@ -55,6 +61,12 @@ SAFE_TO_REPEAT = frozenset({"eth_chainId", "eth_blockNumber", "eth_call", "eth_g
                             "eth_getTransactionCount", "eth_getTransactionReceipt", "eth_getTransactionByHash",
                             "eth_sendRawTransaction"})
 FIRST_BACKOFF_S, MAX_BACKOFF_S = 1.0, 15.0
+DEFAULT_LOG_RANGE = 5_000  # blocks per eth_getLogs call: inside Infura's 10,000 and publicnode's 50,000
+# A provider's refusal of an eth_getLogs range as too large (or as too many results, which a smaller range also cures):
+# "range 12192494 exceeds limit of 10000" (Infura), "eth_getLogs is limited to a 10,000 range", "Log response size
+# exceeded. You can make eth_getLogs requests with up to a 10 block range" (Alchemy), "query returned more than 10000
+# results", "block range too large", "ranges over 100 blocks are not supported on freetier" (drpc).
+RANGE_REFUSED = re.compile(r"range|too (?:many|large|big)|exceed|more than|limit", re.I)
 # What a node says to a second copy of a transaction it has (geth, anvil), or to one whose nonce is already spent.
 ALREADY_SENT = re.compile(r"already known|already imported|known transaction|nonce too low", re.I)
 
@@ -104,7 +116,7 @@ def split_auth(url: str) -> tuple:
 
 def auth_headers(token: str | None = None, header: str = "Authorization") -> dict:
     """A token's header. `header` names the scheme: "Authorization" sends `Bearer <token>`; "Basic" sends HTTP Basic
-    for a "<handle>:<key>" token (the demo chain's, infra#198); any other name carries the raw token (X-Api-Key)."""
+    for a "<handle>:<key>" token (the demo chain's, platform#198); any other name carries the raw token (X-Api-Key)."""
     if not token:
         return {}
     if header.lower() == "basic":
@@ -121,11 +133,14 @@ def _retry_after(headers) -> float | None:
 
 class Rpc:
     def __init__(self, url: str, headers: dict | None = None, timeout: float = 30, retries: int = 0,
-                 sleep=time.sleep, log=None) -> None:
+                 sleep=time.sleep, log=None, log_range: int = DEFAULT_LOG_RANGE) -> None:
         self.url, basic = split_auth(url)  # self.url never carries the key, so errors can print it
         self.headers = {**({"Authorization": basic} if basic else {}), **(headers or {})}
         self.timeout, self._id = timeout, 0
         self.retries, self.sleep, self.log = retries, sleep, log
+        if log_range < 1:
+            raise ValueError("the eth_getLogs range is at least 1 block")
+        self.log_range = log_range  # lowered for good when the provider refuses a chunk as too large
 
     def _exchange(self, body: bytes) -> dict:
         """One HTTP exchange: the decoded answer, or Unavailable (worth trying again) or RpcError (not)."""
@@ -195,11 +210,39 @@ class Rpc:
         return abi.decode(returns, self.eth_call(to, abi.call_data(signature, *args)))
 
     def logs(self, address: str, from_block: int = 0, topics: list | None = None, to_block=None) -> list:
-        q = {"address": address, "fromBlock": hex(from_block),
-             "toBlock": hex(to_block) if isinstance(to_block, int) else "latest"}
-        if topics:
-            q["topics"] = topics
-        return self.call("eth_getLogs", [q])
+        """The events `address` emitted from `from_block` to `to_block` (an int; anything else: the latest block, read
+        once here), in the chain's order, asked in chunks of at most `log_range` blocks (#312)."""
+        end = to_block if isinstance(to_block, int) else self.block()
+        out, start = [], max(from_block, 0)
+        while start <= end:
+            stop = min(end, start + self.log_range - 1)
+            q = {"address": address, "fromBlock": hex(start), "toBlock": hex(stop)}
+            if topics:
+                q["topics"] = topics
+            try:
+                out.extend(self.call("eth_getLogs", [q]))
+            except Unavailable:
+                raise
+            except RpcError as e:
+                smaller = self._smaller_range(f"{e} {getattr(e, 'data', '')}", stop - start + 1)
+                if smaller is None:
+                    raise
+                if self.log:
+                    self.log(f"eth_getLogs: the provider refused {stop - start + 1} blocks; asking for {smaller} at a "
+                             f"time")
+                self.log_range = smaller
+                continue  # the same start, a smaller chunk
+            start = stop + 1
+        return out
+
+    @staticmethod
+    def _smaller_range(message: str, asked: int) -> int | None:
+        """The chunk to ask for after a refusal of `asked` blocks: half, or a smaller limit the message names (a number
+        below `asked`); None when it isn't a range refusal or a single block was refused."""
+        if asked <= 1 or not RANGE_REFUSED.search(message):
+            return None
+        named = [n for n in (int(x.replace(",", "")) for x in re.findall(r"\d[\d,]*", message)) if 0 < n < asked]
+        return max(1, min([asked // 2] + named[-1:]))
 
 
 class Wallet:

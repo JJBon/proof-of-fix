@@ -1,0 +1,519 @@
+{
+ "deployment": "contracts/deployments/sepolia-rehearsal/chain-11155111.json",
+ "chainId": 11155111,
+ "transactions": [
+  {
+   "t": 1795389686.1514242,
+   "from": "0xd766722DBb4Ce5C7807740a38De7a492c44De487",
+   "to": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "fn": "(ETH transfer)",
+   "hash": "0x8458665ca27f98fa1b33ee7b6c556ac2e792eaa5a0b3402ef81597dcd9fefb49",
+   "estimate": 207391,
+   "gasLimit": 269608,
+   "gasUsed": 204600,
+   "status": 1,
+   "block": 12191877,
+   "price": 22
+  },
+  {
+   "t": 1795389769.4022427,
+   "from": "0xd766722DBb4Ce5C7807740a38De7a492c44De487",
+   "to": "0xF03882e990e025e287145e058546CE392b1Bc2ec",
+   "fn": "approve(address,uint256)",
+   "role": "reporter",
+   "hash": "0x427816b4ab88c3ea7707dfa2f06c494124d257895595bd8fecba3a04b491441e",
+   "block": 12191885,
+   "gasUsed": 128189,
+   "gasLimit": 171601,
+   "estimate": 129281,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795389781.0709047,
+   "from": "0xd766722DBb4Ce5C7807740a38De7a492c44De487",
+   "to": "0x4dc5cFADaf7f94F3305E14275831dCF816Ee7A38",
+   "fn": "register(bytes32,bool)",
+   "role": "reporter",
+   "hash": "0xd965a38500e77c2198a1468621a0d162f6c1ba58a8bc141e086e4637fb693c28",
+   "block": 12191886,
+   "gasUsed": 2416879,
+   "gasLimit": 3127760,
+   "estimate": 2494208,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795389824.968687,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x03239FEfF6A82017234Dcc3b4CEED4958FB55D74",
+   "fn": "post(uint256[4],bytes32[],uint256[3][])",
+   "role": "node",
+   "hash": "0x3df9589cbdde7f8201421fe19eb6e203a722bf470a2fc7b77dbed9dba1538720",
+   "block": 12191889,
+   "gasUsed": 1590540,
+   "gasLimit": 2015413,
+   "estimate": 1604331,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795389888.457327,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x0710E4EdF974D69f5D1E67915B489a47eB042DF2",
+   "fn": "draw(uint256)",
+   "role": "node",
+   "hash": "0x07139072e671ba67b1cb793b686b7bff5773dffbb225c6d83d2e9cc4be34066b",
+   "block": 12191894,
+   "gasUsed": 1429934,
+   "gasLimit": 1828708,
+   "estimate": 1454967,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795389901.522629,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x4dc5cFADaf7f94F3305E14275831dCF816Ee7A38",
+   "fn": "signal(uint256)",
+   "role": "node",
+   "hash": "0x57c29de4109d574cf31a0ebbd704634e8f6b87d82a2c5a6663021e6d1a957d22",
+   "block": 12191895,
+   "gasUsed": 217352,
+   "gasLimit": 293042,
+   "estimate": 226434,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795389927.8012712,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x0710E4EdF974D69f5D1E67915B489a47eB042DF2",
+   "fn": "seal(uint256,address,bytes32,bytes)",
+   "role": "node",
+   "hash": "0x2e5b8f675f8048647312f2e87ae5c87bbe89ca25f6e1672c0820b3cec40c25d0",
+   "block": 12191898,
+   "gasUsed": 171010,
+   "gasLimit": 226917,
+   "estimate": 173534,
+   "status": 1,
+   "price": 22
+  },
+  {
+   "t": 1795396582.7687826,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x03239FEfF6A82017234Dcc3b4CEED4958FB55D74",
+   "fn": "post(uint256[4],bytes32[],uint256[3][])",
+   "role": "node",
+   "hash": "0x0139f25034c7a616a886b5b5db0d2cae02ec62f480bb6110ea560963c03b9b2d",
+   "block": 12192436,
+   "gasUsed": 159164,
+   "gasLimit": 210472,
+   "estimate": 160378,
+   "status": 1,
+   "price": 25
+  },
+  {
+   "t": 1795397127.343057,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x0710E4EdF974D69f5D1E67915B489a47eB042DF2",
+   "fn": "receipt(uint256,address,bytes32,bytes)",
+   "role": "node",
+   "hash": "0xa98f7b721818fd767c2280bcc05f58262d68d73a377d31689996377fbef93e84",
+   "block": 12192480,
+   "gasUsed": 160320,
+   "gasLimit": 213450,
+   "estimate": 162760,
+   "status": 1,
+   "price": 23
+  },
+  {
+   "t": 1795397137.1563125,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x0710E4EdF974D69f5D1E67915B489a47eB042DF2",
+   "fn": "reveal(uint256,address,bool,uint8,bytes32,bytes)",
+   "role": "node",
+   "hash": "0x4591ee3cfdde585e7351eb5f5a26f2684ee3ec77f5c32c6881e42fa8722b0f69",
+   "block": 12192481,
+   "gasUsed": 467519,
+   "gasLimit": 615916,
+   "estimate": 484733,
+   "status": 1,
+   "price": 23
+  },
+  {
+   "t": 1795397151.6405957,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x4dc5cFADaf7f94F3305E14275831dCF816Ee7A38",
+   "fn": "report(uint256,address,(bytes32,uint64,uint64,uint64,uint64,uint64,uint64),bytes)",
+   "role": "node",
+   "hash": "0xc020b3894c1bc5233363481f3f4466e1c399285c746d074155493fbf5337e12d",
+   "block": 12192482,
+   "gasUsed": 498815,
+   "gasLimit": 656278,
+   "estimate": 517023,
+   "status": 1,
+   "price": 23
+  },
+  {
+   "t": 1795397164.3087382,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x4dc5cFADaf7f94F3305E14275831dCF816Ee7A38",
+   "fn": "result(uint256)",
+   "role": "node",
+   "hash": "0x12012e39cceccd6ad1c74ab0e58b78bc77bfb5a5ca183f5f4fed30b1aee6a8e6",
+   "block": 12192483,
+   "gasUsed": 698932,
+   "gasLimit": 892057,
+   "estimate": 705646,
+   "status": 1,
+   "price": 23
+  },
+  {
+   "t": 1795397236.6961858,
+   "from": "0xc5E839697306830E28e84FdCb16C958B2Bf99a3F",
+   "to": "0x0710E4EdF974D69f5D1E67915B489a47eB042DF2",
+   "fn": "drawAudits(uint256)",
+   "role": "node",
+   "hash": "0x1e290d912e0ef12f03a0638c09807403a5db025e1c1f2d37185bfa5363ce254e",
+   "block": 12192489,
+   "gasUsed": 286993,
+   "gasLimit": 377355,
+   "estimate": 293884,
+   "status": 1,
+   "price": 24
+  }
+ ],
+ "replayOsaka": [
+  {
+   "hash": "0x8458665ca27f98fa1b33ee7b6c556ac2e792eaa5a0b3402ef81597dcd9fefb49",
+   "fn": "(ETH transfer)",
+   "block": 12191877,
+   "hardfork": "osaka",
+   "oldGasUsed": 21000,
+   "oldStatus": 1,
+   "oldEstimate": 21000,
+   "oldLogs": 0,
+   "sepoliaGasUsed": 204600,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 207391
+  },
+  {
+   "hash": "0x427816b4ab88c3ea7707dfa2f06c494124d257895595bd8fecba3a04b491441e",
+   "fn": "approve(address,uint256)",
+   "block": 12191885,
+   "hardfork": "osaka",
+   "oldGasUsed": 46269,
+   "oldStatus": 1,
+   "oldEstimate": 46269,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 128189,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 129281
+  },
+  {
+   "hash": "0xd965a38500e77c2198a1468621a0d162f6c1ba58a8bc141e086e4637fb693c28",
+   "fn": "register(bytes32,bool)",
+   "block": 12191886,
+   "hardfork": "osaka",
+   "oldGasUsed": 639079,
+   "oldStatus": 1,
+   "oldEstimate": 658604,
+   "oldLogs": 7,
+   "sepoliaGasUsed": 2416879,
+   "sepoliaLogs": 7,
+   "sepoliaEstimate": 2494208
+  },
+  {
+   "hash": "0x3df9589cbdde7f8201421fe19eb6e203a722bf470a2fc7b77dbed9dba1538720",
+   "fn": "post(uint256[4],bytes32[],uint256[3][])",
+   "block": 12191889,
+   "hardfork": "osaka",
+   "oldGasUsed": 364860,
+   "oldStatus": 1,
+   "oldEstimate": 364860,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 1590540,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 1604331
+  },
+  {
+   "hash": "0x07139072e671ba67b1cb793b686b7bff5773dffbb225c6d83d2e9cc4be34066b",
+   "fn": "draw(uint256)",
+   "block": 12191894,
+   "hardfork": "osaka",
+   "oldGasUsed": 450914,
+   "oldStatus": 1,
+   "oldEstimate": 457490,
+   "oldLogs": 2,
+   "sepoliaGasUsed": 1429934,
+   "sepoliaLogs": 2,
+   "sepoliaEstimate": 1454967
+  },
+  {
+   "hash": "0x57c29de4109d574cf31a0ebbd704634e8f6b87d82a2c5a6663021e6d1a957d22",
+   "fn": "signal(uint256)",
+   "block": 12191895,
+   "hardfork": "osaka",
+   "oldGasUsed": 126432,
+   "oldStatus": 1,
+   "oldEstimate": 129745,
+   "oldLogs": 0,
+   "sepoliaGasUsed": 217352,
+   "sepoliaLogs": 0,
+   "sepoliaEstimate": 226434
+  },
+  {
+   "hash": "0x2e5b8f675f8048647312f2e87ae5c87bbe89ca25f6e1672c0820b3cec40c25d0",
+   "fn": "seal(uint256,address,bytes32,bytes)",
+   "block": 12191898,
+   "hardfork": "osaka",
+   "oldGasUsed": 74190,
+   "oldStatus": 1,
+   "oldEstimate": 74724,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 171010,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 173534
+  },
+  {
+   "hash": "0x0139f25034c7a616a886b5b5db0d2cae02ec62f480bb6110ea560963c03b9b2d",
+   "fn": "post(uint256[4],bytes32[],uint256[3][])",
+   "block": 12192436,
+   "hardfork": "osaka",
+   "oldGasUsed": 100864,
+   "oldStatus": 1,
+   "oldEstimate": 100864,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 159164,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 160378
+  },
+  {
+   "hash": "0xa98f7b721818fd767c2280bcc05f58262d68d73a377d31689996377fbef93e84",
+   "fn": "receipt(uint256,address,bytes32,bytes)",
+   "block": 12192480,
+   "hardfork": "osaka",
+   "oldGasUsed": 70700,
+   "oldStatus": 1,
+   "oldEstimate": 71187,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 160320,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 162760
+  },
+  {
+   "hash": "0x4591ee3cfdde585e7351eb5f5a26f2684ee3ec77f5c32c6881e42fa8722b0f69",
+   "fn": "reveal(uint256,address,bool,uint8,bytes32,bytes)",
+   "block": 12192481,
+   "hardfork": "osaka",
+   "oldGasUsed": 185559,
+   "oldStatus": 1,
+   "oldEstimate": 190599,
+   "oldLogs": 3,
+   "sepoliaGasUsed": 467519,
+   "sepoliaLogs": 3,
+   "sepoliaEstimate": 484733
+  },
+  {
+   "hash": "0xc020b3894c1bc5233363481f3f4466e1c399285c746d074155493fbf5337e12d",
+   "fn": "report(uint256,address,(bytes32,uint64,uint64,uint64,uint64,uint64,uint64),bytes)",
+   "block": 12192482,
+   "hardfork": "osaka",
+   "oldGasUsed": 151235,
+   "oldStatus": 1,
+   "oldEstimate": 155039,
+   "oldLogs": 1,
+   "sepoliaGasUsed": 498815,
+   "sepoliaLogs": 1,
+   "sepoliaEstimate": 517023
+  },
+  {
+   "hash": "0x12012e39cceccd6ad1c74ab0e58b78bc77bfb5a5ca183f5f4fed30b1aee6a8e6",
+   "fn": "result(uint256)",
+   "block": 12192483,
+   "hardfork": "osaka",
+   "oldGasUsed": 330689,
+   "oldStatus": 1,
+   "oldEstimate": 329552,
+   "oldLogs": 2,
+   "sepoliaGasUsed": 698932,
+   "sepoliaLogs": 2,
+   "sepoliaEstimate": 705646
+  }
+ ],
+ "reads": {
+  "block": 12191910,
+  "reads": {
+   "FeesV3.maxDeposit(bytes32,uint256)": {
+    "sepolia": 78273,
+    "osaka": 83383
+   },
+   "FeesV3.currentPeriod()": {
+    "sepolia": 15507,
+    "osaka": 21347
+   },
+   "Panels.judges(uint256)": {
+    "sepolia": 22043,
+    "osaka": 27877
+   },
+   "Validators.validator(address)": {
+    "sepolia": 41558,
+    "osaka": 47186
+   },
+   "Validators.isDrawable(address)": {
+    "sepolia": 33831,
+    "osaka": 39474
+   },
+   "RaceV3.config()": {
+    "sepolia": "revert: reverted",
+    "osaka": "revert: reverted"
+   },
+   "FeesV3.roll() [reverts TooEarly]": {
+    "sepolia": "revert: TooEarly()",
+    "osaka": "revert: TooEarly()"
+   },
+   "FeesV3.announce(address) [already priced: no-op]": {
+    "sepolia": 26850,
+    "osaka": 32107
+   }
+  }
+ },
+ "probeTransactions": [
+  {
+   "fn": "deploy probe",
+   "hash": "0x9ce4fa1bd5289bc60704e2434b0e4c3f9ee02a2c416e893946e1bc36821b2358",
+   "estimate": 254161,
+   "gasLimit": 330409,
+   "gasUsed": 251002,
+   "status": 1,
+   "address": "0x784dc91c35897ad79306ae507e7289088555b32f",
+   "runtimeBytes": 28
+  },
+  {
+   "fn": "probe call",
+   "hash": "0x63e74e1250bf77090d7ab9b754e5606076eaa8255105d5896f4d4892cad21c91",
+   "gasLimit": 300000,
+   "gasUsed": 22716,
+   "status": 1,
+   "g0": 284998,
+   "set_seen_by_GAS": 110028,
+   "clear_seen_by_GAS": -97812
+  },
+  {
+   "fn": "probe call",
+   "hash": "0xa5ac76d9a446af8b97ac260f65707dc91eaa6ec0590d27c4be23af1620a56fd4",
+   "gasLimit": 1000000,
+   "gasUsed": 22716,
+   "status": 1,
+   "g0": 984998,
+   "set_seen_by_GAS": 110028,
+   "clear_seen_by_GAS": -97812
+  },
+  {
+   "fn": "probe call",
+   "hash": "0x6fa88a68a4ce3149a67348cf71fd4814cd58874507059e089e73652aef695863",
+   "gasLimit": 16777216,
+   "gasUsed": 22716,
+   "status": 1,
+   "g0": 16762214,
+   "set_seen_by_GAS": 110028,
+   "clear_seen_by_GAS": -97812
+  },
+  {
+   "fn": "probe call",
+   "hash": "0x2b3a8945d5907b09eefed340f44a47194e3250e6075f762e61db70ee5e84bd27",
+   "gasLimit": 17000000,
+   "gasUsed": 22716,
+   "status": 1,
+   "g0": 16762214,
+   "set_seen_by_GAS": 12108,
+   "clear_seen_by_GAS": 108
+  },
+  {
+   "fn": "probe call",
+   "hash": "0x2da1d865e256eed05db8e8e8d2de33ae219c6df1b4de4ebe048b4c3cc9e848a0",
+   "gasLimit": 20000000,
+   "gasUsed": 22716,
+   "status": 1,
+   "g0": 16762214,
+   "set_seen_by_GAS": 12108,
+   "clear_seen_by_GAS": 108
+  }
+ ],
+ "probeEthCallSplitBackend": [
+  {
+   "callGas": 200000,
+   "g0": 184998,
+   "g1": 74970,
+   "g2": 172782,
+   "set_cost_seen_by_GAS": 110028,
+   "clear_delta_seen_by_GAS": -97812
+  },
+  {
+   "callGas": 1000000,
+   "g0": 984998,
+   "g1": 874970,
+   "g2": 972782,
+   "set_cost_seen_by_GAS": 110028,
+   "clear_delta_seen_by_GAS": -97812
+  },
+  {
+   "callGas": 16000000,
+   "g0": 15984998,
+   "g1": 15874970,
+   "g2": 15972782,
+   "set_cost_seen_by_GAS": 110028,
+   "clear_delta_seen_by_GAS": -97812
+  },
+  {
+   "callGas": 16777216,
+   "g0": 16762214,
+   "g1": 16652186,
+   "g2": 16749998,
+   "set_cost_seen_by_GAS": 110028,
+   "clear_delta_seen_by_GAS": -97812
+  },
+  {
+   "callGas": 17000000,
+   "g0": 16762214,
+   "g1": 16750106,
+   "g2": 16749998,
+   "set_cost_seen_by_GAS": 12108,
+   "clear_delta_seen_by_GAS": 108
+  },
+  {
+   "callGas": 30000000,
+   "g0": 16762214,
+   "g1": 16750106,
+   "g2": 16749998,
+   "set_cost_seen_by_GAS": 12108,
+   "clear_delta_seen_by_GAS": 108
+  },
+  {
+   "callGas": 100000000,
+   "g0": 16762214,
+   "g1": 16750106,
+   "g2": 16749998,
+   "set_cost_seen_by_GAS": 12108,
+   "clear_delta_seen_by_GAS": 108
+  }
+ ],
+ "resultMeasure": {
+  "sepolia": {
+   "callGas": 892057,
+   "measuredGasUsed": 218571,
+   "txGasUsed": 698932
+  },
+  "osaka": {
+   "callGas": 892057,
+   "measuredGasUsed": 129751,
+   "txGasUsed": 330689
+  },
+  "gasOverhead": 50000,
+  "gasAllowance": 1000000
+ },
+ "estimateOnlyReverts": {
+  "startWindow(uint256)": "NotReady() x38, no transaction sent"
+ }
+}

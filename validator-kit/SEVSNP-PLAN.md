@@ -198,6 +198,7 @@ A second opinion on the report's signature, with AMD's tool as AWS documents
    ORACLE_RACE = "0x…", ORACLE_FAMILY = "anthropic/claude", ORACLE_JUDGE = "fake", ORACLE_IMAGE = "<image_digest>",
    ORACLE_HOST_ID = "aws:us-east-2", ORACLE_FIX_SOURCE = "radicle", ORACLE_MERGE_VIA = "radicle",
    ORACLE_SEAT_NODES = "chain", ORACLE_RADICLE_RID = "<the deployment record's RID>",
+   ORACLE_FROM_BLOCK = "<the deployment record's block>" (#312; ORACLE_LOG_RANGE only for a strict provider),
    ORACLE_REPO = "<the repository's working copy, which `oracle run` requires>" }` (model (a), the launch's: the
    chain's key by `RPC_API_KEY_SECRET_ARN`, listed in `extra_secret_arns`), `radicle_seed = "<the seed's Node
    ID>@<its address>:8776"` (seed/README.md: `rad self --nid` on the seed, and its Elastic IP), and `node_command =
@@ -423,6 +424,34 @@ Tests without AWS: `tests/test_genesis_validator.py` covers the fields from `evi
 from the script's own type string, the signature the deploy's `--genesis-dev-key` path makes, and the key absent from
 every output and file. `scripts/deploy-sepolia-e2e.sh` (scenario 4) signs with the tool and runs a dry run on an anvil
 with chain id 11155111.
+
+## The node's event scans on Sepolia (#312; the owner's decision, 2026-11-22)
+
+**What happened.** v3 was deployed on Sepolia on 2026-11-22 (first block 12192376, the record's `block`). The genesis
+validator's node (`run --until-idle 600`) stopped at its first pass: `Chain.seats()` (the Radicle delegates, read from
+the registry's `Registered` events) asked for blocks 0 to 12,192,494 in one `eth_getLogs`, and the provider refused
+it (`range 12192494 exceeds limit of 10000`). Every Sepolia provider bounds that range (Infura 10,000 blocks,
+publicnode 50,000; the free tiers of Alchemy 10, drpc 100, 1rpc 50); the devnets' short chains never showed it.
+
+**The fix (proof-of-fix#312, oracle only; the contracts are unchanged, their bytecode rc2's).** `Rpc.logs` asks in
+chunks of at most `ORACLE_LOG_RANGE` blocks (default 5,000) and halves a chunk a provider refuses as too large (or
+takes the smaller limit its message names), keeping that size. The node never scans before the deployment's first
+block, `ORACLE_FROM_BLOCK` (unset: found once from RaceV3's start by bisecting block times, about 25 reads), and
+reads each block's events once: a pass asks only for the blocks since the last one (and the last 32 again, against a
+reorganisation). Both settings go in `node_config` (the disk doesn't fix them, so the user data passes them):
+
+    node_config = { …, ORACLE_FROM_BLOCK = "12192376", ORACLE_LOG_RANGE = "5000" }
+
+`ORACLE_LOG_RANGE` needs setting only below the default, for a stricter provider (`"50"` for 1rpc, `"100"` for drpc's
+free tier); the node finds a smaller limit on its own anyway, at the cost of a few refused calls a run. The watcher's
+own scan is already bounded (`MAX_BLOCK_RANGE`, 2,000 blocks a run): inside Infura's and publicnode's limits, not the
+free tiers' of drpc and 1rpc.
+
+**What follows (the owner, 2026-11-22).** The fix changes the oracle node's image, so the measured disk's image digest
+changes, and with it the genesis registration's `image` and the registry's allowed image. In order: rebuild the disk
+(`scripts/checker-disk.sh --twice`, new values in "The build's values"), a new release candidate (rc3) on the same
+contracts, then a redeploy on Sepolia with a genesis validator registered on the new disk (the steps above again: a
+fresh attested boot, its fields and signature), each step at the owner's go.
 
 ## The build's values
 

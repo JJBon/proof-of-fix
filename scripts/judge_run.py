@@ -53,7 +53,7 @@ PLAN_V2 = Path(os.environ.get("POF_JUDGES_PLAN_V2") or ROOT / "reports" / "judge
 BACKOFF = float(os.environ.get("POF_JUDGE_BACKOFF", "5"))  # seconds: retries wait BACKOFF x 1, 2, 4, 8
 HTTP_TIMEOUT = float(os.environ.get("POF_JUDGE_HTTP_TIMEOUT", "600"))
 GATEWAY = "https://models-xxtlwrjxy7.gateway.bedrock-agentcore.us-east-1.amazonaws.com/inference"
-CLIENT_ID = "pof-judges-models"  # the gateway's judges caller (infra#192), with its own token budget
+CLIENT_ID = "pof-judges-models"  # the gateway's judges caller (platform#192), with its own token budget
 TOKEN_HELPER = Path(os.environ.get("MODEL_GATEWAY_TOKEN_HELPER")
                     or Path.home() / "dev" / "agentcore" / "scripts" / "model-gateway-token.sh")
 

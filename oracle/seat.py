@@ -1,4 +1,4 @@
-"""A role seat's node on the AWS devnet's seats host (proof-of-fix#152, infra#219): `python3 -m oracle seat <command>`
+"""A role seat's node on the AWS devnet's seats host (proof-of-fix#152, platform#219): `python3 -m oracle seat <command>`
 in the node's image, e.g. `seat run --until-idle 600` or `seat info`.
 
 It sets up what `scripts/devnet-seats.sh` sets up for each seat on the owner's laptop, then runs the node's own command
@@ -13,14 +13,14 @@ in this process:
   passes it one variable).
 - the devnet's settings, as devnet-seats.sh's (each may be set in the environment instead):
       ORACLE_KEYS=env  ORACLE_VERSION=2  ORACLE_RPC_API_KEY_HEADER=Basic  ORACLE_EXCHANGE_TRANSPORT=http
-      ORACLE_EXCHANGE_URL=<ORACLE_RPC>/exchange  ORACLE_REPO=example-org/pof-sandbox
+      ORACLE_EXCHANGE_URL=<ORACLE_RPC>/exchange  ORACLE_REPO=clouddemos-internal/pof-sandbox
       FORGEJO_USER=pof-validator-bot  ORACLE_JUDGE=fake  ORACLE_ROUND_TIMEOUT=900 (the relay's seal window)
       ORACLE_POLL=5  ORACLE_SANDBOX=api (the host's Docker socket, DOCKER_SOCKET: the fixes' tests in the pinned
       sandbox image, no network; the image has no Docker CLI)
 - its working directory, SEAT_WORK (required for `run`), mounted at the same path inside and outside the container,
   since the sandbox's bind mount of a checkout is resolved by the host's Docker: ORACLE_SRC_ROOT=<SEAT_WORK>/src,
   ORACLE_RECEIPTS=<SEAT_WORK>/receipts, and ORACLE_REPOS=<SEAT_WORK>/repos.json written from ORACLE_REPO and
-  SEAT_FORGE_URL (default https://git.example.com) unless ORACLE_REPOS names one.
+  SEAT_FORGE_URL (default https://git.clouddemosaws.com) unless ORACLE_REPOS names one.
 
 It refuses, before any chain call: ORACLE_JUDGE other than fake (a real model needs a later change, proof-of-fix#160),
 an RPC or relay URL with a credential in it or over plain HTTP (SEAT_ALLOW_HTTP=1 is for a local test), and a missing or
@@ -39,11 +39,11 @@ from pathlib import Path
 SECRETS = (("ORACLE_PRIVATE_KEY", "key"), ("ORACLE_RPC_TOKEN", "rpc-auth"), ("FORGEJO_TOKEN", "repo-token"))
 DEFAULTS = {
     "ORACLE_KEYS": "env", "ORACLE_VERSION": "2", "ORACLE_RPC_API_KEY_HEADER": "Basic",
-    "ORACLE_EXCHANGE_TRANSPORT": "http", "ORACLE_REPO": "example-org/pof-sandbox",
+    "ORACLE_EXCHANGE_TRANSPORT": "http", "ORACLE_REPO": "clouddemos-internal/pof-sandbox",
     "FORGEJO_USER": "pof-validator-bot", "ORACLE_JUDGE": "fake", "ORACLE_ROUND_TIMEOUT": "900", "ORACLE_POLL": "5",
     "ORACLE_SANDBOX": "api", "PYTHONDONTWRITEBYTECODE": "1",
 }
-DEFAULT_FORGE = "https://git.example.com"
+DEFAULT_FORGE = "https://git.clouddemosaws.com"
 PLAIN_URL = re.compile(r"^https?://[A-Za-z0-9._-]+(:[0-9]+)?(/[A-Za-z0-9._/-]*)?$")
 CREDENTIAL = re.compile(r"^[^:\s]+:\S+$")
 

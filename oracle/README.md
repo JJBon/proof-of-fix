@@ -25,7 +25,7 @@ a bounty, seals the loop's bad and good fixes, and runs three registered nodes p
 devnet oracle key (5) and the record's quorum (3). Keys come from OpenBao, through `scripts/devnet-keys.sh`, and pass
 only through the environment:
 ```
-export BAO_ADDR=https://vault.example.com && bao login -method=oidc role=admin
+export BAO_ADDR=https://vault.clouddemosaws.com && bao login -method=oidc role=admin
 scripts/devnet.sh up && scripts/devnet.sh deploy     # if not already deployed
 scripts/oracle-run.sh --devnet                       # adds a bounty and two submissions; the devnet keeps running
 ```

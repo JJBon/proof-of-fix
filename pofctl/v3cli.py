@@ -111,7 +111,8 @@ class RaceV3:
     def __init__(self, rpc, record: dict) -> None:
         self.rpc, self.record = rpc, record
         # NodeV3Local's record names the race at its top; DeploySepolia's under `addresses`
-        self.chain = v3.Chain(rpc, record.get("race") or (record.get("addresses") or {}).get("race"))
+        self.chain = v3.Chain(rpc, record.get("race") or (record.get("addresses") or {}).get("race"),
+                              first_block=int(record.get("block", 0)))  # scans start at the deployment's block (#312)
         self.address = self.chain.race
         self.coin = self.chain.coin()
         self.book = checksum(rpc.view(self.address, "solverBook()", ["address"])[0])

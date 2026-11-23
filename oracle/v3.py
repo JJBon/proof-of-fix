@@ -240,17 +240,57 @@ def _named(fields: list, row) -> dict:
 
 class Chain:
     """RaceV3 and the contracts it names, read over JSON-RPC (oracle.rpc.Rpc). The node's writes go through its
-    wallet (oracle/node_v3.py) and the `onchain` transport (oracle/transport.py)."""
+    wallet (oracle/node_v3.py) and the `onchain` transport (oracle/transport.py).
+
+    Event scans (#312) never start before `first_block`, the deployment's first block (the node's ORACLE_FROM_BLOCK,
+    pofctl's record `block`, or `find_first_block`). A scan up to the latest block keeps what it read up to
+    `reorg_depth` blocks back, so the next one asks only for the blocks after that: a node polling every 2 s asks for a
+    few dozen blocks a pass, not for everything since its start."""
 
     version = 3
+    reorg_depth = 32  # blocks a scan reads again each time: past any Sepolia reorg, or a provider node that lags
+    first_block_margin_s = 3600  # find_first_block looks this far before RaceV3's start (clock skew; ~300 blocks)
 
-    def __init__(self, rpc, race: str) -> None:
+    def __init__(self, rpc, race: str, first_block: int = 0) -> None:
         self.rpc, self.race = rpc, checksum(race)
         panels, fees, pool, registry, heads, coin, start = rpc.view(
             race, "contracts()", ["address", "address", "address", "address", "address", "address", "uint256"])
         self.panels, self.fees, self.pool = checksum(panels), checksum(fees), checksum(pool)
         self.registry, self.heads, self._coin, self.start = checksum(registry), checksum(heads), checksum(coin), start
         self._chain_id = self._domain = self._repo = None
+        self.first_block = max(int(first_block), 0)
+        self._scans: dict = {}  # (address, topics, first block) -> (the logs up to `done`, done)
+
+    def find_first_block(self) -> int:
+        """The first block from an hour before RaceV3's start, by bisection on the blocks' timestamps: where the
+        deployment's events can begin, for a node that isn't told (ORACLE_FROM_BLOCK). RaceV3's start is the deploying
+        script's block time, read before any of its transactions is mined (DeploySepolia.s.sol, NodeV3Local.s.sol), and
+        the registry, its genesis registration and Panels are deployed in that same broadcast. About 25 block reads."""
+        target, lo, hi = self.start - self.first_block_margin_s, 0, self.block()
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if int(self.rpc.call("eth_getBlockByNumber", [hex(mid), False])["timestamp"], 16) < target:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+
+    def _logs(self, address: str, from_block: int, topics: list, to_block: int | None = None) -> list:
+        """`address`'s events with `topics`, from `from_block` (never before `first_block`) to `to_block` or the latest
+        block. Up to the latest, the blocks older than `reorg_depth` are read once and kept (see the class)."""
+        start = max(from_block, self.first_block)
+        if to_block is not None:
+            return self.rpc.logs(address, start, topics, to_block) if to_block >= start else []
+        key = (address, tuple(topics), start)
+        kept, done = self._scans.get(key, ([], start - 1))
+        head = self.rpc.block()
+        fresh = self.rpc.logs(address, done + 1, topics, head) if head > done else []
+        safe = head - self.reorg_depth
+        if safe > done:
+            kept = kept + [log for log in fresh if int(log["blockNumber"], 16) <= safe]
+            fresh = [log for log in fresh if int(log["blockNumber"], 16) > safe]
+            self._scans[key] = (kept, safe)
+        return kept + fresh
 
     def chain_id(self) -> int:
         if self._chain_id is None:
@@ -303,7 +343,7 @@ class Chain:
         """The seats `key` was given: Panels' Seated(pid, slot, key, sealBy) events naming it."""
         topics = ["0x" + keccak256(SEATED.encode()).hex(), None, "0x" + word(key).hex()]
         out = []
-        for log in self.rpc.logs(self.panels, from_block, topics, to_block):
+        for log in self._logs(self.panels, from_block, topics, to_block):
             slot, seal_by = abi.decode(["uint256", "uint256"], abi.hexdata(log["data"]))
             out.append({"pid": int(log["topics"][1], 16), "slot": slot, "sealBy": seal_by,
                         "block": int(log["blockNumber"], 16)})
@@ -361,11 +401,14 @@ class Chain:
         """Active, bonded at least BOND_FLOOR and in standing: the set #251's L5 counts as seated."""
         return self.rpc.view(self.registry, "isDrawable(address)", ["bool"], key)[0]
 
-    def seats(self, from_block: int = 0) -> list:
+    def seats(self, from_block: int | None = None) -> list:
         """The validators seated on-chain (#251 L11, model (a): the Radicle repository's delegates): every key the
-        registry's Registered events name that `isDrawable` now, checksummed and sorted."""
+        registry's Registered events name that `isDrawable` now, checksummed and sorted. The events are read from the
+        deployment's first block (a validator registered long ago is still a delegate), each block once (#312);
+        `isDrawable` is asked every time, since it changes."""
         topic = "0x" + keccak256(VALIDATOR_REGISTERED.encode()).hex()
-        keys = {checksum("0x" + log["topics"][1][-40:]) for log in self.rpc.logs(self.registry, from_block, [topic])}
+        start = self.first_block if from_block is None else from_block
+        keys = {checksum("0x" + log["topics"][1][-40:]) for log in self._logs(self.registry, start, [topic])}
         return sorted(k for k in keys if self.is_drawable(k))
 
     def repo(self) -> bytes:
@@ -423,13 +466,13 @@ class Chain:
     def committed(self, from_block: int, to_block: int | None = None) -> list:
         topic = "0x" + keccak256(COMMITTED.encode()).hex()
         return [{"bounty": int(log["topics"][1], 16), "submission": int(log["topics"][2], 16),
-                 "block": int(log["blockNumber"], 16)} for log in self.rpc.logs(self.race, from_block, [topic], to_block)]
+                 "block": int(log["blockNumber"], 16)} for log in self._logs(self.race, from_block, [topic], to_block)]
 
     def registered(self, from_block: int, to_block: int | None = None) -> list:
         """RaceV3's Registered(issue, reporter, check): each registration and its check's submission id."""
         topic = "0x" + keccak256(REGISTERED.encode()).hex()
         return [{"issue": int(log["topics"][1], 16), "submission": abi.decode(["uint256"], abi.hexdata(log["data"]))[0],
-                 "block": int(log["blockNumber"], 16)} for log in self.rpc.logs(self.race, from_block, [topic], to_block)]
+                 "block": int(log["blockNumber"], 16)} for log in self._logs(self.race, from_block, [topic], to_block)]
 
     # ----- FeesV3 -----
 

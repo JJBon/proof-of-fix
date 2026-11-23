@@ -1,0 +1,19 @@
+{
+  "ORACLE_VERSION": "3",
+  "ORACLE_RPC": "http://10.82.0.145:8545",
+  "ORACLE_RACE": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "ORACLE_FAMILY": "fake-6",
+  "ORACLE_JUDGE": "direct:bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "ORACLE_IMAGE": "0xd95b0458a321963e59ab86a8575ef67dca7bdf5db55c86c3098764dc55f887d1",
+  "ORACLE_HOST_ID": "aws:us-east-2",
+  "ORACLE_FIX_SOURCE": "radicle",
+  "ORACLE_MERGE_VIA": "radicle",
+  "ORACLE_SEAT_NODES": "chain",
+  "ORACLE_RADICLE_RID": "rad:zFKjTp1E3z6zzcizXoGuMQsZkm6c",
+  "ORACLE_REPO": "pof/stats",
+  "ORACLE_POLL": "2",
+  "ORACLE_MODEL_ALLOW": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "ORACLE_SPEND_DAILY_USD": "1.50",
+  "ORACLE_SPEND_MONTHLY_USD": "1.50",
+  "ORACLE_MAX_CALLS": "60"
+}

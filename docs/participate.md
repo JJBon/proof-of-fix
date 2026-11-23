@@ -1,4 +1,6 @@
-# Taking part in the proof-of-fix devnet
+# Taking part in the proof-of-fix devnet (v2, superseded)
+
+> **v3 is live on Sepolia and replaces this devnet.** To take part now, start at [`docs/take-part.md`](take-part.md). This page stays as the record of the private v2 devnet.
 
 You run the AI check for open-source fixes on **your own AWS account**, and the **contract pays you** for every check it counts. This guide is for engineers invited to the private devnet (proof-of-fix#104).
 

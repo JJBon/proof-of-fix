@@ -9,9 +9,9 @@ You need: git, Python 3.9 or later, [Radicle 1.10.3](https://radicle.xyz) (`rad`
 
 <!-- test: values -->
 ```bash
-export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint>
-export RID=<proof-of-fix's Radicle id, rad:z…, from the deployment record>
-export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record
+export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint: Infura, Alchemy or your own>
+export RID=rad:zyZXC9NqVuse8nXdpv7iYRScDHsN           # proof-of-fix on Radicle
+export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record (RaceV3 0xD622…9829, block 12196904)
 export BOUNTY=<the bounty's number, from its issue's comments>
 ```
 
@@ -85,7 +85,8 @@ scripts/pofctl --v3 claim --bounty "$BOUNTY" --patch "$(field fix < "$SUB")" --b
 ```
 
 The claim opens your seal; a passed fix can still be challenged until its verdict is final, about a day later on
-Sepolia.
+Sepolia once 7 or more validators are active. At launch, while fewer than 7 validators are active, a panel has one judge: its verdict waits 7 days for
+challenges and is held until enough validators are active to judge one (design L16), so expect days, not hours.
 
 <!-- test: wait-final -->
 ```bash

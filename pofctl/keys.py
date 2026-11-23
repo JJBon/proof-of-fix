@@ -79,7 +79,7 @@ def key(role: str, src: str) -> int:
             raise KeyError_(f"{name} isn't set")
         return int(raw, 16)
     if src == "openbao":
-        env = {**os.environ, "BAO_ADDR": os.environ.get("BAO_ADDR", "https://vault.example.com")}
+        env = {**os.environ, "BAO_ADDR": os.environ.get("BAO_ADDR", "https://vault.clouddemosaws.com")}
         try:
             out = subprocess.run(["bao", "kv", "get", f"-mount={MOUNT}", "-field=key", f"{PREFIX}/{role}"],
                                  capture_output=True, text=True, timeout=30, env=env)

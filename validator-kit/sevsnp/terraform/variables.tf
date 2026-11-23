@@ -74,7 +74,7 @@ variable "node_command" {
 }
 
 variable "node_config" {
-  description = "The node's ORACLE_* settings, as data in the user data (never run): e.g. ORACLE_VERSION, ORACLE_RPC, ORACLE_RACE, ORACLE_REPO, ORACLE_FAMILY, ORACLE_JUDGE, ORACLE_MODEL_ALLOW, ORACLE_IMAGE, ORACLE_SPEND_*. Secrets only by ARN (ORACLE_PRIVATE_KEY_SECRET_ARN, RPC_API_KEY_SECRET_ARN, MODEL_API_KEY_SECRET_ARN); the signing key's is set from this module's secret. Empty: the boot only attests."
+  description = "The node's ORACLE_* settings, as data in the user data (never run): e.g. ORACLE_VERSION, ORACLE_RPC, ORACLE_RACE, ORACLE_REPO, ORACLE_FAMILY, ORACLE_JUDGE, ORACLE_MODEL_ALLOW, ORACLE_IMAGE, ORACLE_SPEND_*, ORACLE_FROM_BLOCK (the deployment record's block: no event scan starts before it) and ORACLE_LOG_RANGE (the most blocks one eth_getLogs asks for, default 5000; lower for a strict provider). Secrets only by ARN (ORACLE_PRIVATE_KEY_SECRET_ARN, RPC_API_KEY_SECRET_ARN, MODEL_API_KEY_SECRET_ARN); the signing key's is set from this module's secret. Empty: the boot only attests."
   type        = map(string)
   default     = {}
 

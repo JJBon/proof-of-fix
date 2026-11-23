@@ -1,0 +1,386 @@
+i-05e5c4fc359d06b38	[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI Amazon Elastic Block Store vol002d1ec1e25cadf34 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+BdsDxe: starting Boot0001 "UEFI Amazon Elastic Block Store vol002d1ec1e25cadf34 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+EFI stub: Loaded initrd from LINUX_EFI_INITRD_MEDIA_GUID device path
+EFI stub: Measured initrd data into PCR 9
+[!p]104[?7h[!p]104[?7h[    7.158842] pof-data.sh[394]: pof-data: data volume /dev/nvme1n1 mounted; scratch wiped
+[    7.458476] pof-radicle.sh[480]: POF-RADICLE nid z6MkwbkgYBtcn47Cu3rRjEvGRLjEvWaoDMovaMaH5VLEVYRt
+[    7.472951] pof-radicle.sh[480]: POF-RADICLE repository rad:z4631BLpv1ypZm2YuvXuX7Cz2ugMr; seed z6MkkeQUvaykiczzJmq2WY9ENBcQDWyrVy774eWBcfrabRfk@10.82.0.145:8776; listens on no address (outbound only)
+[    8.235288] pof-radicle.sh[517]: POF-RADICLE ready: rad:z4631BLpv1ypZm2YuvXuX7Cz2ugMr: ready in 380 ms (sync: ok)
+[   14.916735] pof-images.sh[709]: pof-images: loaded pof-oracle-node@sha256:db017921b364cde854d7d60794a56a70e53225e2dc490e3f7a912723ce87961e
+[   17.899286] pof-images.sh[709]: pof-images: loaded pof-test-image@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5
+[   18.065707] pof-attest.sh[750]: POF-ATTEST roothash 6ab872944df4a79fecd92f91d5b258b55aacea77774e7ff8b5fa3fb4e0109790
+[   18.084798] pof-attest.sh[750]: POF-ATTEST nonce a516b08ee227bec2d18bb0c4df9a24e9
+[   18.106091] pof-attest.sh[750]: POF-ATTEST pcrs sha384 4=6B7109033D62265716ED4EFFA6F949915D8A62B851C1135B9600F3949AD8B9DC3731CCFFD177C1A4EB59774965C677E2 7=98441C7F7625D10058C47683AEC486CE311C633235EB555593A7EE791121E3578AE72D04ECEF661F272D59058B77AF35 12=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+[   20.420561] pof-attest.sh[750]: POF-ATTEST snp-summary {"chip_id": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "firmware": 67117025, "host_data": "0000000000000000000000000000000000000000000000000000000000000000", "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766", "policy": "0x2030000", "report_data": "12645c0f36ddedd94ef44b63721d424d4c963e9c7a3ec5d335794de5495dbf14acfdeea6977a206b7e1a30c8005cfae4c41e7cf3d3ba6dabff5a53b04bc4ced7", "reported_tcb": {"boot_loader": 4, "microcode": 225, "snp": 31, "tee": 0}, "signer": "vlek", "version": 5, "vmpl": 0}
+[   20.507672] pof-attest.sh[750]: POF-ATTEST snp-report BQAAAAAAAAAAAAMCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAEAAAAAAAf4ScAAAAAAAAABAAAAAAAAAASZFwPNt3t2U70S2NyHUJNTJY+nHo+xdM1eU3lSV2/FKz97qaXeiBrfhowyABc+uTEHnzz07ptq/9aU7BLxM7XeonM6qugu93cT3dazKPvFdH5v4q8zcYRXPrX+46uET3z7gu1Dvo025xTrgZbHcdmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADhG5xsVsT6M6ys224lcMdsSJR+inRHW5W5EJRurgInTv//////////////////////////////////////////BAAAAAAAH+EZAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAH+EDOgEAAzoBAAQAAAAAAB/h7w8AAAAAAADvDwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlcZWZiWVd9a9vgpujQ9o2WuVAFGfx8tEv+ii+Ow+HD[2026-11-23T14:50:37.864926]VqipHf0BKN3UAk1iisvNBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4zMp5H9dlo81lnncpkchoLnToXYRZnXhA6ZCySFJSXZ7FbNjoJbaQD/SKNXboWhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+[   20.709492] pof-attest.sh[750]: POF-ATTEST snp-cert vlek MIIFIzCCAtegAwIBAgIBADBBBgkqhkiG9w0BAQowNKAPMA0GCWCGSAFlAwQCAgUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAgUAogMCATAwgYAxFDASBgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZpY2VzMRcwFQYDVQQDDA5TRVYtVkxFSy1NaWxhbjAeFw0yNjEwMDEwNTAxMjNaFw0yNzEwMDEwNTAxMjNaMHoxFDASBgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZpY2VzMREwDwYDVQQDDAhTRVYtVkxFSzB2MBAGByqGSM49AgEGBSuBBAAiA2IABAWMGVnFsB2UObp4NXjD6opPhW0TUOVtsl2c41NpFpH2Y++3IYChvwOY+8mXmJmpMbRSjIjMpBa8XeHOacPThgQSl5hj4kL7yNo92tPQ0jpkm5DuywAbXMAKYJXLDR+Lo6OB8jCB7zAQBgkrBgEEAZx4AQEEAwIBADAUBgkrBgEEAZx4AQIEBxYFTWlsYW4wEQYKKwYBBAGceAEDAQQDAgEEMBEGCisGAQQBnHgBAwIEAwIBADARBgorBgEEAZx4AQMEBAMCAQAwEQYKKwYBBAGceAEDBQQDAgEAMBEGCisGAQQBnHgBAwYEAwIBADARBgorBgEEAZx4AQMHBAMCAQAwEQYKKwYBBAGceAEDAwQDAgEfMBIGCisGAQQBnHgBAwgEBAICAOEwLAYJKwYBBAGceAE[2026-11-23T14:50:38.064932]FBB8WHUNOPWNjLXVzLWVhc3QtMi5hbWF6b25hd3MuY29tMEEGCSqGSIb3DQEBCjA0oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0BAQgwDQYJYIZIAWUDBAICBQCiAwIBMAOCAgEALJ2R/RmCr4eP+pGDYntCcZiR7xw+DSdQTmv7BicHa4a06MuJQA+dXNV9oMy4hFI72T/XNEzHhKfbxL/CPvKdFBqzhf0Zv4Jz8axPP/8UxnEvsuyoixjcoN1OC7S8o/B2tRq13ToMlFhHoFTt1TwR4nwXI9s4UCJrwadozQqjpf3MnXLxlOVNzrBLtEqaVT2OM+/Bzkrk+7UxVrf/1QeHm+YXD9O16sex2iE536bp4xg2l37+/cLdGF4o+70whhh3Cqr7kCciurgFI0rrDVUUOHPwyz+WWuIDbpBpShPiQQkB1+Bvzk1lCX10S6XrwJJY8Zm5q4IHljgQb89JF/+QMf2UAhhktvbhQxDKi2BrSkDzK/8BS/YUvseb48ujNrKv14GE9wvt2r9/IvgvMYWwI47YMlOdHNBCg48wKktMEA5IeJVrz9KDCMx5lh7EcWDpfOvQZLYCJ3qbJzw8M/Qxdt/Xg2KcXZbFf6DfkzpkoiJLtIjA4tTBStOHEzoZ/S1EMEqN5XSggrcNCOeM+d9jHDvNQg93hYGrKeoK6gZK/bhGgwlQiNT8kbGFT8KkJaCPv4w95NZz3era4ZIV9Kk4FusZXzt+O9CzhjiA0rB2LMPtFVbfskmIeEhTwleoY1utv9CK9ky9Uq09jofUd/uxMdMA9+ftczyrsLWMjSxPGAQ=
+[   21.332753] pof-attest.sh[750]: POF-ATTEST nitrotpm hEShATgioFkTF79pbW9kdWxlX2lkeCdpLTA1ZTVjNGZjMzU5ZDA2YjM4LXRwbTAwMDAwMDAwMDAwMDAwMDBmZGlnZXN0ZlNIQTM4NGl0aW1lc3RhbXAbAAABogjjN2Ftbml0cm90cG1fcGNyc7gYAFgw6txlDrmrxUKvH4tUg0nx/75qdJMbgsIhZ9XR944nqqOG8B4p8gKphNTuglmVl/eYAVgwrjGMGpngz3D4L7nZDEy42sPr/MXdNP6wQ3vVtRSGStRLM6+7TMIMMsMSnuBjVu94AlgwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEA1gwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEBFgwa3EJAz1iJlcW7U7/pvlJkV2KYrhRwRNblgDzlJrYudw3Mcz/0XfBpOtZd0llxnfiBVgwBTumxpsCHdW0co4OMXvNeuQp+5Jc6D5US3VQlBDRMD1S+VSJWibSCWZ/viVuTDpsBlgwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEB1gwmEQcf3Yl0QBYxHaDrsSGzjEcYzI161VVk6fueREh41eK5y0E7O9mHyctWQWLd681CFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACVgw8hNfh37nT6eMXVlIFLbHR30PbmDuy9A/G+ioz5YP6IJB4tJ3thN3+peFA6LojAN8ClgwYy7p7VlK6xhlAaT4r/0sJQ9bSsrXLHj0Mj4djMuusht32usMAq56GFwSplBNfuCFC1gwIb0M38tOuiuO2tFoDuXd+Pw2rDEI3ZJJfzl2EQ+V[2026-11-23T14:50:38.664946]ETPab7gZEWac2lGprHrT1QRmDFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADVgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADlgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD1gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEVgw////////////////////////////////////////////////////////////////Elgw////////////////////////////////////////////////////////////////E1gw////////////////////////////////////////////////////////////////FFgw////////////////////////////////////////////////////////////////FVgw////////////////////////////////////////////////////////////////Flgw////////////////////////////////////////////////////////////////F1gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa2NlcnRpZmljYXRlWQJzMIICbzCCAfWgAwIBAgIEawRSvjAKBggqhkjOPQQDAzCBjjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xEDAOBgNVBAcMB1NlYXR0bGUxDzANBgNVBAoMBkFtYXp[2026-11-23T14:50:38.764970]vbjEMMAoGA1UECwwDQVdTMTkwNwYDVQQDDDBpLTA1ZTVjNGZjMzU5ZDA2YjM4LnVzLWVhc3QtMi5hd3Mubml0cm8tZW5jbGF2ZXMwHhcNMjYxMTIzMTQ1MDM1WhcNMjYxMTIzMTc1MDM4WjCBkzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xEDAOBgNVBAcMB1NlYXR0bGUxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMT4wPAYDVQQDDDVpLTA1ZTVjNGZjMzU5ZDA2YjM4LXRwbTAwMDAwMDAwMDAwMDAwMDAudXMtZWFzdC0yLmF3czB2MBAGByqGSM49AgEGBSuBBAAiA2IABHRcQ55HTfFSDr33aPaUngmjbqZXUg0JmqDqw2ef+Uq73fRgLMTH7T6blXEZPpIPcuRXbqeTGtosjLboLHDkmVxQRoZpAz8SZ/aKYP2M9HuPxVbLyL3JXHBxh2fJomcjU6MdMBswDAYDVR0TAQH/BAIwADALBgNVHQ8EBAMCBsAwCgYIKoZIzj0EAwMDaAAwZQIwEuNKuK/aCOzDn5CsuhPQCy1Ao7kQG7TlmOHI0/fa43dpwElZnflMJJGLduJTm7ueAjEAo/9iPYiHruEq6aZ9evEuGFd/vwVvwSUq+RWA70ggZB05pSSczoBdRDtjfi8wwAOuaGNhYnVuZGxlhFkCFTCCAhEwggGWoAMCAQICEQD5MXVoG5Cv4R1GzLTk5/hWMAoGCCqGSM49BAMDMEkxCzAJBgNVBAYTAlVTMQ8wDQYDVQQKDAZBbWF6b24xDDAKBgNVBAsMA0FXUzEbMBkGA1UEAwwSYXdzLm5pdHJvLWVuY2xhdmVzMB4XDTE5MTAyODEzMjgwNVoXDTQ5MTAyODE0MjgwNVowSTELMAkGA1UEBhMCVVMxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMRswGQYDVQQDDB[2026-11-23T14:50:38.864953]Jhd3Mubml0cm8tZW5jbGF2ZXMwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAT8AlTrpgjB82hw4prakL5GODKSc26JS//2ctmJREtQUeU0pLH22+PAvFgaMrexdgcO3hLWmj/qIRtm51LPfdHdCV9vE3D0FwhD2dwQASHkz2MBKAlmRIfJeWKEME3FP/SjQjBAMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFJAltQ3ZBUfnlsOW+nKdz5mp30uWMA4GA1UdDwEB/wQEAwIBhjAKBggqhkjOPQQDAwNpADBmAjEAo38vkaHJvV7nuGJ8FpjSVQOOHwND+VtjqWKMPTmAlUWhHry/LjtV2K7ucbTD1q3zAjEAovObFgWycCil3UugabUBbmW0+96P4AYdalMZf5za9dlDvGH8K+sDy2/ujSMC89/2WQLCMIICvjCCAkSgAwIBAgIQDAD7rw+BxnlNq8PGk50WNzAKBggqhkjOPQQDAzBJMQswCQYDVQQGEwJVUzEPMA0GA1UECgwGQW1hem9uMQwwCgYDVQQLDANBV1MxGzAZBgNVBAMMEmF3cy5uaXRyby1lbmNsYXZlczAeFw0yNjExMTkxNjIwNTlaFw0yNjEyMDkxNzIwNTlaMGQxCzAJBgNVBAYTAlVTMQ8wDQYDVQQKDAZBbWF6b24xDDAKBgNVBAsMA0FXUzE2MDQGA1UEAwwtYjBlM2QwYTM0ZTcxNjM4Mi51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE+Aabh7s84oA19KylwpJPPEJIJ+insQMPz/c17m4CMhMwOiCjBYY+I+AuFrzXptVWJpfFXak4dkNq5X9RwmWTpLaaRlOph1+68MMF+3HyWtXZf5CO7TjPRlNwAHHnE/uso4HVMIHSMBIGA1UdEwEB/wQIMAYBAf8CAQIwHwYDVR0jBBgwFoAUkCW1DdkFR[2026-11-23T14:50:39.064973]+eWw5b6cp3PmanfS5YwHQYDVR0OBBYEFGs4FZDlASzXeSvXQO34Zf5WqxxbMA4GA1UdDwEB/wQEAwIBhjBsBgNVHR8EZTBjMGGgX6BdhltodHRwOi8vYXdzLW5pdHJvLWVuY2xhdmVzLWNybC5zMy5hbWF6b25hd3MuY29tL2NybC9hYjQ5NjBjYy03ZDYzLTQyYmQtOWU5Zi01OTMzOGNiNjdmODQuY3JsMAoGCCqGSM49BAMDA2gAMGUCMQD9jsQIJl3X9xWvJTyTp1AqzQr31X2tC2mZXmNKkVcCREys1PRPGM+fZw1bd5ejHiACMHB+DvP17WeN5/m3owqJj3CHCDmzmmiFoLrC7l8McCZQKgxgDTwwUnI7e4t7I9bVSFkDGTCCAxUwggKaoAMCAQICEEr6rqKnHS51efWUfgyWdHMwCgYIKoZIzj0EAwMwZDELMAkGA1UEBhMCVVMxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMTYwNAYDVQQDDC1iMGUzZDBhMzRlNzE2MzgyLnVzLWVhc3QtMi5hd3Mubml0cm8tZW5jbGF2ZXMwHhcNMjYxMTIzMDc1NDEzWhcNMjYxMTI5MDE1NDEzWjCBiTE8MDoGA1UEAwwzYThhZTUzNzBhZjg0ZDc0Yy56b25hbC51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMQwwCgYDVQQLDANBV1MxDzANBgNVBAoMBkFtYXpvbjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAldBMRAwDgYDVQQHDAdTZWF0dGxlMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEZmkYZYnngnMLNuXDNvXMM+rhQnctsL2uyaxp1iYQPFYg33NBdXgJq4M3XgvLWHW6AioLloSE0v1xpiE2ejgrSAb7gC3eS15D8cIzUOPky4JbWfWEurWS07gqcZkeN9l9o4HqMIHnMBIGA1UdEwEB/wQI[2026-11-23T14:50:39.164951]MAYBAf8CAQEwHwYDVR0jBBgwFoAUazgVkOUBLNd5K9dA7fhl/larHFswHQYDVR0OBBYEFAEvMr3WK9wyY8Rg9Q9UlsvajKCcMA4GA1UdDwEB/wQEAwIBhjCBgAYDVR0fBHkwdzB1oHOgcYZvaHR0cDovL2NybC11cy1lYXN0LTItYXdzLW5pdHJvLWVuY2xhdmVzLnMzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tL2NybC80MjI5MmI1MC1lZDY3LTRmNmYtOGUxMS0wYjk0Y2UzYTI0NjYuY3JsMAoGCCqGSM49BAMDA2kAMGYCMQDT8UMKt5DbT/9A3nUC78C6etulUSddK/g6cRqX+HIe/GgPl5PXQzUoIH0/Y8EGh6sCMQCoXlXaDZtkdiPwsFrRKg6m200i6E/vzY5Gm3WNLCjkeUkTSvwsWzBjHrRqf/ms/2tZAsEwggK9MIICRKADAgECAhQ+2WgdRJgNVDWmMUtS/qCpx/NdCjAKBggqhkjOPQQDAzCBiTE8MDoGA1UEAwwzYThhZTUzNzBhZjg0ZDc0Yy56b25hbC51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMQwwCgYDVQQLDANBV1MxDzANBgNVBAoMBkFtYXpvbjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAldBMRAwDgYDVQQHDAdTZWF0dGxlMB4XDTI2MTEyMzE0NDk1M1oXDTI2MTEyNDE0NDk1M1owgY4xCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApXYXNoaW5ndG9uMRAwDgYDVQQHDAdTZWF0dGxlMQ8wDQYDVQQKDAZBbWF6b24xDDAKBgNVBAsMA0FXUzE5MDcGA1UEAwwwaS0wNWU1YzRmYzM1OWQwNmIzOC51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEpdKhCeusb7DL3TgFZmBnnRE[2026-11-23T14:50:39.264989]vNL6sOo+MMDqGpOAuwZPHermwSeSriEWKR5lTILT60hpwVkhO3eIjKgL6Dlr7mspVX7iZ8Tr3ruy0jA/Hi6W8mQATkryQkYTmaqV8ZM15o2YwZDASBgNVHRMBAf8ECDAGAQH/AgEAMA4GA1UdDwEB/wQEAwICBDAdBgNVHQ4EFgQU0BAoT4/cghSSBjxlU15MmphCORAwHwYDVR0jBBgwFoAUAS8yvdYr3DJjxGD1D1SWy9qMoJwwCgYIKoZIzj0EAwMDZwAwZAIwG0XLEdggDcQO7LoovdiUyuPHlsDgE0svJq/o+6csFnOXjHtYhIHLIAK68EIZvz4ZAjBFGa7JTDIL5vQZFO1tz3+Y280Dx+cV52lbQXsHFm5DpgRDlbcLCVCcWfgyWcChuttqcHVibGljX2tlefZpdXNlcl9kYXRhWGA2MmQyMTU0MjY5OTMwMTY0ZDlkYjRjZmJkMjFhOTZmM2VlMTI0NmZiNzVhYzA3MjQ3MmVjNDJmZjc3OWM4YmI4NmFiNTAyZTBlNGRkOTkzZTRjNTVjNTFjMTQ2YTNlZGVlbm9uY2VYIGE1MTZiMDhlZTIyN2JlYzJkMThiYjBjNGRmOWEyNGU5/1hgEIHMQuS5ZA4NwvVB98pztxUigxPqPnXxfEspDfmzn/HjiG5M3uA55T3g+LVENFFsrdZVMfHNvTABqjco45yBw4RnpSY/B2Qx8TZo55Yn5eQ6dKyktzWZIhP3nDozLVtB
+[   23.086885] pof-attest.sh[750]: POF-ATTEST attested-check {"listed": ["pof-oracle-node@sha256:db017921b364cde854d7d60794a56a70e53225e2dc490e3f7a912723ce87961e", "pof-test-image@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5"], "refusal": "attested mode: the image pof-unlisted-probe@sha256:0000000000000000000000000000000000000000000000000000000000000000 isn't on the measured disk's list (/etc/pof/images.json); nothing else runs, and nothing is pulled", "unlisted_refused": true}
+[   23.153191] pof-attest.sh[750]: POF-ATTEST ok
+[   24.323887] pof-node.sh[945]: [0x6C423661] the deployment's events start at block 0 at the earliest (from RaceV3's start; set ORACLE_FROM_BLOCK to the deployment record's `block` to skip this)
+[   24.382023] pof-node.sh[945]: [0x6C423661] panel 191: drawn as a shadow on submission 73
+[   24.398528] pof-node.sh[945]: [0x6C423661] panel 193: drawn as a shadow on submission 74
+[   24.415496] pof-node.sh[945]: [0x6C423661] panel 195: drawn as a shadow on submission 75
+[   25.171531] pof-node.sh[945]: [0x6C423661] registration 73: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 73 signed by its reporter for this issue
+[   25.227752] pof-node.sh[945]: [0x6C423661] submission 73: fail (tests exit 125, none); receipt f981680000f9
+[   25.704790] pof-node.sh[945]: [0x6C423661] panel 191: sealed
+[   26.396015] pof-node.sh[945]: [0x6C423661] registration 74: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 74 signed by its reporter for this issue
+[   26.444049] pof-node.sh[945]: [0x6C423661] submission 74: fail (tests exit 125, none); receipt 99da89acdf67
+[   26.918762] pof-node.sh[945]: [0x6C423661] panel 193: sealed
+[   27.606244] pof-node.sh[945]: [0x6C423661] registration 75: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 75 signed by its reporter for this issue
+[   27.637028] pof-node.sh[945]: [0x6C423661] submission 75: fail (tests exit 125, none); receipt bf46fe203a30
+[   28.115375] pof-node.sh[945]: [0x6C423661] panel 195: sealed
+[   33.653899] pof-node.sh[945]: [0x6C423661] Radicle: main waiting: this node is neither a delegate nor seated on-chain: watching only
+[   36.594368] pof-node.sh[945]: [0x6C423661] panel 191: revealed fail, receipt f981680000f9 on-chain
+[   37.532686] pof-node.sh[945]: [0x6C423661] panel 193: revealed fail, receipt 99da89acdf67 on-chain
+[   38.461231] pof-node.sh[945]: [0x6C423661] panel 195: revealed fail, receipt bf46fe203a30 on-chain
+[   38.940845] pof-node.sh[945]: [0x6C423661] panel 191: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   39.415655] pof-node.sh[945]: [0x6C423661] panel 193: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   39.888951] pof-node.sh[945]: [0x6C423661] panel 195: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   50.925405] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[   55.365861] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[   65.369347] pof-node.sh[945]: [0x6C423661] panel 197: drawn as a shadow on submission 76
+[   65.385076] pof-node.sh[945]: [0x6C423661] panel 199: drawn as a shadow on submission 77
+[   65.401761] pof-node.sh[945]: [0x6C423661] panel 201: drawn as a shadow on submission 78
+[   66.091405] pof-node.sh[945]: [0x6C423661] panel 197: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 76 signed by its reporter for this issue; trying again
+[   66.800816] pof-node.sh[945]: [0x6C423661] panel 199: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 77 signed by its reporter for this issue; trying again
+[   67.505578] pof-node.sh[945]: [0x6C423661] panel 201: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 78 signed by its reporter for this issue; trying again
+[   78.676070] pof-node.sh[945]: [0x6C423661] registration 76: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 76 signed by its reporter for this issue
+[   78.724905] pof-node.sh[945]: [0x6C423661] submission 76: fail (tests exit 125, none); receipt 9087aa3415dc
+[   79.195550] pof-node.sh[945]: [0x6C423661] panel 197: sealed
+[   79.892077] pof-node.sh[945]: [0x6C423661] registration 77: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 77 signed by its reporter for this issue
+[   79.920851] pof-node.sh[945]: [0x6C423661] submission 77: fail (tests exit 125, none); receipt 7b29bc8e6a01
+[   80.389390] pof-node.sh[945]: [0x6C423661] panel 199: sealed
+[   81.084032] pof-node.sh[945]: [0x6C423661] registration 78: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 78 signed by its reporter for this issue
+[   81.115653] pof-node.sh[945]: [0x6C423661] submission 78: fail (tests exit 125, none); receipt 0c93d5078b0b
+[   81.576932] pof-node.sh[945]: [0x6C423661] panel 201: sealed
+[   85.868984] pof-node.sh[945]: [0x6C423661] panel 197: revealed fail, receipt 9087aa3415dc on-chain
+[   86.803630] pof-node.sh[945]: [0x6C423661] panel 199: revealed fail, receipt 7b29bc8e6a01 on-chain
+[   87.739751] pof-node.sh[945]: [0x6C423661] panel 201: revealed fail, receipt 0c93d5078b0b on-chain
+[   88.215798] pof-node.sh[945]: [0x6C423661] panel 197: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   88.682806] pof-node.sh[945]: [0x6C423661] panel 199: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   89.161380] pof-node.sh[945]: [0x6C423661] panel 201: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  104.583541] pof-node.sh[945]: [0x6C423661] keeper: finish(58)
+[  110.809460] pof-node.sh[945]: [0x6C423661] panel 205: drawn as a shadow on submission 79
+[  110.823356] pof-node.sh[945]: [0x6C423661] panel 207: drawn as a shadow on submission 80
+[  110.840556] pof-node.sh[945]: [0x6C423661] panel 209: drawn as a shadow on submission 81
+[  111.527077] pof-node.sh[945]: [0x6C423661] panel 205: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 79 signed by its reporter for this issue; trying again
+[  112.233714] pof-node.sh[945]: [0x6C423661] panel 207: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 80 signed by its reporter for this issue; trying again
+[  112.958268] pof-node.sh[945]: [0x6C423661] panel 209: not judged yet: no signed claim: no Radicle issue on this node's copy carries a claim of registration 81 signed by its reporter for this issue; trying again
+[  122.282268] pof-node.sh[945]: [0x6C423661] registration 79: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 79 signed by its reporter for this issue
+[  122.314072] pof-node.sh[945]: [0x6C423661] submission 79: fail (tests exit 125, none); receipt 6f91b2198c4e
+[  122.777175] pof-node.sh[945]: [0x6C423661] panel 205: sealed
+[  123.489754] pof-node.sh[945]: [0x6C423661] registration 80: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 80 signed by its reporter for this issue
+[  123.538557] pof-node.sh[945]: [0x6C423661] submission 80: fail (tests exit 125, none); receipt 8a9decb389a8
+[  124.009191] pof-node.sh[945]: [0x6C423661] panel 207: sealed
+[  124.715927] pof-node.sh[945]: [0x6C423661] registration 81: not passed: no signed claim: no Radicle issue on this node's copy carries a claim of registration 81 signed by its reporter for this issue
+[  124.765798] pof-node.sh[945]: [0x6C423661] submission 81: fail (tests exit 125, none); receipt 88f8db90f9c3
+[  125.233897] pof-node.sh[945]: [0x6C423661] panel 209: sealed
+[  129.399006] pof-node.sh[945]: [0x6C423661] panel 205: revealed fail, receipt 6f91b2198c4e on-chain
+[  130.320091] pof-node.sh[945]: [0x6C423661] panel 207: revealed fail, receipt 8a9decb389a8 on-chain
+[  131.245895] pof-node.sh[945]: [0x6C423661] panel 209: revealed fail, receipt 88f8db90f9c3 on-chain
+[  131.718098] pof-node.sh[945]: [0x6C423661] panel 205: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  132.197959] pof-node.sh[945]: [0x6C423661] panel 207: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  132.743519] pof-node.sh[945]: [0x6C423661] panel 209: usage reported to the race (tokens 0 in, 0 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  142.566876] pof-node.sh[945]: [0x6C423661] panel 211: drawn as a shadow on submission 82
+[  142.582903] pof-node.sh[945]: [0x6C423661] panel 213: drawn as a shadow on submission 83
+[  142.599771] pof-node.sh[945]: [0x6C423661] panel 215: drawn as a shadow on submission 84
+[  143.416957] pof-node.sh[945]: [0x6C423661] registration 82: Radicle issue 4647d3aca9586886b1e75f5825aec1fa91a3b27c judged a genuine bug report in scope (fake-judge-fake)
+[  143.454142] pof-node.sh[945]: [0x6C423661] submission 82: pass (tests exit 125, fake-judge-fake); receipt 5956db14abb0
+[  143.923363] pof-node.sh[945]: [0x6C423661] panel 211: sealed
+[  144.752659] pof-node.sh[945]: [0x6C423661] registration 83: Radicle issue d0fefc9549d33e177ae46413a7ffcc22c24ab901 judged a genuine bug report in scope (fake-judge-fake)
+[  144.794953] pof-node.sh[945]: [0x6C423661] submission 83: pass (tests exit 125, fake-judge-fake); receipt 4bdd0ef2e7bb
+[  145.265958] pof-node.sh[945]: [0x6C423661] panel 213: sealed
+[  146.074907] pof-node.sh[945]: [0x6C423661] registration 84: Radicle issue 59d1d6a26c9a080d3f8bce5e09e03b8a37686ef8 judged a genuine bug report in scope (fake-judge-fake)
+[  146.102868] pof-node.sh[945]: [0x6C423661] submission 84: pass (tests exit 125, fake-judge-fake); receipt a56732d8d5c1
+[  146.563185] pof-node.sh[945]: [0x6C423661] panel 215: sealed
+[  150.714565] pof-node.sh[945]: [0x6C423661] panel 211: revealed pass, receipt 5956db14abb0 on-chain
+[  151.638332] pof-node.sh[945]: [0x6C423661] panel 213: revealed pass, receipt 4bdd0ef2e7bb on-chain
+[  152.563619] pof-node.sh[945]: [0x6C423661] panel 215: revealed pass, receipt a56732d8d5c1 on-chain
+[  153.042362] pof-node.sh[945]: [0x6C423661] panel 211: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  153.519319] pof-node.sh[945]: [0x6C423661] panel 213: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  154.003159] pof-node.sh[945]: [0x6C423661] panel 215: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  157.177740] pof-node.sh[945]: [0x6C423661] panel 217: drawn as a shadow on submission 85
+[  158.053397] pof-node.sh[945]: [0x6C423661] registration 85: Radicle issue a750899dd3b6f0da2695c1c1e904529347072f3f judged a genuine bug report in scope (fake-judge-fake)
+[  158.081459] pof-node.sh[945]: [0x6C423661] submission 85: pass (tests exit 125, fake-judge-fake); receipt 218276dd993b
+[  158.546993] pof-node.sh[945]: [0x6C423661] panel 217: sealed
+[  161.807531] pof-node.sh[945]: [0x6C423661] panel 219: drawn as a shadow on submission 86
+[  161.824066] pof-node.sh[945]: [0x6C423661] panel 221: drawn as a shadow on submission 87
+[  162.685073] pof-node.sh[945]: [0x6C423661] registration 86: Radicle issue 359c146444d60366eee37cff8283c75029e1e190 judged a genuine bug report in scope (fake-judge-fake)
+[  162.712708] pof-node.sh[945]: [0x6C423661] submission 86: pass (tests exit 125, fake-judge-fake); receipt e22b26d9f7b9
+[  163.184754] pof-node.sh[945]: [0x6C423661] panel 219: sealed
+[  164.036790] pof-node.sh[945]: [0x6C423661] registration 87: Radicle issue 4f492ed0062b8295a389c12da4816a08f94a43a8 judged a genuine bug report in scope (fake-judge-fake)
+[  164.082657] pof-node.sh[945]: [0x6C423661] submission 87: pass (tests exit 125, fake-judge-fake); receipt 7c085dce1fb2
+[  164.555281] pof-node.sh[945]: [0x6C423661] panel 221: sealed
+[  168.960580] pof-node.sh[945]: [0x6C423661] panel 217: revealed pass, receipt 218276dd993b on-chain
+[  169.884061] pof-node.sh[945]: [0x6C423661] panel 219: revealed pass, receipt e22b26d9f7b9 on-chain
+[  170.812891] pof-node.sh[945]: [0x6C423661] panel 221: revealed pass, receipt 7c085dce1fb2 on-chain
+[  171.285494] pof-node.sh[945]: [0x6C423661] panel 217: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  171.763281] pof-node.sh[945]: [0x6C423661] panel 219: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  172.243054] pof-node.sh[945]: [0x6C423661] panel 221: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  173.948770] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  179.230447] pof-node.sh[945]: [0x6C423661] panel 223: drawn as a shadow on submission 88
+[  179.242797] pof-node.sh[945]: [0x6C423661] panel 225: drawn as a shadow on submission 89
+[  179.258703] pof-node.sh[945]: [0x6C423661] panel 227: drawn as a shadow on submission 90
+[  180.128617] pof-node.sh[945]: [0x6C423661] registration 88: Radicle issue ec6645a065874a47d89bd0b663435342b07dd01c judged a genuine bug report in scope (fake-judge-fake)
+[  180.156821] pof-node.sh[945]: [0x6C423661] submission 88: pass (tests exit 125, fake-judge-fake); receipt facf60deafd3
+[  180.624608] pof-node.sh[945]: [0x6C423661] panel 223: sealed
+[  181.487278] pof-node.sh[945]: [0x6C423661] registration 89: Radicle issue 67e7d565eef16539d354055494eb5cb6a97524e7 judged a genuine bug report in scope (fake-judge-fake)
+[  181.532759] pof-node.sh[945]: [0x6C423661] submission 89: pass (tests exit 125, fake-judge-fake); receipt 239043bf6164
+[  182.003478] pof-node.sh[945]: [0x6C423661] panel 225: sealed
+[  182.871246] pof-node.sh[945]: [0x6C423661] registration 90: Radicle issue ae4e77a17324f1c6dd2f8c52434c5acef1fb3aff judged a genuine bug report in scope (fake-judge-fake)
+[  182.915818] pof-node.sh[945]: [0x6C423661] submission 90: pass (tests exit 125, fake-judge-fake); receipt 1c012ddc18c3
+[  183.386629] pof-node.sh[945]: [0x6C423661] panel 227: sealed
+[  190.926611] pof-node.sh[945]: [0x6C423661] panel 223: revealed pass, receipt facf60deafd3 on-chain
+[  191.847620] pof-node.sh[945]: [0x6C423661] panel 225: revealed pass, receipt 239043bf6164 on-chain
+[  192.765225] pof-node.sh[945]: [0x6C423661] panel 227: revealed pass, receipt 1c012ddc18c3 on-chain
+[  193.239591] pof-node.sh[945]: [0x6C423661] panel 223: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  193.720549] pof-node.sh[945]: [0x6C423661] panel 225: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  194.209551] pof-node.sh[945]: [0x6C423661] panel 227: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  200.991075] pof-node.sh[945]: [0x6C423661] panel 229: drawn as a shadow on submission 91
+[  201.006930] pof-node.sh[945]: [0x6C423661] panel 231: drawn as a shadow on submission 92
+[  201.023386] pof-node.sh[945]: [0x6C423661] panel 233: drawn as a shadow on submission 93
+[  201.907505] pof-node.sh[945]: [0x6C423661] registration 91: Radicle issue 58696b96c895df706511e3533c2fac3aca336a72 judged a genuine bug report in scope (fake-judge-fake)
+[  201.953539] pof-node.sh[945]: [0x6C423661] submission 91: pass (tests exit 125, fake-judge-fake); receipt 3c691da01971
+[  202.425216] pof-node.sh[945]: [0x6C423661] panel 229: sealed
+[  203.313970] pof-node.sh[945]: [0x6C423661] registration 92: Radicle issue 88b1b9ac1d39f76e1d8650e583c44b3e0baabd1e judged a genuine bug report in scope (fake-judge-fake)
+[  203.341086] pof-node.sh[945]: [0x6C423661] submission 92: pass (tests exit 125, fake-judge-fake); receipt 085bcaa9c241
+[  203.803521] pof-node.sh[945]: [0x6C423661] panel 231: sealed
+[  204.686926] pof-node.sh[945]: [0x6C423661] registration 93: Radicle issue 4c42e4996635391a0f740484447105666196b9c1 judged a genuine bug report in scope (fake-judge-fake)
+[  204.733076] pof-node.sh[945]: [0x6C423661] submission 93: pass (tests exit 125, fake-judge-fake); receipt 592207a1b2ee
+[  205.204965] pof-node.sh[945]: [0x6C423661] panel 233: sealed
+[  209.458071] pof-node.sh[945]: [0x6C423661] panel 229: revealed pass, receipt 3c691da01971 on-chain
+[  210.384045] pof-node.sh[945]: [0x6C423661] panel 231: revealed pass, receipt 085bcaa9c241 on-chain
+[  211.309929] pof-node.sh[945]: [0x6C423661] panel 233: revealed pass, receipt 592207a1b2ee on-chain
+[  211.797498] pof-node.sh[945]: [0x6C423661] panel 229: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  212.279855] pof-node.sh[945]: [0x6C423661] panel 231: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  212.760738] pof-node.sh[945]: [0x6C423661] panel 233: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  214.553140] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  220.090899] pof-node.sh[945]: [0x6C423661] panel 235: drawn as a shadow on submission 94
+[  220.107994] pof-node.sh[945]: [0x6C423661] panel 237: drawn as a shadow on submission 95
+[  220.124991] pof-node.sh[945]: [0x6C423661] panel 239: drawn as a shadow on submission 96
+[  221.034862] pof-node.sh[945]: [0x6C423661] registration 94: Radicle issue 6c88c999e0219cb837169dad3c1dc91b5b42aca4 judged a genuine bug report in scope (fake-judge-fake)
+[  221.063234] pof-node.sh[945]: [0x6C423661] submission 94: pass (tests exit 125, fake-judge-fake); receipt b0e4a303858b
+[  221.538382] pof-node.sh[945]: [0x6C423661] panel 235: sealed
+[  222.459674] pof-node.sh[945]: [0x6C423661] registration 95: Radicle issue 3caaf29717b1cac4b979b225c5692504ea031e13 judged a genuine bug report in scope (fake-judge-fake)
+[  222.504713] pof-node.sh[945]: [0x6C423661] submission 95: pass (tests exit 125, fake-judge-fake); receipt 31b01c66938d
+[  222.978284] pof-node.sh[945]: [0x6C423661] panel 237: sealed
+[  223.896671] pof-node.sh[945]: [0x6C423661] registration 96: Radicle issue 897b69f7d9fdee53c881ed8e97ad4ebf0185a796 judged a genuine bug report in scope (fake-judge-fake)
+[  223.942435] pof-node.sh[945]: [0x6C423661] submission 96: pass (tests exit 125, fake-judge-fake); receipt 5fc34e4de778
+[  224.414850] pof-node.sh[945]: [0x6C423661] panel 239: sealed
+[  232.205728] pof-node.sh[945]: [0x6C423661] panel 235: revealed pass, receipt b0e4a303858b on-chain
+[  233.129421] pof-node.sh[945]: [0x6C423661] panel 237: revealed pass, receipt 31b01c66938d on-chain
+[  234.054713] pof-node.sh[945]: [0x6C423661] panel 239: revealed pass, receipt 5fc34e4de778 on-chain
+[  234.531936] pof-node.sh[945]: [0x6C423661] panel 235: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  235.013679] pof-node.sh[945]: [0x6C423661] panel 237: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  235.499821] pof-node.sh[945]: [0x6C423661] panel 239: usage reported to the race (tokens 734 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  236.457280] pof-node.sh[945]: [0x6C423661] keeper: finish(86)
+[  254.447945] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  288.620689] pof-node.sh[945]: [0x6C423661] keeper: result(105)
+[  291.866022] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  306.215183] pof-node.sh[945]: [0x6C423661] keeper: result(108)
+[  323.293966] pof-node.sh[945]: [0x6C423661] keeper: result(110)
+[  326.728800] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  344.901318] pof-node.sh[945]: [0x6C423661] keeper: result(112)
+[  387.156096] pof-node.sh[945]: [0x6C423661] keeper: result(120)
+[  391.146400] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  408.942653] pof-node.sh[945]: [0x6C423661] keeper: result(121)
+[  448.580048] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  508.874999] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  567.269390] pof-node.sh[945]: [0x6C423661] keeper: result(145)
+[  567.771609] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  594.574540] pof-node.sh[945]: [0x6C423661] panel 298: drawn as a shadow on submission 151
+[  594.589386] pof-node.sh[945]: [0x6C423661] panel 300: drawn as a shadow on submission 152
+[  594.606962] pof-node.sh[945]: [0x6C423661] panel 302: drawn as a shadow on submission 153
+[  595.940642] pof-node.sh[945]: [0x6C423661] registration 151: Radicle issue cad61ed55eeca0e6b5e3099d784d192d155a7fe4 judged a genuine bug report in scope (fake-judge-fake)
+[  595.967479] pof-node.sh[945]: [0x6C423661] submission 151: pass (tests exit 125, fake-judge-fake); receipt 47fe9fd550a2
+[  596.442355] pof-node.sh[945]: [0x6C423661] panel 298: sealed
+[  597.777623] pof-node.sh[945]: [0x6C423661] registration 152: Radicle issue 4604cecbfd60e4abe3d4c6a9792d67bf56f0c1f0 judged a genuine bug report in scope (fake-judge-fake)
+[  597.822238] pof-node.sh[945]: [0x6C423661] submission 152: pass (tests exit 125, fake-judge-fake); receipt ec970ba51f6b
+[  598.307552] pof-node.sh[945]: [0x6C423661] panel 300: sealed
+[  599.652079] pof-node.sh[945]: [0x6C423661] registration 153: Radicle issue 88c294db2e851537d8b0211fb5d3733dd279e791 judged a genuine bug report in scope (fake-judge-fake)
+[  599.697177] pof-node.sh[945]: [0x6C423661] submission 153: pass (tests exit 125, fake-judge-fake); receipt bfa6aafd6d0f
+[  600.178281] pof-node.sh[945]: [0x6C423661] panel 302: sealed
+[  607.476616] pof-node.sh[945]: [0x6C423661] panel 298: revealed pass, receipt 47fe9fd550a2 on-chain
+[  608.412847] pof-node.sh[945]: [0x6C423661] panel 300: revealed pass, receipt ec970ba51f6b on-chain
+[  609.351214] pof-node.sh[945]: [0x6C423661] panel 302: revealed pass, receipt bfa6aafd6d0f on-chain
+[  609.838712] pof-node.sh[945]: [0x6C423661] panel 298: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  610.331305] pof-node.sh[945]: [0x6C423661] panel 300: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  610.818997] pof-node.sh[945]: [0x6C423661] panel 302: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  617.147869] pof-node.sh[945]: [0x6C423661] panel 304: drawn as a shadow on submission 154
+[  617.164100] pof-node.sh[945]: [0x6C423661] panel 306: drawn as a shadow on submission 155
+[  617.181994] pof-node.sh[945]: [0x6C423661] panel 308: drawn as a shadow on submission 156
+[  618.551377] pof-node.sh[945]: [0x6C423661] registration 154: Radicle issue ffc982f7f9f7752f3604c6b043b1a2adef205aa5 judged a genuine bug report in scope (fake-judge-fake)
+[  618.579128] pof-node.sh[945]: [0x6C423661] submission 154: pass (tests exit 125, fake-judge-fake); receipt 693faff6afac
+[  619.059376] pof-node.sh[945]: [0x6C423661] panel 304: sealed
+[  620.405083] pof-node.sh[945]: [0x6C423661] registration 155: Radicle issue 27762cfb2db0483f2f0b690ecd0693890f73f39f judged a genuine bug report in scope (fake-judge-fake)
+[  620.433938] pof-node.sh[945]: [0x6C423661] submission 155: pass (tests exit 125, fake-judge-fake); receipt 99b32803e955
+[  620.913773] pof-node.sh[945]: [0x6C423661] panel 306: sealed
+[  622.207386] pof-node.sh[945]: [0x6C423661] registration 156: Radicle issue 838b3e7657f22909b8c5eb6ca43142ffdd11f7d1 judged a genuine bug report in scope (fake-judge-fake)
+[  622.252588] pof-node.sh[945]: [0x6C423661] submission 156: pass (tests exit 125, fake-judge-fake); receipt 2cc290d8f2f4
+[  622.741333] pof-node.sh[945]: [0x6C423661] panel 308: sealed
+[  631.075094] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  634.025831] pof-node.sh[945]: [0x6C423661] panel 304: revealed pass, receipt 693faff6afac on-chain
+[  634.977461] pof-node.sh[945]: [0x6C423661] panel 306: revealed pass, receipt 99b32803e955 on-chain
+[  635.915273] pof-node.sh[945]: [0x6C423661] panel 308: revealed pass, receipt 2cc290d8f2f4 on-chain
+[  636.398345] pof-node.sh[945]: [0x6C423661] panel 304: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  636.885363] pof-node.sh[945]: [0x6C423661] panel 306: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  637.378285] pof-node.sh[945]: [0x6C423661] panel 308: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  644.363653] pof-node.sh[945]: [0x6C423661] panel 310: drawn as a shadow on submission 157
+[  644.380755] pof-node.sh[945]: [0x6C423661] panel 312: drawn as a shadow on submission 158
+[  644.398071] pof-node.sh[945]: [0x6C423661] panel 314: drawn as a shadow on submission 159
+[  645.855618] pof-node.sh[945]: [0x6C423661] registration 157: Radicle issue f249d9151d331af0a8b5f9f0a58aae147051a507 judged a genuine bug report in scope (fake-judge-fake)
+[  645.883830] pof-node.sh[945]: [0x6C423661] submission 157: pass (tests exit 125, fake-judge-fake); receipt abf93f1e0c17
+[  646.359993] pof-node.sh[945]: [0x6C423661] panel 310: sealed
+[  647.790191] pof-node.sh[945]: [0x6C423661] registration 158: Radicle issue aa1c03003293c7489830961953e68e0b9a999bb5 judged a genuine bug report in scope (fake-judge-fake)
+[  647.814303] pof-node.sh[945]: [0x6C423661] submission 158: pass (tests exit 125, fake-judge-fake); receipt 130b4fe007c2
+[  648.282542] pof-node.sh[945]: [0x6C423661] panel 312: sealed
+[  649.678324] pof-node.sh[945]: [0x6C423661] registration 159: Radicle issue b351736018b1e9077995529f6a196461a3879730 judged a genuine bug report in scope (fake-judge-fake)
+[  649.704660] pof-node.sh[945]: [0x6C423661] submission 159: pass (tests exit 125, fake-judge-fake); receipt a29a09a90bd4
+[  650.176472] pof-node.sh[945]: [0x6C423661] panel 314: sealed
+[  657.922982] pof-node.sh[945]: [0x6C423661] panel 310: revealed pass, receipt abf93f1e0c17 on-chain
+[  658.861900] pof-node.sh[945]: [0x6C423661] panel 312: revealed pass, receipt 130b4fe007c2 on-chain
+[  659.810977] pof-node.sh[945]: [0x6C423661] panel 314: revealed pass, receipt a29a09a90bd4 on-chain
+[  660.295758] pof-node.sh[945]: [0x6C423661] panel 310: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  660.786173] pof-node.sh[945]: [0x6C423661] panel 312: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  661.275005] pof-node.sh[945]: [0x6C423661] panel 314: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  666.829740] pof-node.sh[945]: [0x6C423661] keeper: payPanel(315)
+[  672.677407] pof-node.sh[945]: [0x6C423661] panel 317: drawn as a shadow on submission 160
+[  672.691952] pof-node.sh[945]: [0x6C423661] panel 319: drawn as a shadow on submission 161
+[  672.706830] pof-node.sh[945]: [0x6C423661] panel 321: drawn as a shadow on submission 162
+[  674.161160] pof-node.sh[945]: [0x6C423661] registration 160: Radicle issue f3dca3d57fbc8201af555036ed4abb6936dea0f7 judged a genuine bug report in scope (fake-judge-fake)
+[  674.188504] pof-node.sh[945]: [0x6C423661] submission 160: pass (tests exit 125, fake-judge-fake); receipt 56bc3d59ac06
+[  674.674111] pof-node.sh[945]: [0x6C423661] panel 317: sealed
+[  676.141890] pof-node.sh[945]: [0x6C423661] registration 161: Radicle issue 1cfd90ea270d0e55181114ebfe1bba4d26cd4a83 judged a genuine bug report in scope (fake-judge-fake)
+[  676.170184] pof-node.sh[945]: [0x6C423661] submission 161: pass (tests exit 125, fake-judge-fake); receipt 69ec3f713f26
+[  676.653674] pof-node.sh[945]: [0x6C423661] panel 319: sealed
+[  678.107188] pof-node.sh[945]: [0x6C423661] registration 162: Radicle issue 6af52b5b01e4ecd7c7b1f67fd35b68da6309d4fb judged a genuine bug report in scope (fake-judge-fake)
+[  678.153258] pof-node.sh[945]: [0x6C423661] submission 162: pass (tests exit 125, fake-judge-fake); receipt 33a849a322c8
+[  678.638133] pof-node.sh[945]: [0x6C423661] panel 321: sealed
+[  686.864024] pof-node.sh[945]: [0x6C423661] panel 317: revealed pass, receipt 56bc3d59ac06 on-chain
+[  687.814031] pof-node.sh[945]: [0x6C423661] panel 319: revealed pass, receipt 69ec3f713f26 on-chain
+[  688.753785] pof-node.sh[945]: [0x6C423661] panel 321: revealed pass, receipt 33a849a322c8 on-chain
+[  689.243064] pof-node.sh[945]: [0x6C423661] panel 317: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  689.727162] pof-node.sh[945]: [0x6C423661] panel 319: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  690.215751] pof-node.sh[945]: [0x6C423661] panel 321: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  696.077281] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  700.053131] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  705.840926] pof-node.sh[945]: [0x6C423661] panel 324: drawn as a shadow on submission 163
+[  705.855475] pof-node.sh[945]: [0x6C423661] panel 326: drawn as a shadow on submission 164
+[  705.872025] pof-node.sh[945]: [0x6C423661] panel 328: drawn as a shadow on submission 165
+[  707.349520] pof-node.sh[945]: [0x6C423661] registration 163: Radicle issue c70510b13cff4b10189d2c370866421daeda71d2 judged a genuine bug report in scope (fake-judge-fake)
+[  707.376452] pof-node.sh[945]: [0x6C423661] submission 163: pass (tests exit 125, fake-judge-fake); receipt 5f0ce4406fef
+[  707.845390] pof-node.sh[945]: [0x6C423661] panel 324: sealed
+[  709.291449] pof-node.sh[945]: [0x6C423661] registration 164: Radicle issue e1f529c6f2012118251db8dbf0ef7876877ff91f judged a genuine bug report in scope (fake-judge-fake)
+[  709.319444] pof-node.sh[945]: [0x6C423661] submission 164: pass (tests exit 125, fake-judge-fake); receipt f073bfa7aba8
+[  709.801249] pof-node.sh[945]: [0x6C423661] panel 326: sealed
+[  711.234117] pof-node.sh[945]: [0x6C423661] registration 165: Radicle issue 66574b43eebfdb294f0f609719d7a2ee04a840d3 judged a genuine bug report in scope (fake-judge-fake)
+[  711.261715] pof-node.sh[945]: [0x6C423661] submission 165: pass (tests exit 125, fake-judge-fake); receipt 29251fc993db
+[  711.743344] pof-node.sh[945]: [0x6C423661] panel 328: sealed
+[  719.949453] pof-node.sh[945]: [0x6C423661] panel 324: revealed pass, receipt 5f0ce4406fef on-chain
+[  720.899433] pof-node.sh[945]: [0x6C423661] panel 326: revealed pass, receipt f073bfa7aba8 on-chain
+[  721.856531] pof-node.sh[945]: [0x6C423661] panel 328: revealed pass, receipt 29251fc993db on-chain
+[  722.346807] pof-node.sh[945]: [0x6C423661] panel 324: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  722.832501] pof-node.sh[945]: [0x6C423661] panel 326: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  723.325640] pof-node.sh[945]: [0x6C423661] panel 328: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  734.545127] pof-node.sh[945]: [0x6C423661] panel 331: drawn as a shadow on submission 166
+[  736.046205] pof-node.sh[945]: [0x6C423661] registration 166: Radicle issue 090e9b2f4c4fa33b137cfeff75b46dca7be358e5 judged a genuine bug report in scope (fake-judge-fake)
+[  736.091115] pof-node.sh[945]: [0x6C423661] submission 166: pass (tests exit 125, fake-judge-fake); receipt 27865508351a
+[  736.572964] pof-node.sh[945]: [0x6C423661] panel 331: sealed
+[  740.380692] pof-node.sh[945]: [0x6C423661] panel 333: drawn as a shadow on submission 167
+[  740.395866] pof-node.sh[945]: [0x6C423661] panel 335: drawn as a shadow on submission 168
+[  741.887262] pof-node.sh[945]: [0x6C423661] registration 167: Radicle issue 63e02c03c1609c4ff21264b9892cd99d396285bb judged a genuine bug report in scope (fake-judge-fake)
+[  741.933237] pof-node.sh[945]: [0x6C423661] submission 167: pass (tests exit 125, fake-judge-fake); receipt 18c2eb668861
+[  742.413955] pof-node.sh[945]: [0x6C423661] panel 333: sealed
+[  743.911926] pof-node.sh[945]: [0x6C423661] registration 168: Radicle issue c6c0905de68b21f3f466c66547cb3b5a238fd272 judged a genuine bug report in scope (fake-judge-fake)
+[  743.956459] pof-node.sh[945]: [0x6C423661] submission 168: pass (tests exit 125, fake-judge-fake); receipt 2fc31a07328a
+[  744.438327] pof-node.sh[945]: [0x6C423661] panel 335: sealed
+[  749.070058] pof-node.sh[945]: [0x6C423661] panel 331: revealed pass, receipt 27865508351a on-chain
+[  750.018027] pof-node.sh[945]: [0x6C423661] panel 333: revealed pass, receipt 18c2eb668861 on-chain
+[  750.959750] pof-node.sh[945]: [0x6C423661] panel 335: revealed pass, receipt 2fc31a07328a on-chain
+[  751.440614] pof-node.sh[945]: [0x6C423661] panel 331: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  751.929692] pof-node.sh[945]: [0x6C423661] panel 333: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  752.423605] pof-node.sh[945]: [0x6C423661] panel 335: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  759.971736] pof-node.sh[945]: [0x6C423661] panel 337: drawn as a shadow on submission 169
+[  759.987055] pof-node.sh[945]: [0x6C423661] panel 339: drawn as a shadow on submission 170
+[  760.000024] pof-node.sh[945]: [0x6C423661] panel 341: drawn as a shadow on submission 171
+[  761.527729] pof-node.sh[945]: [0x6C423661] registration 169: Radicle issue e8ed585b5e24941d22e6aaa215f4c04fa6159118 judged a genuine bug report in scope (fake-judge-fake)
+[  761.555498] pof-node.sh[945]: [0x6C423661] submission 169: pass (tests exit 125, fake-judge-fake); receipt 16c0c8da0070
+[  762.036943] pof-node.sh[945]: [0x6C423661] panel 337: sealed
+[  763.569795] pof-node.sh[945]: [0x6C423661] registration 170: Radicle issue 93396b23d2e249073691a7206167336352bea9f2 judged a genuine bug report in scope (fake-judge-fake)
+[  763.597785] pof-node.sh[945]: [0x6C423661] submission 170: pass (tests exit 125, fake-judge-fake); receipt a675068d16e4
+[  764.081451] pof-node.sh[945]: [0x6C423661] panel 339: sealed
+[  765.609209] pof-node.sh[945]: [0x6C423661] registration 171: Radicle issue 055f331b734bd18f7bbc7830523c116a1e41ce73 judged a genuine bug report in scope (fake-judge-fake)
+[  765.654045] pof-node.sh[945]: [0x6C423661] submission 171: pass (tests exit 125, fake-judge-fake); receipt 228f5b9aac64
+[  766.135387] pof-node.sh[945]: [0x6C423661] panel 341: sealed
+[  778.481040] pof-node.sh[945]: [0x6C423661] panel 337: revealed pass, receipt 16c0c8da0070 on-chain
+[  779.409519] pof-node.sh[945]: [0x6C423661] panel 339: revealed pass, receipt a675068d16e4 on-chain
+[  780.346965] pof-node.sh[945]: [0x6C423661] panel 341: revealed pass, receipt 228f5b9aac64 on-chain
+[  780.829254] pof-node.sh[945]: [0x6C423661] panel 337: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  781.315426] pof-node.sh[945]: [0x6C423661] panel 339: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  781.807297] pof-node.sh[945]: [0x6C423661] panel 341: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  787.897515] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  793.664537] pof-node.sh[945]: [0x6C423661] panel 343: drawn as a shadow on submission 172
+[  793.679986] pof-node.sh[945]: [0x6C423661] panel 345: drawn as a shadow on submission 173
+[  793.695267] pof-node.sh[945]: [0x6C423661] panel 347: drawn as a shadow on submission 174
+[  795.260826] pof-node.sh[945]: [0x6C423661] registration 172: Radicle issue ffcff50e08041d2204b93fad6cd6d14b1c3f5dac judged a genuine bug report in scope (fake-judge-fake)
+[  795.306220] pof-node.sh[945]: [0x6C423661] submission 172: pass (tests exit 125, fake-judge-fake); receipt 52a1c2d315c1
+[  795.787140] pof-node.sh[945]: [0x6C423661] panel 343: sealed
+[  797.353375] pof-node.sh[945]: [0x6C423661] registration 173: Radicle issue 8c3af78d7c9d79f5f7a3a8a805ec5ec6017f047c judged a genuine bug report in scope (fake-judge-fake)
+[  797.399088] pof-node.sh[945]: [0x6C423661] submission 173: pass (tests exit 125, fake-judge-fake); receipt 51df0665c2bd
+[  797.881294] pof-node.sh[945]: [0x6C423661] panel 345: sealed
+[  799.443233] pof-node.sh[945]: [0x6C423661] registration 174: Radicle issue dbf661f191c2c69396eedc608d09e52dea229c05 judged a genuine bug report in scope (fake-judge-fake)
+[  799.489188] pof-node.sh[945]: [0x6C423661] submission 174: pass (tests exit 125, fake-judge-fake); receipt 5c4e3c9fde41
+[  799.969402] pof-node.sh[945]: [0x6C423661] panel 347: sealed
+[  812.417367] pof-node.sh[945]: [0x6C423661] panel 343: revealed pass, receipt 52a1c2d315c1 on-chain
+[  813.361359] pof-node.sh[945]: [0x6C423661] panel 345: revealed pass, receipt 51df0665c2bd on-chain
+[  814.303896] pof-node.sh[945]: [0x6C423661] panel 347: revealed pass, receipt 5c4e3c9fde41 on-chain
+[  814.789372] pof-node.sh[945]: [0x6C423661] panel 343: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  815.282355] pof-node.sh[945]: [0x6C423661] panel 345: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  815.787143] pof-node.sh[945]: [0x6C423661] panel 347: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  823.539058] pof-node.sh[945]: [0x6C423661] panel 349: drawn as a shadow on submission 175
+[  823.554980] pof-node.sh[945]: [0x6C423661] panel 351: drawn as a shadow on submission 176
+[  823.573813] pof-node.sh[945]: [0x6C423661] panel 353: drawn as a shadow on submission 177
+[  825.157850] pof-node.sh[945]: [0x6C423661] registration 175: Radicle issue fbf9bf51f5faab315a604a483f1c2c18fd583b17 judged a genuine bug report in scope (fake-judge-fake)
+[  825.185392] pof-node.sh[945]: [0x6C423661] submission 175: pass (tests exit 125, fake-judge-fake); receipt a74a41a6a7ae
+[  825.669720] pof-node.sh[945]: [0x6C423661] panel 349: sealed
+[  827.253990] pof-node.sh[945]: [0x6C423661] registration 176: Radicle issue f77dc0ab155b03909666bab13d8e05e1e060320a judged a genuine bug report in scope (fake-judge-fake)
+[  827.298929] pof-node.sh[945]: [0x6C423661] submission 176: pass (tests exit 125, fake-judge-fake); receipt 17dc703fb752
+[  827.779963] pof-node.sh[945]: [0x6C423661] panel 351: sealed
+[  829.361412] pof-node.sh[945]: [0x6C423661] registration 177: Radicle issue d89fc2b2f56aee6cebbcd22c6cbbb46a3d47167f judged a genuine bug report in scope (fake-judge-fake)
+[  829.389069] pof-node.sh[945]: [0x6C423661] submission 177: pass (tests exit 125, fake-judge-fake); receipt e2b8ad1e182b
+[  829.864721] pof-node.sh[945]: [0x6C423661] panel 353: sealed
+[  842.461950] pof-node.sh[945]: [0x6C423661] panel 349: revealed pass, receipt a74a41a6a7ae on-chain
+[  843.407762] pof-node.sh[945]: [0x6C423661] panel 351: revealed pass, receipt 17dc703fb752 on-chain
+[  844.358354] pof-node.sh[945]: [0x6C423661] panel 353: revealed pass, receipt e2b8ad1e182b on-chain
+[  844.843209] pof-node.sh[945]: [0x6C423661] panel 349: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  845.333082] pof-node.sh[945]: [0x6C423661] panel 351: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  845.825149] pof-node.sh[945]: [0x6C423661] panel 353: usage reported to the race (tokens 735 in, 47 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  849.687311] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0x26f212e66761; posting the price in force
+[  849.705999] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0x902af8415c18; posting the price in force
+[  849.722602] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0x895d155468e4; posting the price in force
+[  849.741624] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0xad21c9f008fc; posting the price in force
+[  849.758447] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0xce5aa4be0e25; posting the price in force
+[  849.775008] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0x50919eafab0f; posting the price in force
+[  849.791951] pof-node.sh[945]: [0x6C423661] table: no list price here for family 0xefde774a06c3; posting the price in force
+[  850.249213] pof-node.sh[945]: [0x6C423661] table posted: 14 families' list prices and this validator's shared-unit costs
+[  850.763399] pof-node.sh[945]: [0x6C423661] keeper: startWindow(1)
+[  862.100058] pof-node.sh[945]: [0x6C423661] table: the chain refused it (RollInProgress()); trying again
+[  864.145676] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  866.641077] pof-node.sh[945]: [0x6C423661] table posted: 14 families' list prices and this validator's shared-unit costs
+[  868.671812] pof-node.sh[945]: [0x6C423661] Radicle: pushed main: publishing this node's first main at Heads.head 3a51c0bbb395
+[  868.723821] pof-node.sh[945]: [0x6C423661] Radicle: identity waiting: the delegates differ from the seats (seat 0x6c423661490653b44d02b2f298a99252f4423045's node did:key:z6MkwbkgYBtcn47Cu3rRjEvGRLjEvWaoDMovaMaH5VLEVYRt isn't a delegate); this node isn't a delegate, so it can't propose
+[  874.103503] pof-node.sh[945]: [0x6C423661] panel 355: drawn as a counted judge on submission 179
+[  874.603507] pof-node.sh[945]: [0x6C423661] fetch: commit 1b7a78782b7a checked out read-only under /data/scratch/pof-node/src
+[  875.098317] pof-node.sh[945]: [0x6C423661] fetch: commit 3a51c0bbb395 checked out read-only under /data/scratch/pof-node/src
+[  877.171024] pof-node.sh[945]: [0x6C423661] submission 179: pass (tests exit 0, fake-judge-fake); receipt 94760c55cb33
+[  877.652867] pof-node.sh[945]: [0x6C423661] panel 355: sealed
+[  882.703785] pof-node.sh[945]: [0x6C423661] keeper: roll()
+[  885.654032] pof-node.sh[945]: [0x6C423661] panel 355: revealed pass, receipt 94760c55cb33 on-chain
+[  886.143331] pof-node.sh[945]: [0x6C423661] panel 355: usage reported to the race (tokens 580 in, 37 out; 6 vCPU-s, 12 GB-s, 1 MB)
+[  886.655522] pof-node.sh[945]: [0x6C423661] table posted: 14 families' list prices and this validator's shared-unit costs
+[  888.403077] pof-node.sh[945]: [0x6C423661] eth_getTransactionReceipt: can't reach the chain at http://10.82.0.145:8545: [Errno 111] Connection refused; retry 1 of 5 in 1s
+[  889.403975] pof-node.sh[945]: [0x6C423661] eth_getTransactionReceipt: can't reach the chain at http://10.82.0.145:8545: [Errno 111] Connection refused; retry 2 of 5 in 2s
+[  891.406573] pof-node.sh[945]: [0x6C423661] eth_getTransactionReceipt: can't reach the chain at http://10.82.0.145:8545: [Errno 111] Connection refused; retry 3 of 5 in 4s
+[  895.406938] pof-node.sh[945]: [0x6C423661] eth_getTransactionReceipt: can't reach the chain at http://10.82.0.145:8545: [Errno 111] Connection refused; retry 4 of 5 in 8s
+	2026-11-23T15:06:00+00:00

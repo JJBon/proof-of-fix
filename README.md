@@ -338,9 +338,9 @@ stateDiagram-v2
 
 ## Take part
 
-On the Sepolia testnet, once it's deployed (test coin only): [fund an issue](docs/guides/fund-an-issue.md), [submit a fix as a Radicle patch](docs/guides/submit-a-fix.md), [run a validator](docs/guides/run-a-validator.md).
+v3 is live on the Sepolia testnet (test coin only): **[start here](docs/take-part.md)**, then [fund an issue](docs/guides/fund-an-issue.md), [submit a fix as a Radicle patch](docs/guides/submit-a-fix.md) or [run a validator](docs/guides/run-a-validator.md).
 
-The private v2 devnet: invited engineers read [`docs/participate.md`](docs/participate.md). You need an API key from the organiser and an AWS account of your own.
+[`docs/participate.md`](docs/participate.md) describes the earlier private v2 devnet, which v3 replaces.
 
 ## Running it
 

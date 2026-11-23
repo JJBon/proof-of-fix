@@ -8,9 +8,9 @@ You need: git, Python 3.9 or later, [Radicle 1.10.3](https://radicle.xyz) (`rad`
 
 <!-- test: values -->
 ```bash
-export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint>
-export RID=<proof-of-fix's Radicle id, rad:z…, from the deployment record>
-export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record
+export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint: Infura, Alchemy or your own>
+export RID=rad:zyZXC9NqVuse8nXdpv7iYRScDHsN           # proof-of-fix on Radicle
+export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record (RaceV3 0xD622…9829, block 12196904)
 ```
 
 Until the deployment record is in the repository ([L15](../../openspec/changes/proof-of-fix-251-testnet-launch/design.md)),
@@ -61,7 +61,8 @@ echo "registration $REG"
 
 `issue register` pays the registration fee, stakes the issue and posts its registration check's deposit (the unused
 part comes back), then comments your signed claim on the Radicle issue. Validators check that the issue is a genuine,
-in-scope bug report. On Sepolia the check is final about a day later (a panel of 3's windows).
+in-scope bug report. On Sepolia the check is final about a day later (a panel of 3's windows) once 7 or more validators are active. At launch, while fewer than 7 validators are active, a panel has one judge: its verdict waits 7 days for
+challenges and is held until enough validators are active to judge one (design L16), so expect days, not hours.
 
 <!-- test: wait-registration -->
 ```bash

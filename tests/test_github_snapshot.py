@@ -101,6 +101,47 @@ class ScrubAndScan(unittest.TestCase):
         (self.root / "f.txt").write_text(fine)
         self.assertEqual(snap.scan(self.root, [], []), [])
 
+    def test_verbatim_files_keep_the_terms_and_are_counted(self):
+        (self.root / "oracle").mkdir()
+        (self.root / "oracle" / "rpc.py").write_text(f"see {PRIVATE}\n")
+        (self.root / "docs.md").write_text(f"see {PRIVATE}\n")
+        counts, kept = [[0, 0]], [[0, 0]]
+        self.assertEqual(snap.scrub(self.root, [(PRIVATE, "example.com")], counts, ["oracle/"], kept), 1)
+        self.assertEqual((self.root / "oracle" / "rpc.py").read_text(), f"see {PRIVATE}\n")
+        self.assertEqual((self.root / "docs.md").read_text(), "see example.com\n")
+        self.assertEqual((counts, kept), ([[1, 1]], [[1, 1]]))
+
+    def test_verbatim_files_still_refuse_denied_terms_secrets_and_account_ids(self):
+        (self.root / "oracle").mkdir()
+        f = self.root / "oracle" / "x.py"
+        f.write_text(f"{PRIVATE} " + "plat" + "form#12\n")
+        self.assertEqual(snap.scan(self.root, [(PRIVATE, "x")], [], ["oracle/"]), [])
+        self.assertEqual(snap.public_scan(self.root, ["oracle/"]), [])
+        self.assertEqual(snap.scan(self.root, [(PRIVATE, "x")], []), [("oracle/x.py", "a private term")])
+        f.write_text("forbidden-literal\n")
+        self.assertEqual(snap.scan(self.root, [], ["forbidden-literal"], ["oracle/"]), [("oracle/x.py", "a denied term")])
+        f.write_text("AKIA" + "A" * 16 + "\n")
+        self.assertIn(("oracle/x.py", "aws access key"), snap.scan(self.root, [], [], ["oracle/"]))
+        f.write_text("the account " + "21098765" + "4321" + "\n")
+        self.assertEqual(snap.public_scan(self.root, ["oracle/"]), [("oracle/x.py", "an AWS account id")])
+
+    def test_a_verbatim_file_is_named_exactly_and_a_directory_by_its_slash(self):
+        self.assertTrue(snap.is_verbatim("scripts/judge_run.py", snap.IMAGE_INPUTS))
+        self.assertFalse(snap.is_verbatim("scripts/judge_run.py.bak", snap.IMAGE_INPUTS))
+        self.assertTrue(snap.is_verbatim("oracle/rpc.py", snap.IMAGE_INPUTS))
+        self.assertFalse(snap.is_verbatim("oracle-notes.md", snap.IMAGE_INPUTS))
+
+    def test_the_image_inputs_cover_what_the_checker_image_copies(self):
+        """The checker image's COPY sources are all kept verbatim: else the public code builds another digest."""
+        import re
+        dockerfile = (ROOT / "oracle" / "Dockerfile").read_text(encoding="utf-8")
+        sources = [m.group(1) for m in re.finditer(r"^COPY\s+(?!--from)(\S+)\s", dockerfile, re.M)]
+        self.assertTrue(sources)
+        for src in sources:
+            with self.subTest(src):
+                self.assertTrue(snap.is_verbatim(src, snap.IMAGE_INPUTS), src)
+        self.assertEqual(snap.PRESETS["proof-of-fix"]["verbatim"], snap.IMAGE_INPUTS)
+
     def test_this_repository_holds_no_private_term_in_the_script(self):
         text = (ROOT / "scripts" / "github_snapshot.py").read_text(encoding="utf-8")
         self.assertNotRegex(text, r"(?<!\d)\d{12}(?!\d)(?<!111111111111)(?<!123456789012)(?<!000000000000)")

@@ -10,7 +10,7 @@
                                            run didn't finish; the kit's watcher starts the node again (#166)
     python3 -m oracle withdraw-fees [--to ADDRESS]
                                            v2: pull this key's check fees (its credit in the fee coin) to its address
-    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host (infra#219): the command
+    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host (platform#219): the command
                                            with devnet-seats.sh's settings and the seat's secrets from files
                                            (oracle/seat.py)
     python3 -m oracle snp-report --data HEX [--out FILE] [--certs-dir DIR]
@@ -146,6 +146,12 @@ Configuration (environment):
                      a level C validator's zkTLS prover (oracle/zktls.py: a stub until the pinned build is run)
     (ORACLE_ROUNDS defaults to .oracle-rounds on v3: a node that loses what it sealed is slashed for not revealing)
     ORACLE_POLL           seconds between the node's passes over the chain (default 2)
+    ORACLE_FROM_BLOCK     v3: the deployment's first block (its record's `block`; Sepolia v3: 12192376): no event scan
+                     starts before it, and the Radicle delegates (the registry's Registered events) are read from it.
+                     Unset: found once from RaceV3's start by bisecting block times (about 25 reads)
+    ORACLE_LOG_RANGE      the most blocks one eth_getLogs call covers (default 5000: inside Infura's 10,000 and
+                     publicnode's 50,000); longer scans are split. Set it lower for a stricter provider (drpc's free
+                     tier 100, 1rpc 50); a refusal as too large halves it on its own, for the rest of the run
     ORACLE_RPC_OUTAGE_LIMIT  with --until-idle: seconds the chain may stay away before the run ends with exit 75 (default
                      1800). Without --until-idle the node keeps trying for as long as it takes, its round in memory"""
 
@@ -159,7 +165,7 @@ from pathlib import Path
 
 from .chain import Race, Rpc
 from .keys import DstackKeys, EnvKeys, LocalDevKeys
-from .rpc import Unavailable, auth_headers
+from .rpc import DEFAULT_LOG_RANGE, Unavailable, auth_headers
 
 
 EXIT_UNFINISHED = 75  # EX_TEMPFAIL
@@ -183,7 +189,33 @@ def rpc_from_env() -> Rpc:
     token = os.environ.get("ORACLE_RPC_TOKEN") or os.environ.get("RPC_API_KEY")
     header = os.environ.get("ORACLE_RPC_API_KEY_HEADER") or "Authorization"
     return Rpc(os.environ["ORACLE_RPC"], headers=auth_headers(token, header),
-               retries=int(os.environ.get("ORACLE_RPC_RETRIES") or DEFAULT_RPC_RETRIES))
+               retries=int(os.environ.get("ORACLE_RPC_RETRIES") or DEFAULT_RPC_RETRIES),
+               log_range=_whole("ORACLE_LOG_RANGE", os.environ.get("ORACLE_LOG_RANGE"), DEFAULT_LOG_RANGE))
+
+
+def _whole(name: str, raw: str | None, default: int | None, least: int = 1) -> int | None:
+    """A whole-number setting: unset or empty is `default`; anything else is a number of at least `least`."""
+    if not (raw or "").strip():
+        return default
+    try:
+        n = int(raw.strip())
+    except ValueError:
+        raise SystemExit(f"oracle: {name} is a whole number, not {raw!r}") from None
+    if n < least:
+        raise SystemExit(f"oracle: {name} is at least {least}, not {n}")
+    return n
+
+
+def first_block(chain, env, log=print) -> int:
+    """The deployment's first block, before which the node never scans (#312): ORACLE_FROM_BLOCK (the deployment
+    record's `block`), else found from RaceV3's start (`Chain.find_first_block`, said once in the log)."""
+    named = _whole("ORACLE_FROM_BLOCK", env.get("ORACLE_FROM_BLOCK"), None, least=0)
+    if named is not None:
+        return named
+    found = chain.find_first_block()
+    log(f"the deployment's events start at block {found} at the earliest (from RaceV3's start; set ORACLE_FROM_BLOCK "
+        f"to the deployment record's `block` to skip this)")
+    return found
 
 
 def v2_node(rpc, race_address: str, keys, env=None):
@@ -260,6 +292,8 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     def log(m):
         print(f"[{me[:10]}] {m}", flush=True)
 
+    chain.first_block = first_block(chain, env, log)
+
     try:
         judge = judge_from_env(env)
     except (ConfigError, ValueError) as e:
@@ -309,6 +343,13 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     if hasattr(judge, "log"):
         judge.log = node.log
     return node
+
+
+def run_start(from_block: int | None, block: int, first: int) -> int:
+    """Where `run` scans for new seats and the checks it keeps: --from-block, else the last 5000 blocks; never before
+    the deployment's first block. (The registry's Registered events, the Radicle delegates, are read from the first
+    block whatever this says: `Chain.seats`.)"""
+    return max(from_block if from_block is not None else block - 5000, first, 0)
 
 
 def command_v3(argv: list, rpc, race_address: str, keys) -> int:
@@ -365,10 +406,12 @@ def command_v3(argv: list, rpc, race_address: str, keys) -> int:
         if cmd == "run":
             ap = argparse.ArgumentParser(prog="oracle run")
             ap.add_argument("--until-idle", type=float, help="exit after this many seconds without progress")
-            ap.add_argument("--from-block", type=int, help="scan from this block (default: the last 5000)")
+            ap.add_argument("--from-block", type=int, help="scan for this key's seats and the checks to keep from this "
+                                                           "block (default: the last 5000); never before the "
+                                                           "deployment's first block, ORACLE_FROM_BLOCK")
             a = ap.parse_args(argv[2:])
             node = v3_node(rpc, race_address, keys)
-            start = a.from_block if a.from_block is not None else max(rpc.block() - 5000, 0)
+            start = run_start(a.from_block, rpc.block(), node.chain.first_block)
             outage = float(env.get("ORACLE_RPC_OUTAGE_LIMIT") or DEFAULT_OUTAGE_LIMIT_S)
             done = node.run(start, a.until_idle, poll=float(env.get("ORACLE_POLL", "2")),
                             outage_limit=outage if a.until_idle is not None else None)

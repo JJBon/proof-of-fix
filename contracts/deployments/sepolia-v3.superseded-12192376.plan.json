@@ -1,0 +1,25 @@
+{
+  "rid": "rad:zyZXC9NqVuse8nXdpv7iYRScDHsN",
+  "genesisHead": "81505595309f388c3856ba8293e7cd830e97b86b",
+  "genesisValidator": {
+    "key": "0x6C423661490653b44d02B2F298A99252F4423045",
+    "operator": "0x6C423661490653b44d02B2F298A99252F4423045",
+    "teeType": "amd-sev-snp",
+    "level": 1,
+    "attestation": "0x151d995049ee79ed9e9357bff12cb93e1048dc6b08052cedb5ca0b7b66e67e3a",
+    "image": "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b",
+    "host": "0xb198813ac55f5104c3f55e47886019c8fb94c3fac5f42e04c187710c1156b795",
+    "firmware": 67117025,
+    "signature": "0x2befc7166efd49f6708831c00dc6c3eeeba233e38a2aae877fbaffb6baf74c9441a18ecf67e4f931318a89be757bb2a47fa89fae1fdef5926c3e408f945e71ee1b"
+  },
+  "teeTypes": [
+    "amd-sev-snp",
+    "aws-nitro-enclaves"
+  ],
+  "images": [
+    "0x34cc24150088013c0d0e482998b153dd745168d3cd4877c7ead67e12e198ca6b"
+  ],
+  "families": [
+    "anthropic.claude"
+  ]
+}

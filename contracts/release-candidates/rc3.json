@@ -1,0 +1,97 @@
+{
+  "format": "pof-release-candidate/1",
+  "tag": "rc3",
+  "commit": "8946b9ca65df66f9d721593136beae59ff248323",
+  "result": "passed",
+  "checks": {
+    "integration": {
+      "command": "scripts/integration.sh --release-candidate 8946b9ca65df66f9d721593136beae59ff248323",
+      "runs": [
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "details": [
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (1845s)",
+            "launch": "passed (1622s)",
+            "few-larger": "passed (271s)",
+            "few-same": "passed (245s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 4400,
+          "invocation": 1
+        },
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (2376s)",
+            "launch": "passed (1520s)",
+            "few-larger": "passed (247s)",
+            "few-same": "passed (246s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 4800,
+          "invocation": 1
+        },
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (2186s)",
+            "launch": "passed (1511s)",
+            "few-larger": "passed (252s)",
+            "few-same": "passed (258s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 4634,
+          "invocation": 1
+        }
+      ]
+    },
+    "productionWindows": "passed",
+    "sevSnpValidator": "passed",
+    "realModelRun": "passed",
+    "attestedImages": "passed",
+    "attestedImagesEvidence": "evidence/rc-rc3",
+    "sevSnpValidatorEvidence": "evidence/rc-rc3",
+    "realModelRunEvidence": "evidence/rc-rc3-model",
+    "realModelRunModel": "direct:bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  },
+  "panelRules": {
+    "operatorCap": "off",
+    "hostCap": "off",
+    "teeCap": "off",
+    "kTop": 3,
+    "challengeSize": "same"
+  },
+  "bytecode": {
+    "TestCoin": "0xd8b1d3d0896ac7cdcd4f7240a7c816272581195b38fed0676b04fedb0b3f53a2",
+    "CoinFaucet": "0x582891ee6e3b55e68c70e4312cb6d26e355b9ea404908e1823edff34b64da32c",
+    "PoolV3": "0xdf76aed1b208eb18b2a263f4d519386d8dfc708050286783184565e58ed089b0",
+    "RegistryMaker": "0x70e57165e836b137758706a1667bd1abded00bd593e9cb9796a3c26b2a9cc48b",
+    "Validators": "0xdb202c140bdb6ceaf609b246dbb2793dea904cfe07bd3274c6011b623e34220a",
+    "PanelScores": "0x5900bdf9e239e38aee0042df33be462f0ad7b674b38d8566f14e858357f6b62b",
+    "FeesV3": "0x039c4e0b10e322a716f0a7be0f1474dba28d426cdc7ff99c3d8cb43e82ca363b",
+    "Panels": "0x6493438529bacf958efd49e7b5458830bb56f30de53471e1fb552cc69cc4d02c",
+    "RaceV3Endings": "0xd03806113e808d7b3f4b000522ca598eaf1728e85162144c5e2c29327676f358",
+    "RaceV3Annex": "0xaccecf6e91c66d904f60dbe73e2b875b25e2bc88a8b9e6e5d4383e275edb87d7",
+    "RaceV3": "0x19189409f8dd928530d7979d796971820fc75a7676d621082aef4c00e4803732"
+  }
+}
