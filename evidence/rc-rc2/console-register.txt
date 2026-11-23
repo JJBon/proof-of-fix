@@ -1,0 +1,9 @@
+i-08d8c5da3711b8909	[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI Amazon Elastic Block Store vol0ecc3d958968b2e56 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+BdsDxe: starting Boot0001 "UEFI Amazon Elastic Block Store vol0ecc3d958968b2e56 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+EFI stub: Loaded initrd from LINUX_EFI_INITRD_MEDIA_GUID device path
+EFI stub: Measured initrd data into PCR 9
+[!p]104[?7h[!p]104[?7h[    6.943957] pof-data.sh[393]: pof-data: data volume /dev/nvme1n1 mounted; scratch wiped
+[    7.341639] pof-radicle.sh[485]: POF-RADICLE nid z6MkndSSawVcJAPRY96cRcTzG5mBTM46fhgXYb8jMwFdBEG8
+[    7.354877] pof-radicle.sh[485]: POF-RADICLE repository rad:zNsFr9mCKJVTwosBXmGvBumup5g9; seed z6MkgJBSPd8ofuRuG6P1Y8jFvfhCATgxJC1jBWEShMd6wja5@10.82.0.145:8776; listens on no address (outbound only)
+[    9.837731] pof-radicle.sh[519]: POF-RADICLE ready: rad:zNsFr9mCKJVTwosBXmGvBumup5g9: ready in 1001 ms (sync: ok)
+	2026-11-22T19:18:43+00:00

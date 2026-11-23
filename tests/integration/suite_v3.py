@@ -625,6 +625,7 @@ class Net(Run):
                               (c.panels, "ChallengeOpened(uint256,address,bytes32)"),
                               (c.panels, "ChallengeWaits(uint256)"), (c.panels, "SecondDraw(uint256,uint256)"),
                               (c.panels, "ChallengeLapsed(uint256,uint256)"),
+                              (c.panels, "Released(uint256,uint256,uint256)"),
                               (c.panels, "ChallengeReleased(uint256,uint256,bool)"),
                               (c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)"),
                               (c.panels, "WindowStarted(uint256,uint256)"), (c.panels, "Final(uint256,bool)"),
@@ -972,21 +973,35 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
     others = [k for k in first if k != genesis.address]
     silent_key = next((k for k in others if c.validator(k)["bond"] == floor), others[0])  # a floor bond, if one is drawn
     slashed = c.validator(silent_key)["slashed"]
-    n.nodes[n.name(silent_key)].mute.add(P.pid(s4))
+    first_pid = P.pid(s4)
+    n.nodes[n.name(silent_key)].mute.add(first_pid)
     n.drive(lambda: c.verdict(s4)["status"] in (v3.WINDOW, v3.FINAL) and c.submission(s4)["paid"],
-            "the check decided without the silent validator")
-    missed = n.evs(c.panels, "Missed(uint256,address,bool)", c.verdict(s4)["pid"], silent_key)
+            "the check decided without the silent validator", explain=(s4,))
+    missed = n.evs(c.panels, "Missed(uint256,address,bool)", first_pid, silent_key)
     after = P.drawn(s4)
-    check(len(missed) == 1 and silent_key not in after and len(after) == P.size(s4) == 3,
-          f"{n.name(silent_key)} stayed silent on its seat: at the seal deadline it was replaced from the same sample "
-          f"({n.named(first)} -> {n.named(after)}); k stayed 3")
+    if P.pid(s4) == first_pid:
+        check(len(missed) == 1 and silent_key not in after and len(after) == P.size(s4) == 3,
+              f"{n.name(silent_key)} stayed silent on its seat: at the seal deadline it was replaced from the same "
+              f"sample ({n.named(first)} -> {n.named(after)}); k stayed 3")
+    else:
+        # The seat's replacement comes from the same sample (PanelsDraw.tries per seat); when none of its tries finds
+        # a validator free to sit (all drawn already, full or ineligible), the panel stays short and, STUCK_GRACE
+        # after its reveal deadline, the round is released and redrawn from a fresh seed (#251 L19). The silence
+        # still cost the seat; the redrawn panel, where it isn't muted, decides. Rare (one release-candidate run in
+        # thirteen, rc1 run 3): the check accepts either path and says which it saw.
+        released = n.evs(c.panels, "Released(uint256,uint256,uint256)", s4, first_pid)
+        print(n.history(s4), flush=True)
+        check(len(missed) == 1 and len(released) == 1 and len(after) == P.size(s4) == 3,
+              f"{n.name(silent_key)} stayed silent on its seat: at the seal deadline its seat was emptied, no "
+              f"validator in its sample could take it, and the round was released and redrawn (L19, panel "
+              f"{first_pid} -> {P.pid(s4)}: {n.named(first)} -> {n.named(after)}); k stayed 3")
     check(c.validator(silent_key)["slashed"] - slashed >= rpc.view(c.registry, "SILENCE_SLASH()", ["uint256"])[0],
           f"its silence cost it {(c.validator(silent_key)['slashed'] - slashed) / COIN:,.2f} of its bond")
     check(P.replaces_silent() and n.seats_reported(c.verdict(s4)["pid"]) == P.reports(s4, silent=1) == 3,
           "the panel still decided with 3 verdicts and 3 usage reports")
     below = c.validator(silent_key)["bond"] < floor
     out["silent"] = {"validator": n.name(silent_key), "slashed": c.validator(silent_key)["slashed"] - slashed,
-                     "belowFloor": below}
+                     "belowFloor": below, "redrawn": P.pid(s4) != first_pid}
     if below:
         # #251, L5: visibly inactive, not counted, and nothing waits for it; it isn't topped up here (its operator
         # may top up or leave; section 8 tops every validator up for its bounty)

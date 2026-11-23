@@ -56,13 +56,17 @@
 # challenge sizes. --sets story,launch,few-larger,few-same picks some (about 6, 25, 4 and 4 minutes); --report-dir
 # <dir> writes each set's numbers.
 #
-#   scripts/integration.sh --release-candidate <commit> [--runs N] [--record <file>] [--tag <name>]
+#   scripts/integration.sh --release-candidate <commit> [--runs N] [--record <file>] [--tag <name>] [--logs <dir>]
+#                                                       [--resume]
 #        The release candidate (#251 L18, task 7.0; scripts/release_candidate.py): that exact commit, checked out into
-#        a fresh worktree, runs `--version 3 --heal` N times in a row (default 3, stopping at the first failure) on
-#        production windows (refused otherwise: SEV-SNP hosts can't cold-start within minute windows), and the record
-#        is written: the commit, every contract's bytecode hash (scripts/deploy-sepolia.sh hashes), the runs and the
-#        rules the launch set ran with. The items this run can't check (a real SEV-SNP validator, a real-model run, the
-#        attested images) stay "pending" until recorded; the deploy script refuses anything but "passed".
+#        a fresh worktree, runs `--version 3 --heal` until N runs in a row have passed (default 3, stopping at the first
+#        failure) on production windows (refused otherwise: SEV-SNP hosts can't cold-start within minute windows), and
+#        the record is written after every run (atomically; "incomplete" while runs remain): the commit, every
+#        contract's bytecode hash (scripts/deploy-sepolia.sh hashes), the runs and the rules the launch set ran with.
+#        --resume (after a restart) counts the runs already in that record, refused unless its commit and bytecode are
+#        this commit's: the streak is its trailing passed runs, a failure resets it, every run stays listed. The items
+#        this run can't check (a real SEV-SNP validator, a real-model run, the attested images) stay "pending" until
+#        recorded; the deploy script refuses anything but "passed", and reads the last 3 runs.
 #   scripts/integration.sh --release-candidate <commit> --external [--logs <dir>]
 #        That commit's external set only (--version 3 --external in its worktree, production windows enforced): the
 #        SEV-SNP host's chain part of task 7.0 (scripts/rc-aws.sh runs it on the test-chain host; its rehearsal here).

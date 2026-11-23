@@ -1,0 +1,242 @@
+i-08d8c5da3711b8909	[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI Amazon Elastic Block Store vol0ecc3d958968b2e56 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+BdsDxe: starting Boot0001 "UEFI Amazon Elastic Block Store vol0ecc3d958968b2e56 1" from PciRoot(0x0)/Pci(0x4,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+EFI stub: Loaded initrd from LINUX_EFI_INITRD_MEDIA_GUID device path
+EFI stub: Measured initrd data into PCR 9
+[!p]104[?7h[!p]104[?7h[    7.063573] pof-data.sh[391]: pof-data: data volume /dev/nvme1n1 mounted; scratch wiped
+[    7.356024] pof-radicle.sh[479]: POF-RADICLE nid z6MkndSSawVcJAPRY96cRcTzG5mBTM46fhgXYb8jMwFdBEG8
+[    7.371005] pof-radicle.sh[479]: POF-RADICLE repository rad:z48E1JMwGwW3ArcK9UiuZ5oBRN5gP; seed z6MkpcGZFRA6sCEbPTXxUW2VkwSg9wNZhVkVnC7cjtkqaSif@10.82.0.145:8776; listens on no address (outbound only)
+[    8.362640] pof-radicle.sh[515]: POF-RADICLE ready: rad:z48E1JMwGwW3ArcK9UiuZ5oBRN5gP: ready in 379 ms (sync: ok)
+[   14.494815] pof-images.sh[711]: pof-images: loaded pof-oracle-node@sha256:e2bd6f377c7e47ec6a01924c44bec5c2017b98b4f335f6e4d858778f46476a4c
+[   17.435765] pof-images.sh[711]: pof-images: loaded pof-test-image@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5
+[   17.611071] pof-attest.sh[750]: POF-ATTEST roothash 51c96e70f339696a250bcd64c16ba1a487c91a874b3b1fe79ff0df1cf5875db3
+[   17.626480] pof-attest.sh[750]: POF-ATTEST nonce 9779a96dc565c2be3d3274ff693aa1ac
+[   17.649968] pof-attest.sh[750]: POF-ATTEST pcrs sha384 4=C86D43A7BE3E3018218031AFBE2489857936747FDD51644D13A25FBAB28363D706AFD3D94226523C65C5353385663A39 7=98441C7F7625D10058C47683AEC486CE311C633235EB555593A7EE791121E3578AE72D04ECEF661F272D59058B77AF35 12=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+[   19.951080] pof-attest.sh[750]: POF-ATTEST snp-summary {"chip_id": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "firmware": 67117025, "host_data": "0000000000000000000000000000000000000000000000000000000000000000", "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766", "policy": "0x2030000", "report_data": "5ea9370dc28d7ef1171b904ff237347e0d2ed7ea4f8c28cdae3d97ae4321d573b1b4a674849c09d7e9f8cd397e1937548ac4e037c387b16582414c089840250b", "reported_tcb": {"boot_loader": 4, "microcode": 225, "snp": 31, "tee": 0}, "signer": "vlek", "version": 5, "vmpl": 0}
+[   20.037197] pof-attest.sh[750]: POF-ATTEST snp-report BQAAAAAAAAAAAAMCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAEAAAAAAAf4ScAAAAAAAAABAAAAAAAAABeqTcNwo1+8RcbkE/yNzR+DS7X6k+MKM2uPZeuQyHVc7G0pnSEnAnX6fjNOX4ZN1SKxOA3w4exZYJBTAiYQCULeonM6qugu93cT3dazKPvFdH5v4q8zcYRXPrX+46uET3z7gu1Dvo025xTrgZbHcdmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB9igehwNKCZEBEiJuPRVz3seiUz5QW6hZ67DtjMyr6Ef//////////////////////////////////////////BAAAAAAAH+EZAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAH+EDOgEAAzoBAAQAAAAAAB/h7w8AAAAAAADvDwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoDDStNviDsb1WpL0GOqZbIqhBdF+phyFay0CEJ4LRj[2026-11-22T20:31:13.267966]HwBNU9SzdJbZXjfsdaGpAmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2WVOaF9+3sF58lFCZqclIQjIi+w1SBVhk+mVduP4xfi/4oOrh4gmC9HTvVvxU/52AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+[   20.230094] pof-attest.sh[750]: POF-ATTEST snp-cert vlek MIIFIzCCAtegAwIBAgIBADBBBgkqhkiG9w0BAQowNKAPMA0GCWCGSAFlAwQCAgUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAgUAogMCATAwgYAxFDASBgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZpY2VzMRcwFQYDVQQDDA5TRVYtVkxFSy1NaWxhbjAeFw0yNjEwMDEwNTAxMjNaFw0yNzEwMDEwNTAxMjNaMHoxFDASBgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEgQ2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZpY2VzMREwDwYDVQQDDAhTRVYtVkxFSzB2MBAGByqGSM49AgEGBSuBBAAiA2IABAWMGVnFsB2UObp4NXjD6opPhW0TUOVtsl2c41NpFpH2Y++3IYChvwOY+8mXmJmpMbRSjIjMpBa8XeHOacPThgQSl5hj4kL7yNo92tPQ0jpkm5DuywAbXMAKYJXLDR+Lo6OB8jCB7zAQBgkrBgEEAZx4AQEEAwIBADAUBgkrBgEEAZx4AQIEBxYFTWlsYW4wEQYKKwYBBAGceAEDAQQDAgEEMBEGCisGAQQBnHgBAwIEAwIBADARBgorBgEEAZx4AQMEBAMCAQAwEQYKKwYBBAGceAEDBQQDAgEAMBEGCisGAQQBnHgBAwYEAwIBADARBgorBgEEAZx4AQMHBAMCAQAwEQYKKwYBBAGceAEDAwQDAgEfMBIGCisGAQQBnHgBAwgEBAICAOEwLAYJKwYBBAGceAE[2026-11-22T20:31:13.467946]FBB8WHUNOPWNjLXVzLWVhc3QtMi5hbWF6b25hd3MuY29tMEEGCSqGSIb3DQEBCjA0oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0BAQgwDQYJYIZIAWUDBAICBQCiAwIBMAOCAgEALJ2R/RmCr4eP+pGDYntCcZiR7xw+DSdQTmv7BicHa4a06MuJQA+dXNV9oMy4hFI72T/XNEzHhKfbxL/CPvKdFBqzhf0Zv4Jz8axPP/8UxnEvsuyoixjcoN1OC7S8o/B2tRq13ToMlFhHoFTt1TwR4nwXI9s4UCJrwadozQqjpf3MnXLxlOVNzrBLtEqaVT2OM+/Bzkrk+7UxVrf/1QeHm+YXD9O16sex2iE536bp4xg2l37+/cLdGF4o+70whhh3Cqr7kCciurgFI0rrDVUUOHPwyz+WWuIDbpBpShPiQQkB1+Bvzk1lCX10S6XrwJJY8Zm5q4IHljgQb89JF/+QMf2UAhhktvbhQxDKi2BrSkDzK/8BS/YUvseb48ujNrKv14GE9wvt2r9/IvgvMYWwI47YMlOdHNBCg48wKktMEA5IeJVrz9KDCMx5lh7EcWDpfOvQZLYCJ3qbJzw8M/Qxdt/Xg2KcXZbFf6DfkzpkoiJLtIjA4tTBStOHEzoZ/S1EMEqN5XSggrcNCOeM+d9jHDvNQg93hYGrKeoK6gZK/bhGgwlQiNT8kbGFT8KkJaCPv4w95NZz3era4ZIV9Kk4FusZXzt+O9CzhjiA0rB2LMPtFVbfskmIeEhTwleoY1utv9CK9ky9Uq09jofUd/uxMdMA9+ftczyrsLWMjSxPGAQ=
+[   20.817595] pof-attest.sh[750]: POF-ATTEST nitrotpm hEShATgioFkTGL9pbW9kdWxlX2lkeCdpLTA4ZDhjNWRhMzcxMWI4OTA5LXRwbTAwMDAwMDAwMDAwMDAwMDBmZGlnZXN0ZlNIQTM4NGl0aW1lc3RhbXAbAAABogT0rT9tbml0cm90cG1fcGNyc7gYAFgw6txlDrmrxUKvH4tUg0nx/75qdJMbgsIhZ9XR944nqqOG8B4p8gKphNTuglmVl/eYAVgw/+7YJ4haJada6Ny3HxoU/xyLQAoCAbNiFNePu8T7E3NJ5htLPplmnjSGM7rGjGVJAlgwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEA1gwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEBFgwyG1Dp74+MBghgDGvviSJhXk2dH/dUWRNE6JfurKDY9cGr9PZQiZSPGXFNTOFZjo5BVgwb7Z3pawD4pqz0uk1ycM3GOz/Sw+oDQ+q7qg4aWrhZqbXNGAsH3XfewWC+RHMv3f1BlgwUYkjsPlV0I2gd8lqq6Uiud7O3mHFmc6mxBiJz76krk1QUp2W/k0a/a+2Xn+VvyPEB1gwmEQcf3Yl0QBYxHaDrsSGzjEcYzI161VVk6fueREh41eK5y0E7O9mHyctWQWLd681CFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACVgwa6u9f+XFiwnN9UGqsw/y0xBA8/F09wpBdCOW/ZbByy/ffVLVKMJFBJmZtsjEjwBBClgwowiPthDZg9SZP7lL1g1gInwUMS8USUETKSs5dgwrL3T2k0Ta9iliIZlNDYBY8FBbC1gwL+O9FSVmf0Sy/pf7fy7lOE8Rxu17T/NxCNkIu/CM[2026-11-22T20:31:14.067964]WCXipvj7yv8fYIvbCRYbIRPRDFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADVgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADlgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD1gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEFgwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEVgw////////////////////////////////////////////////////////////////Elgw////////////////////////////////////////////////////////////////E1gw////////////////////////////////////////////////////////////////FFgw////////////////////////////////////////////////////////////////FVgw////////////////////////////////////////////////////////////////Flgw////////////////////////////////////////////////////////////////F1gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa2NlcnRpZmljYXRlWQJzMIICbzCCAfWgAwIBAgIEawNRETAKBggqhkjOPQQDAzCBjjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xEDAOBgNVBAcMB1NlYXR0bGUxDzANBgNVBAoMBkFtYXp[2026-11-22T20:31:14.168014]vbjEMMAoGA1UECwwDQVdTMTkwNwYDVQQDDDBpLTA4ZDhjNWRhMzcxMWI4OTA5LnVzLWVhc3QtMi5hd3Mubml0cm8tZW5jbGF2ZXMwHhcNMjYxMTIyMjAzMTEwWhcNMjYxMTIyMjMzMTEzWjCBkzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xEDAOBgNVBAcMB1NlYXR0bGUxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMT4wPAYDVQQDDDVpLTA4ZDhjNWRhMzcxMWI4OTA5LXRwbTAwMDAwMDAwMDAwMDAwMDAudXMtZWFzdC0yLmF3czB2MBAGByqGSM49AgEGBSuBBAAiA2IABNjIna8pHhkQQHgd5d6ZbIBN3y86Jk186krwRH18NRHk1lllKHpG556suLENeKoPeHzoMC+pAkYA3C25rNRbLwMq5lckn/kJOp1Hxz9kY36T9TvySeySNaMmvZcz67lOXaMdMBswDAYDVR0TAQH/BAIwADALBgNVHQ8EBAMCBsAwCgYIKoZIzj0EAwMDaAAwZQIwd1eELzF7Rss4Poqk42z51OTkM5sHABErjDhXi2A3TDgpDVowgYiKtJ6086GW3uSEAjEAxb1TozXGxls1103XlIS7uiOKpgkIsUQlRTE6zqZSOqM9y2gqGVNEgOmS1Ju86PbNaGNhYnVuZGxlhFkCFTCCAhEwggGWoAMCAQICEQD5MXVoG5Cv4R1GzLTk5/hWMAoGCCqGSM49BAMDMEkxCzAJBgNVBAYTAlVTMQ8wDQYDVQQKDAZBbWF6b24xDDAKBgNVBAsMA0FXUzEbMBkGA1UEAwwSYXdzLm5pdHJvLWVuY2xhdmVzMB4XDTE5MTAyODEzMjgwNVoXDTQ5MTAyODE0MjgwNVowSTELMAkGA1UEBhMCVVMxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMRswGQYDVQQDDB[2026-11-22T20:31:14.267970]Jhd3Mubml0cm8tZW5jbGF2ZXMwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAT8AlTrpgjB82hw4prakL5GODKSc26JS//2ctmJREtQUeU0pLH22+PAvFgaMrexdgcO3hLWmj/qIRtm51LPfdHdCV9vE3D0FwhD2dwQASHkz2MBKAlmRIfJeWKEME3FP/SjQjBAMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFJAltQ3ZBUfnlsOW+nKdz5mp30uWMA4GA1UdDwEB/wQEAwIBhjAKBggqhkjOPQQDAwNpADBmAjEAo38vkaHJvV7nuGJ8FpjSVQOOHwND+VtjqWKMPTmAlUWhHry/LjtV2K7ucbTD1q3zAjEAovObFgWycCil3UugabUBbmW0+96P4AYdalMZf5za9dlDvGH8K+sDy2/ujSMC89/2WQLCMIICvjCCAkSgAwIBAgIQDAD7rw+BxnlNq8PGk50WNzAKBggqhkjOPQQDAzBJMQswCQYDVQQGEwJVUzEPMA0GA1UECgwGQW1hem9uMQwwCgYDVQQLDANBV1MxGzAZBgNVBAMMEmF3cy5uaXRyby1lbmNsYXZlczAeFw0yNjExMTkxNjIwNTlaFw0yNjEyMDkxNzIwNTlaMGQxCzAJBgNVBAYTAlVTMQ8wDQYDVQQKDAZBbWF6b24xDDAKBgNVBAsMA0FXUzE2MDQGA1UEAwwtYjBlM2QwYTM0ZTcxNjM4Mi51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE+Aabh7s84oA19KylwpJPPEJIJ+insQMPz/c17m4CMhMwOiCjBYY+I+AuFrzXptVWJpfFXak4dkNq5X9RwmWTpLaaRlOph1+68MMF+3HyWtXZf5CO7TjPRlNwAHHnE/uso4HVMIHSMBIGA1UdEwEB/wQIMAYBAf8CAQIwHwYDVR0jBBgwFoAUkCW1DdkFR[2026-11-22T20:31:14.367999]+eWw5b6cp3PmanfS5YwHQYDVR0OBBYEFGs4FZDlASzXeSvXQO34Zf5WqxxbMA4GA1UdDwEB/wQEAwIBhjBsBgNVHR8EZTBjMGGgX6BdhltodHRwOi8vYXdzLW5pdHJvLWVuY2xhdmVzLWNybC5zMy5hbWF6b25hd3MuY29tL2NybC9hYjQ5NjBjYy03ZDYzLTQyYmQtOWU5Zi01OTMzOGNiNjdmODQuY3JsMAoGCCqGSM49BAMDA2gAMGUCMQD9jsQIJl3X9xWvJTyTp1AqzQr31X2tC2mZXmNKkVcCREys1PRPGM+fZw1bd5ejHiACMHB+DvP17WeN5/m3owqJj3CHCDmzmmiFoLrC7l8McCZQKgxgDTwwUnI7e4t7I9bVSFkDGTCCAxUwggKaoAMCAQICEB0B154dkB26WjPz2S3E9IcwCgYIKoZIzj0EAwMwZDELMAkGA1UEBhMCVVMxDzANBgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDQVdTMTYwNAYDVQQDDC1iMGUzZDBhMzRlNzE2MzgyLnVzLWVhc3QtMi5hd3Mubml0cm8tZW5jbGF2ZXMwHhcNMjYxMTIyMTkwMDQzWhcNMjYxMTI4MDgwMDQzWjCBiTE8MDoGA1UEAwwzNWVkZDJiNjM3MDIzODM4ZC56b25hbC51cy1lYXN0LTIuYXdzLm5pdHJvLWVuY2xhdmVzMQwwCgYDVQQLDANBV1MxDzANBgNVBAoMBkFtYXpvbjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAldBMRAwDgYDVQQHDAdTZWF0dGxlMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEN59NDC+VQW1AznyCghOaYx4Cue8WE80DsMFHHPoAoJcYygCBfcB0one1yYI52nAEBwAqqMWMuSJIEt1CnY+ZLRU1f371dy5qext5e+dr580Q+2qUnb8z8RcrXH+KGf/Go4HqMIHnMBIGA1UdEwEB/wQI[2026-11-22T20:31:14.469630]MAYBAf8CAQEwHwYDVR0jBBgwFoAUazgVkOUBLNd5K9dA7fhl/larHFswHQYDVR0OBBYEFLK86yfcIUjQFlNrtdh+Y7hkeYz1MA4GA1UdDwEB/wQEAwIBhjCBgAYDVR0fBHkwdzB1oHOgcYZvaHR0cDovL2NybC11cy1lYXN0LTItYXdzLW5pdHJvLWVuY2xhdmVzLnMzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tL2NybC80MjI5MmI1MC1lZDY3LTRmNmYtOGUxMS0wYjk0Y2UzYTI0NjYuY3JsMAoGCCqGSM49BAMDA2kAMGYCMQCHp/m7KSWuu5eknkGlfbQm2Nx0RwsPd/hgdbgTx97VP2NaVKBJ6Ex4rjFucuakCRUCMQCHsOXAZ/kaJkno9Qf/jWdhp9HxVmrt9hQ+7GBPwRe+qF48wPlvQraLadhRlymBMFpZAsIwggK+MIICRaADAgECAhUA23cZtXHvAJP9f53E7d8eLlY3PqEwCgYIKoZIzj0EAwMwgYkxPDA6BgNVBAMMMzVlZGQyYjYzNzAyMzgzOGQuem9uYWwudXMtZWFzdC0yLmF3cy5uaXRyby1lbmNsYXZlczEMMAoGA1UECwwDQVdTMQ8wDQYDVQQKDAZBbWF6b24xCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJXQTEQMA4GA1UEBwwHU2VhdHRsZTAeFw0yNjExMjIyMDMwMjlaFw0yNjExMjMyMDMwMjlaMIGOMQswCQYDVQQGEwJVUzETMBEGA1UECAwKV2FzaGluZ3RvbjEQMA4GA1UEBwwHU2VhdHRsZTEPMA0GA1UECgwGQW1hem9uMQwwCgYDVQQLDANBV1MxOTA3BgNVBAMMMGktMDhkOGM1ZGEzNzExYjg5MDkudXMtZWFzdC0yLmF3cy5uaXRyby1lbmNsYXZlczB2MBAGByqGSM49AgEGBSuBBAAiA2IABO740NzHwdBtOXzPqx9Vox7[2026-11-22T20:31:14.667973]VPuZvOl2RTOj81cyugOMgkN5giMPPeqblBgwy/BOR45FvN1M4xVati4xTWmi1Ii2wXfgcT0ev/EJATEjuztlNLn0AVE9JBcnGKCnFj4oj56NmMGQwEgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAgQwHQYDVR0OBBYEFIU094HJrAVjcjXMh+JstP8OyVNPMB8GA1UdIwQYMBaAFLK86yfcIUjQFlNrtdh+Y7hkeYz1MAoGCCqGSM49BAMDA2cAMGQCMFSeb0VsDRrnjSrxjP5PW01pAJAAE+3jdNcdbwxGQq1HT4qkjpdALjfwL5Jxo+upswIwEZMsC+2alxSWHH9CVqs76iqlJA82Q2rRI7d3lLBdV6mvb0mflzMtEM6/zT/6m6jianB1YmxpY19rZXn2aXVzZXJfZGF0YVhgMTFjMGZiYzc5OWM3ZWExMjEwYTU5NjU1YzM2YWVmNzRhNjM5Nzg0MDcyYTQzMDUzNjQ2OWZiYzZjZjIzMDM5NGUyZDk5OGE2MTdmMzI4YjY2OGRmMmQ4NmEyMTMzN2RjZW5vbmNlWCA5Nzc5YTk2ZGM1NjVjMmJlM2QzMjc0ZmY2OTNhYTFhY/9YYCr2K4uAujHtdADY7O390WzC/yxkkIkJL3Qa4eZaeGfJNkWfVBVWP7FwrU4sziXfrpC0j9X8n0fO7qOOshXW5nTRqkqFOzfb7HbOFdckPRo7+Oviq+9A7Qnwfo3JBGl7cw==
+[   22.585457] pof-attest.sh[750]: POF-ATTEST attested-check {"listed": ["pof-oracle-node@sha256:e2bd6f377c7e47ec6a01924c44bec5c2017b98b4f335f6e4d858778f46476a4c", "pof-test-image@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5"], "refusal": "attested mode: the image pof-unlisted-probe@sha256:0000000000000000000000000000000000000000000000000000000000000000 isn't on the measured disk's list (/etc/pof/images.json); nothing else runs, and nothing is pulled", "unlisted_refused": true}
+[   22.650319] pof-attest.sh[750]: POF-ATTEST ok
+[   23.877859] pof-node.sh[948]: [0xd18bC117] panel 132: drawn as a shadow on submission 35 that waits for a panel
+[   23.896445] pof-node.sh[948]: [0xd18bC117] panel 133: drawn as a shadow on submission 36 that waits for a panel
+[   23.914787] pof-node.sh[948]: [0xd18bC117] panel 134: drawn as a shadow on submission 37 that waits for a panel
+[   23.933383] pof-node.sh[948]: [0xd18bC117] panel 135: drawn as a shadow on submission 38 that waits for a panel
+[   23.950234] pof-node.sh[948]: [0xd18bC117] panel 136: drawn as a shadow on submission 39 that waits for a panel
+[   23.966799] pof-node.sh[948]: [0xd18bC117] panel 138: drawn as a shadow on submission 24
+[   23.983761] pof-node.sh[948]: [0xd18bC117] panel 140: drawn as a shadow on submission 25
+[   23.999809] pof-node.sh[948]: [0xd18bC117] panel 142: drawn as a shadow on submission 26
+[   24.015330] pof-node.sh[948]: [0xd18bC117] panel 144: drawn as a shadow on submission 27
+[   24.031363] pof-node.sh[948]: [0xd18bC117] panel 146: drawn as a shadow on submission 28
+[   24.043599] pof-node.sh[948]: [0xd18bC117] panel 152: drawn as a shadow on submission 33
+[   24.060652] pof-node.sh[948]: [0xd18bC117] panel 154: resuming this seat's round from disk
+[   24.077125] pof-node.sh[948]: [0xd18bC117] panel 156: drawn as a shadow on submission 35
+[   24.093258] pof-node.sh[948]: [0xd18bC117] panel 158: drawn as a shadow on submission 36
+[   24.109439] pof-node.sh[948]: [0xd18bC117] panel 160: drawn as a shadow on submission 37
+[   26.670153] pof-node.sh[948]: [0xd18bC117] registration 35: Radicle issue b2ce05f98777da7ae7d51663f127dd000008eb7c judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   26.724927] pof-node.sh[948]: [0xd18bC117] submission 35: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt a3305c214dfc
+[   27.204500] pof-node.sh[948]: [0xd18bC117] panel 132: sealed
+[   29.511904] pof-node.sh[948]: [0xd18bC117] registration 36: Radicle issue 952853e461b02201723d5b53f6349f497d462b05 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   29.559397] pof-node.sh[948]: [0xd18bC117] submission 36: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 7b13423274f6
+[   30.034086] pof-node.sh[948]: [0xd18bC117] panel 133: sealed
+[   32.511456] pof-node.sh[948]: [0xd18bC117] registration 37: Radicle issue 4d4a82cb57509b08213429e7a6b2e517ff9cb4ab judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   32.557975] pof-node.sh[948]: [0xd18bC117] submission 37: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 11eeecccc9f5
+[   33.023724] pof-node.sh[948]: [0xd18bC117] panel 134: sealed
+[   35.397661] pof-node.sh[948]: [0xd18bC117] registration 38: Radicle issue 54cbdbabe788f9a8256ac6642f07d42e3a317c50 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   35.444944] pof-node.sh[948]: [0xd18bC117] submission 38: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt a35d036a6f5e
+[   35.919470] pof-node.sh[948]: [0xd18bC117] panel 135: sealed
+[   38.321165] pof-node.sh[948]: [0xd18bC117] registration 39: Radicle issue 706579480fa108e771a0612eed3f0aa9e41c9b83 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   38.364464] pof-node.sh[948]: [0xd18bC117] submission 39: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 2313e8ef1c9a
+[   38.836614] pof-node.sh[948]: [0xd18bC117] panel 136: sealed
+[   41.338691] pof-node.sh[948]: [0xd18bC117] registration 24: Radicle issue e175250cc2918201f0e2c3dcea558a3eaba35907 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   41.369864] pof-node.sh[948]: [0xd18bC117] submission 24: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 4b12705e43c1
+[   41.829082] pof-node.sh[948]: [0xd18bC117] panel 138: sealed
+[   44.356938] pof-node.sh[948]: [0xd18bC117] registration 25: Radicle issue 5fbeec343d82bf14f83b0d4e5cd6e8ea07533fc0 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   44.403192] pof-node.sh[948]: [0xd18bC117] submission 25: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 25b93f9f57ec
+[   44.873970] pof-node.sh[948]: [0xd18bC117] panel 140: sealed
+[   47.381593] pof-node.sh[948]: [0xd18bC117] registration 26: Radicle issue 252c1296d8c7cd5dc6512510e285091babbe6469 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   47.429194] pof-node.sh[948]: [0xd18bC117] submission 26: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 0ac7b533c663
+[   47.898513] pof-node.sh[948]: [0xd18bC117] panel 142: sealed
+[   50.113025] pof-node.sh[948]: [0xd18bC117] registration 27: Radicle issue 5823d2ddb8213868cfe639795853900fce463527 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   50.143020] pof-node.sh[948]: [0xd18bC117] submission 27: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 44a598770927
+[   50.616659] pof-node.sh[948]: [0xd18bC117] panel 144: sealed
+[   52.965486] pof-node.sh[948]: [0xd18bC117] registration 28: Radicle issue 8dd71c8b62a7ac07d0ccbfbf905095964890ee26 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   53.013219] pof-node.sh[948]: [0xd18bC117] submission 28: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 2141a8a42c7f
+[   53.482264] pof-node.sh[948]: [0xd18bC117] panel 146: sealed
+[   55.716755] pof-node.sh[948]: [0xd18bC117] registration 33: Radicle issue 11f71a015a9088f012f67f332460eb426b08ecd3 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   55.744884] pof-node.sh[948]: [0xd18bC117] submission 33: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt e26492fad02b
+[   56.202872] pof-node.sh[948]: [0xd18bC117] panel 152: sealed
+[   56.667040] pof-node.sh[948]: [0xd18bC117] panel 154: sealed
+[   58.928831] pof-node.sh[948]: [0xd18bC117] registration 35: Radicle issue b2ce05f98777da7ae7d51663f127dd000008eb7c judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   58.958162] pof-node.sh[948]: [0xd18bC117] submission 35: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 3428be0e4200
+[   59.435737] pof-node.sh[948]: [0xd18bC117] panel 156: sealed
+[   61.876700] pof-node.sh[948]: [0xd18bC117] registration 36: Radicle issue 952853e461b02201723d5b53f6349f497d462b05 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   61.903639] pof-node.sh[948]: [0xd18bC117] submission 36: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 7832bcdb9a4d
+[   62.365946] pof-node.sh[948]: [0xd18bC117] panel 158: sealed
+[   64.609289] pof-node.sh[948]: [0xd18bC117] registration 37: Radicle issue 4d4a82cb57509b08213429e7a6b2e517ff9cb4ab judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   64.636765] pof-node.sh[948]: [0xd18bC117] submission 37: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt f0f77962b542
+[   65.099174] pof-node.sh[948]: [0xd18bC117] panel 160: sealed
+[   65.750125] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(9)
+[   66.205029] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(10)
+[   66.671038] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(14)
+[   67.122019] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(15)
+[   70.326847] pof-node.sh[948]: [0xd18bC117] Radicle: main waiting: this node is neither a delegate nor seated on-chain: watching only
+[   72.337382] pof-node.sh[948]: [0xd18bC117] panel 166: drawn as a shadow on submission 42
+[   72.352901] pof-node.sh[948]: [0xd18bC117] panel 168: drawn as a shadow on submission 43
+[   72.368931] pof-node.sh[948]: [0xd18bC117] panel 170: drawn as a shadow on submission 44
+[   72.384790] pof-node.sh[948]: [0xd18bC117] panel 172: drawn as a shadow on submission 45
+[   72.400532] pof-node.sh[948]: [0xd18bC117] panel 174: drawn as a shadow on submission 46
+[   74.773550] pof-node.sh[948]: [0xd18bC117] registration 42: Radicle issue 33489666c66dd80f0ab1a01c4427a626da6da711 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   74.801672] pof-node.sh[948]: [0xd18bC117] submission 42: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 8d2192279777
+[   75.271324] pof-node.sh[948]: [0xd18bC117] panel 166: sealed
+[   77.624715] pof-node.sh[948]: [0xd18bC117] registration 43: Radicle issue f9e52ecea1c7dd2c230e5be2893e1f2de97bf80c judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   77.652502] pof-node.sh[948]: [0xd18bC117] submission 43: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt d11a818ae4c5
+[   78.122199] pof-node.sh[948]: [0xd18bC117] panel 168: sealed
+[   80.795384] pof-node.sh[948]: [0xd18bC117] registration 44: Radicle issue dc6584e99e4c44a242d1814c98cb24e515bbe874 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   80.841060] pof-node.sh[948]: [0xd18bC117] submission 44: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 8eaee2818e6b
+[   81.310788] pof-node.sh[948]: [0xd18bC117] panel 170: sealed
+[   83.964875] pof-node.sh[948]: [0xd18bC117] registration 45: Radicle issue 19b5517014bf92b59693316383e72a49f51e6b26 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   83.992558] pof-node.sh[948]: [0xd18bC117] submission 45: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt ea7d61455680
+[   84.451463] pof-node.sh[948]: [0xd18bC117] panel 172: sealed
+[   86.574968] pof-node.sh[948]: [0xd18bC117] registration 46: Radicle issue 809cb428777bdd48245edcdb838e3e3df05b3a3f judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[   86.603648] pof-node.sh[948]: [0xd18bC117] submission 46: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt ae4930ef1c44
+[   87.060075] pof-node.sh[948]: [0xd18bC117] panel 174: sealed
+[   87.979358] pof-node.sh[948]: [0xd18bC117] panel 132: revealed pass, receipt a3305c214dfc on-chain
+[   88.891992] pof-node.sh[948]: [0xd18bC117] panel 133: revealed pass, receipt 7b13423274f6 on-chain
+[   89.810394] pof-node.sh[948]: [0xd18bC117] panel 134: revealed pass, receipt 11eeecccc9f5 on-chain
+[   90.731425] pof-node.sh[948]: [0xd18bC117] panel 135: revealed pass, receipt a35d036a6f5e on-chain
+[   91.646544] pof-node.sh[948]: [0xd18bC117] panel 136: revealed pass, receipt 2313e8ef1c9a on-chain
+[   92.197907] pof-node.sh[948]: [0xd18bC117] panel 132: usage reported to the race (tokens 949 in, 280 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   92.671369] pof-node.sh[948]: [0xd18bC117] panel 133: usage reported to the race (tokens 945 in, 256 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   93.142781] pof-node.sh[948]: [0xd18bC117] panel 134: usage reported to the race (tokens 955 in, 262 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   93.618756] pof-node.sh[948]: [0xd18bC117] panel 135: usage reported to the race (tokens 950 in, 262 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   94.095385] pof-node.sh[948]: [0xd18bC117] panel 136: usage reported to the race (tokens 950 in, 265 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[   94.669439] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(9)
+[   95.123550] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(10)
+[   95.594945] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(14)
+[   96.045964] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(15)
+[  100.913606] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(14)
+[  106.171348] pof-node.sh[948]: [0xd18bC117] panel 138: revealed pass, receipt 4b12705e43c1 on-chain
+[  107.085655] pof-node.sh[948]: [0xd18bC117] panel 140: revealed pass, receipt 25b93f9f57ec on-chain
+[  108.002720] pof-node.sh[948]: [0xd18bC117] panel 142: revealed pass, receipt 0ac7b533c663 on-chain
+[  108.919376] pof-node.sh[948]: [0xd18bC117] panel 144: revealed pass, receipt 44a598770927 on-chain
+[  109.837257] pof-node.sh[948]: [0xd18bC117] panel 146: revealed pass, receipt 2141a8a42c7f on-chain
+[  110.364530] pof-node.sh[948]: [0xd18bC117] panel 138: usage reported to the race (tokens 936 in, 277 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  110.839187] pof-node.sh[948]: [0xd18bC117] panel 140: usage reported to the race (tokens 954 in, 261 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  111.313648] pof-node.sh[948]: [0xd18bC117] panel 142: usage reported to the race (tokens 946 in, 267 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  111.783484] pof-node.sh[948]: [0xd18bC117] panel 144: usage reported to the race (tokens 938 in, 261 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  112.262602] pof-node.sh[948]: [0xd18bC117] panel 146: usage reported to the race (tokens 948 in, 263 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  117.668839] pof-node.sh[948]: [0xd18bC117] panel 152: revealed pass, receipt e26492fad02b on-chain
+[  118.591107] pof-node.sh[948]: [0xd18bC117] panel 154: revealed pass, receipt 96280c0973fc on-chain
+[  119.502886] pof-node.sh[948]: [0xd18bC117] panel 156: revealed pass, receipt 3428be0e4200 on-chain
+[  120.416891] pof-node.sh[948]: [0xd18bC117] panel 158: revealed pass, receipt 7832bcdb9a4d on-chain
+[  121.337390] pof-node.sh[948]: [0xd18bC117] panel 160: revealed pass, receipt f0f77962b542 on-chain
+[  121.874833] pof-node.sh[948]: [0xd18bC117] panel 152: usage reported to the race (tokens 938 in, 255 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  122.349149] pof-node.sh[948]: [0xd18bC117] panel 154: usage reported to the race (tokens 580 in, 37 out; 4 vCPU-s, 8 GB-s, 1 MB)
+[  122.822954] pof-node.sh[948]: [0xd18bC117] panel 156: usage reported to the race (tokens 957 in, 229 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  123.303082] pof-node.sh[948]: [0xd18bC117] panel 158: usage reported to the race (tokens 949 in, 272 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  123.783687] pof-node.sh[948]: [0xd18bC117] panel 160: usage reported to the race (tokens 951 in, 264 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  124.441869] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(41)
+[  129.680575] pof-node.sh[948]: [0xd18bC117] panel 166: revealed pass, receipt 8d2192279777 on-chain
+[  130.600514] pof-node.sh[948]: [0xd18bC117] panel 168: revealed pass, receipt d11a818ae4c5 on-chain
+[  131.521029] pof-node.sh[948]: [0xd18bC117] panel 170: revealed pass, receipt 8eaee2818e6b on-chain
+[  132.494110] pof-node.sh[948]: [0xd18bC117] panel 172: revealed pass, receipt ea7d61455680 on-chain
+[  133.417267] pof-node.sh[948]: [0xd18bC117] panel 174: revealed pass, receipt ae4930ef1c44 on-chain
+[  133.920712] pof-node.sh[948]: [0xd18bC117] panel 166: usage reported to the race (tokens 944 in, 265 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  134.395920] pof-node.sh[948]: [0xd18bC117] panel 168: usage reported to the race (tokens 960 in, 257 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  134.865366] pof-node.sh[948]: [0xd18bC117] panel 170: usage reported to the race (tokens 942 in, 292 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  135.342336] pof-node.sh[948]: [0xd18bC117] panel 172: usage reported to the race (tokens 938 in, 270 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  135.818238] pof-node.sh[948]: [0xd18bC117] panel 174: usage reported to the race (tokens 951 in, 224 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  141.457410] pof-node.sh[948]: [0xd18bC117] keeper: draw(50)
+[  141.893054] pof-node.sh[948]: [0xd18bC117] keeper: signal(50)
+[  144.877216] pof-node.sh[948]: [0xd18bC117] keeper: payPanel(181)
+[  145.316620] pof-node.sh[948]: [0xd18bC117] keeper: payPanel(182)
+[  147.349804] pof-node.sh[948]: [0xd18bC117] panel 185: drawn as a shadow on submission 49
+[  147.366036] pof-node.sh[948]: [0xd18bC117] panel 187: drawn as a shadow on submission 50
+[  147.381408] pof-node.sh[948]: [0xd18bC117] panel 189: drawn as a shadow on submission 51
+[  149.976635] pof-node.sh[948]: [0xd18bC117] registration 49: Radicle issue b93121deba0b1764e763b99eda13664779b5ecdb judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  150.006599] pof-node.sh[948]: [0xd18bC117] submission 49: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 951198064a0d
+[  150.481187] pof-node.sh[948]: [0xd18bC117] panel 185: sealed
+[  153.075672] pof-node.sh[948]: [0xd18bC117] registration 50: Radicle issue 728276679744f6af8001ff10c333cd0d1b02c5ba judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  153.122752] pof-node.sh[948]: [0xd18bC117] submission 50: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt ac3d2e7215d0
+[  153.591624] pof-node.sh[948]: [0xd18bC117] panel 187: sealed
+[  156.077303] pof-node.sh[948]: [0xd18bC117] registration 51: Radicle issue efcf6674aba69fcad05b924edd2c38b1fc9e3d92 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  156.104932] pof-node.sh[948]: [0xd18bC117] submission 51: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt c769b5885a90
+[  156.562386] pof-node.sh[948]: [0xd18bC117] panel 189: sealed
+[  162.408545] pof-node.sh[948]: [0xd18bC117] panel 185: revealed pass, receipt 951198064a0d on-chain
+[  163.324467] pof-node.sh[948]: [0xd18bC117] panel 187: revealed pass, receipt ac3d2e7215d0 on-chain
+[  164.235698] pof-node.sh[948]: [0xd18bC117] panel 189: revealed pass, receipt c769b5885a90 on-chain
+[  164.705041] pof-node.sh[948]: [0xd18bC117] panel 185: usage reported to the race (tokens 949 in, 279 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  165.179843] pof-node.sh[948]: [0xd18bC117] panel 187: usage reported to the race (tokens 941 in, 285 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  165.661195] pof-node.sh[948]: [0xd18bC117] panel 189: usage reported to the race (tokens 941 in, 250 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  179.709462] pof-node.sh[948]: [0xd18bC117] panel 192: drawn as a shadow on submission 52
+[  179.723601] pof-node.sh[948]: [0xd18bC117] panel 194: drawn as a shadow on submission 53
+[  179.740876] pof-node.sh[948]: [0xd18bC117] panel 196: drawn as a shadow on submission 54
+[  182.301559] pof-node.sh[948]: [0xd18bC117] registration 52: Radicle issue aaa93b6dda43745793a5c924a17f74ef10e12165 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  182.327370] pof-node.sh[948]: [0xd18bC117] submission 52: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 480105eb7221
+[  182.794833] pof-node.sh[948]: [0xd18bC117] panel 192: sealed
+[  185.053550] pof-node.sh[948]: [0xd18bC117] registration 53: Radicle issue b95eadac24aeef3e49666522d8ce0ef72882ddbe judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  185.080791] pof-node.sh[948]: [0xd18bC117] submission 53: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt dd1929bd3891
+[  185.544802] pof-node.sh[948]: [0xd18bC117] panel 194: sealed
+[  188.229361] pof-node.sh[948]: [0xd18bC117] registration 54: Radicle issue 48f227765e17ee3544337f88ca3567dcba7df4b0 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  188.256455] pof-node.sh[948]: [0xd18bC117] submission 54: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt ac62077ea2dd
+[  188.732407] pof-node.sh[948]: [0xd18bC117] panel 196: sealed
+[  193.316547] pof-node.sh[948]: [0xd18bC117] panel 192: revealed pass, receipt 480105eb7221 on-chain
+[  194.243216] pof-node.sh[948]: [0xd18bC117] panel 194: revealed pass, receipt dd1929bd3891 on-chain
+[  195.162691] pof-node.sh[948]: [0xd18bC117] panel 196: revealed pass, receipt ac62077ea2dd on-chain
+[  195.631504] pof-node.sh[948]: [0xd18bC117] panel 192: usage reported to the race (tokens 944 in, 261 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  196.113658] pof-node.sh[948]: [0xd18bC117] panel 194: usage reported to the race (tokens 956 in, 221 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  196.583709] pof-node.sh[948]: [0xd18bC117] panel 196: usage reported to the race (tokens 944 in, 288 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  202.313984] pof-node.sh[948]: [0xd18bC117] keeper: payPanel(197)
+[  211.525501] pof-node.sh[948]: [0xd18bC117] panel 199: drawn as a shadow on submission 55
+[  211.539813] pof-node.sh[948]: [0xd18bC117] panel 201: drawn as a shadow on submission 56
+[  211.556512] pof-node.sh[948]: [0xd18bC117] panel 203: drawn as a shadow on submission 57
+[  213.925526] pof-node.sh[948]: [0xd18bC117] registration 55: Radicle issue a382f84e2b511889e55f1e3d26f54a198430d802 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  213.956513] pof-node.sh[948]: [0xd18bC117] submission 55: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 0de7bdeb8403
+[  214.425926] pof-node.sh[948]: [0xd18bC117] panel 199: sealed
+[  216.985127] pof-node.sh[948]: [0xd18bC117] registration 56: Radicle issue 24c653c6021f9e500c22b024a36ca755239a38f6 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  217.013286] pof-node.sh[948]: [0xd18bC117] submission 56: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 22fe26813c71
+[  217.483074] pof-node.sh[948]: [0xd18bC117] panel 201: sealed
+[  220.012897] pof-node.sh[948]: [0xd18bC117] registration 57: Radicle issue 90d25442c4ccdb6004056a8dbf11c5ada53cb77a judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  220.041930] pof-node.sh[948]: [0xd18bC117] submission 57: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt cafe82292a22
+[  220.502645] pof-node.sh[948]: [0xd18bC117] panel 203: sealed
+[  224.933852] pof-node.sh[948]: [0xd18bC117] panel 199: revealed pass, receipt 0de7bdeb8403 on-chain
+[  225.849655] pof-node.sh[948]: [0xd18bC117] panel 201: revealed pass, receipt 22fe26813c71 on-chain
+[  226.767755] pof-node.sh[948]: [0xd18bC117] panel 203: revealed pass, receipt cafe82292a22 on-chain
+[  227.248027] pof-node.sh[948]: [0xd18bC117] panel 199: usage reported to the race (tokens 940 in, 230 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  227.726307] pof-node.sh[948]: [0xd18bC117] panel 201: usage reported to the race (tokens 955 in, 271 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  228.210035] pof-node.sh[948]: [0xd18bC117] panel 203: usage reported to the race (tokens 938 in, 269 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  230.210814] pof-node.sh[948]: [0xd18bC117] keeper: roll()
+[  239.592709] pof-node.sh[948]: [0xd18bC117] panel 205: drawn as a shadow on submission 58
+[  239.608629] pof-node.sh[948]: [0xd18bC117] panel 207: drawn as a shadow on submission 59
+[  239.620650] pof-node.sh[948]: [0xd18bC117] panel 209: drawn as a shadow on submission 60
+[  242.275967] pof-node.sh[948]: [0xd18bC117] registration 58: Radicle issue 4e75a186aafaf82c885a8282e90cf24807f680da judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  242.306281] pof-node.sh[948]: [0xd18bC117] submission 58: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt b404f33afbea
+[  242.765454] pof-node.sh[948]: [0xd18bC117] panel 205: sealed
+[  245.340972] pof-node.sh[948]: [0xd18bC117] registration 59: Radicle issue 93162b573dbca65c037073fbfd119835c8fa08d5 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  245.388499] pof-node.sh[948]: [0xd18bC117] submission 59: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 5a29fb7ee9e3
+[  245.868721] pof-node.sh[948]: [0xd18bC117] panel 207: sealed
+[  248.628838] pof-node.sh[948]: [0xd18bC117] registration 60: Radicle issue 235c49384661020061dcf1d59d2e375f9142ac7d judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  248.656783] pof-node.sh[948]: [0xd18bC117] submission 60: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt ed3eb6b39978
+[  249.121179] pof-node.sh[948]: [0xd18bC117] panel 209: sealed
+[  249.795758] pof-node.sh[948]: [0xd18bC117] keeper: finish(33)
+[  253.031361] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0x26f212e66761; posting the price in force
+[  253.047373] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0x902af8415c18; posting the price in force
+[  253.063277] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0x895d155468e4; posting the price in force
+[  253.082511] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0xad21c9f008fc; posting the price in force
+[  253.099527] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0xce5aa4be0e25; posting the price in force
+[  253.117395] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0x50919eafab0f; posting the price in force
+[  253.136475] pof-node.sh[948]: [0xd18bC117] table: no list price here for family 0xefde774a06c3; posting the price in force
+[  253.606996] pof-node.sh[948]: [0xd18bC117] table posted: 14 families' list prices and this validator's shared-unit costs
+[  254.117797] pof-node.sh[948]: [0xd18bC117] keeper: startWindow(14)
+[  254.562002] pof-node.sh[948]: [0xd18bC117] keeper: drawAudits(14)
+[  258.680761] pof-node.sh[948]: [0xd18bC117] panel 205: revealed pass, receipt b404f33afbea on-chain
+[  259.596619] pof-node.sh[948]: [0xd18bC117] panel 207: revealed pass, receipt 5a29fb7ee9e3 on-chain
+[  260.517143] pof-node.sh[948]: [0xd18bC117] panel 209: revealed pass, receipt ed3eb6b39978 on-chain
+[  260.988046] pof-node.sh[948]: [0xd18bC117] panel 205: usage reported to the race (tokens 944 in, 273 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  261.461795] pof-node.sh[948]: [0xd18bC117] panel 207: usage reported to the race (tokens 939 in, 266 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  261.940466] pof-node.sh[948]: [0xd18bC117] panel 209: usage reported to the race (tokens 959 in, 261 out; 2 vCPU-s, 4 GB-s, 1 MB)
+[  265.710299] pof-node.sh[948]: [0xd18bC117] panel 211: drawn as a counted judge on submission 61
+[  268.057412] pof-node.sh[948]: [0xd18bC117] registration 61: Radicle issue 32f56ff8f5ecd90ecfecbb4b1656646e7ae63512 judged a genuine bug report in scope (us.anthropic.claude-haiku-4-5-20251001-v1:0)
+[  268.088956] pof-node.sh[948]: [0xd18bC117] submission 61: pass (tests exit 125, us.anthropic.claude-haiku-4-5-20251001-v1:0); receipt 85947443ec7c
+[  268.558457] pof-node.sh[948]: [0xd18bC117] panel 211: sealed
+	2026-11-22T20:36:05+00:00

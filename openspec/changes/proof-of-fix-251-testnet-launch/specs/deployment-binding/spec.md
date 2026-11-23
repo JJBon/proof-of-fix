@@ -97,6 +97,14 @@ The Sepolia deploy script SHALL deploy only contracts whose bytecode hashes matc
 - **WHEN** the deploy script finds no release-candidate record for the commit, or one whose run failed
 - **THEN** it refuses before signing anything
 
+#### Scenario: Runs resumed after a restart
+- **WHEN** the release-candidate run is resumed after a restart (`--resume`) from a record that names the same commit and the same bytecode hashes, and that record lists a failed run followed by 3 passed runs
+- **THEN** the failed run stays in the record, and the deploy script accepts the integration item, because the last 3 runs passed with no failure after them
+
+#### Scenario: Resuming another build
+- **WHEN** the release-candidate run is resumed from a record whose commit or bytecode hashes differ from the commit's as computed now
+- **THEN** it refuses to resume, and runs nothing
+
 ### Requirement: The fee coin is a test coin with no key
 On Sepolia the fee coin SHALL be the project's own test coin (design L17, owner 2026-11-20): an ERC-20 with 6 decimals whose name and symbol never say "USD" or "USDC". Its supply SHALL come only from one genesis mint at construction, named in the deployment record, and from its faucet, its only minter. It SHALL have no owner, admin, pause, setter or upgrade, and SHALL be constructed only on Sepolia and the local test ids.
 

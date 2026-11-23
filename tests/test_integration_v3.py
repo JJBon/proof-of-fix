@@ -1,7 +1,7 @@
 """The v3 integration suite's own pieces that need no devnet (proof-of-fix#256, #251 task 3.27): the release-candidate
-record scripts/release_candidate.py writes (and what the deploy script then accepts), its refusal of minute windows,
-the moved clock's hold on a seat of a validator run outside the harness (tests/integration/suite_v3.py,
-`external_hold`), and the scenario sets' rules (tests/integration/scenarios_v3.py)."""
+record scripts/release_candidate.py writes after every run and resumes from (--resume), what the deploy script then
+accepts, its refusal of minute windows, the moved clock's hold on a seat of a validator run outside the harness
+(tests/integration/suite_v3.py, `external_hold`), and the scenario sets' rules (tests/integration/scenarios_v3.py)."""
 
 from __future__ import annotations
 
@@ -63,8 +63,11 @@ class TheRecord(unittest.TestCase):
         self.assertEqual(r["result"], "failed")
         self.assertEqual(r["checks"]["productionWindows"], "failed")
 
-    def test_fewer_runs_than_asked_fail(self):
-        self.assertEqual(rc.record(SHA, "", [run()], CODE, LAUNCH, None, 3)["result"], "failed")
+    def test_fewer_runs_than_asked_are_incomplete_until_the_rest_run(self):
+        r = rc.record(SHA, "", [run()], CODE, LAUNCH, None, 3)
+        self.assertEqual((r["result"], r["checks"]["productionWindows"]), ("incomplete", "pending"))
+        with self.assertRaises(ds.Refused):
+            self.deploy_reads(r)
 
     def test_a_set_on_minute_windows_fails_production_windows(self):
         r = rc.record(SHA, "", [run(windows="minutes")] * 3, CODE, LAUNCH, None, 3)
@@ -91,6 +94,213 @@ class TheRecord(unittest.TestCase):
         numbers = {"launch": {"setup": {"rules": dict(LAUNCH)}}}
         self.assertEqual(rc.rules_of(numbers), LAUNCH)
         self.assertIsNone(rc.rules_of({}))
+
+
+def runs_of(*results: str, invocation: int = 1) -> list:
+    return [dict(run(x), invocation=invocation) for x in results]
+
+
+class TheResume(unittest.TestCase):
+    """The record is written after every run, and --resume goes on from its runs (the owner's PC loses power): only
+    for the same commit and bytecode, a failure resetting the streak, every run kept, the deploy reading the last 3.
+    The suite's runs are mocked: nothing here starts a devnet."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.out = Path(self.dir.name) / "rc.json"
+        self.logs = Path(self.dir.name) / "logs"
+        self.results: list = []  # what the mocked runs return, in order
+        self.seen: list = []  # the record as each run starts: what a power cut then would leave
+        self.code = dict(CODE)
+        for target, kw in (("resolve", {"return_value": SHA}), ("checkout", {"return_value": Path(self.dir.name)}),
+                           ("drop", {}), ("hashes", {"side_effect": lambda where: dict(self.code)}),
+                           ("one_run", {"side_effect": self.fake_run})):
+            patcher = mock.patch.object(rc, target, **kw)
+            setattr(self, target, patcher.start())
+            self.addCleanup(patcher.stop)
+        for patcher in (mock.patch("builtins.print"), mock.patch("sys.stderr"),
+                        mock.patch.dict("os.environ", {"DEVNET_V3_WINDOWS": "production"})):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def fake_run(self, where, i, logs, env):
+        self.seen.append(json.loads(self.out.read_text()) if self.out.exists() else None)
+        if not self.results:
+            raise SystemExit(143)  # the power goes (or SIGTERM) during this run
+        r = run(self.results.pop(0))
+        r["numbers"]["launch"]["setup"] = {"rules": dict(LAUNCH)}
+        return r
+
+    def gate(self, *results: str, resume: bool = False, runs: int = 3) -> int:
+        self.results = list(results)
+        self.seen = []
+        argv = [SHA, "--record", str(self.out), "--tag", "v3-rc1", "--logs", str(self.logs), "--runs", str(runs)]
+        return rc.main(argv + (["--resume"] if resume else []))
+
+    def doc(self) -> dict:
+        return json.loads(self.out.read_text())
+
+    def put(self, *results: str, **over) -> None:
+        r = rc.record(SHA, "v3-rc1", runs_of(*results), CODE, LAUNCH, None, 3)
+        r.update(over)
+        self.out.write_text(json.dumps(r))
+
+    def test_the_record_is_written_after_every_run_incomplete_while_runs_remain(self):
+        self.assertEqual(self.gate("passed", "passed", "passed"), 0)
+        self.assertIsNone(self.seen[0])
+        self.assertEqual([s["checks"]["integration"]["runs"] for s in self.seen[1:]], [["passed"], ["passed"] * 2])
+        for s in self.seen[1:]:
+            self.assertEqual((s["result"], s["checks"]["productionWindows"]), ("incomplete", "pending"))
+            self.assertEqual(s["commit"], SHA)
+            self.assertEqual(s["bytecode"], CODE)
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed"] * 3)
+        self.assertEqual(doc["checks"]["productionWindows"], "passed")
+        self.assertEqual(doc["result"], "incomplete")  # the AWS items are pending
+        self.assertEqual(doc["panelRules"], LAUNCH)
+        self.assertEqual([d["invocation"] for d in doc["checks"]["integration"]["details"]], [1, 1, 1])
+        self.assertEqual(sorted(p.name for p in self.out.parent.iterdir() if p.is_file()), ["rc.json"])  # no temp
+
+    def test_a_failed_run_is_written_failed_and_stops_the_invocation(self):
+        self.assertEqual(self.gate("passed", "failed"), 1)
+        self.assertEqual(self.one_run.call_count, 2)
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed", "failed"])
+        self.assertEqual((doc["result"], doc["checks"]["productionWindows"]), ("failed", "failed"))
+
+    def test_the_write_is_atomic(self):
+        self.out.write_text("{\"old\": true}")
+        with mock.patch.object(rc.os, "replace", side_effect=OSError("power cut")), self.assertRaises(OSError):
+            rc.write_record(self.out, {"new": True})
+        self.assertEqual(json.loads(self.out.read_text()), {"old": True})
+        self.assertEqual([p.name for p in self.out.parent.iterdir()], ["rc.json"])
+        rc.write_record(self.out, {"new": True})
+        self.assertEqual(json.loads(self.out.read_text()), {"new": True})
+
+    def test_resume_with_the_same_commit_and_bytecode_runs_only_what_is_missing(self):
+        self.put("passed", "passed")
+        self.assertEqual(self.gate("passed", resume=True), 0)
+        self.assertEqual(self.one_run.call_count, 1)
+        self.assertEqual(self.one_run.call_args.args[1], 3)  # its logs are run-3's, after the record's two
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed"] * 3)
+        self.assertEqual([d["invocation"] for d in doc["checks"]["integration"]["details"]], [1, 1, 2])
+        self.assertEqual(doc["checks"]["productionWindows"], "passed")
+        self.assertEqual(doc["panelRules"], LAUNCH)
+
+    def test_resume_with_the_streak_complete_runs_nothing(self):
+        self.put("passed", "passed", "passed")
+        self.assertEqual(self.gate(resume=True), 0)
+        self.one_run.assert_not_called()
+        self.assertEqual(self.doc()["checks"]["integration"]["runs"], ["passed"] * 3)
+
+    def test_resume_refuses_another_commit(self):
+        self.put("passed", "passed", commit="c" * 40)
+        before = self.out.read_text()
+        self.assertEqual(self.gate("passed", resume=True), 2)
+        self.one_run.assert_not_called()
+        self.assertEqual(self.out.read_text(), before)
+
+    def test_resume_refuses_other_bytecode(self):
+        self.put("passed", "passed")
+        before = self.out.read_text()
+        self.code["Panels"] = "0x" + "ef" * 32  # the same commit built to other code (another solc, a dirty cache)
+        with mock.patch("builtins.print") as said:
+            self.assertEqual(self.gate("passed", resume=True), 2)
+        self.assertIn("Panels", " ".join(str(c.args[0]) for c in said.call_args_list))
+        self.one_run.assert_not_called()
+        self.drop.assert_called_once()  # the worktree still goes
+        self.assertEqual(self.out.read_text(), before)
+
+    def test_resume_refuses_without_a_record(self):
+        self.assertEqual(self.gate("passed", resume=True), 2)
+        self.one_run.assert_not_called()
+        self.checkout.assert_not_called()
+        self.assertFalse(self.out.exists())
+
+    def test_a_failure_resets_the_streak_and_stays_in_the_record(self):
+        self.put("passed", "passed")
+        self.assertEqual(self.gate("failed", resume=True), 1)
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed", "passed", "failed"])
+        self.assertEqual(doc["result"], "failed")
+        with self.assertRaises(SystemExit):  # the power goes during the third run after the failure
+            self.gate("passed", "passed", resume=True)
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed", "passed", "failed", "passed", "passed"])
+        self.assertEqual((doc["result"], doc["checks"]["productionWindows"]), ("incomplete", "pending"))
+        self.assertEqual(self.gate("passed", resume=True), 0)  # the streak was 2 of 3: one run left
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed", "passed", "failed"] + ["passed"] * 3)
+        self.assertEqual([d["invocation"] for d in doc["checks"]["integration"]["details"]], [1, 1, 2, 3, 3, 4])
+        self.assertEqual(doc["checks"]["productionWindows"], "passed")
+
+    def test_a_run_off_production_windows_resets_the_streak(self):
+        self.put("passed", "passed")
+        doc = json.loads(self.out.read_text())
+        doc["checks"]["integration"]["details"][1]["windows"]["launch"] = "minutes"
+        self.out.write_text(json.dumps(doc))
+        self.assertEqual(self.gate("passed", "passed", "passed", resume=True), 0)
+        self.assertEqual(self.one_run.call_count, 3)
+
+    def test_a_record_from_before_resume_counts_its_runs(self):
+        old = rc.record(SHA, "v3-rc1", runs_of("passed", "passed"), CODE, LAUNCH, None, 2)  # a --runs 2 run
+        for d in old["checks"]["integration"]["details"]:
+            del d["windows"], d["invocation"]
+        self.out.write_text(json.dumps(old))
+        self.assertEqual(self.gate("passed", resume=True), 0)
+        self.assertEqual(self.one_run.call_count, 1)
+
+    def test_without_resume_the_streak_starts_at_zero_and_earlier_runs_go(self):
+        self.put("passed", "passed")
+        self.assertEqual(self.gate("passed", "passed", "passed"), 0)
+        self.assertEqual(self.one_run.call_count, 3)
+        doc = self.doc()
+        self.assertEqual(doc["checks"]["integration"]["runs"], ["passed"] * 3)
+        self.assertEqual([d["invocation"] for d in doc["checks"]["integration"]["details"]], [1, 1, 1])
+
+    def test_the_aws_items_carry_over_on_resume(self):
+        r = rc.record(SHA, "v3-rc1", runs_of("passed", "passed"), CODE, LAUNCH,
+                      {"commit": SHA, "checks": {"sevSnpValidator": "passed", "attestedImages": "passed",
+                                                 "attestedImagesEvidence": "evidence/x", "realModelRun": "pending"}}, 3)
+        self.out.write_text(json.dumps(r))
+        self.assertEqual(self.gate("passed", resume=True), 0)
+        checks = self.doc()["checks"]
+        self.assertEqual([checks[c] for c in ("sevSnpValidator", "attestedImages", "realModelRun")],
+                         ["passed", "passed", "pending"])
+        self.assertEqual(checks["attestedImagesEvidence"], "evidence/x")
+
+    deploy_reads = TheRecord.deploy_reads
+
+    def test_the_deploy_takes_three_passes_after_an_old_failure_and_nothing_less(self):
+        """The deploy (scripts/deploy_sepolia.py) reads the last 3 runs: a failure before them is history, a failure
+        among or after them refuses, even in a record hand-edited to say passed."""
+        aws = {"commit": SHA, "checks": {c: "passed" for c in rc.EXTERNAL_CHECKS}}
+        ok = rc.record(SHA, "v3-rc1", runs_of("passed", "failed", "passed", "passed", "passed"), CODE, LAUNCH, aws, 3)
+        self.assertEqual(ok["result"], "passed")
+        self.assertEqual(ok["checks"]["integration"]["runs"][1], "failed")  # kept, visible
+        self.assertEqual(self.deploy_reads(ok, rules=ds.panel_rules("launch", 3, "same"))["commit"], SHA)
+        self.assertTrue(rc.runs_passed(ok))
+        for bad in (("failed", "passed", "passed"), ("passed", "passed", "passed", "failed"),
+                    ("passed", "passed", "failed", "passed", "passed")):
+            with self.subTest(bad):
+                r = rc.record(SHA, "v3-rc1", runs_of(*bad), CODE, LAUNCH, aws, 3)
+                self.assertNotEqual(r["result"], "passed")
+                self.assertFalse(rc.runs_passed(r))
+                with self.assertRaises(ds.Refused):
+                    self.deploy_reads(r)
+                r.update(result="passed")
+                r["checks"]["productionWindows"] = "passed"
+                with self.assertRaises(ds.Refused) as e:
+                    self.deploy_reads(r)
+                self.assertIn("3 runs in a row", str(e.exception))
+
+    def test_the_aws_items_on_a_record_still_running_keep_it_incomplete(self):
+        r = rc.record(SHA, "v3-rc1", runs_of("passed"), CODE, LAUNCH, None, 3)
+        self.assertEqual(rc.result_of(r["checks"], rc.runs_passed(r)), "incomplete")
+        r = rc.record(SHA, "v3-rc1", runs_of("passed", "failed"), CODE, LAUNCH, None, 3)
+        self.assertEqual(rc.result_of(r["checks"], rc.runs_passed(r)), "failed")
 
 
 class ProductionWindowsOnly(unittest.TestCase):

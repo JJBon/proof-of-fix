@@ -5,9 +5,10 @@
    outside this checkout (`git worktree add --detach`), so the run is that exact commit and nothing uncommitted. The
    pinned solc is copied in from this checkout's contracts/.cache when the worktree has none.
 2. Every contract's creation-code hash is computed there (`scripts/deploy-sepolia.sh hashes`, as the deploy compares).
-3. `scripts/integration.sh --version 3 --heal` runs there N times in a row (default 3), each from a clean state (its
-   devnets are started and removed by the suite), stopping at the first failure. Each run is the story on #132's
-   defaults and #256's lettered scenarios (scripts/integration-v3.sh), the `launch` set on the Sepolia record's rules.
+3. `scripts/integration.sh --version 3 --heal` runs there until N runs in a row have passed (default 3), each from a
+   clean state (its devnets are started and removed by the suite), stopping at the first failure (--resume, item 6,
+   goes on from the record's runs). Each run is the story on #132's defaults and #256's lettered scenarios
+   (scripts/integration-v3.sh), the `launch` set on the Sepolia record's rules.
    If the commit has the Radicle suite (tests/integration/suite_v3_radicle.py, #286), each run also runs
    `scripts/integration.sh --version 3 --radicle`.
 4. Production windows only (#251 L4; validator-kit/SEVSNP-PLAN.md, "Boot time against the deadlines": an attested
@@ -17,19 +18,28 @@
    POF_V3_EXTERNAL (validator addresses run outside the suite, e.g. item 3's SEV-SNP host) is passed through: the
    suite then holds its clock at a deadline while such a validator's seat hasn't acted (tests/integration/suite_v3.py,
    `external_hold`).
-5. The record (`pof-release-candidate/1`, scripts/deploy_sepolia.py's format) is written: the tag, the commit,
-   `checks.integration` (the command and each run's result, with each set's result and time), `productionWindows`,
-   `panelRules` (the launch set's, as Panels read them back), `bytecode`. The items this run can't check
-   (`sevSnpValidator`, `realModelRun`, `attestedImages`: a real host and a paid model, task 7.0) are kept from an
-   existing record of the same commit at that path when they are "passed", and are "pending" otherwise. `result` is
-   "passed" only when every item passed, "failed" when a run failed, "incomplete" otherwise; the deploy script takes
-   only "passed".
+5. The record (`pof-release-candidate/1`, scripts/deploy_sepolia.py's format) is written after every run, not only at
+   the end, atomically (a temporary file renamed over it, so a power cut can't leave half a record): the tag, the
+   commit, `checks.integration` (the command and each run's result, with each set's result, windows, time and
+   invocation), `productionWindows`, `panelRules` (the launch set's, as Panels read them back), `bytecode`. The
+   items this run can't check (`sevSnpValidator`, `realModelRun`, `attestedImages`: a real host and a paid model, task
+   7.0) are kept from an existing record of the same commit at that path when they are "passed", and are "pending"
+   otherwise. `result` is "passed" only when every item passed, "failed" when the last run failed, "incomplete"
+   otherwise (runs still to go, or items pending); the deploy script takes only "passed", and only with the last 3
+   runs passed in a row.
+6. --resume (the owner's PC loses power; a run takes about 65 minutes): the runs already in the record at that path
+   count, so a restart doesn't lose them. It is refused (exit 2) unless that record exists, names the same commit and
+   the hashes computed now are its `bytecode`. Every run starts from a clean state, so runs of separate invocations
+   are runs in a row as much as runs of one: the streak is the trailing runs that passed on production windows, a
+   failure resets it to 0, and runs go on until the streak is N. The record keeps every run, failed ones included,
+   each with the invocation it ran in; the deploy reads only the last 3. Without --resume the streak starts at 0 and
+   the record's earlier runs are dropped (its passed AWS items are kept, as above).
 
     scripts/integration.sh --release-candidate <commit> [--runs N] [--record FILE] [--tag NAME] [--logs DIR]
-                                                        [--keep-worktree]
+                                                        [--resume] [--keep-worktree]
     scripts/integration.sh --release-candidate <commit> --external [--logs DIR] [--keep-worktree]
 
-6. --external (task 7.0, items 3 and 6 on AWS: scripts/rc-aws.sh): that commit's external set only, in the same fresh
+7. --external (task 7.0, items 3 and 6 on AWS: scripts/rc-aws.sh): that commit's external set only, in the same fresh
    worktree on production windows: `scripts/integration.sh --version 3 --external` (tests/integration/external_v3.py),
    with POF_V3_EXTERNAL and the POF_EXT_* settings passed through and POF_EXT_DIR set to the logs directory, where it
    writes ready.json (what the SEV-SNP host needs) and external.json (`pof-external-run/1`). No record is written here:
@@ -40,8 +50,8 @@
 
 The record goes to contracts/release-candidates/<tag or the commit's first 12 digits>.json in this checkout unless
 --record names another file; the runs' logs and numbers to --logs (default a new directory under the system's temporary
-directory, printed). Docker and the pinned solc are needed, as for scripts/integration.sh. Nothing here touches a
-public network."""
+directory, printed; a resumed run numbers its logs after the record's runs). Docker and the pinned solc are needed,
+as for scripts/integration.sh. Nothing here touches a public network."""
 
 from __future__ import annotations
 
@@ -169,12 +179,90 @@ def one_run(where: Path, i: int, logs: Path, env: dict) -> dict:
             numbers[name] = json.loads(f.read_text(encoding="utf-8"))
     ok &= all(name in sets and sets[name].startswith("passed") for name in SETS)
     return {"result": "passed" if ok else "failed", "sets": sets, "wallSeconds": round(time.time() - started),
-            "numbers": numbers}
+            "numbers": numbers, "windows": {name: numbers.get(name, {}).get("windowsKind") for name in SETS}}
 
 
 def production(numbers: dict) -> bool:
     """Every set ran on production windows, as its devnet's record says."""
     return all(numbers.get(name, {}).get("windowsKind") == "production" for name in SETS)
+
+
+def windows_of(run: dict) -> dict:
+    """Each set's windows in a run: from its numbers (a run of this invocation) or from the record (a resumed one)."""
+    if isinstance(run.get("windows"), dict):
+        return run["windows"]
+    return {name: run.get("numbers", {}).get(name, {}).get("windowsKind") for name in SETS}
+
+
+def counted(run: dict) -> bool:
+    """A run counts towards the streak when it passed with every set on production windows."""
+    return run.get("result") == "passed" and all(windows_of(run).get(name) == "production" for name in SETS)
+
+
+def streak(runs: list) -> int:
+    """The runs in a row at the end that count: a failure (or a run off production windows) resets it to 0."""
+    n = 0
+    for r in reversed(runs):
+        if not counted(r):
+            break
+        n += 1
+    return n
+
+
+def resumed_runs(earlier: dict) -> list:
+    """The runs a record lists, as run dicts (no numbers: the record keeps each set's result, windows and time).
+    A record written before --resume has no windows per run: its runs were all on production windows when its
+    `productionWindows` passed (it passed only then)."""
+    integ = earlier.get("checks", {}).get("integration", {})
+    results, details = integ.get("runs", []), integ.get("details", [])
+    if not isinstance(results, list) or not isinstance(details, list) or len(results) != len(details):
+        raise Stop("the record's integration runs and their details don't match: nothing to resume")
+    all_production = earlier.get("checks", {}).get("productionWindows") == "passed"
+    out = []
+    for res, d in zip(results, details):
+        d = d if isinstance(d, dict) else {}
+        windows = d.get("windows") if isinstance(d.get("windows"), dict) else \
+            ({name: "production" for name in SETS} if all_production else {})
+        out.append({"result": res, "sets": d.get("sets", {}), "wallSeconds": d.get("wallSeconds", 0),
+                    "windows": windows, "invocation": d.get("invocation", 1)})
+    return out
+
+
+def resume_from(earlier: dict | None, out: Path, sha: str, code: dict) -> list:
+    """The runs to resume from the record at `out`, refused unless it is this commit's with these bytecode hashes."""
+    if earlier is None:
+        raise Stop(f"--resume: no record at {out} to resume from (start without --resume)")
+    if earlier.get("commit") != sha:
+        raise Stop(f"--resume: {out} is the record of commit {str(earlier.get('commit'))[:12]}, not {sha[:12]}")
+    if earlier.get("bytecode") != code:
+        differ = sorted(n for n in set(code) | set(earlier.get("bytecode") or {})
+                        if (earlier.get("bytecode") or {}).get(n) != code.get(n))
+        raise Stop(f"--resume: {out}'s bytecode hashes aren't this commit's as computed now (differ: "
+                   f"{', '.join(differ) or 'the record has none'}); start a fresh run without --resume")
+    return resumed_runs(earlier)
+
+
+def write_record(out: Path, rc: dict) -> None:
+    """The record, atomically: a temporary file beside it, flushed to disk, renamed over it."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=f".{out.name}.", suffix=".tmp", dir=str(out.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(rc, indent=2) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, out)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+    try:
+        d = os.open(str(out.parent), os.O_RDONLY)
+        try:
+            os.fsync(d)
+        finally:
+            os.close(d)
+    except OSError:
+        pass
 
 
 def rules_of(numbers: dict) -> dict | None:
@@ -183,12 +271,17 @@ def rules_of(numbers: dict) -> dict | None:
 
 
 def record(sha: str, tag: str, runs: list, code: dict, rules: dict | None, earlier: dict | None, wanted: int) -> dict:
-    passed = len(runs) >= wanted and all(r["result"] == "passed" for r in runs)
+    """The record of `runs` (every run, in order, failed ones included). The integration item passes when the last
+    `wanted` runs passed in a row on production windows; while fewer have and the last run didn't fail, the record is
+    "incomplete" (`productionWindows` "pending"); when the last run failed, "failed"."""
+    passed = streak(runs) >= wanted
+    failed = bool(runs) and not counted(runs[-1])
     checks: dict = {"integration": {"command": f"scripts/integration.sh --release-candidate {sha}",
                                     "runs": [r["result"] for r in runs],
-                                    "details": [{"sets": r["sets"], "wallSeconds": r["wallSeconds"]} for r in runs]},
-                    "productionWindows": "passed" if passed and all(production(r["numbers"]) for r in runs)
-                    else "failed"}
+                                    "details": [{"sets": r["sets"], "windows": windows_of(r),
+                                                 "wallSeconds": r["wallSeconds"], "invocation": r.get("invocation", 1)}
+                                                for r in runs]},
+                    "productionWindows": "passed" if passed else "failed" if failed else "pending"}
     for c in EXTERNAL_CHECKS:
         old = (earlier or {}).get("checks", {}).get(c)
         checks[c] = old if old == "passed" else "pending"
@@ -200,16 +293,21 @@ def record(sha: str, tag: str, runs: list, code: dict, rules: dict | None, earli
 
 
 def result_of(checks: dict, runs_passed: bool) -> str:
-    """The record's `result`: "failed" when a run failed or the windows weren't production's, "passed" when every
-    item passed, "incomplete" otherwise."""
+    """The record's `result`: "failed" when the last run failed or the windows weren't production's, "incomplete"
+    while runs are still to go (`productionWindows` "pending") or items are pending, "passed" when every item
+    passed."""
+    if checks.get("productionWindows") == "pending" and not runs_passed:
+        return "incomplete"
     if not runs_passed or checks.get("productionWindows") != "passed":
         return "failed"
     return "passed" if all(checks.get(c) == "passed" for c in RC_CHECKS) else "incomplete"
 
 
 def runs_passed(rc: dict, wanted: int = 3) -> bool:
+    """The record's last `wanted` runs passed, with no failure after them (the deploy's rule,
+    scripts/deploy_sepolia.py `load_release_candidate`); runs before them, failed ones included, don't matter."""
     runs = rc.get("checks", {}).get("integration", {}).get("runs", [])
-    return len(runs) >= wanted and all(r == "passed" for r in runs)
+    return isinstance(runs, list) and len(runs) >= wanted and all(r == "passed" for r in runs[-wanted:])
 
 
 def verify_problems(verify: dict, manifest: dict) -> list:
@@ -314,11 +412,15 @@ def main(argv: list | None = None) -> int:
     ap.add_argument("--tag", help="the release candidate's name (default the commit's first tag)")
     ap.add_argument("--logs", help="where the runs' logs and numbers go (default a new temporary directory)")
     ap.add_argument("--keep-worktree", action="store_true")
+    ap.add_argument("--resume", action="store_true",
+                    help="count the runs already in the record (same commit and bytecode, else refused): after a "
+                         "restart, run only until the last --runs runs passed in a row")
     ap.add_argument("--external", action="store_true",
                     help="only the external set (task 7.0 on AWS, scripts/rc-aws.sh): ready.json and external.json in "
                          "--logs; no record")
     a = ap.parse_args(argv)
-    # stopped from outside (SIGTERM), the worktree is still removed (`finally`) and no record is written
+    # stopped from outside (SIGTERM), the worktree is still removed (`finally`); the record keeps the runs finished
+    # before, and --resume goes on from them
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     try:
         if a.runs < 1:
@@ -326,6 +428,8 @@ def main(argv: list | None = None) -> int:
         env = windows_env(os.environ)
         sha = resolve(a.commit)
         if a.external:
+            if a.resume:
+                raise Stop("--resume is for the record's runs; --external writes no record")
             return external_main(sha, a, env)
         tag = tag_of(sha, a.tag)
         out = Path(a.record) if a.record else ROOT / "contracts" / "release-candidates" / f"{tag or sha[:12]}.json"
@@ -335,8 +439,13 @@ def main(argv: list | None = None) -> int:
                 earlier = json.loads(out.read_text(encoding="utf-8"))
             except ValueError:
                 raise Stop(f"{out} exists and isn't JSON: not overwritten") from None
+            if not isinstance(earlier, dict):
+                raise Stop(f"{out} isn't a record: not overwritten")
             if earlier.get("commit") != sha:
-                raise Stop(f"{out} is the record of another commit ({str(earlier.get('commit'))[:12]}): not overwritten")
+                raise Stop(f"{out} is the record of another commit ({str(earlier.get('commit'))[:12]}): not "
+                           f"{'resumed' if a.resume else 'overwritten'}")
+        if a.resume and earlier is None:
+            raise Stop(f"--resume: no record at {out} to resume from (start without --resume)")
         logs = Path(a.logs) if a.logs else Path(tempfile.mkdtemp(prefix=f"pof-rc-logs-{sha[:12]}-"))
         logs.mkdir(parents=True, exist_ok=True)
         print(f"release candidate {tag or '(untagged)'} at {sha}: logs in {logs}", flush=True)
@@ -344,29 +453,43 @@ def main(argv: list | None = None) -> int:
         try:
             code = hashes(where)
             print(f"bytecode hashes of {len(code)} contracts computed at {sha[:12]}", flush=True)
-            runs: list = []
-            for i in range(1, a.runs + 1):
-                print(f"run {i} of {a.runs} ...", flush=True)
+            runs: list = resume_from(earlier, out, sha, code) if a.resume else []
+            invocation = max((r.get("invocation", 1) for r in runs), default=0) + 1
+            if a.resume:
+                print(f"resumed {out}: {len(runs)} runs recorded, the last {streak(runs)} in a row passed", flush=True)
+            # the earlier record's panel rules, for runs resumed from it (their numbers aren't in the record)
+            kept_rules = ((earlier or {}).get("panelRules") or None) if a.resume else None
+
+            def save() -> dict:  # after every run, so a restart loses at most the run it cut
+                rules = next((rules_of(r.get("numbers", {})) for r in runs if rules_of(r.get("numbers", {}))),
+                             kept_rules)
+                rc = record(sha, tag, runs, code, rules, earlier, a.runs)
+                write_record(out, rc)
+                return rc
+
+            rc = None
+            while streak(runs) < a.runs:
+                i = len(runs) + 1
+                print(f"run {i} (streak {streak(runs)} of {a.runs}) ...", flush=True)
                 r = one_run(where, i, logs, env)
+                r["invocation"] = invocation
                 runs.append(r)
-                print(f"run {i}: {r['result']} in {r['wallSeconds']:,} s ({', '.join(f'{k} {v}' for k, v in r['sets'].items())})",
-                      flush=True)
-                if r["result"] != "passed":
+                rc = save()
+                sets = ", ".join(f"{k} {v}" for k, v in r["sets"].items())
+                print(f"run {i}: {r['result']} in {r['wallSeconds']:,} s ({sets}); record {rc['result']}", flush=True)
+                if not counted(r):
                     break
+            if rc is None:  # resumed with the streak already complete: the record rewritten as it stands
+                rc = save()
         finally:
             if a.keep_worktree:
                 print(f"worktree kept: {where}")
             else:
                 drop(where)
-        rules = next((rules_of(r["numbers"]) for r in runs if rules_of(r["numbers"])), None)
-        rc = record(sha, tag, runs, code, rules, earlier, a.runs)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(rc, indent=2) + "\n", encoding="utf-8")
         pending = [c for c in RC_CHECKS if rc["checks"][c] != "passed"]
         print(f"record: {out} (result {rc['result']}" + (f"; not passed yet: {', '.join(pending)}" if pending else "")
               + ")", flush=True)
-        return 0 if rc["checks"]["integration"]["runs"] and all(r == "passed" for r in rc["checks"]["integration"]["runs"]) \
-            and len(runs) == a.runs else 1
+        return 0 if streak(runs) >= a.runs else 1
     except Stop as e:
         print(f"release candidate: {e}", file=sys.stderr)
         return 2

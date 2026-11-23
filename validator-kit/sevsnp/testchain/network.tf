@@ -30,7 +30,7 @@ resource "aws_security_group" "testchain" {
 resource "aws_vpc_security_group_ingress_rule" "from_sevsnp" {
   for_each                     = { rpc = var.rpc_port, seed = var.seed_port }
   security_group_id            = aws_security_group.testchain.id
-  description                  = "${each.key} from the SEV-SNP host's group only"
+  description                  = "${each.key} from the SEV-SNP host group only"
   ip_protocol                  = "tcp"
   from_port                    = each.value
   to_port                      = each.value

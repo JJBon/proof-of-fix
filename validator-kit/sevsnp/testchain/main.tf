@@ -10,7 +10,8 @@
 # no inbound port from the internet: SSM only (Run Command for the run, port forwarding for this machine's view).
 
 locals {
-  ami = var.ami_id != "" ? var.ami_id : (var.create_instance ? data.aws_ssm_parameter.al2023[0].value : "")
+  # nonsensitive: SSM marks every parameter value sensitive, and an AMI ID is public (the ami_id output needs it plain)
+  ami = var.ami_id != "" ? var.ami_id : (var.create_instance ? nonsensitive(data.aws_ssm_parameter.al2023[0].value) : "")
   user_data = templatefile("${path.module}/user-data.yaml.tftpl", {
     rc_remote        = base64gzip(file("${path.module}/rc-remote.sh"))
     autostop_minutes = var.autostop_hours * 60
@@ -138,6 +139,8 @@ resource "aws_instance" "host" {
   tags = { Name = "${var.name}-host" }
 
   lifecycle {
-    ignore_changes = [ami] # a new AL2023 AMI doesn't replace a stopped host; pin ami_id to change it
+    # a new AL2023 AMI doesn't replace a stopped host (pin ami_id to change it); a stopped host reads as having no public
+    # address, which isn't a change to make
+    ignore_changes = [ami, associate_public_ip_address]
   }
 }

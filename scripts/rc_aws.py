@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import io
 import json
 import os
 import re
@@ -53,6 +54,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from pathlib import Path
@@ -85,6 +87,9 @@ PRICES_READ = "2026-11-21"
 TESTCHAIN_DISK_GB = 40
 HOURS_A_MONTH = 730
 MODEL_RUN_USD = 1.00  # the owner's estimate for one small real-model run (approved separately), capped below
+MODEL_MAX_CALLS = "60"  # per node process: qualifying alone takes QUALIFY_VERDICTS (20) judged shadow seats, then the
+# counted panel and retries; at the node's default (20) the 2026-11-22 model run could never qualify. The spend cap
+# below, not the call count, bounds the cost.
 MODEL_SPEND_CAP_USD = "1.50"  # the node's own daily cap in that run (oracle/spend.py): it pauses itself there
 
 FORMATS = {"ready": "pof-external-ready/1", "external": rc.EXTERNAL_FORMAT}
@@ -452,7 +457,9 @@ def preflight(a, outputs: dict, kit: dict, need_record: bool = True) -> dict:
 
 def bundle(sha: str, work: Path) -> list:
     """The commit as a git bundle, the pinned images (docker save) and solc's cache, for the S3 bucket."""
-    ref = f"refs/pof-rc-aws/{sha[:12]}"
+    # a branch ref: the host's plain `git clone` of the bundle fetches refs/heads/* only, so a ref elsewhere left the
+    # clone without the commit ("unable to read tree", the first AWS run of 2026-11-22)
+    ref = f"refs/heads/pof-rc-aws-{sha[:12]}"
     subprocess.run(["git", "update-ref", ref, sha], cwd=ROOT, check=True)
     try:
         subprocess.run(["git", "bundle", "create", str(work / "repo.bundle"), ref], cwd=ROOT, check=True,
@@ -462,11 +469,39 @@ def bundle(sha: str, work: Path) -> list:
     images = remote_images()
     with open(work / "images.tar", "wb") as f:
         subprocess.run(["docker", "save", *images.values()], stdout=f, check=True)
+    name_digest_refs(work / "images.tar", images.values())
     ids = {k: subprocess.run(["docker", "image", "inspect", "-f", "{{.Id}}", v], capture_output=True, text=True,
                              check=True).stdout.strip() for k, v in images.items()}
     (work / "images.json").write_text(json.dumps({"images": images, "ids": ids}, indent=2))
     subprocess.run(["tar", "-czf", str(work / "solc.tgz"), "-C", str(ROOT / "contracts"), ".cache"], check=True)
     return ["repo.bundle", "images.tar", "images.json", "solc.tgz"]
+
+
+def name_digest_refs(archive: Path, refs) -> None:
+    """Names each image saved by digest in `archive`'s OCI index (`io.containerd.image.name`). `docker save` of a
+    `repo@sha256:…` reference writes no name, so the test-chain host's Docker (25, containerd image store) loaded it
+    unnamed and the reference didn't resolve (the AWS run of 2026-11-22: "image foundry … is missing"). Each digest
+    reference's digest is its image's index entry, so the entry gets that name; a tag already carries its own."""
+    by_digest = {r.split("@", 1)[1]: r for r in refs if "@sha256:" in r}
+    if not by_digest:
+        return
+    named = archive.with_name(archive.name + ".named")
+    with tarfile.open(archive) as src, tarfile.open(named, "w", format=tarfile.PAX_FORMAT) as out:
+        for member in src:
+            data = src.extractfile(member) if member.isfile() else None
+            if member.name.lstrip("./") == "index.json" and data is not None:
+                index = json.loads(data.read())
+                for m in index.get("manifests", []):
+                    ref = by_digest.get(m.get("digest", ""))
+                    if ref:
+                        m.setdefault("annotations", {})["io.containerd.image.name"] = ref
+                body = json.dumps(index).encode()
+                member = tarfile.TarInfo(member.name)
+                member.size, member.mode = len(body), 0o644
+                out.addfile(member, io.BytesIO(body))
+            else:
+                out.addfile(member, data)
+    named.replace(archive)
 
 
 def remote_images() -> dict:
@@ -504,6 +539,22 @@ def wait_for(probe, what: str, timeout: float, every: float = 20, sleep=time.sle
         sleep(every)
 
 
+def booted_console(aws, iid: str, done, what: str, sleep=time.sleep, timeout: float = 900) -> str:
+    """A boot's serial console, read while the host runs, then the host stopped: a Nitro instance's console can't be
+    read once it has stopped (2026-11-22: the header only, 47 bytes), so these boots don't power themselves off."""
+    try:
+        return wait_for(lambda: (lambda text: text if done(text) else "")(aws.console(iid)), what, timeout, every=10,
+                        sleep=sleep)
+    finally:
+        aws.stop(iid)
+        aws.wait_state(iid, "stopped", 900, sleep=sleep)
+
+
+def _attest_facts(text: str) -> bool:
+    f = console_facts(text)
+    return bool(f["nid"]) and f["firmware"] is not None and bool(f["attested"])
+
+
 def aws_run(a, aws: Aws | None = None, sleep=time.sleep) -> int:
     """`run` and `model-run` (the module's docstring)."""
     if not a.yes_start:
@@ -531,10 +582,11 @@ def aws_run(a, aws: Aws | None = None, sleep=time.sleep) -> int:
     with Machines(aws, tc, sev, sleep=sleep) as m:
         nonces = {k: secrets.token_hex(16) for k in ("attest", "register", "run")}
         (out / "nonces.json").write_text(json.dumps(nonces, indent=2))
-        # 2. both machines; the SEV-SNP host's first boot only attests (no node settings), then powers off
+        # 2. both machines; the SEV-SNP host's first boot only attests (no node settings) and stays up until its
+        # console is read (booted_console)
         aws.wait_state(sev, "stopped", 900, sleep=sleep)
         m.remember()
-        aws.set_user_data(sev, user_data(nonces["attest"], "run --until-idle 600"))
+        aws.set_user_data(sev, user_data(nonces["attest"], "run --until-idle 600", power_off=False))
         m.start()
         log(f"started {tc} (test chain) and {sev} (SEV-SNP, attest-only boot)")
         # 3. the bundle and provisioning
@@ -545,6 +597,11 @@ def aws_run(a, aws: Aws | None = None, sleep=time.sleep) -> int:
                 aws.s3_cp(str(work / f), f"s3://{bucket}/{sha}/{f}")
         finally:
             shutil.rmtree(work, ignore_errors=True)
+        # the attest-only boot's console, while it runs; then it stops
+        console0 = booted_console(aws, sev, _attest_facts, "the attest-only boot attested (its Radicle node, firmware)",
+                                  sleep=sleep)
+        (out / "console-attest.txt").write_text(console0)
+        facts0 = console_facts(console0)
         wait_for(lambda: aws.ssm_online(tc), "the test-chain host on SSM", 900, sleep=sleep)
         log(" ".join(remote(aws, tc, "provision", bucket, sha, timeout=3600).strip().splitlines()[-1:]))
         # 4. the external set on the test-chain host
@@ -560,27 +617,21 @@ def aws_run(a, aws: Aws | None = None, sleep=time.sleep) -> int:
         url = f"http://127.0.0.1:{RPC_LOCAL}"
         wait_for(lambda: _chain_id(url) == ready["chainId"], "the chain through the SSM forward", 120, every=5,
                  sleep=sleep)
-        # 6. the SEV-SNP host: its attest-only boot's console, then register, then run
-        aws.wait_state(sev, "stopped", 900, sleep=sleep)
-        console0 = aws.console(sev)
-        (out / "console-attest.txt").write_text(console0)
-        facts0 = console_facts(console0)
-        if not facts0["nid"] or facts0["firmware"] is None or not facts0["attested"]:
-            raise Stop(f"the attest-only boot didn't attest or print its Radicle node and firmware: {facts0}")
+        # 6. the SEV-SNP host (its attest-only boot was read in step 3): register, then run
         judge = paid or "fake"
         extra = {}
         if paid:
             extra = {"ORACLE_MODEL_ALLOW": paid.split(":", 2)[2], "ORACLE_SPEND_DAILY_USD": MODEL_SPEND_CAP_USD,
-                     "ORACLE_SPEND_MONTHLY_USD": MODEL_SPEND_CAP_USD, "ORACLE_MAX_CALLS": "20"}
+                     "ORACLE_SPEND_MONTHLY_USD": MODEL_SPEND_CAP_USD, "ORACLE_MAX_CALLS": MODEL_MAX_CALLS}
         cfg = node_config(ready, judge, extra)
         (out / "node-config.json").write_text(json.dumps(cfg, indent=2))
         aws.set_user_data(sev, user_data(nonces["register"], register_command(ready, facts0["firmware"]),
-                                         ready["seed"], cfg, kit.get("signing_key_secret_arn", "")))
+                                         ready["seed"], cfg, kit.get("signing_key_secret_arn", ""), power_off=False))
         aws.start(sev)
         wait_for(lambda: _registered(url, ready["registry"], a.validator_address), "the SEV-SNP host registered",
                  1800, every=15, sleep=sleep)
-        aws.wait_state(sev, "stopped", 900, sleep=sleep)
-        console1 = aws.console(sev)
+        console1 = booted_console(aws, sev, lambda text: bool(console_facts(text)["nid"]),
+                                  "the register boot's console (its Radicle node)", sleep=sleep)
         (out / "console-register.txt").write_text(console1)
         aws.set_user_data(sev, user_data(nonces["run"], f"run --until-idle {int(a.idle_seconds)}", ready["seed"], cfg,
                                          kit.get("signing_key_secret_arn", "")))

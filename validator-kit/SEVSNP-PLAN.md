@@ -324,7 +324,8 @@ The 8-hour auto-stop bounds a forgotten run at about $2 of compute.
    stops it; stop it right after the apply: `scripts/rc-aws.sh stop`).
 3. The verifier's inputs (step 7): AMD's VLEK chain, AWS's Nitro root, the expected launch measurement for 2 vCPUs.
 4. The release candidate's local runs, which need no AWS: `scripts/integration.sh --release-candidate <commit>` (3
-   runs; its record is `--record`), and the test image and Radicle image built here (`scripts/test-image.sh`,
+   runs in a row; its record is `--record`, written after every run; after a power cut, the same command with
+   `--resume` goes on from the record's runs), and the test image and Radicle image built here (`scripts/test-image.sh`,
    `docker build -t pof190-radicle:spike spikes/radicle`): the driver ships exactly those, checked by image ID.
 
 **The run (each command is one approval):**
@@ -368,6 +369,61 @@ place of SEV-SNP. Its record step runs on a copy and must keep both items pendin
 
 **The rehearsal's result (2026-11-21, commit `58e39a8c`): passed** in 594 s of wall time. The chain was ready after 267 s (v1-v5 qualified by 48 Radicle-claimed registration checks); the outside validator, booted from the driver's user data, registered itself 13 s after ready.json (`simulated`, `amd-sev-snp`, the accepted extra image, family fake-6, bond 250, its own Radicle node); it qualified after 15 more checks (30 shadow seats, 27 revealed in wall time, the clock held at 30 seat deadlines); with v2-v5 paused, counted panel 218 was v1, the outside validator and genesis, and the outside validator's seat was sealed, revealed and receipted and the panel counted (pass, in its window); every harness validator's Radicle node dialled only the seed, outbound. The record step on a copy kept `sevSnpValidator` and `attestedImages` pending (a rehearsal, no verify.py evidence). The first try stopped at the resume after the draw (a capacity above Panels' ceiling); fixed by restoring each one's own capacity.
 
+## The genesis validator on Sepolia (task 7.1; the owner's decision, 2026-11-22)
+
+Sepolia's genesis validator is this host: the measured disk (root hash `51c96e70…`, image digest `0x34cc2415…6ca6b`)
+with a **fresh** key in the kit's secret (`signing_key_secret_arn`). Its custody isn't attested ("Open risks"), so the
+genesis digest is signed from the secret on the owner's machine, not on the host. `scripts/genesis-validator.sh` does
+each step. It reads the key into its own process only (never printed, logged, written to a file or put on a command
+line) and prints only the address. AWS calls use the profile `pof-sandbox` (`--profile`); the secret's ARN comes from
+the kit's `tofu output` (`--secret-arn` names it instead).
+
+The deployer is task 7.2's fresh wallet. Its address and its nonce when the script runs fix the registry's address,
+so both are in the boot's binding and in the digest. Forge first deploys Panels' three linked libraries from the
+deployer (through the CREATE2 deployer), so the script runs at the wallet's transaction count + 3 (`--deployer-nonce`,
+default 0, + `--libraries`, default 3; 0 only if the same build's libraries already exist on Sepolia). A wallet that
+has sent nothing has nonce 0, and the faucet's funding doesn't change that. If the wallet sends anything first, sign
+again, and boot again for a bound attestation.
+
+1. **The key:** `scripts/genesis-validator.sh new-key` puts a fresh key straight into the secret (Secrets Manager's
+   `PutSecretValue`, signed in the process) and prints its address. It refuses a secret that already holds a key and
+   names that key's address. `--replace` puts the new key in its place (Secrets Manager keeps the old one as
+   `AWSPREVIOUS`). The host's node reads the same secret, so on Sepolia it runs with this key.
+2. **The binding:** `scripts/genesis-validator.sh binding --deployer 0x<deployer>` prints the registry's address and
+   `attestNonce`: keccak256 of what the node's own `register` quotes (`proof-of-fix v3 registration`, the registry's
+   EIP-712 domain on chain 11155111, the key).
+3. **An attested boot** with that nonce: in the kit's tfvars, set `attest_nonce = "<attestNonce>"` and no
+   `node_config` (attest only, like `rc-aws.sh`'s first boot; it powers off). Apply, save the console (step 7), and run
+   `verify.py` with every check and `--nonce <attestNonce>`, saving its JSON output (`> verify.json`).
+4. **The fields:** `scripts/genesis-validator.sh fields --plan plan.json --console console.txt --manifest
+   out/manifest.json --verify verify.json --deployer 0x<deployer>` writes the plan's `genesisValidator`:
+   - `key`: the secret's address;
+   - `operator`: the key's address by default, as the node's `register` does (`--operator` sets another);
+   - `teeType`: amd-sev-snp;
+   - `level`: 1 (A, a cloud's confidential VM; `--level B` for 2);
+   - `attestation`: keccak256 of the boot's SEV-SNP report, as the node hashes its quote;
+   - `image`: the manifest's `image_digest`;
+   - `host`: keccak256 of `aws:us-east-2`, the kit's ORACLE_HOST_ID (`--host` sets another);
+   - `firmware`: the report's REPORTED_TCB (67117025 on 2026-11-22).
+
+   It refuses a `verify.json` with any check skipped or failed, or one from another boot, and a console that fails the
+   offline checks when they run again. It also refuses a boot whose nonce isn't step 2's. `--unbound` accepts such a
+   boot (for example `evidence/2026-11-22/`), but the attestation then shows only that the measured disk booted, not
+   that it booted for this registration. It prints the host's Radicle node (`POF-RADICLE nid`), which goes to the
+   deploy as `--genesis-rad-node`.
+5. **The digest:** the deploy's dry run (`scripts/deploy-sepolia.sh deploy --plan plan.json … --deployer 0x<deployer>
+   --genesis-rad-node did:key:z6Mk…`) refuses without a signature and prints `GENESIS_REGISTRY` and `GENESIS_DIGEST`.
+6. **The signature:** `scripts/genesis-validator.sh sign --plan plan.json --deployer 0x<deployer> --genesis-rad-node
+   did:key:z6Mk… --digest <GENESIS_DIGEST>` computes the digest the way DeploySepolia.s.sol does and refuses if it
+   isn't the dry run's. It signs with the secret's key (refused unless that key is the plan's) and writes `signature`
+   into the plan.
+7. **The dry run again** passes. The broadcast (task 7.4) waits for the owner's go (7.3).
+
+Tests without AWS: `tests/test_genesis_validator.py` covers the fields from `evidence/2026-11-22/`, the digest rebuilt
+from the script's own type string, the signature the deploy's `--genesis-dev-key` path makes, and the key absent from
+every output and file. `scripts/deploy-sepolia-e2e.sh` (scenario 4) signs with the tool and runs a dry run on an anvil
+with chain id 11155111.
+
 ## The build's values
 
 Recorded by `scripts/checker-disk.sh --twice` on 2026-11-21, with this host's Radicle node (#251 L12, task 4.9): two
@@ -377,7 +433,7 @@ Radicle units and scripts; the node image also carries main's changes to `oracle
 moved too. Booted under QEMU (OVMF, a software TPM, no network but a forwarded IMDS stand-in): it made
 the node's key on the data volume and printed `POF-RADICLE nid z6Mk…`, ran radicle-node under its unit's sandbox,
 kept the same Node ID on the next boot, and its Radicle steps were done before the images were loaded (below, "Boot
-time against the deadlines"). Not booted on AWS yet: the next apply does (steps 3–7).
+time against the deadlines"). Booted on AWS on 2026-11-22 (steps 4-7: snapshot `snap-094a15e2fa26e0b03`, AMI `ami-036534fb42ef550fe`, instance `i-08d8c5da3711b8909`): `POF-ATTEST ok`, the Radicle node up outbound only (`POF-RADICLE nid z6MkndSS…`), and verify.py passed every check with the 2026-11-20 measurement (`evidence/2026-11-22/`). The attest-only boot with `power_off` true powered off in about 45 s, and a Nitro instance's console isn't readable once stopped: read it with `power_off=false` (step 6) as the first run did.
 
 ```
 roothash      51c96e70f339696a250bcd64c16ba1a487c91a874b3b1fe79ff0df1cf5875db3

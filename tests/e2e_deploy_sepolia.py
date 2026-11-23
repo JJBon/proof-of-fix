@@ -10,7 +10,8 @@ No other network: nothing here names a public endpoint.
 2. chain id 11155111, a genesis head that isn't the repository's canonical main: refused, nothing sent;
 3. chain id 11155111, a release-candidate record whose Panels hash differs: refused, naming Panels, nothing sent;
 4. chain id 11155111, the right head: with no genesis signature the dry run refuses and prints the digest to sign;
-   signed outside the script it passes; the dry run sends nothing and writes its record; then --broadcast-sepolia
+   signed outside the script it passes, and so does a plan signed by scripts/genesis-validator.sh `sign` from a secret
+   (task 7.1: its GENESIS_DIGEST is forge's); the dry run sends nothing and writes its record; then --broadcast-sepolia
    deploys the test coin's faucet (and with it the coin, the genesis mint to the deployer by default) and the rest,
    and the record and the chain agree; a claim from the deployed faucet pays 20 coins and a second is refused;
 5. chain id 31337 on the local endpoint: the same test coin (no mock coin), the genesis mint of 6,000 coins to
@@ -20,6 +21,7 @@ No coin is planted: the deployment brings its own (design L17, 2026-11-20)."""
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -38,6 +40,10 @@ from fake_radicle import snapshot  # noqa: E402
 from oracle.crypto import address, keccak256, sign  # noqa: E402
 from oracle.delegates import did_from_key  # noqa: E402
 from pofctl.keys import MNEMONIC, derive  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("genesis_validator", ROOT / "scripts" / "genesis_validator.py")
+GV = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(GV)
 
 IMAGE = "ghcr.io/foundry-rs/foundry@sha256:32c8ea9ef052a440cb1620175987a3f49eff8b068a0c6a3d09ebf7f5f9a0e043"
 NAME = os.environ.get("POF_DEPLOY_E2E_NAME", "pof-deploy-sepolia-e2e")
@@ -101,6 +107,19 @@ def nonce(who: str) -> int:
 
 def blocks() -> int:
     return int(rpc("eth_blockNumber"), 16)
+
+
+class KeySecret:
+    """The genesis validator's secret for scripts/genesis_validator.py, in memory (anvil's public key 1)."""
+
+    def __init__(self, key: int) -> None:
+        self.key = key
+
+    def read(self) -> str:
+        return f"{self.key:064x}"
+
+    def write(self, value: str) -> None:
+        raise AssertionError("signing never writes the secret")
 
 
 class Rig:
@@ -354,6 +373,14 @@ def main() -> int:
             check(r.returncode == 2 and bool(digest), "no genesis signature: refused, printing the digest to sign")
             r = rig.deploy(rc=rc, plan=rig.signed_plan(digest[-1]), genesis_key=False)
             check(r.returncode == 0 and nonce(DEPLOYER) == 0, "signed outside the script: the dry run passes, nothing sent")
+            # the genesis-validator tool (task 7.1): its digest is forge's, and its signature from a secret passes
+            tool_plan = rig.work / "plan-tool.json"
+            tool_plan.write_text(unsigned.read_text(encoding="utf-8"), encoding="utf-8")
+            code = GV.main(["sign", "--plan", str(tool_plan), "--deployer", DEPLOYER, "--genesis-rad-node", RAD_DID,
+                            "--digest", digest[-1]], source=KeySecret(derive(MNEMONIC, 1)))
+            check(code == 0, "genesis-validator sign: forge's GENESIS_DIGEST computed here, signed from the secret")
+            r = rig.deploy(rc=rc, plan=tool_plan, genesis_key=False)
+            check(r.returncode == 0 and nonce(DEPLOYER) == 0, "signed by genesis-validator: the dry run passes, nothing sent")
             # the Sepolia record's rules (#251 batch 4): a release candidate that ran with the defaults is refused
             r = rig.deploy(*LAUNCH_FLAGS, rc=rc)
             check(r.returncode == 2 and "ran with other panel rules" in r.stderr and nonce(DEPLOYER) == 0,

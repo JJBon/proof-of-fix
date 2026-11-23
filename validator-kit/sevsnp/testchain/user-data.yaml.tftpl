@@ -27,5 +27,5 @@ write_files:
       WantedBy=multi-user.target
 runcmd:
   - [systemctl, daemon-reload]
-  - [systemctl, enable, --now, pof-autostop.service]
+  - [systemctl, enable, --now, --no-block, pof-autostop.service]  # --no-block: the unit is After=multi-user.target, which waits for cloud-final
   - [bash, /opt/pof/rc-remote.sh, install]

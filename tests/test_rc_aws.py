@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -591,6 +592,77 @@ class TheReleaseCandidateExternalMode(unittest.TestCase):
             self.assertEqual(drop.call_count, 2)
             with mock.patch.dict(os.environ, {"DEVNET_V3_WINDOWS": "minutes"}), mock.patch("sys.stderr"):
                 self.assertEqual(rc.main(["HEAD", "--external", "--logs", d]), 2)  # minute windows refused
+
+
+class TheBundle(unittest.TestCase):
+    """The commit's bundle: the host clones it plainly (rc-remote.sh provision: `git clone repo.bundle repo`, then a
+    detached checkout of the SHA), so the commit must come with that clone (the first AWS run of 2026-11-22 failed:
+    its ref outside refs/heads/ left the clone without it)."""
+
+    def test_a_plain_clone_of_the_bundle_checks_the_commit_out(self):
+        real = subprocess.run
+
+        def run(argv, *a, **kw):  # git for real; docker and tar (images and solc) aren't this test's
+            if argv[0] == "git":
+                return real(argv, *a, **kw)
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as d:
+            src = Path(d) / "src"  # a repository of its own: CI checks this one out shallow (--depth 1)
+            git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-C", str(src)]
+            real(["git", "init", "-q", str(src)], check=True)
+            for i in range(2):
+                (src / "f").write_text(str(i))
+                real([*git, "add", "f"], check=True)
+                real([*git, "commit", "-q", "-m", str(i)], check=True)
+            sha = real([*git, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+            work = Path(d) / "work"
+            work.mkdir()
+            with unittest.mock.patch.object(A, "ROOT", src), unittest.mock.patch.object(A, "remote_images", lambda: {}), \
+                    unittest.mock.patch.object(A.subprocess, "run", run):
+                A.bundle(sha, work)
+            real(["git", "clone", "-q", str(work / "repo.bundle"), str(work / "repo")], check=True, capture_output=True)
+            real(["git", "-C", str(work / "repo"), "checkout", "-q", "--detach", sha], check=True, capture_output=True)
+            head = real(["git", "-C", str(work / "repo"), "rev-parse", "HEAD"], capture_output=True, text=True).stdout
+            self.assertEqual(head.strip(), sha)
+            left = real([*git, "for-each-ref", "refs/heads/pof-rc-aws-*"], capture_output=True, text=True)
+            self.assertEqual(left.stdout.strip(), "")  # the temporary branch is removed
+
+class TheBootConsole(unittest.TestCase):
+    """A Nitro instance's console can't be read once it has stopped (2026-11-22: the header only), so the attest and
+    register boots stay up (POF_POWER_OFF=no) and the driver reads the console while the host runs, then stops it."""
+
+    def test_the_console_is_read_while_running_then_the_host_stops(self):
+        text = (ROOT / "validator-kit/sevsnp/evidence/2026-11-22/console.txt").read_text(errors="replace")
+        fake = FakeAws()
+        fake.states[SEV_ID] = "running"
+        answers = iter(["", "", text])
+        fake.console = lambda iid: next(answers)
+        got = A.booted_console(fake, SEV_ID, A._attest_facts, "the attest boot", sleep=lambda s: None)
+        self.assertEqual(got, text)
+        self.assertEqual([c[0] for c in fake.calls], ["stop", "wait_state"])
+        self.assertEqual(fake.states[SEV_ID], "stopped")
+
+    def test_a_console_that_never_attests_still_stops_the_host(self):
+        fake = FakeAws()
+        fake.states[SEV_ID] = "running"
+        with self.assertRaises(A.Stop):
+            A.booted_console(fake, SEV_ID, A._attest_facts, "the attest boot", sleep=lambda s: None, timeout=-1)
+        self.assertEqual(fake.states[SEV_ID], "stopped")
+
+    def test_the_attest_boot_keeps_the_host_up(self):
+        fake = TheStop().run_failing(fail_on="s3_cp", raise_in=lambda sha, work: ["repo.bundle"])
+        attest = next(c[2] for c in fake.calls if c[0] == "set_user_data" and "POF_ATTEST_NONCE" in c[2])
+        self.assertIn("POF_POWER_OFF=no", attest)
+
+
+class TheModelRunCaps(unittest.TestCase):
+    def test_the_call_cap_leaves_room_to_qualify_and_judge(self):
+        # the node's call cap is per process: the outside validator must judge QUALIFY_VERDICTS shadow seats to
+        # qualify, then its counted seat (the 2026-11-22 model run at 20 calls could never finish)
+        src = (ROOT / "contracts/src/v3/Validators.sol").read_text()
+        need = int(re.search(r"QUALIFY_VERDICTS = (\d+);", src).group(1))
+        self.assertGreaterEqual(int(A.MODEL_MAX_CALLS), 2 * need)
 
 
 if __name__ == "__main__":

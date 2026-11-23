@@ -127,7 +127,8 @@ rec.write_text(json.dumps({"chainId": int(cid), "deployer": os.environ["DEPLOY_D
 run = root / "contracts" / "broadcast" / "DeploySepolia.s.sol" / cid / ("run-latest.json" if broadcast else
                                                                         "dry-run/run-latest.json")
 run.parent.mkdir(parents=True, exist_ok=True)
-run.write_text(json.dumps({"libraries": ["src/v3/PanelsDraw.sol:PanelsDraw:0x" + "33" * 20]}))
+run.write_text(json.dumps({"libraries": ["src/v3/PanelsDraw.sol:PanelsDraw:0x" + "33" * 20],
+                           "receipts": [{"blockNumber": "0x2a"}, {"blockNumber": "0x29"}]}))
 print("== Logs ==")
 '''
 
@@ -465,6 +466,21 @@ class TestDeploy(unittest.TestCase):
         self.assertEqual(rec["libraries"], {"PanelsDraw": "0x" + "33" * 20})
         self.assertEqual(rec["genesisHeadCheck"]["commit"], HEAD)
 
+    def test_the_record_names_the_deployment_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = Path(d) / "run-latest.json"
+            run.write_text(json.dumps({"receipts": [{"blockNumber": "0xba0a2c"}, {"blockNumber": "0xba0a2b"},
+                                                    {"blockNumber": 12192301}]}), encoding="utf-8")
+            self.assertEqual(ds.deploy_block(run), 0xba0a2b)
+            run.write_text(json.dumps({"receipts": []}), encoding="utf-8")
+            with self.assertRaises(ds.Refused):
+                ds.deploy_block(run)
+
+    def test_a_remote_broadcast_takes_its_gas_from_the_node(self):
+        # 2026-11-22: forge's local estimates predate Sepolia's EIP-8037 gas, and the first broadcast ran out of gas
+        self.assertEqual(ds.broadcast_flags(False), " --broadcast --slow --skip-simulation")
+        self.assertEqual(ds.broadcast_flags(True), " --broadcast --slow")
+
     @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_broadcast_flag_broadcasts_with_the_key_on_stdin(self):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", "--broadcast-sepolia")
@@ -477,6 +493,7 @@ class TestDeploy(unittest.TestCase):
         self.assertIn("eth_call", Chain.calls)
         rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
         self.assertFalse(rec["dryRun"])
+        self.assertEqual(rec["block"], 0x29)  # the deployment's first block, for pofctl's from_block
 
     @outside_sandbox(NEEDS_CHECKOUT)
     def test_the_panel_rules_go_to_forge_and_into_the_record(self):

@@ -54,6 +54,12 @@ needs `--keystore FILE` (forge asks for its password; the key is never read here
 `--dev-key N` (anvil's public test key N, passed to forge on stdin, never on a command line). The genesis validator's
 signature is the plan's `genesisValidator.signature`, over the GENESIS_DIGEST a dry run prints; `--genesis-dev-key N`
 signs with anvil's key N on a local endpoint. The RPC URL goes to forge in the environment, and is never printed.
+For Sepolia, scripts/genesis-validator.sh (task 7.1) fills the plan's genesisValidator from the SEV-SNP kit host's
+attested boot and signs GENESIS_DIGEST from the kit's secret (validator-kit/SEVSNP-PLAN.md, "The genesis validator on
+Sepolia"). The digest names the registry's address, which follows from the deployer's address and its nonce when the
+script runs: forge deploys Panels' three linked libraries from the deployer first, so for a fresh deployer the registry
+maker is its creation at nonce 5 and the registry is the maker's first; anything the deployer sends before the
+broadcast changes it.
 
 Forge runs in the pinned Foundry image (scripts/contracts.sh's), with the host's network so it reaches the endpoint.
 DEPLOY_FORGE_CONTAINER=<name> runs it in an existing container instead (the test rig's anvil container, which mounts
@@ -67,6 +73,8 @@ contracts/release-candidates/ once the run of task 7.0 passes):
      "result": "passed",                                   # or "failed"; "incomplete" while items are pending
      "checks": {"integration": {"command": "scripts/integration.sh --release-candidate <commit>",
                                 "runs": ["passed", "passed", "passed"]},   # the last 3 must have passed, in a row
+                                                           # (earlier runs, a failure included, may precede them:
+                                                           # --resume keeps every run across restarts)
                 "productionWindows": "passed",             # L18 item 2: a bounty with production windows, clock moved
                 "sevSnpValidator": "passed",               # item 3: one real SEV-SNP validator registered and judged
                 "realModelRun": "passed",                  # item 4: one small real-model run
@@ -523,7 +531,7 @@ def deploy(a) -> int:
     script = f'forge script {SCRIPT} --rpc-url "$DEPLOY_RPC_URL" --sender "$DEPLOY_DEPLOYER"'
     stdin, mounts, tty = "", (), False
     if a.broadcast_sepolia:
-        script += " --broadcast --slow"
+        script += broadcast_flags(local)
         if a.dev_key is not None:
             script = 'read -r PK; ' + script + ' --private-key "$PK"'
             stdin = hex(derive(MNEMONIC, a.dev_key)) + "\n"
@@ -569,6 +577,7 @@ def deploy(a) -> int:
     if a.broadcast_sepolia:
         _check_deployed(url, record, cid)
         _check_rules(url, record, rules)
+        record["block"] = deploy_block(run_file)
     record.update({
         "dryRun": not a.broadcast_sepolia,
         "endpoint": "local" if local else "remote",
@@ -617,6 +626,16 @@ def _deployer(a) -> str:
     return found
 
 
+def broadcast_flags(local: bool) -> str:
+    """forge's broadcast flags. On a remote endpoint each transaction's gas limit comes from the node's own
+    eth_estimateGas (--skip-simulation): forge's local EVM predates Sepolia's Glamsterdam fork (EIP-8037's state-gas
+    repricing, live since 2026-10-06), so its estimates were about 7x short and the first broadcast of 2026-11-22
+    reverted out of gas at its first transaction (a library through the CREATE2 deployer: 3.45 M given, 16.7 M
+    needed). The dry run before it still simulates every constructor's checks; only the gas limits differ. A local
+    endpoint keeps forge's simulation (anvil runs the same rules as forge)."""
+    return " --broadcast --slow" if local else " --broadcast --slow --skip-simulation"
+
+
 def _env(plan: dict, rc: dict, deployer: str, url: str, name: str, gkey: int | None) -> dict:
     g = plan["genesisValidator"]
     env = {
@@ -645,6 +664,19 @@ def _env(plan: dict, rc: dict, deployer: str, url: str, name: str, gkey: int | N
     elif g.get("signature"):
         env["DEPLOY_GENESIS_SIG"] = g["signature"]
     return env
+
+
+def deploy_block(run_file: Path) -> int:
+    """The deployment's first block, from forge's receipts: pofctl (`from_block`) and the node scan events from it, not
+    from block 0 (a free RPC tier refuses or rate-limits long eth_getLogs ranges; found 2026-11-22 on Sepolia)."""
+    try:
+        receipts = json.loads(run_file.read_text(encoding="utf-8")).get("receipts") or []
+    except (OSError, ValueError):
+        raise Refused(f"forge left no run file ({run_file.relative_to(ROOT)}) to read the deployment's block from") from None
+    blocks = [int(str(r["blockNumber"]), 0) for r in receipts if r.get("blockNumber") is not None]
+    if not blocks:
+        raise Refused("forge's run file has no receipts: the deployment's block is unknown")
+    return min(blocks)
 
 
 def libraries(run_file: Path) -> dict:
