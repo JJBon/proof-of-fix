@@ -37,6 +37,9 @@
 #                                              Nothing is published beyond that network; --keep leaves it up. Results
 #                                              and node logs: .integration-radicle-v3/
 #
+#   scripts/integration.sh --version 3 --radicle --handover
+#                                              the v3 -> v3.1 hand-over rehearsal on the same harness (#310 RB12,
+#                                              tests/integration/handover_v3_radicle.py): .integration-handover-v3/
 #   scripts/integration.sh --version 3 --external
 #                                              one validator run outside the harness (#251 task 7.0, L18 items 3 and
 #                                              6): production windows on anvil, the seed and six harness validators on
@@ -51,10 +54,12 @@
 # POF_INTEGRATION_PORT picks the devnet's port (default 8556); POF_INTEGRATION_KEEP=1 keeps the devnet.
 #
 # --version 3 runs scripts/integration-v3.sh: the story above, then #256's lettered scenarios for #251's contract batch 4
-# (task 3.27), each set on its own throwaway devnet with the rules it needs (tests/integration/scenarios_v3.py): u, v
-# and w on the Sepolia record's rules (panel caps `launch`, kTop 3, `same`), f and g with one model family under both
-# challenge sizes. --sets story,launch,few-larger,few-same picks some (about 6, 25, 4 and 4 minutes); --report-dir
-# <dir> writes each set's numbers.
+# (task 3.27), each set on its own throwaway devnet with the rules it needs (tests/integration/scenarios_v3.py): u, w,
+# v, x, e (#311's early reveal) and p (the v3.1 polish: who draws and keeps with the harness's keeper off) on the
+# Sepolia record's rules (panel caps `launch`, kTop 3, `same`), r (#310's rebase in place) on the same rules, f and g
+# with one model family under both challenge sizes. --sets
+# story,launch,rebase,few-larger,few-same picks some (about 6, 25, 5, 4 and 4 minutes); --report-dir <dir> writes each
+# set's numbers.
 #
 #   scripts/integration.sh --release-candidate <commit> [--runs N] [--record <file>] [--tag <name>] [--logs <dir>]
 #                                                       [--resume]
@@ -151,10 +156,17 @@ case "$VERSION" in
       source scripts/solc.sh  # SOLC: the pinned solc, for the deployment inside the anvil container
       [[ -f "$SOLC" ]] || { echo "integration: solc missing; run: scripts/contracts.sh setup" >&2; exit 2; }
       rest=()
-      for a in "${ARGS[@]}"; do [[ "$a" == --radicle ]] || rest+=("$a"); done
+      suite=tests/integration/suite_v3_radicle.py
+      for a in "${ARGS[@]}"; do
+        case "$a" in
+          --radicle) ;;
+          --handover) suite=tests/integration/handover_v3_radicle.py ;;  # #310 RB12: the v3 -> v3.1 hand-over
+          *) rest+=("$a") ;;
+        esac
+      done
       echo "building the Radicle node image (pinned release, sha256-checked) ..."
       docker build -q -t pof190-radicle:spike spikes/radicle >/dev/null
-      POF_SOLC="$SOLC" exec python3 tests/integration/suite_v3_radicle.py run "${rest[@]}" </dev/null
+      POF_SOLC="$SOLC" exec python3 "$suite" run "${rest[@]}" </dev/null
     fi
     # The same throwaway devnet as v2's run (name, port, state, records), started and removed by devnet-v3-e2e.sh.
     export POF_V3_E2E_NAME=${POF_INTEGRATION_NAME:-pof-devnet-integration} POF_V3_E2E_PORT=${POF_INTEGRATION_PORT:-8556} \

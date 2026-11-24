@@ -25,7 +25,7 @@ a bounty, seals the loop's bad and good fixes, and runs three registered nodes p
 devnet oracle key (5) and the record's quorum (3). Keys come from OpenBao, through `scripts/devnet-keys.sh`, and pass
 only through the environment:
 ```
-export BAO_ADDR=https://vault.clouddemosaws.com && bao login -method=oidc role=admin
+export BAO_ADDR=<your OpenBao address> && bao login -method=oidc role=admin
 scripts/devnet.sh up && scripts/devnet.sh deploy     # if not already deployed
 scripts/oracle-run.sh --devnet                       # adds a bounty and two submissions; the devnet keeps running
 ```
@@ -126,8 +126,8 @@ scripts/node-v3-e2e.sh --grow                                # until the candida
 Judges reuse B1's harness (#89): `pof.judges.prompt` (the prompt, with untrusted text quoted, and the verdict parser)
 with the sandbox's test result in place of B1's "not provided" line; `FakeJudge` wraps `pof.judges.fake` (deterministic,
 the default); `GatewayJudge` uses `scripts/judge_run.py`'s gateway client for one seat of `pof.judges.plan.SEATS` (the
-AgentCore model gateway as `pof-judges-models`), for development and B1 only. **Counted judges call their provider
-directly** (#118): `DirectJudge` with `oracle/models.py`, chosen by `ORACLE_JUDGE=direct:<provider>:<model>`:
+model gateway at `MODEL_GATEWAY_URL`, required with no default, as `pof-judges-models`), for development and B1
+only. **Counted judges call their provider directly** (#118): `DirectJudge` with `oracle/models.py`, chosen by `ORACLE_JUDGE=direct:<provider>:<model>`:
 `bedrock` (Converse, SigV4 with the instance role's IMDSv2 credentials, `ORACLE_MODEL_ALLOW` required), `anthropic`,
 `openai` (any OpenAI-compatible server with `ORACLE_MODEL_URL`) or `gemini`, with the key from `MODEL_API_KEY` in a
 header only. The provider's own token counts, the model, the endpoint's host and the request ID go into the receipt

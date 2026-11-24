@@ -80,12 +80,18 @@ RACE_ISSUE_FIELDS = ["repo", "reporter", "registration", "stake", "bounty", "che
 RACE_BOUNTY = "(uint256,uint8,uint256,bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)"
 RACE_BOUNTY_FIELDS = ["issue", "state", "offerFrom", "locked", "lockBps", "idleSince", "attempting", "next", "winner",
                       "mergeBy", "epoch", "pledges"]
+# v3.1 (#310, rebase in place) adds `rebaseOf` to the submission and `rebase`, `lastPass` to the award; a v3
+# deployment's views return the shorter v3 tuples (`Chain.rebases` tells them apart, `_V3` below).
 RACE_SUBMISSION = ("(uint256,uint256,uint256,address,bytes32,uint256,uint256,uint256,uint256,uint8,bool,bool,bool,"
-                   "bytes32,bytes32)")
+                   "bytes32,bytes32,uint256)")
 RACE_SUBMISSION_FIELDS = ["bounty", "issue", "day", "solver", "commitment", "deposit", "charged", "judged", "pledges",
-                          "outcome", "appealed", "paid", "done", "fix", "base"]
-RACE_AWARD = "(address,bytes32,uint256,bool,uint256,bool)"
-RACE_AWARD_FIELDS = ["winner", "fix", "sub", "closed", "earned", "merged"]
+                          "outcome", "appealed", "paid", "done", "fix", "base", "rebaseOf"]
+RACE_AWARD = "(address,bytes32,uint256,bool,uint256,bool,uint256,uint256)"
+RACE_AWARD_FIELDS = ["winner", "fix", "sub", "closed", "earned", "merged", "rebase", "lastPass"]
+RACE_SUBMISSION_V3 = RACE_SUBMISSION[:-len(",uint256)")] + ")"
+RACE_AWARD_V3 = RACE_AWARD[:-len(",uint256,uint256)")] + ")"
+REBASE_GRACE_S = 86_400  # RaceV3Base.REBASE_GRACE (O1): a third party may rebase this long after the head moved
+REBASE_SHARE_BPS = 1_000  # RaceV3Base.REBASE_SHARE_BPS: a third party's share of the price when its rebase merges
 # RaceV3's enums (RaceV3Base.sol), in their declared order. "Merged" is the claimed state: since #251's L9 the head
 # moves at the verdict's finality (`merge`), recorded on the award (`merged`).
 RACE_STATES = ["None", "Open", "Won", "Merged", "Paid", "Refunded", "Unsolved"]
@@ -102,6 +108,8 @@ HEAD = "(bytes32,bytes32,uint256,uint256,uint256,bytes32)"  # v2's Heads.Head
 SEATED = "Seated(uint256,uint256,address,uint256)"
 COMMITTED = "Committed(uint256,uint256,address)"
 REGISTERED = "Registered(uint256,address,uint256)"
+REBASED = "Rebased(uint256,uint256,uint256,bytes32,bytes32)"  # v3.1 (#310): bounty, original, check; fix, base
+COUNTED_EVENT = "Counted(uint256,uint256,bool,uint256,uint8)"  # Panels: id, pid (indexed); pass, passes, level
 # Validators' own; its third topic is the Radicle node key (#251, L11)
 VALIDATOR_REGISTERED = f"Registered(address,address,bool,uint8,uint256,{REGISTRATION},bytes32)"
 
@@ -232,6 +240,40 @@ class Receipt:
         return cls(*(b32(d[name]) for name in RECEIPT_FIELDS if name in d))
 
 
+# ---------- drawing a check ----------
+
+def draw_and_signal(status: int, draw, signal, seated) -> list:
+    """The one draw-and-signal rule for anyone who draws a check: the keeper (oracle/node_v3.py, and so the keeper-only
+    node) and `pofctl --v3 draw` (v3.1 polish VP24, the owner's Q2 of 2026-11-24). RaceV3Endings.signal counts a wait
+    while the check waits, and otherwise counts the seated validators as drawn; FeesV3 counts each event at most once
+    a period, so a signal more than needed is harmless, and one fewer loses a count.
+
+    - Waiting: signal (the wait), then draw, then signal again if the draw seated a panel.
+    - Sealed: draw, then signal (the panel; or the wait, if the draw found too few validators).
+    - Anything else: nothing.
+
+    `draw()` sends Panels.draw and says whether it was sent (it may raise, as the caller's sends do); `signal(kind)`
+    sends RaceV3.signal for `kind` "wait" (before the draw) or "drawn" (after it) and says whether it was sent;
+    `seated()` reads whether the check now has a panel. Returns the steps sent, in order ("signal:wait", "draw",
+    "signal:drawn")."""
+    sent = []
+    if status == WAITING:
+        if signal("wait"):
+            sent.append("signal:wait")
+        if not draw():
+            return sent
+        sent.append("draw")
+        if seated() and signal("drawn"):
+            sent.append("signal:drawn")
+    elif status == SEALED:
+        if not draw():
+            return sent
+        sent.append("draw")
+        if signal("drawn"):
+            sent.append("signal:drawn")
+    return sent
+
+
 # ---------- the chain's v3 views ----------
 
 def _named(fields: list, row) -> dict:
@@ -257,7 +299,7 @@ class Chain:
             race, "contracts()", ["address", "address", "address", "address", "address", "address", "uint256"])
         self.panels, self.fees, self.pool = checksum(panels), checksum(fees), checksum(pool)
         self.registry, self.heads, self._coin, self.start = checksum(registry), checksum(heads), checksum(coin), start
-        self._chain_id = self._domain = self._repo = None
+        self._chain_id = self._domain = self._repo = self._rebases = None
         self.first_block = max(int(first_block), 0)
         self._scans: dict = {}  # (address, topics, first block) -> (the logs up to `done`, done)
 
@@ -429,9 +471,22 @@ class Chain:
 
     # ----- RaceV3 -----
 
+    def rebases(self) -> bool:
+        """Whether this deployment is v3.1 (#310: rebase in place), read once from the race itself: v3.1's `award`
+        view returns eight words, v3's six. The ABI follows the contract, so a v3 record and a v3.1 record both read
+        right whatever their `version` says."""
+        if self._rebases is None:
+            data = self.rpc.eth_call(self.race, abi.call_data("award(uint256,uint256)", 0, 0))
+            self._rebases = len(data) >= 8 * 32
+        return self._rebases
+
     def submission(self, s: int) -> dict:
-        sub = _named(RACE_SUBMISSION_FIELDS,
-                     self.rpc.view(self.race, "submission(uint256)", [RACE_SUBMISSION], s)[0])
+        """A check's record. `rebaseOf` (v3.1): the original winning submission a rebase check rebases, else 0."""
+        if self.rebases():
+            row = self.rpc.view(self.race, "submission(uint256)", [RACE_SUBMISSION], s)[0]
+        else:
+            row = (*self.rpc.view(self.race, "submission(uint256)", [RACE_SUBMISSION_V3], s)[0], 0)
+        sub = _named(RACE_SUBMISSION_FIELDS, row)
         sub["solver"] = checksum(sub["solver"])
         return sub
 
@@ -440,7 +495,11 @@ class Chain:
 
     def award(self, b: int, epoch: int) -> dict:
         """An award (`merged`: the head moved to its fix at its verdict's finality, #251 L9)."""
-        row = _named(RACE_AWARD_FIELDS, self.rpc.view(self.race, "award(uint256,uint256)", [RACE_AWARD], b, epoch)[0])
+        if self.rebases():
+            row = self.rpc.view(self.race, "award(uint256,uint256)", [RACE_AWARD], b, epoch)[0]
+        else:
+            row = (*self.rpc.view(self.race, "award(uint256,uint256)", [RACE_AWARD_V3], b, epoch)[0], 0, 0)
+        row = _named(RACE_AWARD_FIELDS, row)
         row["winner"] = checksum(row["winner"])
         return row
 
@@ -473,6 +532,27 @@ class Chain:
         topic = "0x" + keccak256(REGISTERED.encode()).hex()
         return [{"issue": int(log["topics"][1], 16), "submission": abi.decode(["uint256"], abi.hexdata(log["data"]))[0],
                  "block": int(log["blockNumber"], 16)} for log in self._logs(self.race, from_block, [topic], to_block)]
+
+    def rebased(self, from_block: int, to_block: int | None = None) -> list:
+        """RaceV3's Rebased(bounty, original, check, fix, base) (v3.1, #310): each rebase check opened. None on v3."""
+        if not self.rebases():
+            return []
+        topic = "0x" + keccak256(REBASED.encode()).hex()
+        out = []
+        for log in self._logs(self.race, from_block, [topic], to_block):
+            fix, base = abi.decode(["bytes32", "bytes32"], abi.hexdata(log["data"]))
+            out.append({"bounty": int(log["topics"][1], 16), "original": int(log["topics"][2], 16),
+                        "submission": int(log["topics"][3], 16), "fix": b32(fix), "base": b32(base),
+                        "block": int(log["blockNumber"], 16)})
+        return out
+
+    def counted_tx(self, s: int, pid: int, from_block: int = 0) -> dict | None:
+        """The transaction that counted check `s`'s panel `pid` (Panels' Counted event), from `from_block` to the
+        latest block: {"tx": its hash, "block"}, or None when there's none (yet). Read once, not kept."""
+        topics = ["0x" + keccak256(COUNTED_EVENT.encode()).hex(), "0x" + word(s).hex(), "0x" + word(pid).hex()]
+        for log in self._logs(self.panels, from_block, topics, self.block()):
+            return {"tx": log["transactionHash"], "block": int(log["blockNumber"], 16)}
+        return None
 
     # ----- FeesV3 -----
 

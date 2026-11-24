@@ -624,6 +624,61 @@ class Configuration(unittest.TestCase):
                         chain, "0x" + "11" * 20)
         self.assertIn("isn't the race's repository", str(e.exception))
 
+    def test_a_superseded_deployment_runs_no_seat(self):
+        """#310 RB12: a node runs the seat's part (pushing main, voting on the identity) for one deployment only, the
+        newest. Its record marked `supersededBy` turns the seat's part off, with a line saying why; the fix source and
+        the keeper stay."""
+        import json
+        import tempfile
+
+        class Chain(FakeSeats):
+            race = "0x" + "a1" * 20
+
+            def repo(self):
+                return R.repo_id(RID)
+
+        chain = Chain(C1, [])
+        with tempfile.TemporaryDirectory() as d:
+            old, new, other = (Path(d) / n for n in ("v3.json", "v3.1.json", "other.json"))
+            old.write_text(json.dumps({"version": 3, "addresses": {"race": chain.race},
+                                       "supersededBy": "sepolia-v3.1.json"}))
+            new.write_text(json.dumps({"version": 3, "addresses": {"race": chain.race}}))
+            other.write_text(json.dumps({"version": 3, "race": "0x" + "b2" * 20}))
+            env = {"ORACLE_MERGE_VIA": "radicle", "ORACLE_FIX_SOURCE": "radicle", "ORACLE_RADICLE_RID": RID}
+            logs = []
+            fixes, _, seat = RV.from_env({**env, "ORACLE_DEPLOYMENT_RECORD": str(old)}, chain, "0x" + "11" * 20,
+                                         log=logs.append)
+            self.assertIsNone(seat)
+            self.assertIsInstance(fixes, RV.RadicleFixes)  # the checks are still judged
+            self.assertIn("superseded by sepolia-v3.1.json", logs[0])
+            self.assertIn("the keeper still runs", logs[0])
+            _, _, seat = RV.from_env({**env, "ORACLE_DEPLOYMENT_RECORD": str(new)}, chain, "0x" + "11" * 20)
+            self.assertIsInstance(seat, RV.SeatAdapter)  # the newest deployment's node runs it
+            with self.assertRaises(ValueError) as e:
+                RV.from_env({**env, "ORACLE_DEPLOYMENT_RECORD": str(other)}, chain, "0x" + "11" * 20)
+            self.assertIn("is the record of race", str(e.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VerdictCommentsUnread(unittest.TestCase):
+    """v3.1 polish VP18: a node's verdict receipt on the issue isn't part of what a later judge reads (an audit or a
+    challenge would otherwise be shown the counted verdict), so the issue's hash in a receipt doesn't change either."""
+
+    def test_the_verdict_comments_are_left_out_of_the_issue_text(self):
+        from oracle import radicle_v3 as RV3
+        from oracle import verdict_comment as VC
+        issue = {"title": "median() of an empty list", "state": "open", "comments": [
+            {"author": "did:key:a", "body": "It raises."},
+            {"author": "did:key:b", "body": "Registration: 1"}]}
+        before = RV3.issue_text(issue)
+        issue["comments"] += [
+            {"author": "did:key:c", "body": "proof-of-fix verdict: registration check 2 passed.\n\n"
+                                            + VC.marker_line(31337, "0xAbC", 2)},
+            {"author": "did:key:c", "body": "the reason …\n\n" + VC.marker_line(31337, "0xAbC", 2, VC.REASON_MARKER)}]
+        self.assertEqual(RV3.issue_text(issue), before)
+        issue["comments"].append({"author": "did:key:d",
+                                  "body": "pof-verdict: is mentioned, but not as the last line\nok"})
+        self.assertIn("Comment 4", RV3.issue_text(issue))

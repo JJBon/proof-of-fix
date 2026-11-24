@@ -54,8 +54,9 @@ class FakeRpc:
 
     url = "http://fake.invalid"
 
-    def __init__(self, chain_id: int = 31337, **over) -> None:
-        self.cid, self.calls, self.log_rows = chain_id, [], []
+    def __init__(self, chain_id: int = 31337, rebases: bool = False, **over) -> None:
+        self.cid, self.calls, self.log_rows, self.rebases = chain_id, [], [], rebases
+        self.eth, self.now, self.height = 2 * 10**16, 10_000, 100  # 0.02 ETH; the chain's time and block
         cfg = (RACE, RACE, 2 * C, 5 * C, 0, 0, 0, 10 * C, 5000, 1000, 1765, 28, 7, 14, 7, 4, 0)
         self.answers = {
             "contracts": lambda to, *a: [PANELS, FEES, POOL, REGISTRY, HEADS, COIN, 1],
@@ -76,7 +77,7 @@ class FakeRpc:
         return self.cid
 
     def block(self) -> int:
-        return 100
+        return self.height
 
     def view(self, to, sig, returns, *args):
         self.calls.append(("view", to, sig))
@@ -84,12 +85,19 @@ class FakeRpc:
 
     def logs(self, address, from_block=0, topics=None, to_block=None):
         return [r for r in self.log_rows if r["address"] == address.lower() and r["topics"][0] == topics[0]
-                and (topics[2] is None or r["topics"][2] == topics[2])]
+                and (len(topics) < 3 or topics[2] is None or r["topics"][2] == topics[2])]
+
+    def eth_call(self, to, data):
+        """The one raw call: oracle.v3.Chain.rebases reads `award(0, 0)`'s length (v3: six words, v3.1: eight)."""
+        self.calls.append(("eth_call", to, data[:4].hex()))
+        return b"\0" * 32 * (8 if self.rebases else 6)
 
     def call(self, method, params=None):
         self.calls.append((method, params))
         if method == "eth_getBlockByNumber":
-            return {"number": hex(100), "timestamp": hex(10_000)}
+            return {"number": hex(100), "timestamp": hex(self.now)}
+        if method == "eth_getBalance":
+            return hex(self.eth)
         raise AssertionError(f"unexpected {method}: nothing may be sent")
 
 
@@ -113,8 +121,17 @@ class Records(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("POFCTL_", "DEVNET_KEYS"))}
         self.env = mock.patch.dict(os.environ, env, clear=True)
         self.env.start()
+        # the approval wait's clock (VP17): a fake one, advanced by its sleeps, which are recorded
+        self.now, self.slept = [0.0], []
+        self.clock = [mock.patch.object(v3cli, "_clock", lambda: self.now[0]),
+                      mock.patch.object(v3cli, "_sleep", lambda s: (self.slept.append(s), self.now.__setitem__(
+                          0, self.now[0] + s)))]
+        for c in self.clock:
+            c.start()
 
     def tearDown(self):
+        for c in self.clock:
+            c.stop()
         self.env.stop()
         self.tmp.cleanup()
 
@@ -337,7 +354,8 @@ class TestStatus(Records):
                                                                                                73 * C))
         self.assertEqual([c["submission"] for c in data["claims"]], [9])  # 8 closed; 10 is someone else's
         self.assertEqual(data["claims"][0], {"submission": 9, "bounty": 4, "amount": 7 * C, "status": "Window",
-                                             "pass": True, "outcome": "Pass"})
+                                             "pass": True, "outcome": "Pass", "rebaseOf": 0})
+        self.assertEqual(data["rebases"], [])  # v3: no rebase in place
         self.assertIn("cap            80.000000 = REP_BASE 50.000000 + 1 x reputation 30.000000", text)
         self.assertIn("open claims    7.000000 in 1 submission(s); room for 73.000000 more", text)
         self.assertIn("submission 9 on bounty 4: 7.000000, Window, passed", text)
@@ -356,6 +374,117 @@ class TestStatus(Records):
             data, lines = v3cli.cmd_status(cli.Ctx(a), a)
         self.assertEqual((data["checkDeposit"], data["refunded"]), (40 * C, False))
         self.assertIn("a flat judges' fee of 40.000000, not refunded", "\n".join(lines))
+
+
+class TestRebase(Records):
+    """`pofctl --v3 rebase` (#310, RB8): every refusal the race would make is checked before anything is sent; then
+    the deposit's allowance, the transaction, and the patch update with the claim lines."""
+
+    ORIG_FIX, ORIG_BASE, NEW_FIX = "cd" * 20, "ef" * 20, "12" * 20
+
+    def rpc(self, who: str, **kw) -> FakeRpc:
+        st = kw.pop("state", 3)  # Merged: claimed
+        orig_base = kw.pop("orig_base", self.ORIG_BASE)
+        rebase = kw.pop("rebase", 0)
+        rebase_row = kw.pop("rebase_row", None)
+        moved = kw.pop("moved", 9_000)
+        winner = kw.pop("winner", who)
+        cap = kw.pop("cap", 50 * C)
+        word = lambda sha: bytes.fromhex(sha) + b"\0" * 12  # noqa: E731
+
+        def submission(to, s):
+            if to.lower() == PANELS:
+                row = [0] * len(v3.PANELS_SUBMISSION_FIELDS)
+                row[v3.PANELS_SUBMISSION_FIELDS.index("status")] = v3.FINAL
+                row[v3.PANELS_SUBMISSION_FIELDS.index("pass")] = True
+                return [tuple(row)]
+            if s == 5:
+                return [(1, 0, 0, winner, b"\0" * 32, 0, 0, 20 * C, 0, 1, False, True, True, word(self.ORIG_FIX),
+                         word(orig_base), 0)]
+            if s == rebase and rebase_row is not None:
+                return [rebase_row]
+            return [(1, 0, 0, who, b"\0" * 32, 1_230_000, 0, 20 * C, 0, 0, False, False, False, word(self.NEW_FIX),
+                     word(HEAD), 5)]
+
+        over = {"bounty": lambda to, *a: [(1, st, 0, True, 5000, 0, 0, 1, 5, 0, 1, 1)],
+                "award": lambda to, *a: [(winner, word(self.ORIG_FIX), 5, False, 0, False, rebase, 0)],
+                "submission": submission, "paid": lambda to, *a: [False], "capOf": lambda to, *a: [cap],
+                "claimOf": lambda to, *a: [(winner, 20 * C)],
+                "head": lambda to, *a: [(word(HEAD), b"\0" * 32, moved, 0, 0, b"\0" * 32)],
+                "maxDeposit": lambda to, *a: [1_230_000]}
+        over.update(kw)
+        return FakeRpc(31337, rebases=True, **over)
+
+    def run_rebase(self, rpc, *extra):
+        os.environ["DEVNET_KEYS"] = "insecure-local"
+        a = cli.parser().parse_args(["--record", str(self.v3), "rebase", "--bounty", "1", "--patch", self.NEW_FIX,
+                                     *extra])
+        sent = []
+        rebased = "0x" + crypto.keccak256(v3.REBASED.encode()).hex()
+
+        def send(to, sig, *args, **kw):
+            sent.append((to, sig, args))
+            return {"logs": [{"topics": [rebased, "0x%064x" % 1, "0x%064x" % 5, "0x%064x" % 6], "data": "0x"}]}
+
+        with mock.patch.object(cli, "Rpc", return_value=rpc), mock.patch.object(Wallet, "send", side_effect=send):
+            ctx = cli.Ctx(a)
+            try:
+                return v3cli.cmd_rebase(ctx, a), sent
+            except cli.Fail as e:
+                return e, sent
+
+    def solver(self) -> str:
+        os.environ["DEVNET_KEYS"] = "insecure-local"
+        a = cli.parser().parse_args(["--record", str(self.v3), "rebase", "--bounty", "1", "--patch", self.NEW_FIX])
+        with mock.patch.object(cli, "Rpc", return_value=FakeRpc(31337)):
+            return cli.Ctx(a).wallet("solver").address
+
+    def refused(self, rpc, *extra) -> str:
+        out, sent = self.run_rebase(rpc, *extra)
+        self.assertIsInstance(out, cli.Fail)
+        self.assertEqual(sent, [])
+        self.assertIn("Nothing was sent", str(out))
+        return str(out)
+
+    def test_the_solver_rebases_and_gets_the_patch_update(self):
+        who = self.solver()
+        (data, lines), sent = self.run_rebase(self.rpc(who), "--patch-id", "a1b2c3")
+        self.assertEqual([x[1] for x in sent], ["approve(address,uint256)", "rebase(uint256,bytes32,bytes32,bytes32)"])
+        bounty, fix, base, salt = sent[1][2]
+        self.assertEqual((bounty, fix, base), (1, bytes.fromhex(self.NEW_FIX) + b"\0" * 12, bytes.fromhex(HEAD)
+                                                + b"\0" * 12))
+        self.assertEqual((data["check"], data["original"], data["thirdParty"]), (6, 5, False))
+        self.assertIn(f"git push --force rad {self.NEW_FIX}:refs/heads/patches/a1b2c3", data["patchCommand"])
+        self.assertIn("Submission: 6", data["patchBody"])
+        self.assertIn(f"Solver wallet: {who}", data["patchBody"])
+        self.assertIn("rebase check 6", "\n".join(lines))
+
+    def test_a_v3_deployment_has_no_rebase(self):
+        rpc = self.rpc(self.solver())
+        rpc.rebases = False
+        self.assertIn("v3, which has no rebase in place", self.refused(rpc))
+
+    def test_refusals_before_anything_is_sent(self):
+        who = self.solver()
+        self.assertIn("is Open", self.refused(self.rpc(who, state=1)))
+        self.assertIn("merges as it is", self.refused(self.rpc(who, orig_base=HEAD)))
+        self.assertIn("a rebase goes onto the head", self.refused(self.rpc(who), "--base", "34" * 20))
+        self.assertIn("still being judged", self.refused(self.rpc(who, rebase=7, rebase_row=(
+            1, 0, 0, who, b"\0" * 32, 0, 0, 20 * C, 0, 0, False, False, False, b"\0" * 32, b"\0" * 32, 5))))
+        self.assertIn("already paid", self.refused(self.rpc(who, paid=lambda to, *a: [True])))
+
+    def test_a_third_party_waits_a_day_after_the_head_moved(self):
+        other = crypto.checksum("0x" + "42" * 20)
+        msg = self.refused(self.rpc(self.solver(), winner=other, moved=9_000))
+        self.assertIn("a day after the head last moved", msg)
+        (data, _), sent = self.run_rebase(self.rpc(self.solver(), winner=other, moved=10_000 - 86_400))
+        self.assertTrue(data["thirdParty"])
+        self.assertEqual(sent[-1][1], "rebase(uint256,bytes32,bytes32,bytes32)")
+
+    def test_over_the_cap_is_refused(self):
+        other = crypto.checksum("0x" + "42" * 20)
+        msg = self.refused(self.rpc(self.solver(), winner=other, moved=10_000 - 86_400, cap=10 * C))
+        self.assertIn("refused (D29)", msg)
 
 
 FAUCET = "0x" + "fa" * 20

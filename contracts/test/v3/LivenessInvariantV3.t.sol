@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity 0.8.37;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {IFeesV3} from "../../src/v3/IFeesV3.sol";
+import {TEST_REPO} from "./helpers/SuiteWindows.sol";
 import {IValidators} from "../../src/v3/IValidators.sol";
 import {Status, Kind, Submission, Panel, Seat} from "../../src/v3/PanelsBase.sol";
 import {PanelsSetup} from "./helpers/PanelsSetup.sol";
@@ -41,6 +43,7 @@ contract LivenessHandler is PanelsSetup {
             keys.push(_addSpread(++added, FAMILIES, 3));
         }
         joinMax = extra == 3 ? 9 : extra + 6;
+        fees.bind(); // the handler stands for the race: each check opens in FeesV3 at its epoch (v3.1 polish, F1)
     }
 
     function idCount() external view returns (uint256) {
@@ -58,7 +61,89 @@ contract LivenessHandler is PanelsSetup {
         if (ids.length >= 10) return;
         uint256 id = ids.length + 1;
         ids.push(id);
+        fees.open(id);
         _open(id, 60e6 + seed % 190e6);
+    }
+
+    // ---------- a family priced later (v3.1 polish, F1, task 1.3) ----------
+
+    bytes32[] public later; // the families announced by `price`, each priced at a later roll
+    uint256 public laterSeats; // seats of a later family on a paid panel (checks opened after its first price)
+
+    /// A new family: a validator of it joins and is announced, and every active validator of an earlier family posts
+    /// a table pricing it (three counting tables of other families give it a first price at the next roll, which the
+    /// keeper makes). Checks opened before that roll must never seat it on a paid panel.
+    function price(uint256 seed) external {
+        if (later.length >= 3) return;
+        bytes32 fam = keccak256(abi.encode("a later family", later.length));
+        later.push(fam);
+        address k = _add(keccak256(abi.encode("later host", later.length)), fam, _tee(seed % 3), 1, FULL_BOND);
+        keys.push(k);
+        fees.announce(k);
+        bytes32[] memory priced = fees.pricedFamilies();
+        uint256 n = priced.length + later.length;
+        bytes32[] memory fs = new bytes32[](n);
+        uint256[3][] memory ts = new uint256[3][](n);
+        for (uint256 i; i < n; ++i) {
+            fs[i] = i < priced.length ? priced[i] : later[i - priced.length];
+            ts[i] = [uint256(4_000_000), 200_000, 20_000_000];
+        }
+        uint256[4] memory sh = [uint256(11_244_444), 1_234_722, 269_531_250, 2_700_000_000];
+        for (uint256 i; i < keys.length; ++i) {
+            address v = keys[i];
+            if (reg.validator(v).state != IValidators.State.Active || _isLater(reg.validator(v).family)) continue;
+            vm.prank(v);
+            fees.post(sh, fs, ts);
+        }
+    }
+
+    function _isLater(bytes32 fam) internal view returns (bool) {
+        for (uint256 i; i < later.length; ++i) {
+            if (later[i] == fam) return true;
+        }
+        return false;
+    }
+
+    /// The invariant's count: seats on counted, audit and challenge panels whose family wasn't priced at their check's
+    /// epoch, and panels whose pay at that epoch (`checkCost`, the audit's and the challenge's pay; `settle` prices a
+    /// counted panel alike) reverts. Both must stay 0.
+    function unpricedSeats() external view returns (uint256 bad) {
+        uint256 n = pn.panelCount();
+        for (uint256 pid = 1; pid <= n; ++pid) {
+            Panel memory p = pn.panel(pid);
+            if (p.kind == Kind.Shadow) continue;
+            address[] memory js = pn.judges(pid);
+            uint256 e = fees.drawEpoch(p.id);
+            IFeesV3.Report[] memory rs = new IFeesV3.Report[](js.length);
+            uint256 m;
+            for (uint256 i; i < js.length; ++i) {
+                if (js[i] == address(0)) continue; // an empty seat
+                bytes32 fam = reg.validator(js[i]).family;
+                if (!fees.isPriced(fam) || fees.pricedFrom(fam) > e) ++bad;
+                rs[m].payee = js[i];
+                rs[m++].family = fam;
+            }
+            if (m == 0) continue;
+            assembly ("memory-safe") {
+                mstore(rs, m)
+            }
+            try fees.checkCost(p.id, TEST_REPO, rs) {} catch {
+                ++bad;
+            }
+        }
+    }
+
+    /// Seats of the later families so far (the depth of the runs: a later family does get seated, for checks opened
+    /// after its first price).
+    function laterSeated() external view returns (uint256 seated) {
+        uint256 n = pn.panelCount();
+        for (uint256 pid = 1; pid <= n; ++pid) {
+            if (pn.panel(pid).kind == Kind.Shadow) continue;
+            address[] memory js = pn.judges(pid);
+            for (uint256 i; i < js.length; ++i) {
+                if (js[i] != address(0) && _isLater(reg.validator(js[i]).family)) ++seated;
+            }
+        }
     }
 
     function join(uint256 seed) external {
@@ -112,6 +197,10 @@ contract LivenessHandler is PanelsSetup {
     // ---------- the keeper and the honest judges ----------
 
     function keep() public {
+        // the pricing periods that ended, closed (one part a call)
+        while (vm.getBlockTimestamp() >= fees.start() + (fees.rolled() + 1) * 1 days) {
+            fees.roll();
+        }
         for (uint256 j; j < ids.length; ++j) {
             _keepSubmission(ids[j]);
         }
@@ -289,7 +378,7 @@ contract LivenessInvariantV3Test is Test {
 
     function setUp() public {
         handler = new LivenessHandler(3, false);
-        bytes4[] memory sel = new bytes4[](7);
+        bytes4[] memory sel = new bytes4[](8);
         sel[0] = LivenessHandler.open.selector;
         sel[1] = LivenessHandler.join.selector;
         sel[2] = LivenessHandler.leave.selector;
@@ -297,6 +386,7 @@ contract LivenessInvariantV3Test is Test {
         sel[4] = LivenessHandler.pause.selector;
         sel[5] = LivenessHandler.passTime.selector;
         sel[6] = LivenessHandler.keep.selector;
+        sel[7] = LivenessHandler.price.selector;
         targetContract(address(handler));
         targetSelector(FuzzSelector(address(handler), sel));
     }
@@ -306,6 +396,13 @@ contract LivenessInvariantV3Test is Test {
     /// window), final, or refunded. Its status is one value, so "exactly one" is that each status carries its schedule.
     function invariant_noSubmissionIsStuck() public view {
         _check();
+    }
+
+    /// v3.1 polish, F1 (task 1.3): every seated validator of a counted, audit or challenge panel is of a family priced
+    /// at its check's epoch, and that panel's pay at the epoch never reverts `Unpriced`, whatever families were priced
+    /// since (the `price` action).
+    function invariant_seatsPricedAtTheirChecksEpoch() public view {
+        assertEq(handler.unpricedSeats(), 0);
     }
 
     function _check() internal view {
@@ -366,6 +463,32 @@ contract LivenessInvariantV3Test is Test {
         assertFalse(handler.overdue(), "no challenge outlived its deadline without a panel");
     }
 
+    /// A scripted run of the `price` action (v3.1 polish, F1): checks opened before a later family's first price never
+    /// seat it, while checks opened after do; every pay at a check's epoch stays priced.
+    function test_theHandlerPricesALaterFamily() public {
+        uint256 hour = PanelsLike(handler.panelsAddress()).REVEAL_WINDOW();
+        handler.join(1);
+        handler.join(2);
+        handler.open(0);
+        handler.open(7);
+        handler.price(0);
+        handler.passTime(25 * hour);
+        handler.keep(); // the roll gives the later family its first price
+        for (uint256 i; i < 4; ++i) {
+            handler.open(11 * i);
+        }
+        for (uint256 i; i < 12; ++i) {
+            handler.passTime(20 * hour);
+            handler.keep();
+            _check();
+            assertEq(handler.unpricedSeats(), 0);
+        }
+        handler.settleAll();
+        assertEq(handler.unpricedSeats(), 0);
+        assertTrue(handler.allDone());
+        console.log("seats of the later family:", handler.laterSeated());
+    }
+
     /// A scripted run reaching the paths: an honest panel's verdict final; then, with two validators silent, stuck
     /// rounds released and redrawn; and the invariant after each step.
     function test_theHandlerReachesTheReleasePaths() public {
@@ -414,7 +537,7 @@ abstract contract ChallengeLivenessBase is Test {
 
     function _setUpWith(uint256 extra, bool launch) internal {
         handler = new LivenessHandler(extra, launch);
-        bytes4[] memory sel = new bytes4[](9);
+        bytes4[] memory sel = new bytes4[](10);
         sel[0] = LivenessHandler.open.selector;
         sel[1] = LivenessHandler.join.selector;
         sel[2] = LivenessHandler.leave.selector;
@@ -424,12 +547,18 @@ abstract contract ChallengeLivenessBase is Test {
         sel[6] = LivenessHandler.keep.selector;
         sel[7] = LivenessHandler.challenge.selector;
         sel[8] = LivenessHandler.dispute.selector;
+        sel[9] = LivenessHandler.price.selector;
         targetContract(address(handler));
         targetSelector(FuzzSelector(address(handler), sel));
     }
 
     function invariant_noSubmissionOrChallengeIsStuck() public view {
         LivenessChecks.check(handler);
+    }
+
+    /// v3.1 polish, F1 (task 1.3), with challenges: as `LivenessInvariantV3Test`'s.
+    function invariant_seatsPricedAtTheirChecksEpoch() public view {
+        require(handler.unpricedSeats() == 0, "a seat of a family priced after its check's epoch");
     }
 
     function afterInvariant() public {

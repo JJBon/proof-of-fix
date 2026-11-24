@@ -238,6 +238,7 @@ def cmd_fake(_a) -> int:
 def cmd_run(a) -> int:
     if not a.execute:
         raise SystemExit("the paid run needs --execute and the owner's approval of the plan's hash")
+    url = JR.gateway_url()  # MODEL_GATEWAY_URL, required (v3.1 polish VP25)
     plan = json.loads(PLAN.read_text(encoding="utf-8"))
     base = base_cases()
     refusal = JR.approval(plan["hash"], make_plan(base)["hash"], os.environ.get("POF_JUDGE_RUN_APPROVED"))
@@ -248,7 +249,7 @@ def cmd_run(a) -> int:
     out = JR.DATA / "verdicts-memory-v1"
     seats = {s: PR.all_seats(())[s] for s in SEATS}
     limits = JR.Limits(a.max_tokens, a.max_usd, *JR.prior_spend_v2(out, list(seats)))
-    gateway = JR.Gateway(os.environ.get("MODEL_GATEWAY_URL", JR.GATEWAY), JR.gateway_token(JR.TOKEN_HELPER))
+    gateway = JR.Gateway(url, JR.gateway_token(JR.TOKEN_HELPER))
     answer = JR.answerer_v2(gateway, limits, seats, messages=M.messages)
     try:
         smoke = out / "smoke"

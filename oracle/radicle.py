@@ -314,6 +314,10 @@ printf '%%s\n' "$out"
 [ "$c" = 0 ] || exit 4
 %(announce)s"""
 
+    COMMENT = r"""set -u
+rad issue comment --repo %(rid)s %(issue)s --message %(message)s || exit 4
+%(announce)s"""
+
     def __init__(self, rid: str, prefix=(), repo_dir: str = "", timeout: float = 120.0) -> None:
         if not RID_RE.match(rid):
             raise ValueError(f"not a Radicle RID: {rid!r}")
@@ -380,6 +384,15 @@ printf '%%s\n' "$out"
             raise ValueError(f"not a revision id: {revision!r}")
         return self._sh(self.ID_CHANGE % {"verb": "accept" if accept else "reject", "rid": self.rid,
                                           "args": revision, "announce": sync_lines(self.rid, "announce")})
+
+    def comment(self, issue: str, body: str) -> str:
+        """`rad issue comment` on issue `issue` (its whole id) with `body`, then an announcement. Returns the output (a
+        failed announcement is in it as `@syncerror`); raises Unavailable when the comment fails. The decision to
+        comment is the caller's (oracle/verdict_comment.py); this only does it."""
+        if not SHA_RE.match(issue):
+            raise ValueError(f"not an issue id: {issue!r}")
+        return self._sh(self.COMMENT % {"rid": self.rid, "issue": issue, "message": shlex.quote(body),
+                                        "announce": sync_lines(self.rid, "announce")})
 
     def storage(self) -> str:
         """The repository's storage on the node (a bare git repository: every namespace, the patches' commits)."""

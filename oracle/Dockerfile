@@ -5,7 +5,7 @@
 # measures; publish the digest with each release so anyone can check a node runs it.
 # No Docker CLI (#116): given the host's Docker socket, the node starts each fix's tests in a sibling container through
 # the Docker Engine API (oracle/sandbox.py DockerApi, standard library). See validator-kit/terraform/node-user-data.sh.tftpl.
-# On the AWS devnet's seats host (platform#219) each role seat runs `seat run --until-idle 600` (oracle/seat.py: the
+# On the AWS devnet's seats host each role seat runs `seat run --until-idle 600` (oracle/seat.py: the
 # seat's secrets from its files, devnet-seats.sh's settings). scripts/seats-image.sh builds and pushes it.
 # The base: the test image's (oracle/test-image/Dockerfile), python:3.12-slim-trixie (Python 3.12.16, Debian 13.7),
 # its multi-platform index (the seats host is arm64). Debian, not Alpine (#251 L21, 2026-11-20): Alpine's repositories

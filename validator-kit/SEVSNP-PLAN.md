@@ -266,6 +266,19 @@ others, so without it the canonical `main` lagged `Heads.head` until 4 delegates
 11 minutes of c6a.large at `run --until-idle 600`, about $0.016. It isn't held by the spend pause (no model call); the
 fuse, the budget and the kill switch hold it as any start.
 
+**The draw duty (v3.1 polish VP9).** A check nobody drew has no seats, so no seat wakes anyone for it. With
+`watcher_wake_on_draw` (on by default) the watcher also scans the events that open a check (`Committed`, `Registered`,
+`Rebased`) in the same block range as `Seated`, keeps the undrawn ones on its state list, and starts the stopped
+instance once for a check still undrawn `DRAW_GRACE_BLOCKS` (25, about 5 minutes) past its seed block, or past its
+retry time for a waiting draw, plus this validator's stagger (`keccak256(validator, check)` mod 10 minutes,
+`DRAW_STAGGER_MINUTES`). The node's keeper draws it and the node powers off once idle; the other validators' watchers
+see the check drawn and drop it. The starts: at most one per check and seed block (`DRAW_MAX_STARTS`), at most 20
+verdicts read a run (`DRAW_READS_MAX`), under the fuse, the budget and the kill switch like any start, and not held by
+the spend pause (a draw calls no model). The cost: about 10 minutes of compute per undrawn check (about $0.016 of
+c6a.large at `run --until-idle 600`), on usually one host thanks to the stagger. With an always-on keeper (the seed
+host's, [the runbook's "Run a keeper"](runbook.md#run-a-keeper)) it never fires. `watcher_max_block_range`
+(`MAX_BLOCK_RANGE`, 2000) bounds each run's scan for an RPC tier that limits `eth_getLogs`' range.
+
 ## 9. Stop and destroy
 
 ```bash
@@ -653,10 +666,10 @@ in place of 55 s).
 | A drawn validator's windows | production (`WindowsLib.production`, what `DeploySepolia.s.sol` deploys) | minutes (`inMinutes()`: a devnet with `DEVNET_V3_WINDOWS=minutes`, the Foundry short run) |
 |---|---|---|
 | seal (`SEAL_WINDOW`, from the draw or a replacement's seat) | 7,200 s | 120 s |
-| reveal (`REVEAL_WINDOW`, after `sealBy`, once every seat sealed) | 3,600 s | 60 s |
+| reveal (from v3.1, #311: opens once every seat sealed, and for a counted panel its shadows, not at `sealBy`; it closes `REVEAL_WINDOW` after `sealBy`; v3: after `sealBy`) | 3,600 s after `sealBy` | 60 s after `sealBy` |
 | a cold start's share of the seal window (127 s; 199 s bound) | 1.8 % (2.8 %) | 106 % (166 %): the window closes first |
 | what's left of the seal window after the check | ≈ 4,370 s (73 min): 7,200 − 127 − 2,400 (Sepolia's profile, `timeoutSeconds` for the two test runs) − about 300 (the fix's fetch and the model call) | nothing |
-| the reveal | the node holds the instance up while its seat is open (an open seat isn't idleness), so it reveals within its 2 s poll of the window opening; after a crash the watcher restarts it, worst 127 s (3.5 %) of 3,600 s | only a node that stayed up |
+| the reveal | the node holds the instance up while its seat is open (an open seat isn't idleness), so it reveals within its 2 s poll of the window opening: from v3.1, minutes after the draw when everyone drawn seals promptly; after a crash the watcher restarts it as soon as the panel is full (v3.1) or near `sealBy` (v3), worst 127 s (3.5 %) of 3,600 s | only a node that stayed up |
 
 **Production windows (Sepolia): the margin is wide; nothing to fix.** A cold start uses under 3 % of the seal window,
 and over an hour is left after the longest check the Sepolia profile allows. A replacement seat gets a fresh seal

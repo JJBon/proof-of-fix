@@ -45,7 +45,11 @@ Configuration (environment, v3; see oracle/__main__.py):
                           only choice, for an older registry without it)
     ORACLE_SEAT_BINDINGS  "bindings" only: a JSON file of other validators' binding entries ({did: {"validator",
                           "sig"}}) to carry
-    ORACLE_RADICLE_EVERY  seconds between two of the seat's passes (default 30)"""
+    ORACLE_RADICLE_EVERY  seconds between two of the seat's passes (default 30)
+    ORACLE_DEPLOYMENT_RECORD  the deployment's record (JSON). When it names a newer deployment (`supersededBy`, #310
+                          RB12), the seat's part doesn't start, and says why: a node runs the seat's part for exactly
+                          one deployment, the newest, so a superseded race's head is never pushed; its keeper still
+                          runs (results, refunds, merges on its own `Heads`)"""
 
 from __future__ import annotations
 
@@ -145,9 +149,21 @@ def issue_text(issue: dict) -> str:
     author's Radicle ID. Everything in it was written by people: it's quoted as untrusted text."""
     parts = [f"Title: {issue['title']}", f"State: {issue['state']}"]
     for i, c in enumerate(issue["comments"]):
+        if i and _verdict_comment(c["body"]):
+            continue  # a node's verdict receipt (oracle/verdict_comment.py): no later judge reads an earlier verdict
         what = "Description" if i == 0 else f"Comment {i}"
         parts.append(f"{what} (by {c['author'] or 'unknown'}):\n{c['body']}")
     return "\n\n".join(parts)
+
+
+VERDICT_MARKERS = ("pof-verdict: ", "pof-verdict-reason: ")  # oracle/verdict_comment.py's marker lines
+
+
+def _verdict_comment(body: str) -> bool:
+    """A verdict receipt: its last line is a verdict marker. Left out of what a judge reads (v3.1 polish VP18), so an
+    audit or a challenge isn't shown the counted verdict, and the issue's hash in a receipt doesn't change after it."""
+    lines = body.rstrip().splitlines()
+    return bool(lines) and lines[-1].startswith(VERDICT_MARKERS)
 
 
 CLAIM_TAG = "pof-registration-claim-v1"
@@ -336,9 +352,27 @@ def seat_nodes(env, chain, rid: str) -> D.SeatNodes:
     return D.DocumentBindings(chain.chain_id(), chain.registry, rid, known=known)
 
 
+def superseded(env, chain=None) -> str:
+    """What the deployment record (ORACLE_DEPLOYMENT_RECORD) says supersedes this deployment (`supersededBy`, #310
+    RB12), or "" when there's no record or it names none. Raises ValueError for a record that can't be read, or that is
+    another race's than `chain`'s."""
+    path = env.get("ORACLE_DEPLOYMENT_RECORD", "")
+    if not path:
+        return ""
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ValueError(f"ORACLE_DEPLOYMENT_RECORD: can't read {path}: {e}") from None
+    race = doc.get("race") or (doc.get("addresses") or {}).get("race") or ""
+    if chain is not None and race and race.lower() != str(chain.race).lower():
+        raise ValueError(f"ORACLE_DEPLOYMENT_RECORD: {path} is the record of race {race}, not of {chain.race}")
+    return str(doc.get("supersededBy") or "")
+
+
 def from_env(env, chain, address: str, sign=None, log=print) -> tuple:
     """(the fix source, its fetcher, the seat's adapter) the environment configures; None for each part that's off.
-    Raises ValueError on a configuration that can't be right (a RID that isn't the race's repository)."""
+    Raises ValueError on a configuration that can't be right (a RID that isn't the race's repository). The seat's part
+    is off for a superseded deployment (`superseded`, #310 RB12), with a line in the log."""
     source = env.get("ORACLE_FIX_SOURCE", "") or "host"
     via = env.get("ORACLE_MERGE_VIA", "") or "forge"
     if source not in ("host", "radicle"):
@@ -360,6 +394,11 @@ def from_env(env, chain, address: str, sign=None, log=print) -> tuple:
         max_mb = float(env.get("ORACLE_FETCH_MAX_MB", fetch.DEFAULT_MAX_MB))
         fetcher = RadicleFetcher(r, log=log, max_bytes=int(max_mb * (1 << 20)),
                                  timeout_s=float(env.get("ORACLE_FETCH_TIMEOUT", fetch.DEFAULT_TIMEOUT_S)))
+    newer = superseded(env, chain) if via == "radicle" else ""
+    if newer:
+        log(f"Radicle: the seat's part is off: this deployment's record says it is superseded by {newer} (#310 RB12: "
+            f"a node pushes main and votes on the identity for one deployment only, the newest); the keeper still runs")
+        via = "forge"
     if via == "radicle":
         seat = SeatAdapter(r, chain, address, seat_nodes(env, chain, rid), sign=sign, log=log,
                            every=float(env.get("ORACLE_RADICLE_EVERY", "30")))
@@ -373,7 +412,11 @@ def attach(node, env, chain, address: str, sign=None) -> None:
     4.6). Raises ValueError on a configuration that can't be right."""
     fixes, fetcher, seat = from_env(env, chain, address, sign=sign, log=node.log)
     if fixes is not None:
+        from .verdict_comment import VerdictComments
+
         node.fixes = fixes
         node.claims = RadicleIssues(fixes.radicle)
         node.fetcher = fetcher if env.get("ORACLE_FETCH", "1") != "0" else None
+        # the verdict on the Radicle issue (#251 v3.1 polish VP18): only from a node with the issues on its Radicle node
+        node.verdicts = VerdictComments(fixes.radicle, node.claims, log=node.log, store=getattr(node, "rounds", None))
     node.radicle_seat = seat

@@ -169,6 +169,34 @@ class Fetcher:
         self._failed.pop(key, None)
         return found
 
+    def range_diff(self, root: Path, old_base: str, old_fix: str, new_base: str, new_fix: str,
+                   max_bytes: int = DEFAULT_DIFF_BYTES) -> Optional[Diff]:
+        """`git range-diff` of an approved fix (`old_base`..`old_fix`) against its rebase (`new_base`..`new_fix`)
+        (#310, RB3: a rebase check's case), each range from its merge base, computed by this node from the four commits
+        it fetched itself. None (logged) when they couldn't be fetched just now: try again; a Diff with a `refusal`
+        when no attempt would give one. The commits are checked as `diff` checks them; the text is in `text`."""
+        shas = [(x or "").strip().lower() for x in (old_base, old_fix, new_base, new_fix)]
+        if not all(SHA.match(x) for x in shas):
+            return Diff(refusal="a rebase's range-diff needs four commit ids")
+        key = "range:" + "..".join(shas)
+        last = self._failed.get(key)
+        if last is not None and time.monotonic() - last < self.retry_s:
+            return None
+        Path(root).mkdir(parents=True, exist_ok=True)
+        tmp = Path(tempfile.mkdtemp(prefix=f".range-{shas[3][:12]}-", dir=root))
+        try:
+            found = self._range_diff(tmp, *shas, max_bytes)
+        except TooLarge as e:
+            found = Diff(refusal=f"the fixes and their bases' history are {e}")
+        except FetchRefused as e:
+            self._failed[key] = time.monotonic()
+            self.log(f"fetch: the range-diff of {shas[1][:12]} and {shas[3][:12]} from {self.url}: {e}")
+            return None
+        finally:
+            remove(tmp)
+        self._failed.pop(key, None)
+        return found
+
     def file_at(self, root: Path, sha: str, path: str, max_bytes: int) -> Optional[Blob]:
         """The file at `path` in commit `sha`, fetched by this node (#166: the repository's test command, read at the
         pull request's base so the fix can't change it). None (logged) when it couldn't be fetched just now: try
@@ -249,6 +277,30 @@ class Fetcher:
             return Diff(merge_base, refusal=f"its diff is larger than the limit ({max_bytes:,} bytes)")
         message, cut = self._bounded(tmp, ["show", "-s", "--format=%B", sha], COMMIT_MESSAGE_BYTES)
         return Diff(merge_base, patch.decode(errors="replace"), message.decode(errors="replace").strip(), message_cut=cut)
+
+    def _range_diff(self, tmp: Path, old_base: str, old_fix: str, new_base: str, new_fix: str, max_bytes: int) -> Diff:
+        self._run(tmp, ["init", "-q"], tmp)
+        old_mb = new_mb = ""
+        for depth in DIFF_DEPTHS:
+            self._run(tmp, ["fetch", "-q", "--depth", str(depth), "--no-tags", "--no-recurse-submodules", *self._via(),
+                            "--", self.url, *sorted({old_base, old_fix, new_base, new_fix})], tmp)
+            for commit in (old_base, old_fix, new_base, new_fix):
+                if self._run(tmp, ["rev-parse", "--verify", f"{commit}^{{commit}}"], tmp, capture=True) != commit:
+                    raise FetchRefused(f"the host didn't serve commit {commit[:12]}")
+            try:
+                old_mb = self._run(tmp, ["merge-base", old_base, old_fix], tmp, capture=True)
+                new_mb = self._run(tmp, ["merge-base", new_base, new_fix], tmp, capture=True)
+            except FetchRefused:
+                old_mb = new_mb = ""
+            if old_mb and new_mb:
+                break
+        if not (old_mb and new_mb):
+            return Diff(refusal=f"no common ancestor with their bases within {DIFF_DEPTHS[-1]} commits")
+        text, more = self._bounded(tmp, ["range-diff", "--no-color", f"{old_mb}..{old_fix}", f"{new_mb}..{new_fix}"],
+                                   max_bytes)
+        if more:
+            return Diff(new_mb, refusal=f"the range-diff is larger than the limit ({max_bytes:,} bytes)")
+        return Diff(new_mb, text.decode(errors="replace"))
 
     def _bounded(self, cwd: Path, args: list, limit: int) -> tuple:
         """git's standard output, at most `limit` bytes, and whether it had more: killed there, or at the time limit,

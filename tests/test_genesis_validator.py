@@ -82,7 +82,7 @@ class Work(unittest.TestCase):
             shutil.copy(EVIDENCE / name, self.tmp / name)
         self.plan = self.tmp / "plan.json"
         self.plan.write_text(json.dumps({"rid": "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5", "genesisHead": "1" * 40,
-                                         "families": ["anthropic.claude"], "teeTypes": ["amd-sev-snp"],
+                                         "families": ["anthropic/claude"], "teeTypes": ["amd-sev-snp"],
                                          "images": [IMAGE]}), encoding="utf-8")
 
     def fields_args(self, *extra):

@@ -79,7 +79,9 @@ def key(role: str, src: str) -> int:
             raise KeyError_(f"{name} isn't set")
         return int(raw, 16)
     if src == "openbao":
-        env = {**os.environ, "BAO_ADDR": os.environ.get("BAO_ADDR", "https://vault.clouddemosaws.com")}
+        if not os.environ.get("BAO_ADDR"):
+            raise KeyError_("set BAO_ADDR to your OpenBao server's address (the devnet keys' store)")
+        env = dict(os.environ)
         try:
             out = subprocess.run(["bao", "kv", "get", f"-mount={MOUNT}", "-field=key", f"{PREFIX}/{role}"],
                                  capture_output=True, text=True, timeout=30, env=env)

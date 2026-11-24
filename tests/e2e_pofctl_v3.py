@@ -203,8 +203,11 @@ class Story:
 
     def rad_open(self, title: str, description: str) -> str:
         """`rad issue open` on the stand-in node: the new issue's id."""
-        return subprocess.run(["rad", "issue", "open", "--repo", RID, "--title", title, "--description", description,
-                               "--no-announce"], capture_output=True, text=True, check=True).stdout.split()[2]
+        from pofctl import v3cli
+
+        out = subprocess.run(["rad", "issue", "open", "--repo", RID, "--title", title, "--description", description,
+                              "--no-announce"], capture_output=True, text=True, check=True).stdout
+        return v3cli.rad_issue_id(out)  # Radicle 1.10.3's box: its `│ Issue   <id> │` row
 
     def head(self) -> str:
         return self.c.head()[:20].hex()

@@ -23,6 +23,9 @@ interface IPanelsFees {
     function isPriced(bytes32 family) external view returns (bool);
     function pricedFrom(bytes32 family) external view returns (uint256);
     function rolled() external view returns (uint256);
+    /// The epoch check `id` is charged at once open, else `rolled` (v3.1 polish, F1): its paid seats' families must be
+    /// priced by then.
+    function drawEpoch(uint256 id) external view returns (uint256);
     function announce(address key) external;
 }
 

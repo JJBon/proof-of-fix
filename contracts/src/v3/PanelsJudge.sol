@@ -67,7 +67,7 @@ library PanelsJudge {
         Seat storage x = _seatFor(st, pid, key);
         if (!x.hasSeal) revert NotSealed();
         if (x.revealed) revert AlreadyRevealed();
-        _inRevealWindow(p);
+        _inRevealWindow(st, pid, p);
         _checkSig(e, key, PanelsBase.REVEAL_TAG, pid, keccak256(abi.encode(vote, mask, salt)), sig);
         if (PanelsBase.commitmentOf(pid, key, vote, mask, salt) != x.seal) {
             emit Mismatch(pid, key);
@@ -95,7 +95,7 @@ library PanelsJudge {
         if (!x.hasSeal) revert NotSealed();
         if (x.receipted) revert AlreadyReceipted();
         if (receiptHash == 0) revert EmptyHash();
-        _inRevealWindow(p);
+        _inRevealWindow(st, pid, p);
         _checkSig(e, key, PanelsBase.RECEIPT_TAG, pid, receiptHash, sig);
         x.receipt = receiptHash;
         x.receipted = true;
@@ -383,11 +383,22 @@ library PanelsJudge {
         return st.seats[pid][slot - 1];
     }
 
-    /// The reveal window: the seal window over and the reveal window not; on a judging panel, every seat filled and
-    /// sealed first (shadows reveal on their own).
-    function _inRevealWindow(Panel storage p) private view {
-        if (block.timestamp <= p.sealBy) revert TooEarly();
-        if (p.kind != Kind.Shadow && (p.seats < p.k || p.nSealed < p.k)) revert TooEarly();
+    /// The reveal window (#311, design E1 and E2): a judging panel's opens once every seat is filled and sealed, and a
+    /// counted panel's before its `sealBy` also once every seat of its shadow panel has sealed (or the shadows' window
+    /// is over: a shadow's `sealBy` is never later than its counted panel's), so no counted vote is public while a
+    /// shadow can still seal. A shadow panel's opens after its own `sealBy`. Every panel's closes at `revealBy`.
+    function _inRevealWindow(Store storage st, uint256 pid, Panel storage p) private view {
+        Kind kind = p.kind;
+        if (kind == Kind.Shadow) {
+            if (block.timestamp <= p.sealBy) revert TooEarly();
+        } else {
+            if (p.nSealed < p.k) revert TooEarly();
+            if (kind == Kind.Counted && block.timestamp <= p.sealBy) {
+                uint256 sp = st.subs[p.id].shadowPid;
+                Panel storage q = st.panels[sp];
+                if (sp != 0 && q.ex == pid && q.nSealed < q.k && block.timestamp <= q.sealBy) revert TooEarly();
+            }
+        }
         if (block.timestamp > p.revealBy) revert TooLate();
     }
 

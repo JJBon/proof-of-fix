@@ -573,7 +573,7 @@ class TheExternalSet(unittest.TestCase):
         X = self.X
         self.assertEqual(X.HARNESS, ["genesis", "v1", "v2", "v3", "v4", "v5"])
         self.assertEqual(X.PAUSED, ["v2", "v3", "v4", "v5"])
-        self.assertEqual(X.EXTERNAL_FAMILY, "fake-6")
+        self.assertEqual(X.EXTERNAL_FAMILY, "anthropic/claude")  # `provider/line` (v3.1 polish VP12), priced at deploy
 
 
 class TheReleaseCandidateExternalMode(unittest.TestCase):

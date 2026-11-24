@@ -57,26 +57,43 @@ mkdir -p ~/.proof-of-fix && cast wallet new ~/.proof-of-fix solver    # an encry
 printf '{"record": "%s", "keystore": "%s"}\n' "$RECORD" ~/.proof-of-fix/solver > pofctl.json
 field() { python3 -c 'import json, sys; print(json.load(sys.stdin)[sys.argv[1]])' "$1"; }   # one field of --json
 POFCTL="$PWD/scripts/pofctl"                 # this checkout's pofctl, with your pofctl.json, from any directory
-ME=$("$POFCTL" --json --v3 status | field solver) && echo "your address $ME"   # asks for the password
+ME=$("$POFCTL" --json --v3 status | field solver) && echo "your address $ME"   # asks for the password, once
+printf '{"record": "%s", "keystore": "%s", "address": "%s"}\n' "$RECORD" ~/.proof-of-fix/solver "$ME" > pofctl.json
 ```
 
-pofctl decrypts the keystore for every command, `status` included, so each asks for its password at the terminal,
-and fails where there's none (a script, a CI job, a shell without a TTY). For a scripted run, put the password in a
-file only you can read and name it in `POFCTL_KEYSTORE_PASSWORD_FILE` (never the password itself in the
-environment). pofctl never prints the key. `pofctl.json` holds two paths, no secret; don't commit it.
+cast's keystore doesn't name its address, so the first `status` decrypts it once to find it; with the address in
+`pofctl.json` (or `--address 0x…`), `status` reads only the chain and asks for no password. Every command that sends
+a transaction decrypts the keystore and asks for its password at the terminal, and fails where there's none (a
+script, a CI job, a shell without a TTY). For a scripted run, put the password in a file only you can read and name it
+in `POFCTL_KEYSTORE_PASSWORD_FILE` (never the password itself in the environment). pofctl never prints the key.
+`pofctl.json` holds two paths and your address, no secret; don't commit it.
 
 Send about **0.01 Sepolia ETH** (plenty for every step here) to your address from any Sepolia faucet: it pays the gas.
 Check it arrived, then take test coins for the fix's deposit:
 
 <!-- test: gas -->
 ```bash
-cast balance "$ME" --rpc-url "$POFCTL_RPC" --ether   # 0.010000000000000000 once the faucet's ETH is in
+"$POFCTL" --v3 status | grep ETH             # "ETH  0.010000 for gas" once the faucet's ETH is in; no password
 "$POFCTL" faucet                             # 20 test coins, once every 2 hours per address
-"$POFCTL" --v3 status                        # your cap, and the deposit a fix posts (the rest comes back)
+"$POFCTL" --v3 status                        # your cap and room, your ETH, and the deposit a fix posts
 ```
 
-A new identity may have claims open up to $50 (the cap grows with reputation); a fix whose bounty would take you over
-it is refused before anything is sent.
+**A newcomer's ceiling.** A new identity may have claims open up to 50 coins (`REP_BASE`; the cap grows with
+reputation), and a fix whose claim would take you over it is refused before anything is sent. The claim is the
+bounty's price: at the record's opening share (50 %) and finder's fee (17.65 %), a bounty holding more than about
+117.6 coins (its funds less the registration fee) can't be claimed by a newcomer. Pledges made after you start still
+raise the claim: the bounty's first attempt locks the share, not the funds. So record the attempt first, as soon as you start
+work (free on Sepolia: `attemptFee` is 0), and check `pofctl status`' room before you commit:
+
+<!-- test: skip (an optional step; the devnet's newcomer submits at once; the Radicle set runs `attempt`) -->
+```bash
+"$POFCTL" --v3 attempt --bounty "$BOUNTY"    # checks the bounty is open and its claim fits your room, then sends it
+"$POFCTL" --v3 status | grep room            # "room for … more": the claim at commit must fit in it
+```
+
+`attempt` refuses, with nothing sent, a bounty that isn't open or whose claim at the price on offer is already over your
+room (the commit would be refused). It approves the fee coin only if the deployment charges an attempt fee, and prints
+the transaction and the next step.
 
 ## 2. Fix it on top of `Heads.head`
 
@@ -109,7 +126,16 @@ rad sync --announce
 ```
 
 `submit` seals the commit, its base and a fresh salt on-chain with the fix's deposit. A panel of validators, each
-taking the patch from its own Radicle node, runs the tests twice and judges the fix.
+taking the patch from its own Radicle node, runs the tests twice and judges the fix. A validator's keeper draws the
+panel within minutes; if no validator draws it within 10 minutes, any key with gas may:
+
+<!-- test: skip (the devnet's keepers draw every check at once; pofctl's own tests cover `draw`) -->
+```bash
+"$POFCTL" --v3 draw "$(field submission < "$SUB")"
+```
+
+On v3 the verdict comes about 2–3 hours after the draw: the 2-hour seal window, then the reveal (up to an hour) and
+the count. On v3.1 the reveal opens as soon as every seat has sealed, so it takes minutes.
 
 ## 4. Claim, merge, withdraw
 
@@ -122,7 +148,7 @@ taking the patch from its own Radicle node, runs the tests twice and judges the 
 
 The claim opens your seal; a passed fix can still be challenged until its verdict is final, about a day later on
 Sepolia once 7 or more validators are active. At launch, while fewer than 7 validators are active, a panel has one
-judge: its verdict waits 7 days for challenges and is held until enough validators are active to judge one
+judge: its verdict waits 7 days for challenges and is held until 6–7 validators with room can judge one
 (design L16), so expect days, not hours.
 
 <!-- test: wait-final -->
@@ -135,3 +161,38 @@ judge: its verdict waits 7 days for challenges and is held until enough validato
 rad sync --fetch && "$POFCTL" --v3 verify-head   # canonical main is now your fix
 "$POFCTL" --v3 withdraw --role solver            # your credit in the race: refunds and instalments so far
 ```
+
+## 5. If your fix's base went stale: rebase in place
+
+Two fixes judged on the same head can't both merge as they are: once the first one moves `Heads.head`, the second's
+`merge` is refused as stale (its base isn't the head any more). On v3.1 the winner then rebases its fix onto the new
+head in place: the award keeps its place, its epoch and its price, and nothing waits for the merge deadline. `merge`
+and `status` tell you when this applies.
+
+<!-- test: skip (the rebase in place runs in the devnet's scenario r, tests/integration/scenarios_v3.py, with these commands) -->
+```bash
+rad sync --fetch
+git checkout "fix-$BOUNTY" && git rebase "$(scripts/pofctl --json --v3 status | field head)"   # resolve, re-run the tests
+REB=~/.proof-of-fix/rebase-$BOUNTY.json
+scripts/pofctl --json --v3 rebase --bounty "$BOUNTY" --patch "$(git rev-parse HEAD)" \
+  --patch-id "<your fix's Radicle patch id>" > "$REB"
+sh -c "$(field patchCommand < "$REB")"       # a new revision of the same patch, with the rebase check's claim lines
+rad sync --announce
+```
+
+What happens next:
+
+- **The check.** `rebase` opens the rebased commit as a new check, with the same deposit as a fix (its judges are paid
+  by the meter, the rest comes back) and a claim at the bounty your fix was judged at, which replaces your original
+  claim. A fresh panel runs the tests with the new head's protected paths, so the first fix's tests must pass too, and
+  compares your rebase with the approved fix: anything beyond adapting the fix to the new base fails it.
+- **The merge.** It has a full challenge window of its own. Once both verdicts are final, `scripts/pofctl --v3 merge
+  --bounty "$BOUNTY"` moves the head to the rebased commit (the original commit never becomes the head), and your
+  instalments count from the later of the two finalities. With panels of 3 at level A that's about one cycle, 27 hours
+  plus the time you took to rebase, after the first fix merged.
+- **If it fails** while its base is still the head, your award closes with nothing paid and the bounty reopens at
+  once; you may appeal that check once in the reopened bounty. If the head moved again during the check, only that
+  check ends: rebase again onto the new head.
+- **If you don't.** A day after the head moved, anyone may rebase your fix. The award stays yours; a rebase by someone
+  else that merges is paid 10 % of the price, from the pot's rest, and their checks back. Nobody rebasing or
+  merging it within 3 days (`mergeDays`) of the latest passing verdict closes the award, and the bounty reopens.

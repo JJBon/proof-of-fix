@@ -34,7 +34,8 @@ class SeatEntryTest(unittest.TestCase):
 
     def env(self, **extra) -> dict:
         return {"ORACLE_RPC": "https://devnet.example", "ORACLE_RACE": RACE, "SEAT_SECRETS": str(self.secrets),
-                "SEAT_WORK": str(self.work), **extra}
+                "SEAT_WORK": str(self.work), "ORACLE_REPO": "example-org/pof-sandbox",
+                "SEAT_FORGE_URL": "https://forge.example", **extra}
 
     def test_the_secrets_from_their_files_and_devnet_seats_settings(self):
         env = self.env()
@@ -50,7 +51,7 @@ class SeatEntryTest(unittest.TestCase):
         self.assertTrue((self.work / "src").is_dir())
         repos = (self.work / "repos.json").read_text()
         self.assertEqual(json.loads(repos), {"repos": {"example-org/pof-sandbox": {
-            "host": "forgejo", "api": "https://git.example.com"}}})
+            "host": "forgejo", "api": "https://forge.example"}}})
         for secret in (KEY, AUTH, TOKEN, "s3cret"):
             self.assertNotIn(secret, repos)
 
@@ -64,6 +65,14 @@ class SeatEntryTest(unittest.TestCase):
         self.assertIn("DEVNET_SEATS_ROUND_TIMEOUT:-900", script)
         self.assertIn("DEVNET_SEATS_POLL:-5", script)
         self.assertIn("DEVNET_SEATS_JUDGE:-fake", script)
+
+    def test_no_built_in_repository_or_forge(self):
+        """The image's files hold no internal default (v3.1 polish VP15): the host sets the repository and its forge."""
+        for missing in ("ORACLE_REPO", "SEAT_FORGE_URL"):
+            env = self.env()
+            del env[missing]
+            with self.assertRaisesRegex(seat.Refused, "ORACLE_REPO .* SEAT_FORGE_URL"):
+                seat.configure(env, "run")
 
     def test_the_environment_wins_over_a_file(self):
         env = self.env(FORGEJO_TOKEN="from-env", ORACLE_REPOS="/etc/repos.json", ORACLE_SRC_ROOT=str(self.work / "x"))

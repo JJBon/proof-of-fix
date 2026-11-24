@@ -106,7 +106,8 @@ Shadows drawn while a submission waited (`ex = 0`, `PanelsVerdict.sol:60`) have 
 open when the counted panel is drawn (`draw` runs again on any registry change, `PanelsVerdict.sol:40-42`). E2's test
 doesn't cover them (their `ex` isn't the counted panel, and the counted draw overwrites `s.shadowPid`,
 `PanelsVerdict.sol:449`). So `draw`, before it seats the counted panel, closes the seal window of the submission's
-previous shadow panel: `sealBy = now` when it is still open. Its `revealBy` doesn't move.
+previous shadow panel: `sealBy = now − 1` when it is still open, so not even a seal in the draw's own block is
+taken. Its `revealBy` doesn't move.
 
 - **What that exposes:** a waiting shadow that sealed can then reveal before the counted judges seal. That's not new:
   today a waiting shadow's `sealBy` is always earlier than the later counted panel's, so its reveals are already open
@@ -157,6 +158,39 @@ Task 1.5 measures `reveal`, `receipt`, `seal` and `draw` with `forge test --gas-
 the deltas here and the deploy cost from the size change. A Sepolia rehearsal (as in the Glamsterdam report) is part
 of the release candidate, not this change. Since no slot is new and nothing reads `gasleft()`, the report's R1–R4
 caveats are unchanged.
+
+### Measured (task 1.5, pinned Foundry 1.8.5, solc 0.8.37)
+
+**Sizes** (`scripts/contracts.sh sizes` and `out/*.json`; before at 072d4a3):
+
+| Contract | Runtime before (B) | Runtime after (B) | Δ | Runtime margin after (B) | Initcode margin after (B) |
+|---|---:|---:|---:|---:|---:|
+| Panels | 19,026 | 19,026 | 0 | 5,550 | 26,452 |
+| PanelsJudge | 16,515 | 16,695 | +180 | 7,881 | 32,425 |
+| PanelsVerdict | 23,163 | 23,327 | +164 | **1,249** | 25,793 |
+| PanelsDraw | 10,656 | 10,656 | 0 | 13,920 | 38,466 |
+| PanelScores | 5,869 | 5,869 | 0 | 18,707 | 43,196 |
+
+Every margin stays above E5's 512 B. RaceV3 (1,964 B), RaceV3Annex (2,214 B), RaceV3Endings (2,731 B), Validators
+(1,668 B) and FeesV3 (6,550 B) are unchanged. Deploying the two libraries costs 344 B more code: 526,320 more state gas
+under EIP-8037 (1,530 a byte), 68,800 under the old rules (200 a byte).
+
+**Gas** (`forge test --gas-report` over `PanelsV3Test` and `PanelsV3BTest`, the same 83 tests before and after, median
+per call; and a probe of one counted reveal and receipt before `sealBy`, with and without shadows):
+
+| Call | Before (median) | After (median) | Δ |
+|---|---:|---:|---:|
+| `seal` | 74,190 | 74,190 | 0 |
+| `reveal` (these suites reveal after `sealBy`) | 51,769 | 51,804 | +35 |
+| `receipt` (likewise) | 85,969 | 86,004 | +35 |
+| `draw` | 643,392 | 646,557 | +3,165 (the previous shadow panel's timeline read) |
+| `settleShadows` | 92,418 | 92,589 | +171 |
+| a counted `reveal` before `sealBy`, its shadows sealed, against none drawn | | 63,915 vs 59,596 | +4,319 (the shadow panel's reads) |
+| a counted `receipt` likewise | | 98,131 vs 93,813 | +4,318 |
+
+All of it is execution gas: no call writes a new slot (the only new write, E3's, overwrites a non-zero `sealBy`), so
+EIP-8037's state gas (97,920 a new slot) doesn't change for any transaction. Against the Sepolia rehearsal's
+per-transaction figures (`reports/glamsterdam-runtime-v1.md`: reveal 467,519, draw 1,429,934) the deltas are under 1 %.
 
 ### E7. The node and the watcher
 

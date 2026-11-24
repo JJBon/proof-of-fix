@@ -13,7 +13,8 @@ import json
 
 from .models import InstanceRoleCredentials, credentials_from_env, http_request, sigv4
 
-SECRETS = ("ORACLE_PRIVATE_KEY", "RPC_API_KEY", "MODEL_API_KEY", "ORACLE_GIT_TOKEN")
+# ORACLE_RPC: the RPC URL itself, a provider's key in its path (#251 v3.1 polish VP10, VP20: ORACLE_RPC_SECRET_ARN)
+SECRETS = ("ORACLE_PRIVATE_KEY", "RPC_API_KEY", "MODEL_API_KEY", "ORACLE_GIT_TOKEN", "ORACLE_RPC")
 
 
 class SecretError(RuntimeError):

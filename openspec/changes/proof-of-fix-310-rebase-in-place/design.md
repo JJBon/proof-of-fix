@@ -287,8 +287,9 @@ covers the rest.
 
 ### RB8. Node, pofctl and Radicle patches
 
-**The patch.** A rebase is a new revision of the same Radicle patch: `git push rad <fix>:refs/patches/<patch-id>`
-with `patch.message` lines. Its description carries bot/logic's claim lines (`pr_body`: bounty, submission = the
+**The patch.** A rebase is a new revision of the same Radicle patch: `git push --force rad
+<fix>:refs/heads/patches/<patch-id>` (forced: the rebased commit doesn't descend from the last revision; `refs/patches`
+would open a new patch) with `patch.message` lines. Its description carries bot/logic's claim lines (`pr_body`: bounty, submission = the
 rebase check's id, salt, solver = the rebaser).
 
 - `_find_patch` (`node_v3.py:507-547`) already matches per revision on the claim lines and the commitment, and

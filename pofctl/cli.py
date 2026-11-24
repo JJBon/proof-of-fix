@@ -3,7 +3,8 @@
     pofctl [--json] [--config FILE] [--v1 | --v3] [--as ROLE] [--keystore FILE] <command> ...
 
 v3 on Radicle (#251 task 4.4): `issue register --rad-issue`, `pledge`, `submit --patch`, `claim`, `merge`, `status`,
-`verify-head` and `checkout`; see pofctl/v3cli.py. Those only v3 has select it by themselves, as a v3 record does.
+`verify-head` and `checkout`; v3.1 polish: `issue register --title`, `issue show` and `draw`; see pofctl/v3cli.py. Those
+only v3 has select it by themselves, as a v3 record does.
 
 Roles and their default keys (devnet-keys.sh's roles; --as picks another, e.g. --as solver-b, or --as engineer with
 POFCTL_KEY_ENGINEER set to an engineer's own key):
@@ -24,13 +25,17 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import shlex
 import sys
+import time
+import traceback
 from pathlib import Path
 
 from oracle import v2
-from oracle.crypto import recover, sign
+from oracle.crypto import checksum, recover, sign
+from oracle.redact import REDACT
 
 from bot import logic
 from bot.forge import load_config as load_repos
@@ -50,6 +55,19 @@ REGISTERED, AT_MERGE = 120 * C, 100 * C  # the stub quorum's two importance esti
 Fail = v3cli.Fail  # one failure type for every command, v2's and v3's
 
 
+def log(line: str) -> None:
+    """pofctl's log lines (an RPC retry), on stderr, through the shared redactor (VP20): no RPC key in them."""
+    print(REDACT(str(line)), file=sys.stderr)
+
+
+def make_rpc(url: str, headers: dict | None = None, secrets_: tuple = ()) -> Rpc:
+    """The chain pofctl reads and sends to: `Rpc`'s default retries (VP19: a 429 doesn't fail a command at its first
+    answer), its URL and token (`secrets_`) loaded into the redactor first (VP20)."""
+    for secret in (url, *secrets_):
+        REDACT.add(secret)
+    return Rpc(url, headers, sleep=lambda s: time.sleep(s), log=log)
+
+
 # ---------- context ----------
 
 class Ctx:
@@ -59,9 +77,10 @@ class Ctx:
         url = args.rpc or os.environ.get("POFCTL_RPC") or self.config.get("rpc") or "http://127.0.0.1:8546"
         headers = dict(self.config.get("rpc_headers") or {})
         # #104's chain on AWS: a per-engineer key, never in the config
-        headers.update(auth_headers(os.environ.get("POFCTL_RPC_TOKEN"),
-                                    os.environ.get("POFCTL_RPC_AUTH") or "Authorization"))
-        self.rpc = Rpc(url, headers)
+        token = os.environ.get("POFCTL_RPC_TOKEN")
+        auth = auth_headers(token, os.environ.get("POFCTL_RPC_AUTH") or "Authorization")
+        headers.update(auth)
+        self.rpc = make_rpc(url, headers, (token, *(v.split(" ")[-1] for v in auth.values())))
         v3_wanted = getattr(args, "v3", False) or getattr(args, "command", "") in v3cli.V3_ONLY \
             or self.config.get("version") == 3
         if args.v1 and v3_wanted:
@@ -110,6 +129,21 @@ class Ctx:
             raise Fail(f"devnet keys (source {self.src}) are refused on chain {cid}: they sign on the local chains "
                        f"{DEVNET_CHAINS[1]} and {DEVNET_CHAINS[0]} only (rule 1). On a public chain sign with your "
                        f"own keystore file: --keystore FILE (the password is asked for; the key is never printed)")
+
+    def view_address(self, given: str | None = None) -> str:
+        """The address a read-only command shows (VP11): `--address`, then `address` in pofctl.json, then the
+        keystore's `address` field; the key is decrypted (its password asked) only if none of them gives it."""
+        for value in (given, self.config.get("address")):
+            if value:
+                return checksum(value)
+        if self.keystore and Path(self.keystore).is_file():
+            try:
+                found = json.loads(Path(self.keystore).read_text(encoding="utf-8")).get("address")
+            except (OSError, ValueError, AttributeError):
+                found = None
+            if found and re.fullmatch(r"(0x)?[0-9a-fA-F]{40}", str(found)):
+                return checksum("0x" + str(found).lower().removeprefix("0x"))
+        return self.wallet("solver").address
 
     def wallet(self, role: str) -> Wallet:
         kr = self.key_role(role)
@@ -701,13 +735,17 @@ def parser() -> argparse.ArgumentParser:
 
     st = sub.add_parser("status", help="the chain, the deployment and the oracle set; v3: the solver's cap, open "
                                        "claims and the deposit a fix posts")
-    st.add_argument("--address", help="v3: the solver to show (default: the solver role's key, or the keystore's)")
+    st.add_argument("--address", help="v3: the address to show (default: `address` in pofctl.json, the keystore's "
+                                      "`address` field, else the solver role's key; no password unless none gives it)")
     st.set_defaults(fn=cmd_status, fn3=v3cli.cmd_status)
 
     iss = sub.add_parser("issue", help="v3: a Radicle issue on-chain").add_subparsers(dest="action", required=True)
     i = iss.add_parser("register", help="register a Radicle issue: the fee, the stake and its check's deposit; prints "
                                         "(or with --comment posts) the claim the check reads on the issue")
-    i.add_argument("--rad-issue", required=True, help="the Radicle issue's id (as `rad issue list` shows it)")
+    i.add_argument("--rad-issue", help="the Radicle issue's whole id (as `rad issue list` shows it)")
+    i.add_argument("--title", help="v3.1: open the Radicle issue with this title (`rad issue open` through --rad-exec), "
+                                   "instead of --rad-issue")
+    i.add_argument("--description", help="with --title: the Radicle issue's description")
     i.add_argument("--rid", help="the repository's RID (default: the record's)")
     i.add_argument("--comment", action="store_true", help="comment the claim on the Radicle issue with `rad issue "
                                                           "comment`, through --rad-exec")
@@ -717,6 +755,22 @@ def parser() -> argparse.ArgumentParser:
     i = iss.add_parser("open", help="open the bounty of an issue whose registration check passed and is final")
     i.add_argument("--issue", type=int, required=True, help="the on-chain issue")
     i.set_defaults(fn=v3cli.cmd_open, fn3=v3cli.cmd_open)
+    i = iss.add_parser("show", help="v3.1: a registration's check: status, panel, deadlines, result, hold or window, "
+                                    "and the deposit's spending and refund (reads only)")
+    i.add_argument("--issue", type=int, required=True, help="the on-chain issue")
+    i.set_defaults(fn=v3cli.cmd_issue_show, fn3=v3cli.cmd_issue_show)
+
+    dr = sub.add_parser("draw", help="v3.1: draw the panel of a check no validator drew (sealed past its seed block, "
+                                     "or waiting with the registry changed or past its retry time); any key with gas")
+    dr.add_argument("check", type=int, help="the check (a submission id: a registration's check or a fix)")
+    dr.add_argument("--role", default="reporter", help="the key that sends (default the reporter's; with --keystore, "
+                                                       "the keystore's)")
+    dr.set_defaults(fn=v3cli.cmd_draw, fn3=v3cli.cmd_draw)
+
+    at = sub.add_parser("attempt", help="v3: record an attempt on an open bounty (the first locks its share of the "
+                                        "price); checks the price against your room first")
+    at.add_argument("--bounty", type=int, required=True)
+    at.set_defaults(fn=v3cli.cmd_attempt, fn3=v3cli.cmd_attempt)
 
     pl = sub.add_parser("pledge", help="v3: fund a bounty; refused while fewer than 3 solvers are active")
     pl.add_argument("--bounty", type=int, required=True)
@@ -743,6 +797,16 @@ def parser() -> argparse.ArgumentParser:
     mg = sub.add_parser("merge", help="v3: at the verdict's finality, move Heads to the claimed fix (anyone)")
     mg.add_argument("--bounty", type=int, required=True)
     mg.set_defaults(fn=v3cli.cmd_merge, fn3=v3cli.cmd_merge)
+
+    rb = sub.add_parser("rebase", help="v3.1: rebase a claimed fix whose base went stale onto Heads.head, in place "
+                                       "(the winner at once, anyone a day after the head moved)")
+    rb.add_argument("--bounty", type=int, required=True)
+    rb.add_argument("--patch", required=True, help="the rebased commit (on Heads.head)")
+    rb.add_argument("--base", help="its base (default and only accepted: Heads.head now)")
+    rb.add_argument("--salt", help="0x + 64 hex (default: random)")
+    rb.add_argument("--patch-id", help="the fix's Radicle patch id, for the printed push command")
+    rb.add_argument("--title", help="the new revision's title")
+    rb.set_defaults(fn=v3cli.cmd_rebase, fn3=v3cli.cmd_rebase)
 
     co = sub.add_parser("checkout", help="v3: check out the commit Heads.head names, from any namespace of a Radicle "
                                          "node's copy")
@@ -932,8 +996,8 @@ def run(argv: list) -> tuple:
     if ctx.version == 3:
         fn = getattr(a, "fn3", None)
         if fn is None:
-            raise Fail(f"`{a.command}` is v2's; on v3: status, issue register|open, pledge, submit, claim, merge, "
-                       f"withdraw, faucet, verify-head, verify-delegates and checkout")
+            raise Fail(f"`{a.command}` is v2's; on v3: status, issue register|open|show, draw, pledge, submit, claim, "
+                       f"merge, withdraw, faucet, verify-head, verify-delegates and checkout")
         return fn(ctx, a)
     if a.command in v3cli.V3_ONLY:
         raise Fail(f"`{a.command}` is v3's (--v3)")
@@ -949,9 +1013,12 @@ def main(argv: list | None = None) -> int:
     try:
         data, lines = run(argv)
     except (Fail, RpcError, keysrc.KeyError_, keystore.KeystoreError, FileNotFoundError, ValueError) as e:
-        msg = e.reason if isinstance(e, Reverted) else str(e)
+        msg = REDACT(e.reason if isinstance(e, Reverted) else str(e))  # VP20: no RPC key in an error
         print(json.dumps({"error": msg}) if as_json else f"pofctl: {msg}", file=sys.stderr)
         return 1
+    except Exception:  # anything else: its traceback, redacted (VP20)
+        print(REDACT(traceback.format_exc()), file=sys.stderr, end="")
+        return 2
     print(json.dumps(data, indent=2, default=str) if as_json else "\n".join(lines))
     return 0
 

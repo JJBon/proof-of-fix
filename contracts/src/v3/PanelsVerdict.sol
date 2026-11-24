@@ -61,6 +61,10 @@ library PanelsVerdict {
             }
             return;
         }
+        // #311 (design E3): the shadows drawn while it waited can't seal from now on (not even in this block),
+        // since the counted panel's reveal could open before their window ends; those that hadn't sealed count no miss
+        Panel storage w = st.panels[s.shadowPid];
+        if (w.sealBy >= block.timestamp) w.sealBy = uint64(block.timestamp - 1);
         (uint256 pid, Panel storage p) = PanelsBase.newPanel(st, e, id, Kind.Counted, seed, k, 0, s.snap, c.counter);
         for (uint256 i; i < k; ++i) {
             PanelsBase.seat(st, e, pid, p, i, c.members[i].key, c.members[i].level);
@@ -439,6 +443,7 @@ library PanelsVerdict {
         );
         if (unpriced != address(0)) PanelsBase.announce(e, unpriced);
         if (keys.length == 0) return;
+        // the timeline is set here once and never reset (#311: `_settleShadows` reads an early close from it)
         (uint256 spid, Panel storage p) =
             PanelsBase.newPanel(st, e, id, Kind.Shadow, seed, keys.length, countedPid, s.snap, 0);
         p.sealBy = uint64(sealBy);
@@ -459,8 +464,12 @@ library PanelsVerdict {
         if (!p.closed) {
             p.closed = true;
             changed = true;
+            // #311 (design E4): a waiting panel whose seal window the counted draw closed early (shadow timelines are
+            // set once, revealBy = sealBy + REVEAL_WINDOW, and never reset): its seats that hadn't sealed count no draw
+            bool cut = p.sealBy + e.reveal < p.revealBy;
             for (uint256 i; i < n; ++i) {
                 Seat storage x = st.seats[spid][i];
+                if (cut && !x.hasSeal) continue;
                 e.reg.recordShadow(x.key, x.revealed && x.receipted);
             }
         }

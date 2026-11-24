@@ -10,7 +10,7 @@
                                            run didn't finish; the kit's watcher starts the node again (#166)
     python3 -m oracle withdraw-fees [--to ADDRESS]
                                            v2: pull this key's check fees (its credit in the fee coin) to its address
-    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host (platform#219): the command
+    python3 -m oracle seat <command>       a role seat on the AWS devnet's seats host: the command
                                            with devnet-seats.sh's settings and the seat's secrets from files
                                            (oracle/seat.py)
     python3 -m oracle snp-report --data HEX [--out FILE] [--certs-dir DIR]
@@ -47,6 +47,9 @@ v3 (ORACLE_VERSION=3, ORACLE_RACE the RaceV3: an open validator, #139; oracle/no
 
 Configuration (environment):
     ORACLE_RPC       the chain's JSON-RPC URL; user info in it (https://<handle>:<key>@host) is sent as HTTP Basic
+    ORACLE_RPC_SECRET_ARN  a Secrets Manager secret holding ORACLE_RPC (a provider's key in its path), read as the
+                     other <NAME>_SECRET_ARN are. The URL is never logged: every node line, tracebacks included, shows
+                     its scheme and host only (oracle/redact.py)
     ORACLE_RPC_TOKEN or RPC_API_KEY
                      the chain's API key, in ORACLE_RPC_API_KEY_HEADER: "Authorization" (Bearer, the default),
                      "Basic" (a "<handle>:<key>" key, the demo chain's) or another header name (the raw key)
@@ -89,7 +92,8 @@ Configuration (environment):
     ORACLE_EXCHANGE  folder: the directory the drawn judges share (one machine; default .oracle-exchange)
     ORACLE_RECEIPTS  where receipts are stored (default .oracle-receipts)
     ORACLE_JUDGE     "fake" (the default: deterministic, no model call), "direct:<provider>:<model>" (a counted
-                     judge: a PAID call straight to the provider, #118) or "gateway:<family>" (development only, PAID).
+                     judge: a PAID call straight to the provider, #118) or "gateway:<family>" (development only, PAID;
+                     MODEL_GATEWAY_URL required, the gateway's inference URL: there is no default).
                      direct providers: bedrock (Converse, the instance role's credentials via IMDSv2 or AWS_* in the
                      environment, AWS_REGION; ORACLE_MODEL_ALLOW required), anthropic, openai (any OpenAI-compatible
                      server with ORACLE_MODEL_URL), gemini; MODEL_API_KEY or MODEL_API_KEY_FILE, sent as a header only
@@ -141,11 +145,25 @@ Configuration (environment):
                      each seat's node key from its registration, Validators.radNodeOf; "bindings", signed bindings in
                      the identity document, the default and only choice for a registry from before that field),
                      ORACLE_SEAT_BINDINGS (bindings only: a JSON file of other validators' bindings to carry),
-                     ORACLE_RADICLE_EVERY (seconds between passes, default 30)
+                     ORACLE_RADICLE_EVERY (seconds between passes, default 30),
+                     ORACLE_DEPLOYMENT_RECORD (the deployment's record: marked `supersededBy` a newer one, the seat's
+                     part stays off and the keeper runs alone, #310 RB12)
     ORACLE_ZKTLS_BIN, ORACLE_ZKTLS_NOTARY, ORACLE_ZKTLS_MODE
                      a level C validator's zkTLS prover (oracle/zktls.py: a stub until the pinned build is run)
     (ORACLE_ROUNDS defaults to .oracle-rounds on v3: a node that loses what it sealed is slashed for not revealing)
-    ORACLE_POLL           seconds between the node's passes over the chain (default 2)
+    ORACLE_POLL           seconds between the node's passes over the chain (default 12 on Sepolia, chain id 11155111:
+                     one block; 2 elsewhere). The seat steps (seals, reveals, reports) run every pass
+    ORACLE_KEEPER_EVERY   v3: seconds of chain time between two passes' keeper sections, the calls anyone may make
+                     (default 60 on Sepolia; 0 elsewhere: every pass). Keeper calls aren't deadline-bound
+    ORACLE_KEEPER_BUDGET  v3: about how many RPC calls one keeper section makes (default 300); the next section goes on
+                     from the check or panel where it stopped, so a long list is covered over several passes. Finished
+                     checks (done, verdict final or released, nothing owed) and kept panels leave the keeper's scan;
+                     a restart reads every check from ORACLE_FROM_BLOCK once. A refused keeper call waits 30 s
+                     doubling to an hour (sooner once the registry, the capacity hour, the period or the verdict
+                     changes); a chain that stops answering the keeper (HTTP 429) pauses its section for the answer's
+                     Retry-After, else up to 600 s, never the seat steps
+    ORACLE_TX_POLL        seconds between two looks for a sent transaction's receipt (default 4 on Sepolia; 0.4
+                     elsewhere)
     ORACLE_FROM_BLOCK     v3: the deployment's first block (its record's `block`; Sepolia v3: 12192376): no event scan
                      starts before it, and the Radicle delegates (the registry's Registered events) are read from it.
                      Unset: found once from RaceV3's start by bisecting block times (about 25 reads)
@@ -165,11 +183,15 @@ from pathlib import Path
 
 from .chain import Race, Rpc
 from .keys import DstackKeys, EnvKeys, LocalDevKeys
+from .redact import REDACT, load_env
 from .rpc import DEFAULT_LOG_RANGE, Unavailable, auth_headers
 
 
 EXIT_UNFINISHED = 75  # EX_TEMPFAIL
 DEFAULT_RPC_RETRIES, DEFAULT_OUTAGE_LIMIT_S = 5, 1800.0
+SEPOLIA_CHAIN_ID = 11_155_111
+# v3.1 polish VP6: (on Sepolia, elsewhere) seconds; ORACLE_KEEPER_EVERY 0 is every pass
+DEFAULT_POLL_S, DEFAULT_KEEPER_EVERY_S, DEFAULT_TX_POLL_S = (12.0, 2.0), (60.0, 0.0), (4.0, 0.4)
 
 
 def keys_from_env(chain_id: int, race: str):
@@ -185,12 +207,13 @@ def keys_from_env(chain_id: int, race: str):
     return DstackKeys(f"pof/oracle/{chain_id}/{race.lower()}")
 
 
-def rpc_from_env() -> Rpc:
-    token = os.environ.get("ORACLE_RPC_TOKEN") or os.environ.get("RPC_API_KEY")
-    header = os.environ.get("ORACLE_RPC_API_KEY_HEADER") or "Authorization"
-    return Rpc(os.environ["ORACLE_RPC"], headers=auth_headers(token, header),
-               retries=int(os.environ.get("ORACLE_RPC_RETRIES") or DEFAULT_RPC_RETRIES),
-               log_range=_whole("ORACLE_LOG_RANGE", os.environ.get("ORACLE_LOG_RANGE"), DEFAULT_LOG_RANGE))
+def rpc_from_env(env=None) -> Rpc:
+    env = os.environ if env is None else env
+    token = env.get("ORACLE_RPC_TOKEN") or env.get("RPC_API_KEY")
+    header = env.get("ORACLE_RPC_API_KEY_HEADER") or "Authorization"
+    return Rpc(env["ORACLE_RPC"], headers=auth_headers(token, header),
+               retries=int(env.get("ORACLE_RPC_RETRIES") or DEFAULT_RPC_RETRIES),
+               log_range=_whole("ORACLE_LOG_RANGE", env.get("ORACLE_LOG_RANGE"), DEFAULT_LOG_RANGE))
 
 
 def _whole(name: str, raw: str | None, default: int | None, least: int = 1) -> int | None:
@@ -204,6 +227,31 @@ def _whole(name: str, raw: str | None, default: int | None, least: int = 1) -> i
     if n < least:
         raise SystemExit(f"oracle: {name} is at least {least}, not {n}")
     return n
+
+
+def _seconds(name: str, raw: str | None, default: float) -> float:
+    """A seconds setting: unset or empty is `default`; anything else a number of 0 or more."""
+    if not (raw or "").strip():
+        return default
+    try:
+        x = float(raw.strip())
+    except ValueError:
+        raise SystemExit(f"oracle: {name} is a number of seconds, not {raw!r}") from None
+    if not x >= 0:
+        raise SystemExit(f"oracle: {name} is 0 or more, not {raw.strip()}")
+    return x
+
+
+def node_cadence(env, chain_id: int) -> dict:
+    """ORACLE_POLL, ORACLE_KEEPER_EVERY, ORACLE_TX_POLL and ORACLE_KEEPER_BUDGET, each with its default for the chain
+    (Sepolia's or a devnet's, v3.1 polish VP6)."""
+    from .node_v3 import KEEPER_BUDGET
+
+    at = 0 if chain_id == SEPOLIA_CHAIN_ID else 1
+    return {"poll": _seconds("ORACLE_POLL", env.get("ORACLE_POLL"), DEFAULT_POLL_S[at]),
+            "keeper_every": _seconds("ORACLE_KEEPER_EVERY", env.get("ORACLE_KEEPER_EVERY"), DEFAULT_KEEPER_EVERY_S[at]),
+            "tx_poll": _seconds("ORACLE_TX_POLL", env.get("ORACLE_TX_POLL"), DEFAULT_TX_POLL_S[at]),
+            "keeper_budget": _whole("ORACLE_KEEPER_BUDGET", env.get("ORACLE_KEEPER_BUDGET"), KEEPER_BUDGET)}
 
 
 def first_block(chain, env, log=print) -> int:
@@ -274,6 +322,15 @@ def _json_setting(value: str):
     return json.loads(value if value.startswith("{") else Path(value).read_text())
 
 
+def node_log(me: str):
+    """The v3 node's log: every line through the shared redactor, so no RPC key reaches it (#251 v3.1 polish VP20)."""
+
+    def log(m):
+        print(REDACT(f"[{me[:10]}] {m}"), flush=True)
+
+    return log
+
+
 def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     """The v3 node, configured from the environment (see the module's docstring)."""
     from bot.forge import load_config, repo_for
@@ -282,17 +339,17 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     from .judge import DirectJudge, judge_from_env
     from .models import ConfigError
     from .node_v3 import NodeV3
-    from .rpc import Wallet
+    from .rpc import LoggedWallet
     from .transport import exchange_from_env
 
     env = os.environ if env is None else env
     chain = v3.Chain(rpc, race_address)
     me = keys.address()
 
-    def log(m):
-        print(f"[{me[:10]}] {m}", flush=True)
+    log = node_log(me)
 
     chain.first_block = first_block(chain, env, log)
+    cadence = node_cadence(env, chain.chain_id())
 
     try:
         judge = judge_from_env(env)
@@ -302,7 +359,8 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
     if need_repo and not repo:
         raise SystemExit("oracle: set ORACLE_REPO (owner/name)")
     host = repo_for(repo, load_config(env.get("ORACLE_REPOS"))) if repo else None
-    wallet = Wallet(rpc, keys.account_secret(), "node")
+    wallet = LoggedWallet(rpc, keys.account_secret(), "node", log=log,
+                          poll_s=cadence["tx_poll"])  # each transaction's hash and block (VP10)
     exchange = exchange_from_env(env, chain.race, log=log, chain=chain, keys=keys, wallet=wallet)
     prover = None
     if chain.validator(me)["proofType"] == "0x" + v3.PROOF_ZKTLS.hex():
@@ -320,6 +378,8 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
                   list_prices=_json_setting(env.get("ORACLE_LIST_PRICES", "")),
                   keeper=env.get("ORACLE_KEEPER", "on") != "off", repo_id=env.get("ORACLE_REPO_ID") or v3.ZERO,
                   sources=sources)
+    node.keeper_every, node.keeper_budget = cadence["keeper_every"], cadence["keeper_budget"]
+    node.poll = cadence["poll"]
     if host is not None:
         node.fetcher = fetch.from_env(env, repo, host, log=node.log)
     if isinstance(judge, DirectJudge):  # the node's own spending caps and pause (#253; oracle/spend.py)
@@ -339,7 +399,7 @@ def v3_node(rpc, race_address: str, keys, env=None, need_repo: bool = True):
         radicle_v3.attach(node, env, chain, me, sign=keys.sign)
     except ValueError as e:
         raise SystemExit(f"oracle: {e}") from None
-    rpc.log = node.log
+    rpc.log = wallet.log = node.log
     if hasattr(judge, "log"):
         judge.log = node.log
     return node
@@ -413,7 +473,7 @@ def command_v3(argv: list, rpc, race_address: str, keys) -> int:
             node = v3_node(rpc, race_address, keys)
             start = run_start(a.from_block, rpc.block(), node.chain.first_block)
             outage = float(env.get("ORACLE_RPC_OUTAGE_LIMIT") or DEFAULT_OUTAGE_LIMIT_S)
-            done = node.run(start, a.until_idle, poll=float(env.get("ORACLE_POLL", "2")),
+            done = node.run(start, a.until_idle, poll=node.poll,
                             outage_limit=outage if a.until_idle is not None else None)
             print(f"node {me}: {done} seat(s) finished", flush=True)
             return 0
@@ -527,7 +587,7 @@ def main(argv: list) -> int:
     try:
         return command(argv)
     except Unavailable as e:
-        print(f"oracle: {e}; the run didn't finish", flush=True)
+        print(REDACT(f"oracle: {e}; the run didn't finish"), flush=True)
         return EXIT_UNFINISHED
     except ImageRefused as e:  # attested mode (#251 L21): an unlisted image or a pull is a setup error; the node stops
         print(f"oracle: setup error, stopping: {e}", flush=True)
@@ -536,7 +596,7 @@ def main(argv: list) -> int:
 
 def command(argv: list) -> int:
     if any(os.environ.get(f"{n}_SECRET_ARN") for n in ("ORACLE_PRIVATE_KEY", "RPC_API_KEY", "MODEL_API_KEY",
-                                                        "ORACLE_GIT_TOKEN")):
+                                                        "ORACLE_GIT_TOKEN", "ORACLE_RPC")):
         from . import awssecret  # the SEV-SNP kit's node reads its own secrets (no AWS CLI on the measured disk)
 
         try:
@@ -544,6 +604,7 @@ def command(argv: list) -> int:
         except awssecret.SecretError as e:
             print(f"oracle: {e}", flush=True)
             return 1
+    load_env(os.environ)  # the RPC's URL and key, redacted from every line this process logs (VP20)
     if len(argv) > 1 and argv[1] == "model-check":
         return model_check(os.environ)
     if len(argv) > 1 and argv[1] == "snp-report":
@@ -610,5 +671,18 @@ def command(argv: list) -> int:
     return 2
 
 
+def entry(argv: list) -> int:
+    """`python3 -m oracle`: main, and on anything unexpected its traceback redacted (VP20), then exit 1."""
+    import traceback
+
+    try:
+        return main(argv)
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException:  # noqa: BLE001
+        print(REDACT(traceback.format_exc()), file=sys.stderr, flush=True)
+        return 1
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(entry(sys.argv))

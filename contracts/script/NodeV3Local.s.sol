@@ -377,7 +377,7 @@ contract NodeV3LocalScript is Script {
         c.finderFeeBps = 1_765;
         c.idleDays = 28;
         c.resultDays = 7;
-        c.mergeDays = 14;
+        c.mergeDays = 3; // v3.1's (#310, O4), as DeploySepolia.s.sol
         c.releaseEveryDays = 7;
         c.instalments = 4;
         c.judgeFee = 0; // the taxi fare: a fix's deposit's rest returns to its solver

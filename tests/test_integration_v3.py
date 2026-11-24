@@ -348,7 +348,7 @@ class TheSets(unittest.TestCase):
         self.assertEqual(ds.panel_rules(s["caps"], s["kTop"], s["size"]), LAUNCH)
         self.assertEqual(s["layout"], "one")
         self.assertEqual(s["validators"] + 1, 7)
-        self.assertEqual(s["scenarios"].split(), ["u", "w", "v", "x"])
+        self.assertEqual(s["scenarios"].split(), ["u", "w", "v", "x", "e", "p"])
 
     def test_f_and_g_under_both_challenge_sizes(self):
         sizes = {scenarios_v3.SETS[n]["size"] for n in scenarios_v3.SETS if "f" in scenarios_v3.SETS[n]["scenarios"]}

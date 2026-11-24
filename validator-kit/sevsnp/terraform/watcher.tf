@@ -7,10 +7,32 @@
 # starts the instance once each time Heads.head moves (WAKE_ON_HEAD), so the node pushes the canonical `main` even
 # when it wasn't drawn for the fix (watcher.py, "The Radicle duty").
 #
+# With watcher_wake_on_draw (on by default, #251 v3.1 polish VP9) it also starts the instance for a check that nobody
+# drew past its grace and this validator's stagger, so the node's keeper draws it (watcher.py, "The draw duty"): about
+# ten minutes of compute per undrawn check, usually on one host; never with an always-on keeper drawing first.
+#
 # Least privilege: it may start this instance and no other (ec2:StartInstances on its ARN), describe instances (no
 # resource-level permission exists for that), read and write its own state parameter, write its own logs, read the
 # chain's URL or key secret when one is named, and read this kit's budget when its automatic stop is on. Its RPC calls
 # are reads only: it holds no key and signs nothing.
+
+# The watcher's own variables live here, beside the function they configure.
+variable "watcher_wake_on_draw" {
+  description = "The watcher's draw duty (WAKE_ON_DRAW): start the stopped instance for a check nobody drew past its grace (25 blocks) and this validator's stagger (up to 10 minutes), so the node draws it. On by default: without an always-on keeper it is what draws."
+  type        = bool
+  default     = true
+}
+
+variable "watcher_max_block_range" {
+  description = "The most blocks the watcher scans a run (MAX_BLOCK_RANGE) for seats and, with the draw duty, new checks. Lower it for an RPC tier that limits eth_getLogs' range."
+  type        = number
+  default     = 2000
+
+  validation {
+    condition     = var.watcher_max_block_range >= 1 && floor(var.watcher_max_block_range) == var.watcher_max_block_range
+    error_message = "watcher_max_block_range is a whole number of blocks, at least 1."
+  }
+}
 
 locals {
   watcher = var.create_instance ? 1 : 0
@@ -139,7 +161,7 @@ resource "aws_lambda_function" "watcher" {
       INSTANCE_ID            = aws_instance.node[0].id
       STATE_PARAM            = aws_ssm_parameter.watcher_state[0].name
       ENABLED                = var.watcher_enabled ? "true" : "false"
-      MAX_BLOCK_RANGE        = "2000"
+      MAX_BLOCK_RANGE        = tostring(var.watcher_max_block_range)
       LOOKBACK_BLOCKS        = tostring(var.watcher_lookback_blocks)
       MAX_STARTS_PER_DAY     = tostring(var.max_starts_per_day)
       RETRY_MINUTES          = tostring(var.watcher_retry_minutes)
@@ -148,6 +170,7 @@ resource "aws_lambda_function" "watcher" {
       READY_SECONDS          = tostring(var.ready_seconds)
       UNPAUSE_CHECK          = var.unpause_check
       WAKE_ON_HEAD           = lookup(var.node_config, "ORACLE_MERGE_VIA", "") == "radicle" ? "true" : "false"
+      WAKE_ON_DRAW           = var.watcher_wake_on_draw ? "true" : "false"
       BUDGET_NAME            = local.watcher_budget
       ACCOUNT_ID             = data.aws_caller_identity.current.account_id
     }

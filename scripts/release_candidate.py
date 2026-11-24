@@ -74,7 +74,7 @@ from deploy_sepolia import CONTRACTS, RC_CHECKS, RC_FORMAT, RULE_FIELDS  # noqa:
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 EXTERNAL_CHECKS = tuple(c for c in RC_CHECKS if c != "productionWindows")  # recorded by their own runs (task 7.0)
-SETS = ("story", "launch", "few-larger", "few-same")
+SETS = ("story", "launch", "rebase", "few-larger", "few-same")
 EXTERNAL_FORMAT = "pof-external-run/1"
 # verify.py's checks (validator-kit/sevsnp/verify.py): all must have run and passed; a skipped one (no AMD chain, no
 # Nitro root, no expected measurement) leaves the items pending

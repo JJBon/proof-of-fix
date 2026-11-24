@@ -49,6 +49,9 @@ contract RaceV3Handler is Test {
     uint256 public refunds;
     uint256 public finished;
     uint256 public overCharged; // a result that took more than the deposit had
+    uint256 public rebases; // rebase checks opened (#310)
+    uint256 public rebasedMerges; // merges through a rebase
+    mapping(bytes32 fix => bool) public rebasedOriginal; // an original commit of an award that was rebased
 
     constructor(RaceV3 rc_, ReplayPanels pn_, FeesV3 fees_, MockCoin usd_, ReplayRegistry reg) {
         rc = rc_;
@@ -222,7 +225,8 @@ contract RaceV3Handler is Test {
     }
 
     /// A claimed fix whose verdict is final moves the head (#251, L9), unless its base is stale: then it reverts whole
-    /// and the winner keeps its place until mergeDays after its finality (`mergeExpired`).
+    /// and the winner keeps its place until mergeDays after its finality (`mergeExpired`). With a rebase check standing
+    /// as a pass (#310), the head moves to the rebased commit once both are final.
     function merge(uint256 seed) external {
         uint256 b = _bountyIn(seed, RaceV3Base.State.Merged);
         if (b == 0) return;
@@ -232,7 +236,12 @@ contract RaceV3Handler is Test {
             rc.sync(a.sub);
             return;
         }
-        if (baseOf[a.sub] != _head()) {
+        uint256 m = a.sub;
+        if (a.rebase != 0 && pn.submission(a.rebase).pass) {
+            if (pn.submission(a.rebase).status != Status.Final) return;
+            m = a.rebase;
+        }
+        if (baseOf[m] != _head()) {
             try rc.merge(b) {
                 _stuck("a stale merge went through");
             } catch {}
@@ -240,6 +249,28 @@ contract RaceV3Handler is Test {
         }
         rc.merge(b);
         ++merges;
+        if (m != a.sub) ++rebasedMerges;
+        if (rebasedOriginal[_head()]) _stuck("a rebased award's original commit became the head");
+    }
+
+    /// A rebase in place (#310): the winner, or anyone (the race enforces the grace), rebases a claimed, unmerged award
+    /// onto the head; refused unless its base went stale and its slot is free.
+    function rebase(uint256 seed) external {
+        uint256 b = _bountyIn(seed, RaceV3Base.State.Merged);
+        if (b == 0) return;
+        RaceV3Base.Award memory a = rc.award(b, rc.bounty(b).epoch);
+        address who = (seed >> 8) % 2 == 0 ? a.winner : _actor(seed >> 16);
+        uint256 next = subs + 1;
+        bytes32 base = _head();
+        vm.prank(who);
+        bool busy = a.rebase != 0 && rc.submission(a.rebase).outcome == RaceV3Base.Outcome.None;
+        try rc.rebase(b, _fix(next), base, "salt") returns (uint256 id) {
+            if (busy) _stuck("two rebases of one award at once");
+            subs = id;
+            baseOf[id] = base;
+            rebasedOriginal[_fix(a.sub)] = true;
+            ++rebases;
+        } catch {}
     }
 
     function withdraw(uint256 seed) external {
@@ -259,6 +290,10 @@ contract RaceV3Handler is Test {
         if (bt.state != RaceV3Base.State.Merged) return;
         RaceV3Base.Award memory a = rc.award(b, bt.epoch);
         Submission memory p = pn.submission(a.sub);
+        if (a.rebase != 0) { // the deadline follows its rebases, or its solver's failed rebase reopens it at once (#310)
+            try rc.mergeExpired(b) {} catch {}
+            return;
+        }
         if (a.merged || p.status != Status.Final || rc.day() <= (p.finalAt - _start()) / 1 days + 14) return;
         rc.mergeExpired(b); // claimed, final, not merged in time (a stale base): reopened, nothing earned
     }
@@ -330,7 +365,12 @@ contract RaceV3Handler is Test {
 
     function passDays(uint256 daysRaw) external {
         vm.warp(block.timestamp + bound(daysRaw, 1, 10) * 1 days);
-        if (block.timestamp >= fees.start() + (fees.rolled() + 1) * 1 days) fees.roll();
+        if (block.timestamp >= fees.start() + (fees.rolled() + 1) * 1 days) {
+            uint256 p = fees.rolled();
+            while (fees.rolled() == p) {
+                fees.roll(); // one part a call (v3.1 polish F2)
+            }
+        }
     }
 
     // ---------- helpers ----------
@@ -510,6 +550,12 @@ contract RaceV3InvariantTest is Test {
         }
     }
 
+    /// #310: a rebased award's original commit never becomes the head (checked at each merge), and no rebase is taken
+    /// while another of the same award is undecided (checked at each rebase): both counted as stuck by the handler.
+    function invariant_rebasesInPlace() public view {
+        assertEq(handler.stuck(), 0, handler.lastStuck());
+    }
+
     /// A scripted run through the handler reaches every path the invariants guard (a paid settle, a refund, a
     /// clawback, a finished deposit), and the invariants hold after it.
     function test_theHandlerReachesEveryPath() public {
@@ -552,6 +598,42 @@ contract RaceV3InvariantTest is Test {
         invariant_headNeverNamesAReversedFix();
     }
 
+    /// A scripted rebase in place through the handler (#310): two fixes on one head, the first merged, the second
+    /// rebased by its winner, judged, final and merged through the rebase; the invariants hold after it.
+    function test_theHandlerRebases() public {
+        handler.register(1, true);
+        handler.register(2, true);
+        handler.pledge(0, 100e6);
+        handler.pledge(1, 100e6);
+        handler.commit(0); // bounty 1
+        handler.judge(handler.subs() - 1, true);
+        handler.claim(0);
+        handler.commit(1); // bounty 2, on the same head
+        handler.judge(handler.subs() - 1, true);
+        handler.claim(1);
+        handler.finalize(handler.subs() - 2);
+        handler.finalize(handler.subs() - 1);
+        handler.merge(0); // bounty 1 moves the head; bounty 2 is stale
+        assertEq(handler.merges(), 1);
+        handler.merge(1);
+        assertEq(handler.merges(), 1);
+        handler.rebase(1); // bounty 2's winner rebases onto the head
+        assertEq(handler.rebases(), 1);
+        handler.rebase(1); // refused: one undecided at a time
+        assertEq(handler.rebases(), 1);
+        handler.judge(handler.subs() - 1, true);
+        handler.finalize(handler.subs() - 1);
+        handler.merge(1);
+        assertEq(handler.rebasedMerges(), 1);
+        invariant_booksExact();
+        invariant_payoutsNeverStuck();
+        invariant_depositsAccounted();
+        invariant_potsCoverAwards();
+        invariant_winnersPassed();
+        invariant_headNeverNamesAReversedFix();
+        invariant_rebasesInPlace();
+    }
+
     /// #251 L9 (specs/canonical-head): the head never names a submission whose verdict is reversed. Whatever moved it
     /// last is a merged award's fix, final in Panels and a pass, never closed by a clawback.
     function invariant_headNeverNamesAReversedFix() public view {
@@ -561,7 +643,8 @@ contract RaceV3InvariantTest is Test {
             assertEq(hd.commit, TEST_GENESIS_HEAD);
             return;
         }
-        Submission memory p = ReplayPanels(address(handler.pn())).submission(hd.submission);
+        ReplayPanels rp = ReplayPanels(address(handler.pn()));
+        Submission memory p = rp.submission(hd.submission);
         assertEq(uint256(p.status), uint256(Status.Final), "the head's verdict is final");
         assertTrue(p.pass, "the head's verdict is a pass");
         RaceV3Base.Bounty memory bt = rc.bounty(hd.bounty);
@@ -573,6 +656,13 @@ contract RaceV3InvariantTest is Test {
                 found = true;
                 assertFalse(a.closed, "not clawed back");
                 assertEq(a.fix, hd.commit, "its fix");
+                // the check whose verdict the head records judged the tree on it: the rebase's, if it merged with one
+                uint256 judgedBy = a.rebase != 0 ? a.rebase : a.sub;
+                assertEq(hd.verdict, keccak256(abi.encode(address(rp), judgedBy)), "the verdict that judged the tree");
+                assertEq(rc.submission(judgedBy).fix, hd.commit, "the commit that verdict judged");
+                Submission memory q = rp.submission(judgedBy);
+                assertEq(uint256(q.status), uint256(Status.Final), "its own verdict is final");
+                assertTrue(q.pass, "its own verdict is a pass");
             }
         }
         assertTrue(found, "a merged award of its bounty");

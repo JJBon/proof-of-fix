@@ -133,7 +133,8 @@ POF_JUDGE_RUN_APPROVED=9ed6768c875c4516 \
 - the estimate fits `--max-usd`.
 
 **While it runs:**
-- it calls only the gateway (`MODEL_GATEWAY_URL`, by default the prod model gateway), as `pof-judges-models`;
+- it calls only the gateway (`MODEL_GATEWAY_URL`, required since v3.1 polish VP25: no default; unset, the command
+  stops first, naming it), as `pof-judges-models`;
 - it is resumable, and stores each family's verdicts in `data/judges/verdicts/<family>.jsonl` with their token usage;
 - `--families` runs a subset, such as the pilot.
 

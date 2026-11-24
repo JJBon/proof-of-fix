@@ -122,6 +122,7 @@ abstract contract RaceV3Base is Baskets {
         bool done; // its deposit's rest returned
         bytes32 fix; // revealed at its claim
         bytes32 base; // revealed at its claim: the head `merge` moves from (#251, L9)
+        uint256 rebaseOf; // a rebase check (#310, RB2): the original winning submission it rebases; 0 otherwise
     }
 
     struct Award {
@@ -131,6 +132,9 @@ abstract contract RaceV3Base is Baskets {
         bool closed; // a reversal closed it
         uint256 earned; // instalments earned when it closed
         bool merged; // the head moved to its fix (#251, L9): only then are its instalments earned
+        uint256 rebase; // its latest rebase check (#310, RB2); once merged with one, the head moved to that check's fix
+        uint256 lastPass; // the rebase check it replaced while that one stood as a pass: the merge deadline counts from
+        // its finality too (#310, RB5)
     }
 
     /// A challenge the race filed (Panels allows one open at a time): its stake and its panel's worst-case cost are
@@ -162,6 +166,11 @@ abstract contract RaceV3Base is Baskets {
     /// The judges' usage reports: a panel's pay waits for every seat's, or this long after its reveal deadline.
     uint256 internal constant REPORT_WINDOW = 1 days;
     bytes32 internal constant USAGE_TAG = keccak256("proof-of-fix v3 usage");
+    /// A rebase in place (#310, RB1, decided by the owner on 2026-11-23, O1): anyone besides the winning solver may
+    /// rebase a stale award once this long has passed since the head last moved; a third party's rebase that merges is
+    /// paid this share of the award's price from the pot's rest at the bounty's payment.
+    uint256 internal constant REBASE_GRACE = 1 days;
+    uint256 internal constant REBASE_SHARE_BPS = 1_000;
 
     Config internal config;
     Panels internal immutable panels;
@@ -212,11 +221,13 @@ abstract contract RaceV3Base is Baskets {
     event DisputeRewarded(uint256 indexed submission, address indexed disputer, uint256 reward);
     event Appealed(uint256 indexed submission, uint256 indexed appeal, bytes32 test);
     event ToPool(uint256 indexed submission, uint256 amount);
+    event Rebased(uint256 indexed bounty, uint256 indexed original, uint256 indexed check, bytes32 fix, bytes32 base);
 
     error BadParams();
     error WrongState(uint256 bounty, State state);
     error NotYet();
     error Refused();
+    error ShortOfGas(); // payShadow sent with too little gas to price the seat (#310)
     error BadSignature();
     error TooFewActiveSolvers(uint256 active);
     error AppealClosed();
@@ -307,13 +318,18 @@ abstract contract RaceV3Base is Baskets {
     }
 
     /// Instalments earned by an award: one at each release after its verdict's finality, up to all of them. Nothing
-    /// before Panels' finality, if the final verdict isn't a pass, or before the head moved to its fix (#251, L9).
+    /// before Panels' finality, if the final verdict isn't a pass, or before the head moved to its fix (#251, L9). An
+    /// award merged through a rebase counts from the later of its two verdicts' finality (#310, RB5).
     function _earned(uint256 b, uint256 epoch) internal view returns (uint256) {
         Award storage a = awards[b][epoch];
         if (a.closed) return a.earned;
         if (!a.merged) return 0;
         (Status st, bool pass, uint256 finalAt) = _verdict(a.sub);
         if (st != Status.Final || !pass) return 0;
+        if (a.rebase != 0) {
+            (,, uint256 f) = _verdict(a.rebase);
+            if (f > finalAt) finalAt = f;
+        }
         uint256 rel = config.releaseEveryDays;
         uint256 n = _day() / rel - ((finalAt - start) / 1 days) / rel;
         return n < config.instalments ? n : config.instalments;
@@ -407,18 +423,26 @@ abstract contract RaceV3Base is Baskets {
         }
         if (bt.state == State.Paid && c == coin) {
             Issue storage i = _issues[bt.issue];
-            uint256 fee = _priceOf(b, c, bt.epoch) * config.finderFeeBps / BPS;
-            uint256 h = held(b, c);
-            if (fee > h) fee = h;
-            if (fee != 0) _pay(b, c, i.reporter, fee);
-            uint256 refund = i.registration < held(b, c) ? i.registration : held(b, c);
-            if (refund != 0) _pay(b, c, i.reporter, refund);
-            // S6: the winner's checks for its fix, from what the pot holds once the award is paid
+            uint256 price = _priceOf(b, c, bt.epoch);
+            _payUpTo(b, i.reporter, price * config.finderFeeBps / BPS);
+            _payUpTo(b, i.reporter, i.registration);
+            // a third party's rebase that merged (#310, RB1): its share, before the checks' refunds
             Submission storage w = _submissions[bt.winner];
-            uint256 back = w.charged < held(b, c) ? w.charged : held(b, c);
-            if (back != 0) _pay(b, c, w.solver, back);
+            uint256 r = awards[b][bt.epoch].rebase;
+            Submission storage rs = _submissions[r]; // 0: the empty record
+            if (r != 0 && rs.solver != w.solver) _payUpTo(b, rs.solver, price * REBASE_SHARE_BPS / BPS);
+            // S6: the winner's checks for its fix, and its rebase's (#310), from what the pot holds once it is paid
+            _payUpTo(b, w.solver, w.charged);
+            _payUpTo(b, rs.solver, rs.charged);
         }
         return true;
+    }
+
+    /// Pays `amount` of the fee coin from bounty `b`'s pot to `to`, as far as the pot holds.
+    function _payUpTo(uint256 b, address to, uint256 amount) internal {
+        uint256 h = held(b, coin);
+        if (amount > h) amount = h;
+        if (amount != 0) _pay(b, coin, to, amount);
     }
 
     function _payInstalments(uint256 b, address c, uint256 epoch) internal {
@@ -613,10 +637,31 @@ abstract contract RaceV3Base is Baskets {
         if (s.bounty == 0) return;
         bytes memory ps = _sub(id);
         uint256 pid = _w(ps, S_PID);
-        if (pid == 0 || _w(ps, S_PASS) != 0) return;
-        bytes memory p = _pan(pid);
-        if (_w(p, P_COUNTED) == 0 || 2 * _w(p, P_PASSES) <= _w(p, P_K)) return;
+        if (pid == 0 || _w(ps, S_PASS) != 0 || !_countedPass(pid)) return;
         book.reversed(id, s.solver, s.judged);
+    }
+
+    /// Whether panel `pid` counted, with a majority passing.
+    function _countedPass(uint256 pid) internal view returns (bool) {
+        bytes memory p = _pan(pid);
+        return _w(p, P_COUNTED) != 0 && 2 * _w(p, P_PASSES) > _w(p, P_K);
+    }
+
+    /// Whether rebase check `r` of award `a` is the winning solver's own, failed by its counted panel on `head`.
+    function _ownFail(Award storage a, uint256 r, bytes32 head) internal view returns (bool) {
+        Submission storage rs = _submissions[r];
+        return r != 0 && rs.solver == a.winner && rs.outcome == Outcome.Fail && rs.base == head
+            && !_countedPass(_w(_sub(r), S_PID));
+    }
+
+    /// The repository's head now (the issue's repository: the deployment's one) and when it last moved, read from the
+    /// head registry's record by word (Heads.Head: commit 0, movedAt 2).
+    function _headOf(uint256 issueId) internal view returns (bytes32) {
+        return bytes32(_w(_headRecord(issueId), 0));
+    }
+
+    function _headRecord(uint256 issueId) internal view returns (bytes memory) {
+        return _view(address(heads), abi.encodeCall(Heads.head, (_issues[issueId].repo)));
     }
 
     function _closeIssue(uint256 id, IssueState state, address to) internal {

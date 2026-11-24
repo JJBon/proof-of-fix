@@ -109,6 +109,54 @@ contract RaceV3Annex is RaceV3Base {
         book.closeClaim(id);
     }
 
+    // ---------- expired merges (moved from the endings for #310: EIP-170) ----------
+
+    /// A winning fix not claimed by its deadline (mergeDays after its win), or a claimed one whose final verdict wasn't
+    /// merged by mergeDays after its finality (its base went stale, or nobody merged it, #251 L9): nothing is paid
+    /// (the award closes with nothing earned) and the bounty reopens.
+    ///
+    /// **With rebases (#310, RB5).** The deadline counts from the later of the original verdict's finality and the
+    /// finality of its latest passing rebase check (the one in the slot, or the one it replaced), and while a rebase
+    /// check submitted by the deadline is undecided the award doesn't expire. The winning solver's own rebase that its
+    /// counted panel failed while its base is still the head closes the award at once, deadline or not; any other
+    /// ending of a rebase check only frees its slot.
+    function mergeExpired(uint256 b) external delegated nonReentrant {
+        Bounty storage bt = _bounties[b];
+        if (bt.state == State.Won) {
+            if (_day() <= bt.mergeBy) revert NotYet();
+            return _reopen(b);
+        }
+        if (bt.state != State.Merged) revert NotYet();
+        uint256 e = bt.epoch;
+        Award storage a = awards[b][e];
+        if (a.merged) revert NotYet();
+        uint256 r = a.rebase;
+        Submission storage rs = _submissions[r];
+        if (!_ownFail(a, r, _headOf(bt.issue))) {
+            (Status st,, uint256 last) = _verdict(a.sub);
+            if (st != Status.Final) revert NotYet();
+            uint256 f = _passedFinal(a.lastPass);
+            if (f > last) last = f;
+            f = _passedFinal(r);
+            if (f > last) last = f;
+            uint256 deadline = (last - start) / 1 days + config.mergeDays;
+            if (_day() <= deadline || (r != 0 && rs.outcome == Outcome.None && rs.day <= deadline)) revert NotYet();
+        }
+        a.closed = true;
+        emit ClawedBack(b, e, 0);
+        book.closeClaim(a.sub); // never merged: its claim closes, nothing joins the reputation
+        _reopen(b);
+    }
+
+    /// The finality of check `id` if its verdict stands as a pass (NotYet while that verdict isn't final); 0 otherwise.
+    function _passedFinal(uint256 id) internal view returns (uint256) {
+        if (id == 0) return 0;
+        (Status st, bool pass, uint256 f) = _verdict(id);
+        if (!pass) return 0;
+        if (st != Status.Final) revert NotYet();
+        return f;
+    }
+
     // ---------- challenges and reversals ----------
 
     /// A challenge of check `id`'s verdict in its window (or held), with `evidence`: the challenger posts the
@@ -169,7 +217,10 @@ contract RaceV3Annex is RaceV3Base {
         }
         emit ChallengeSettled(id, cpid, upheld);
         Bounty storage bt = _bounties[s.bounty];
-        bool won = s.bounty != 0 && bt.winner == id && (bt.state == State.Won || bt.state == State.Merged);
+        // a winning fix, or a rebase that would have merged (#310, RB6): catching either protects the head
+        bool merged = s.bounty != 0 && bt.state == State.Merged;
+        bool won = (merged || (s.bounty != 0 && bt.state == State.Won))
+            && (bt.winner == id || (merged && awards[s.bounty][bt.epoch].rebase == id));
         _sync(id);
         if (upheld && c.test) _reward(id, c.challenger, won);
     }
@@ -235,19 +286,21 @@ contract RaceV3Annex is RaceV3Base {
 
     /// An upheld test dispute's reward (D21): EVIDENCE_REWARD_BPS of the bounty the fix was judged at, from the
     /// bounty's pot when the reversed fix had won it (the pot then pays no award), never from the solver; and the
-    /// disputer is active if it has a merged fix in the repository (launch L6).
+    /// disputer is active if it has a merged fix in the repository (launch L6). Against a rebase that would have
+    /// merged (#310, RB6) the award stays claimed, so the reward comes only from what the pot holds beyond its price.
     function _reward(uint256 id, address to, bool won) internal {
         book.disputeUpheld(to);
         uint256 b = _submissions[id].bounty;
         uint256 r;
         if (won) {
+            _touch(b, coin);
             r = _units(_submissions[id].judged * EVIDENCE_REWARD_BPS / BPS);
             uint256 h = held(b, coin);
+            Bounty storage bt = _bounties[b];
+            uint256 keep = bt.state == State.Merged ? _priceOf(b, coin, bt.epoch) : 0;
+            h = h > keep ? h - keep : 0;
             if (r > h) r = h;
-            if (r != 0) {
-                _touch(b, coin);
-                _pay(b, coin, to, r);
-            }
+            if (r != 0) _pay(b, coin, to, r);
         }
         emit DisputeRewarded(id, to, r);
     }
@@ -303,7 +356,7 @@ contract RaceV3Annex is RaceV3Base {
         s.outcome = pass ? Outcome.Pass : Outcome.Fail;
         emit Decided(id, s.outcome);
         uint256 b = s.bounty;
-        if (b == 0) return;
+        if (b == 0 || s.rebaseOf != 0) return; // a rebase check never joins the queue; its award stays (#310, RB6)
         Bounty storage bt = _bounties[b];
         if (pass) {
             if (bt.state != State.Open) return;

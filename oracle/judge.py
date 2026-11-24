@@ -265,14 +265,18 @@ def _judge_run():
 
 class GatewayJudge:
     """One seat (pof.judges.plan.SEATS) through the model gateway, with scripts/judge_run.py's client. `post` and
-    `token` are injectable; by default the real gateway and the judges' token helper (a paid call)."""
+    `token` are injectable; by default the judges' token helper (a paid call). `url` is the gateway's inference URL:
+    required, with no default (v3.1 polish VP25); judge_from_env passes MODEL_GATEWAY_URL."""
 
     def __init__(self, family: str, url: str | None = None, token=None, post=None, max_tokens: int = 4000):
+        if not url:
+            raise ValueError("MODEL_GATEWAY_URL is not set: ORACLE_JUDGE=gateway:<family> calls the model gateway at "
+                             "that URL and has no default")
         run = _judge_run()
         self.seat: PL.Seat = PL.SEATS[family]
         self._request = run.request
         kwargs = {} if post is None else {"post": post}
-        self.gateway = run.Gateway(url or run.GATEWAY, token or run.gateway_token(), **kwargs)
+        self.gateway = run.Gateway(url, token or run.gateway_token(), **kwargs)
         self.max_tokens = max_tokens
 
     def _call(self, system: str, user: str) -> tuple:
@@ -323,7 +327,8 @@ def judge_from_env(env):
     "direct:<provider>:<model>" with provider bedrock, anthropic, openai or gemini (oracle/models.py's settings)."""
     spec = env.get("ORACLE_JUDGE", "fake") or "fake"
     if spec.startswith("gateway:"):
-        return GatewayJudge(spec.split(":", 1)[1], max_tokens=int(env.get("ORACLE_MAX_TOKENS") or 4000))
+        return GatewayJudge(spec.split(":", 1)[1], url=(env.get("MODEL_GATEWAY_URL") or "").strip() or None,
+                            max_tokens=int(env.get("ORACLE_MAX_TOKENS") or 4000))
     if spec.startswith("direct:"):
         from . import models
 

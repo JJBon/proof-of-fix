@@ -19,7 +19,11 @@ $RAD_HOME/cobs/<type>/<id>.json, and only the commands the callers run are answe
     rad id accept|reject REV --repo RID --no-confirm   this node's verdict on REV; accepted at the threshold
     rad issue open [--repo RID] --title T --description D [--no-announce]
                                          a new issue COB in Radicle 1.10.3's shape (its id the description's comment
-                                         id; the thread's timeline in order), its id printed
+                                         id; the thread's timeline in order), printed as Radicle 1.10.3 prints it: a
+                                         box whose row `│ Issue   <40 hex> │` holds the whole id (v3.1 polish VP11)
+    rad issue show <ID> [--repo RID]     the same box for that issue (a unique prefix, as rad takes it); with
+                                         $RAD_HOME/show-title present, its contents as the title shown (a test's
+                                         mismatch)
     rad issue comment [--repo RID] <ID> --message M    appended to $RAD_HOME/issue-comments.jsonl, and to the
                                          issue COB's thread when this node has that issue
 
@@ -123,6 +127,26 @@ def _issue_cob(title: str, iid: str, author: str, description: str) -> dict:
             "thread": {"comments": {iid: _comment(author, description)}, "timeline": [iid]}}
 
 
+def issue_box(iid: str, title: str, author: str, description: str, status: str = "open", comments=()) -> str:
+    """`rad issue open` and `rad issue show` as Radicle 1.10.3 prints them with no terminal (checked against the real
+    binary for the v3.1 polish, task 8.3): the issue's attributes in a rounded box (`Title`, `Issue`, `Author`,
+    `Status`, each `│ Name   value │`), an empty row, then the description; `show` adds each later comment after a
+    divider: `<author> (you) now <its short id>`, an empty row, its lines. The box is as wide as its widest line."""
+    rows = [f"Title   {title}", f"Issue   {iid}", f"Author  {author} (you)", f"Status  {status}", "",
+            *(description.splitlines() or [""])]
+    parts = [[f"{a} (you) now {cid[:7]}", "", *(body.splitlines() or [""])] for cid, a, body in comments]
+    width = max(len(x) for x in rows + [y for part in parts for y in part]) + 2
+    line = "─" * width
+
+    def row(text: str) -> str:
+        return f"│ {text.ljust(width - 2)} │"
+
+    out = [f"╭{line}╮", *map(row, rows)]
+    for part in parts:
+        out += [f"├{line}┤", *map(row, part)]
+    return "\n".join(out + [f"╰{line}╯"])
+
+
 def main(argv: list) -> int:
     home = Path(os.environ.get("RAD_HOME") or Path.home() / ".radicle")
     if argv[:2] == ["self", "--did"]:
@@ -169,7 +193,24 @@ def main(argv: list) -> int:
         d = home / "cobs" / ISSUE_TYPE
         d.mkdir(parents=True, exist_ok=True)
         (d / f"{iid}.json").write_text(json.dumps(_issue_cob(title, iid, _me(home)[8:], desc)), encoding="utf-8")
-        print(f"✓ issue {iid} opened")
+        print(issue_box(iid, title, _me(home)[8:], desc))
+        return 0
+    if argv[:2] == ["issue", "show"]:
+        rest = [x for i, x in enumerate(argv[2:]) if x != "--repo" and (i == 0 or argv[2:][i - 1] != "--repo")]
+        issue = rest[0] if rest else ""
+        d = home / "cobs" / ISSUE_TYPE
+        found = sorted(d.glob(f"{issue}*.json")) if d.is_dir() and issue else []
+        if len(found) != 1:
+            sys.stderr.write(f"✗ Error: revspec '{issue}' not found; class=Reference (4); code=NotFound (-3)\n")
+            return 1
+        cob = json.loads(found[0].read_text(encoding="utf-8"))
+        iid = found[0].stem
+        first = cob["thread"]["comments"][cob["thread"]["timeline"][0]]
+        override = home / "show-title"
+        title = override.read_text(encoding="utf-8").strip() if override.is_file() else cob["title"]
+        later = [(cid, cob["thread"]["comments"][cid]["author"], cob["thread"]["comments"][cid]["body"])
+                 for cid in cob["thread"]["timeline"][1:]]
+        print(issue_box(iid, title, first["author"], first["body"], cob["state"]["status"], later))
         return 0
     if argv[:2] == ["issue", "comment"]:
         rest, repo, msg, issue = argv[2:], "", None, ""

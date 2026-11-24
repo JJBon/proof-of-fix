@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import signal
@@ -65,7 +66,7 @@ from oracle import abi, v3  # noqa: E402
 from oracle import delegates as D  # noqa: E402
 from oracle import radicle as R  # noqa: E402
 
-PREFIX = "pof251g"
+PREFIX = os.environ.get("POF_GUIDES_PREFIX", "pof251g")  # containers and network: pof251g-*, unless set
 OUT = ROOT / ".guides-radicle"
 RECORD_DIR = ROOT / "contracts" / "deployments" / "guides-radicle"
 GUIDES = ROOT / "docs" / "guides"

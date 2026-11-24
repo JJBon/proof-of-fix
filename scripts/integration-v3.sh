@@ -5,26 +5,29 @@
 #                registration and qualification, the k = 1 hold, a waiting bounty, a silent judge, k = 5, a challenge
 #                reversed, the head at finality, protected tests (#251 L20); --heal adds the time to heal
 #   launch       tests/integration/scenarios_v3.py --set launch, the Sepolia record's rules (caps `launch`, kTop 3,
-#                `same`): scenarios u, w and v (#251 task 3.27; L23, L24, L25), 7 then 15 validators
+#                `same`): scenarios u, w, v, x, e and p (#251 task 3.27; L23, L24, L25; #290; #311; the v3.1 polish),
+#                7 then 15 validators
+#   rebase       --set rebase, the launch's rules: scenario r, rebase in place (#310, v3.1): a conflicting fix merges
+#                about one cycle after the first, and a failed rebase reopens its bounty at once
 #   few-larger   --set few-larger (#132's defaults, one model family): scenarios f and g, D27's second draw
 #   few-same     --set few-same (the launch's rules, one model family): scenarios f and g
 # Every set deploys production windows (#251 L4) and moves the chain's clock to the next deadline.
 #
-#   scripts/integration-v3.sh [--sets story,launch,few-larger,few-same] [--heal] [--verbose] [--report <file>]
+#   scripts/integration-v3.sh [--sets story,launch,rebase,few-larger,few-same] [--heal] [--verbose] [--report <file>]
 #                             [--report-dir <dir>]
 # --report, --heal and any other option are the story's (as before); --report-dir writes every set's numbers there
 # (<set>.json). The settings come from scripts/integration.sh (POF_V3_E2E_*). It goes on after a set fails and exits 1
 # if any did; the last line names each set's result.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SETS=(story launch few-larger few-same)
+SETS=(story launch rebase few-larger few-same)
 STORY=()
 COMMON=()
 DIR=""
 while (($#)); do
   case "$1" in
     --sets | --scenarios)
-      (($# >= 2)) || { echo "integration-v3: $1 needs a list: story,launch,few-larger,few-same" >&2; exit 2; }
+      (($# >= 2)) || { echo "integration-v3: $1 needs a list: story,launch,rebase,few-larger,few-same" >&2; exit 2; }
       IFS=, read -r -a SETS <<<"$2"
       shift 2
       ;;
@@ -44,7 +47,7 @@ while (($#)); do
   esac
 done
 for s in "${SETS[@]}"; do
-  case "$s" in story | launch | few-larger | few-same) ;; *) echo "integration-v3: unknown set $s" >&2; exit 2 ;; esac
+  case "$s" in story | launch | rebase | few-larger | few-same) ;; *) echo "integration-v3: unknown set $s" >&2; exit 2 ;; esac
 done
 [[ -z "$DIR" ]] || mkdir -p "$DIR"
 results=()

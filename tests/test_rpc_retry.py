@@ -18,11 +18,12 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # test_oracle_v2's fakes, as tests.test_*
 
 from oracle import crypto, v2  # noqa: E402
+from oracle import rpc as rpc_module  # noqa: E402
 from oracle.judge import FakeJudge  # noqa: E402
 from oracle.keys import LocalDevKeys  # noqa: E402
 from oracle.node_v2 import Exchange, NodeV2  # noqa: E402
 from oracle.receipt import Store  # noqa: E402
-from oracle.rpc import Reverted, Rpc, RpcError, Unavailable, Wallet  # noqa: E402
+from oracle.rpc import DEFAULT_RETRIES, RETRY_AFTER_MAX_S, Reverted, Rpc, RpcError, Unavailable, Wallet  # noqa: E402
 from test_oracle_v2 import CHAIN, RACE, FakeChain, FakeHost, FakeWallet  # noqa: E402
 
 URL = "https://devnet.example/"
@@ -78,7 +79,7 @@ class Retries(unittest.TestCase):
         self.sleeps.clear()
         with answers(http_error(429, "7"), http_error(429, "900"), http_error(429, "soon"), OK):
             rpc.call("eth_blockNumber")
-        self.assertEqual(self.sleeps, [7.0, 15.0, 4.0])
+        self.assertEqual(self.sleeps, [7.0, RETRY_AFTER_MAX_S, 4.0])  # Retry-After up to 30 s (VP19)
 
     def test_exhausted_retries_raise_unavailable_with_no_key_in_the_message(self):
         rpc = Rpc("https://alice:s3cret@devnet.example/", retries=2, sleep=self.sleeps.append)
@@ -88,10 +89,30 @@ class Retries(unittest.TestCase):
         self.assertNotIn("s3cret", str(caught.exception))
         self.assertIsInstance(caught.exception, RpcError)
 
-    def test_no_retries_by_default(self):
-        with answers(http_error(502)) as urlopen, self.assertRaises(Unavailable):
-            Rpc(URL, sleep=self.sleeps.append).call("eth_blockNumber")
+    def test_three_retries_by_default_honouring_retry_after(self):
+        """#251 v3.1 polish VP19 (S5): an Rpc built with no `retries` retries a 429 DEFAULT_RETRIES (3) times, waiting
+        what Retry-After says; it never repeats eth_sendTransaction, and never a revert."""
+        self.assertEqual(DEFAULT_RETRIES, 3)
+        rpc = Rpc(URL, sleep=self.sleeps.append)
+        with answers(http_error(429, "5"), http_error(429, "6"), http_error(429, "7"), OK) as urlopen:
+            self.assertEqual(rpc.call("eth_blockNumber"), "0x10")
+        self.assertEqual((urlopen.call_count, self.sleeps), (4, [5.0, 6.0, 7.0]))
+        self.sleeps.clear()
+        with answers(*[http_error(429, "2")] * 4) as urlopen, self.assertRaises(Unavailable) as caught:
+            rpc.call("eth_getLogs")
+        self.assertEqual((urlopen.call_count, self.sleeps), (4, [2.0, 2.0, 4.0]))
+        self.assertEqual(caught.exception.retry_after, 2.0)  # the last answer's, for the keeper's pause (VP6)
+        self.sleeps.clear()
+        with answers(http_error(429, "1"), OK) as urlopen, self.assertRaises(Unavailable):
+            rpc.call("eth_sendTransaction")
         self.assertEqual((urlopen.call_count, self.sleeps), (1, []))
+        with answers({"id": 1, "error": {"code": 3, "message": "execution reverted", "data": "0x"}}, OK) as urlopen, \
+                self.assertRaises(Reverted):
+            rpc.call("eth_call")
+        self.assertEqual((urlopen.call_count, self.sleeps), (1, []))
+        with answers(http_error(429, "1"), {"id": 1, "result": "0x" + "ab" * 32}) as urlopen:
+            rpc.call("eth_sendRawTransaction", ["0x00"])  # its bytes carry their own nonce: safe to repeat
+        self.assertEqual(urlopen.call_count, 2)
 
     def test_non_transient_answers_arent_retried(self):
         for failure, kind in ((http_error(401), RpcError), (http_error(403), RpcError), (http_error(404), RpcError),
@@ -142,6 +163,8 @@ class ChainStub:
             if isinstance(effect, Exception):
                 raise effect
             return effect
+        if method == "eth_getTransactionByHash":  # asked only when a refusal leaves it open: not here
+            return None
         raise AssertionError(method)
 
 
@@ -193,12 +216,176 @@ class Transactions(unittest.TestCase):
             self._wallet(chain).send(self.TO, "f()")
 
     def test_a_spent_nonce_lets_a_later_call_sign_afresh(self):
-        chain = ChainStub(sends=[RpcError("nonce too low")])
+        """Bytes that may have gone out (a lost answer), then refused as a taken nonce the chain shows nothing for:
+        maybe sent, so waited for; with no receipt, a later call signs afresh (VP27 keeps this for bytes once out)."""
+        chain = ChainStub(sends=[Unavailable("502"), RpcError("nonce too low")], receipts=[None, None])
         wallet = self._wallet(chain)
         with self.assertRaises(Unavailable):
             wallet.send(self.TO, "f()", wait=0)
+        with self.assertRaises(Unavailable):
+            wallet.send(self.TO, "f()", wait=0)  # the same bytes: refused, not signed again
+        self.assertEqual(chain.raw[0], chain.raw[1])
         wallet.send(self.TO, "f()")
-        self.assertNotEqual(chain.raw[0], chain.raw[1])
+        self.assertNotEqual(chain.raw[1], chain.raw[2])
+
+
+def nonce_of(raw: bytes) -> int:
+    """A legacy transaction's nonce: the first item of its RLP list."""
+    i = 1 + (raw[0] - 0xf7 if raw[0] > 0xf7 else 0)
+    if raw[i] < 0x80:
+        return raw[i]
+    return int.from_bytes(raw[i + 1:i + 1 + raw[i] - 0x80], "big")
+
+
+class LoadBalancedChain:
+    """A chain behind a load-balanced public RPC (#251 v3.1 polish VP27): it mines each accepted transaction at once,
+    but `stale` pending counts are answered first, one per ask, by a backend that hasn't seen the last ones.
+    `refuse`: a refusal message for every send, whatever its nonce (a chain that never takes it); `drop`: the next
+    accepted transaction is lost by the pool (gone until sent again); `hold`: receipt asks a pooled transaction waits
+    before it mines (0: mined as it's accepted); `lose`: the next send's answer is lost after it arrives."""
+
+    url = "https://sepolia.infura.io/v3/4f1e9c0a7b3d42e8a5c6d7e8f9a0b1c2"  # a key in the path
+
+    def __init__(self, next_nonce=0, stale=(), refuse=None, drop=False, hold=0, lose=False):
+        self.next, self.stale, self.refuse, self.drop = next_nonce, list(stale), refuse, drop
+        self.hold, self.lose = hold, lose
+        self.mined, self.pool, self.nonces, self.counts = {}, {}, [], []
+
+    def chain_id(self):
+        return CHAIN
+
+    def call(self, method, params=None):
+        if method == "eth_estimateGas":
+            return "0x5208"
+        if method == "eth_gasPrice":
+            return "0x1"
+        if method == "eth_getTransactionCount":
+            count = self.stale.pop(0) if self.stale else self.next
+            self.counts.append(count)
+            return hex(count)
+        if method == "eth_sendRawTransaction":
+            raw = bytes.fromhex(params[0][2:])
+            h, nonce = "0x" + crypto.keccak256(raw).hex(), nonce_of(raw)
+            self.nonces.append(nonce)
+            if self.refuse:
+                raise RpcError(f"eth_sendRawTransaction: {self.refuse}")
+            if h in self.pool:
+                raise RpcError("eth_sendRawTransaction: already known")
+            if nonce < self.next:  # a mined copy too: it has left the pool
+                raise RpcError("eth_sendRawTransaction: nonce too low")
+            if self.drop:
+                self.drop = False
+            elif self.hold:
+                self.pool[h] = [nonce, self.hold]
+            else:
+                self._mine(h, nonce)
+            if self.lose:
+                self.lose = False
+                raise Unavailable("502")
+            return h
+        if method == "eth_getTransactionReceipt":
+            if params[0] in self.pool:
+                self.pool[params[0]][1] -= 1
+                if self.pool[params[0]][1] < 0:
+                    self._mine(params[0], self.pool.pop(params[0])[0])
+            return self.mined.get(params[0])
+        if method == "eth_getTransactionByHash":
+            return self.mined.get(params[0]) or ({"hash": params[0]} if params[0] in self.pool else None)
+        raise AssertionError(method)
+
+    def _mine(self, h, nonce):
+        self.mined[h] = {"status": "0x1", "blockNumber": hex(len(self.mined) + 1), "transactionHash": h}
+        self.next = nonce + 1
+
+
+class StaleNonces(unittest.TestCase):
+    """The wallet's nonce on a load-balanced public RPC (VP27; seen live on Sepolia through PublicNode, 2026-11-24: a
+    register signed with the approve's nonce, refused, then waited for as maybe sent until 60s ran out)."""
+
+    TO = crypto.checksum("0x" + "ab" * 20)
+
+    def setUp(self):
+        patcher = mock.patch.object(Wallet, "poll_s", 0.001)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_stale_pending_nonce_is_refused_then_signed_again_past_it(self):
+        chain = LoadBalancedChain(next_nonce=1, stale=[0, 0])  # the approve mined at 0; two backends behind
+        receipt = Wallet(chain, 0x11).send(self.TO, "register()", wait=1)
+        self.assertEqual(receipt["status"], "0x1")
+        self.assertEqual(chain.nonces, [0, 1])  # the second signing is past the refused nonce, stale count or not
+        self.assertEqual(chain.counts, [0, 0])
+
+    def test_the_nonce_never_goes_backwards_within_a_process(self):
+        chain = LoadBalancedChain()
+        wallet = Wallet(chain, 0x11)
+        wallet.send(self.TO, "approve()", wait=1)
+        chain.stale = [0]  # the backend that answers next hasn't seen the approve
+        wallet.send(self.TO, "register()", wait=1)
+        self.assertEqual(chain.nonces, [0, 1])  # no refusal: the remembered nonce wins
+        self.assertEqual(len(chain.mined), 2)
+
+    def test_a_nonce_still_refused_after_the_retries_fails_clearly(self):
+        chain = LoadBalancedChain(refuse="nonce too low: next nonce 9, tx nonce 0")
+        with self.assertRaises(RpcError) as ctx:
+            Wallet(chain, 0x11).send(self.TO, "register()", wait=1)
+        self.assertNotIsInstance(ctx.exception, Unavailable)  # not "maybe sent": nothing waited for
+        message = str(ctx.exception)
+        self.assertIn("nonce 3", message)
+        self.assertIn("https://sepolia.infura.io/…", message)
+        self.assertNotIn("4f1e9c0a7b3d42e8a5c6d7e8f9a0b1c2", message)
+        self.assertEqual(chain.nonces, [0, 1, 2, 3])  # 1 + NONCE_RETRIES signings, each past the last
+
+    def test_other_providers_refusals_of_a_taken_nonce(self):
+        for message in ("replacement transaction underpriced", "Nonce too low. Expected nonce to be 1 but got 0",
+                        "NONCE_TOO_LOW", "OldNonce", "nonce has already been used",
+                        "already known: 0x" + "cd" * 32):  # another transaction's hash: not these bytes
+            chain = LoadBalancedChain(next_nonce=1, stale=[0])
+            sends = iter([RpcError(f"eth_sendRawTransaction: {message}")])
+            real = chain.call
+
+            def call(method, params=None, real=real):
+                if method == "eth_sendRawTransaction":
+                    for effect in sends:
+                        chain.nonces.append(nonce_of(bytes.fromhex(params[0][2:])))
+                        raise effect
+                return real(method, params)
+
+            chain.call = call
+            self.assertEqual(Wallet(chain, 0x11).send(self.TO, "register()", wait=1)["status"], "0x1", message)
+            self.assertEqual(chain.nonces, [0, 1], message)
+
+    def test_a_true_duplicate_is_still_waited_for(self):
+        """The same bytes sent twice (the first answer lost, the copy pending): "already known", then its receipt, and
+        no second signing."""
+        chain = LoadBalancedChain(hold=2, lose=True)
+        wallet = Wallet(chain, 0x11)
+        with self.assertRaises(Unavailable):
+            wallet.send(self.TO, "f()", wait=0)  # no time to see a receipt: its bytes are kept
+        self.assertEqual(wallet.send(self.TO, "f()", wait=1)["status"], "0x1")
+        self.assertEqual(chain.nonces, [0, 0])
+        self.assertEqual(len(chain.mined), 1)
+
+    def test_its_own_mined_copy_refused_as_nonce_too_low_is_waited_for(self):
+        """The same bytes again after the first copy mined: "nonce too low", but the chain knows the hash, so its
+        receipt is the answer and nothing is signed again."""
+        chain = LoadBalancedChain(lose=True)
+        wallet = Wallet(chain, 0x11)
+        with self.assertRaises(Unavailable):
+            wallet.send(self.TO, "f()", wait=0)
+        self.assertEqual(wallet.send(self.TO, "f()", wait=1)["status"], "0x1")
+        self.assertEqual(chain.nonces, [0, 0])
+        self.assertEqual(len(chain.mined), 1)
+
+    def test_a_dropped_transaction_is_sent_once_more_with_the_same_bytes(self):
+        chain = LoadBalancedChain(drop=True)
+        now = [1000.0]
+        clock = mock.Mock(time=lambda: now[0], sleep=lambda s: now.__setitem__(0, now[0] + 1.0))
+        with mock.patch.object(rpc_module, "time", clock):
+            receipt = Wallet(chain, 0x11).send(self.TO, "f()", wait=60)
+        self.assertEqual(receipt["status"], "0x1")
+        self.assertEqual(chain.nonces, [0, 0])  # the same nonce, the same bytes
+        self.assertGreaterEqual(now[0] - 1000.0, rpc_module.DROPPED_AFTER_S)
 
 
 class FlakyChain(FakeChain):

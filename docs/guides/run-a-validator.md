@@ -18,6 +18,9 @@ export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record, o
 export FAMILY=anthropic.claude                       # the family the deployment seats at launch (its plan's `families`)
 ```
 
+v3 seats the family as `anthropic.claude`, so v3's validators register with that name. v3.1 renames it
+`anthropic/claude` (the `provider/line` form every receipt uses); its guide will say so when it's deployed.
+
 ## 1. Your Radicle node and the code
 
 A validator's Radicle node serves the patches it judges and, once it holds a seat, pushes the canonical `main` when
@@ -184,6 +187,7 @@ node_config = {
   ORACLE_RACE        = "0xD622adB4CbC82fF51d5D2ddbD56681b5f2d89829"
   ORACLE_FROM_BLOCK  = "12196904"                     # the record's block: no event scan starts before it
   ORACLE_FAMILY      = "anthropic.claude"
+  ORACLE_LIST_PRICES = "{}"                           # post only families already priced: v3 can't seat a new one
   ORACLE_JUDGE       = "direct:bedrock:<your model's inference profile id>"   # or the Anthropic API's (3.4)
   ORACLE_MODEL_ALLOW = "<the same id>"
   ORACLE_IMAGE       = "0xd95b0458a321963e59ab86a8575ef67dca7bdf5db55c86c3098764dc55f887d1"
@@ -215,7 +219,9 @@ validator_address = "0x<your signing key's address>"
 
 Apply with `power_off=true` (the default). The watcher checks the chain every minute and starts the instance only
 when your key is drawn, or when `Heads` moves (your node then pushes the canonical `main`); the node judges, reports,
-and powers off after 10 idle minutes.
+and powers off after 10 idle minutes. On v3.1's kit the watcher also draws: a check nobody drew within its grace
+(about 5 minutes) plus your stagger (up to 10 minutes) starts your instance once, and its keeper draws the panel
+(`WAKE_ON_DRAW`, on by default; [the runbook](../../validator-kit/runbook.md#run-a-keeper)).
 
 A new validator is drawn as a shadow first: its verdicts aren't counted until about 20 of them qualify it. Then it
 sits on counted panels, and its node becomes a delegate of the repository when the seats on-chain change.
@@ -223,3 +229,15 @@ sits on counted panels, and its node becomes a delegate of the repository when t
 The launch plans 7 to 15 validators (design L16). Until 7 are active, panels have one judge, a passed fix waits 7 days
 for challenges, and its verdict is held until enough validators are active to judge a challenge: more validators is
 what makes fixes merge sooner.
+
+How long a check takes. On v3 a verdict comes about 2–3 hours after the draw: the 2-hour seal window, then the reveal
+(up to an hour) and the count. On v3.1 the reveal opens as soon as every seat has sealed, so it takes minutes. A lone
+verdict is then held until 6–7 validators with room can judge a challenge:
+
+- **Before its audits are drawn** it needs six eligible validators outside its panel (seven in all, with the judge);
+  **after**, three outside the judge and its auditors (six in all, with two auditors). That is the challenge panel of
+  3, plus one for each audit still to be drawn, since an auditor sits out of the challenge.
+- **Each one counts only if** it is bonded for the bounty, not a party to it, and has room now (fewer than 10 k = 1
+  verdicts not yet final).
+- **Below that, every lone verdict stays held.** At exactly the threshold, one validator pausing (capacity 0) or
+  filling up holds them all; one more validator than the threshold keeps them moving.

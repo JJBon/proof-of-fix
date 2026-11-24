@@ -12,7 +12,8 @@ The sets (each a fresh devnet; `SETS` below):
 
 - `launch`, the Sepolia record's rules (panel caps `launch`, kTop 3, `same`; #251 task 3.25): seven validators that
   share one operator account, one host and one TEE type, as the owner's launch validators do, bonded $250 each, each its
-  own model family (`LAUNCH_FAMILIES`); the scenarios in the order u, w, v, x (v grows the network to 15 at its end).
+  own model family (`LAUNCH_FAMILIES`); the scenarios in the order u, w, v, x, e, p (v grows the network to 15 at its
+  end).
   u  the launch settings: the rules read back from Panels, panels of 3 fill on that layout (a registration check, and
      a funded fix above k = 1's $50 limit once three solvers are active), the k = 3 window 24 h;
   v  panels of 3 at 7 validators: a verdict audited by one of the 4 outside its panel; a challenge and a failing-test
@@ -28,6 +29,24 @@ The sets (each a fresh devnet; `SETS` below):
      a bad fix gets k = 1 and its lone judge passes it; with three others back the verdict stays held (its two audits
      would leave its challenge one judge), its audits, drawn while it's held, catch it, and their challenge waits;
      once the rest are back three fresh validators reverse it, and only then does its window start, whole.
+  e  the early reveal (#311): three candidates join; a registration check whose judges and shadows all seal promptly
+     is counted minutes after its draw, not after SEAL_WINDOW (2 h), and every shadow sealed before the first counted
+     reveal; with the candidates stopped and one drawn as a shadow, the counted reveal waits for the seal window.
+  p  who draws and keeps (v3.1 polish, task 8.1), the harness's keeper off (the genesis node's, and no epoch pokes):
+     with every validator node stopped, a registration check is drawn by one validator's node that its watcher's draw
+     duty started (validator-kit/sevsnp/lambda/watcher.py on this chain), a second by `pofctl --v3 draw`, a third by
+     the keeper-only node (`python3 -m oracle.keeper run --once`, its own process); then that node's keeper
+     (oracle/keeper.py's Keeper) keeps alone: a new family (`anthropic/claude`) is priced by its rollPart loop while
+     12 checks opened before it are in flight, and every one of them settles (`result`, its audits paid, a challenge
+     settled), none seating the new family; and an auditor that never reports has its panel paid after
+     REPORT_WINDOW, by the keeper.
+- `rebase`, the launch's rules and layout (seven validators, panels of 3; #310, rebase in place, v3.1):
+  r  two fixes judged on the same head: the first merges, the keepers make no merge call on the second's stale base,
+     pofctl refuses its merge and points to `rebase`; its solver rebases with `pofctl --v3 rebase` (the guide's
+     command, docs/guides/submit-a-fix.md section 5), opens the new revision, and the rebase passes and merges about
+     one cycle after the first (seal + reveal + the k = 3 window, 27 h; asserted at 28 h); then a second pair where
+     the rebase breaks the first fix's tests: its panel fails it, and the keepers reopen the bounty at once
+     (`mergeExpired`), no merge deadline.
 - `few-larger`, #132's defaults (every cap strict, kTop 7, `larger`) with one model family seated, and `few-same`, the
   launch's rules with one family: four validators, so a k = 3 verdict leaves one outside.
   f  a challenge that can't draw its fresh panel (5 with `larger`, 3 with `same`) is judged by D27's second draw of the
@@ -71,7 +90,9 @@ GENESIS_TEE = "intel-tdx"
 LAUNCH_FAMILIES = ["fake"] + [f"fake-{i}" for i in range(1, 15)]
 SETS = {
     "launch": {"caps": "launch", "kTop": 3, "size": "same", "families": LAUNCH_FAMILIES, "layout": "one",
-               "validators": 6, "scenarios": "u w v x"},
+               "validators": 6, "scenarios": "u w v x e p"},
+    "rebase": {"caps": "launch", "kTop": 3, "size": "same", "families": LAUNCH_FAMILIES, "layout": "one",
+               "validators": 6, "scenarios": "r"},
     "few-larger": {"caps": "strict", "kTop": 7, "size": "larger", "families": ["fake"], "layout": "spread",
                    "validators": 3, "scenarios": "f g"},
     "few-same": {"caps": "launch", "kTop": 3, "size": "same", "families": ["fake"], "layout": "spread",
@@ -91,9 +112,11 @@ class ScenarioNet(SV.Net):
         self.genesis_key = crypto.checksum(record["genesis"])
         self.start = max(rpc.block() - 20, 0)
 
+    family_next: str | None = None  # p: the next validator joins with this family instead of the set's
+
     def family_of(self, i: int) -> str:
         fams = self.spec["families"]
-        return fams[i % len(fams)]
+        return self.family_next or fams[i % len(fams)]
 
     def join(self, i: int, bond: int = BOND) -> SV.Node:
         name = f"v{i}"
@@ -508,6 +531,12 @@ def scenario_x(n: ScenarioNet, out: dict) -> None:
     print("\n== x. a lone wrong pass caught by its audit: the hold keeps room for its audits, and the window waits for "
           "its challenge ==", flush=True)
     c, rpc = n.chain, n.rpc
+    # D20's seats change at finality: v's reversed lying pass unseats its judges' families only once it is final.
+    # So every earlier verdict is final before the seated families are read (seen in #311's runs: v15's reversal,
+    # whose lying panel held genesis, became final just after this choice and unseated genesis's family, so the
+    # lone validator chosen here could no longer be drawn and the outage's draw waited forever)
+    n.drive(lambda: all(c.verdict(s)["status"] not in (v3.SEALED, v3.WAITING, v3.JUDGING, v3.HELD, v3.WINDOW)
+                        for s in list(c.live)), "x: every earlier verdict final", poke=True)
     scores = crypto.checksum(rpc.view(c.panels, "scores()", ["address"])[0])
     names = n.active_names()
     # validators of seated families only (D20: v's reversed passes may have made their liars' families contenders,
@@ -587,6 +616,75 @@ def scenario_x(n: ScenarioNet, out: dict) -> None:
                 "windowSeconds": window}
 
 
+# ---------- e: the early reveal (#311) ----------
+
+SEALED_EV = "Sealed(uint256,address,bytes32)"
+REVEALED_EV = "Revealed(uint256,address,bool,uint8)"
+
+
+def timeline(n: ScenarioNet, s: int) -> dict:
+    """Check `s`'s counted panel: when it was drawn and counted (chain time), its seal deadline, its shadow panel, and
+    the blocks of the shadows' seals and of the first counted reveal."""
+    c = n.chain
+    pid, _, drawn = SV.panels_of(n, s, v3.COUNTED)[-1]
+    counted = n.evs(c.panels, "Counted(uint256,uint256,bool,uint256,uint8)", s)[-1]
+    sp = c.verdict(s)["shadowPid"]
+    sp = sp if sp and c.panel(sp)["ex"] == pid else 0
+    reveals = n.evs(c.panels, REVEALED_EV, pid)
+    return {"pid": pid, "drawn": n.when(drawn), "counted": n.when(counted), "sealBy": c.panel(pid)["sealBy"],
+            "shadowPid": sp, "shadows": c.judges(sp) if sp else [],
+            "shadowSeals": [int(x["blockNumber"], 16) for x in n.evs(c.panels, SEALED_EV, sp)] if sp else [],
+            "shadowSealBy": c.panel(sp)["sealBy"] if sp else 0,
+            "firstReveal": min(int(x["blockNumber"], 16) for x in reveals),
+            "firstRevealAt": min(n.when(x) for x in reveals)}
+
+
+def scenario_e(n: ScenarioNet, out: dict) -> None:
+    print("\n== e. the early reveal (#311): judges and shadows that seal promptly are counted in minutes; a silent "
+          "shadow holds the reveal to the seal window ==", flush=True)
+    c, rpc = n.chain, n.rpc
+    seal_w = rpc.view(c.panels, "SEAL_WINDOW()", ["uint256"])[0]
+    cands = [n.join_next() for _ in range(3)]
+    check(not any(c.is_active(n.nodes[x].address) for x in cands),
+          f"{', '.join(cands)} join as candidates: they are drawn as shadow judges, never as counted ones")
+    # 1. everyone drawn is prompt: the reveal opens at the last seal, not at `sealBy`
+    s = n.right_registration("e: a check whose judges and shadows all seal promptly")
+    t = timeline(n, s)
+    took = t["counted"] - t["drawn"]
+    check(t["counted"] < t["sealBy"] and took < seal_w // 4,
+          f"counted {took} s of chain time after its draw, before its seal window would have closed "
+          f"(SEAL_WINDOW {SV.hours(seal_w)}): about {SV.hours(t['sealBy'] - t['counted'])} sooner than before #311")
+    check(all(b < t["firstReveal"] for b in t["shadowSeals"]),
+          f"its {len(t['shadows'])} shadow(s) ({n.named(t['shadows']) or 'none drawn'}) sealed before the first "
+          f"counted reveal (blocks {t['shadowSeals']} < {t['firstReveal']}): no counted vote was public while a "
+          f"shadow could still seal")
+    # 2. a silent shadow: the counted reveal waits for the shadows' seal window, today's timing, no sooner. The
+    # candidates stop; a check's one shadow is drawn from them and from any barred family's validators (D20), so
+    # checks are registered until one of them is drawn
+    stopped = {x: n.nodes.pop(x) for x in cands}
+    silent = {node.address.lower() for node in stopped.values()}
+    try:
+        t2, tries = None, 0
+        while t2 is None and tries < 30:
+            tries += 1
+            _, s2 = n.register_issue()
+            n.drive(lambda: n.counted(s2) and c.submission(s2)["paid"], f"e: check {s2} counted", poke=True,
+                    explain=(s2,))
+            got = timeline(n, s2)
+            if any(k.lower() in silent for k in got["shadows"]):
+                t2 = got
+        check(t2 is not None, f"a stopped candidate drawn as a shadow of a check (after {tries} check(s))")
+        check(t2["firstRevealAt"] > t2["shadowSealBy"] and t2["counted"] - t2["drawn"] >= seal_w,
+              f"with {n.named(t2['shadows'])} silent on its shadow seat, no counted judge could reveal until the "
+              f"shadows' seal window closed: the first reveal {t2['firstRevealAt'] - t2['drawn']} s after the draw "
+              f"(SEAL_WINDOW {seal_w} s), as before #311")
+    finally:
+        n.nodes.update(stopped)
+    out["e"] = {"check": s, "countedAfter": took, "savedSeconds": t["sealBy"] - t["counted"],
+                "shadows": len(t["shadows"]), "silentCheck": t2["pid"] if t2 else None,
+                "silentCountedAfter": t2["counted"] - t2["drawn"] if t2 else None, "silentTries": tries}
+
+
 def rpc_default(n: ScenarioNet) -> int:
     return n.rpc.view(n.chain.panels, "CHECKS_DEFAULT()", ["uint256"])[0]
 
@@ -642,7 +740,422 @@ def scenario_g(n: ScenarioNet, out: dict) -> None:
     out[f"g-{size}"] = {"submission": s, "panel": r["pid"], "stake": stake}
 
 
-SCENARIOS = {"u": scenario_u, "v": scenario_v, "w": scenario_w, "x": scenario_x, "f": scenario_f, "g": scenario_g}
+# ---------- r: rebase in place (#310) ----------
+
+def pofctl_ctx(n: ScenarioNet, w):
+    """pofctl's v3 commands on this devnet, as `w` (the run's own wallet: a devnet key, no keystore)."""
+    from types import SimpleNamespace
+
+    from pofctl import v3cli
+
+    return SimpleNamespace(v3=v3cli.RaceV3(n.rpc, n.record), wallet=lambda role: w), v3cli
+
+
+def stale_pair(n: ScenarioNet, label: str, solver1, solver2) -> tuple:
+    """Two fixes sealed on the head now by `solver1` and `solver2`, both judged and claimed; the first merged by the
+    keepers. Returns (the second's bounty, its submission, its issue, the first's merge time)."""
+    c = n.chain
+    issues = [n.final_registration() for _ in range(2)]
+    bounties = [n.open_bounty(i) for i in issues]
+    subs = [n.submit_fix(b, i, f"{label} {k + 1}", good=True, solver=w)
+            for k, (b, i, w) in enumerate(zip(bounties, issues, (solver1, solver2)))]
+    for (s, _), b in zip(subs, bounties):
+        n.drive(lambda b=b, s=s: n.bounty_state(b) == SV.WON and c.bounty(b)["winner"] == s, f"{label}: {s} won",
+                poke=True, explain=(s,))
+    for (s, opening), b, w in zip(subs, bounties, (solver1, solver2)):
+        w.send(c.race, "claim(uint256,bytes32,bytes32,bytes32)", b, *opening)
+    n.drive(lambda: c.award(bounties[0], 1)["merged"], f"{label}: the first merged", poke=True)
+    t1 = n.when(n.evs(c.race, "HeadMerged(uint256,uint256,uint256,bytes32)", bounties[0])[-1])
+    n.drive(lambda: c.verdict(subs[1][0])["status"] == v3.FINAL, f"{label}: the second final", poke=True)
+    return bounties[1], subs[1][0], issues[1], t1
+
+
+def rebase_with_pofctl(n: ScenarioNet, w, b: int, issue: int, label: str, good: bool) -> dict:
+    """The guide's commands: `pofctl --v3 rebase` for a commit on the head, then the new revision with its claim lines
+    (here the fake host's pull request, as the harness opens every fix)."""
+    from types import SimpleNamespace
+
+    sha = n.fix_sha(label)
+    (n.work / "src" / sha).mkdir(parents=True, exist_ok=True)
+    if not good:
+        n.bad.add(sha)
+    ctx, v3cli = pofctl_ctx(n, w)
+    data, lines = v3cli.cmd_rebase(ctx, SimpleNamespace(bounty=b, patch=sha, base=None, salt=None, patch_id="p",
+                                                        title=None))
+    for line in lines:
+        print(f"  pofctl: {line}", flush=True)
+    n.host.add_pull(f"Fix the median ({label})", data["patchBody"], sha, data["base"])
+    n.chain.live[data["check"]] = True
+    return data
+
+
+def scenario_r(n: ScenarioNet, out: dict) -> None:
+    print("\n== r. rebase in place (#310): a conflicting fix merges about one cycle after the first ==", flush=True)
+    c = n.chain
+    check(c.rebases(), "the devnet's race is v3.1: its views carry Submission.rebaseOf and Award.rebase")
+    other = n.account("r other solver")
+    b2, s2, issue2, t1 = stale_pair(n, "r", other, n.solver)
+    head = c.head()
+    check(v3.b32(c.submission(s2)["base"]) != head and not c.award(b2, 1)["merged"],
+          f"bounty {b2}'s fix (submission {s2}) is final, but its base isn't Heads.head any more: stale")
+    merges = [t for t in n.rpc.logs(c.race, n.start, [SV.topic("HeadMerged(uint256,uint256,uint256,bytes32)")])]
+    ctx, v3cli = pofctl_ctx(n, n.solver)
+    try:
+        v3cli.cmd_merge(ctx, __import__("types").SimpleNamespace(bounty=b2))
+        refused = ""
+    except v3cli.Fail as e:
+        refused = str(e)
+    check("stale base" in refused and "pofctl --v3 rebase" in refused,
+          f"pofctl refuses its merge and points to rebase: {refused[:140]}…")
+    # the drive above stops at the step that made the verdict final, which the keeper's pass read as still in its
+    # window, and a keeper section reads only its budget's worth of the scan set (VP6's cursor): more passes of every
+    # node, the clock unmoved, until a keeper has read it final and seen the stale base
+    want = f"bounty {b2}: not merged: check {s2}'s base"
+    for _ in range(20):
+        n.node_log.flush()
+        said = (n.work / "nodes.log").read_text(encoding="utf-8")
+        if want in said:
+            break
+        for node in n.nodes.values():
+            node.tick(n.start)
+    check(want in said,
+          "the keepers saw the stale base and made no merge call (#314): \"not merged: … isn't Heads.head any more\"")
+    data = rebase_with_pofctl(n, n.solver, b2, issue2, "r rebased", good=True)
+    rid = data["check"]
+    check(c.submission(rid)["rebaseOf"] == s2 and c.award(b2, 1)["rebase"] == rid and c.bounty(b2)["epoch"] == 1,
+          f"rebase check {rid} of submission {s2}: the award keeps its place and its epoch")
+    n.drive(lambda: c.award(b2, 1)["merged"], "r: the rebase merged", poke=True, explain=(rid,))
+    t2 = n.when(n.evs(c.race, "HeadMerged(uint256,uint256,uint256,bytes32)", b2)[-1])
+    k = c.verdict(rid)["k"]
+    check(c.head() == v2.commit_word(n.fix_sha("r rebased")),
+          f"Heads.head is the rebased commit (a panel of {k} passed it), not the original")
+    gap = t2 - t1
+    check(k == 3 and gap <= 28 * HOUR,
+          f"the second fix merged {SV.hours(gap)} after the first: about one cycle (seal 2 h + reveal 1 h + the k = 3 "
+          f"window 24 h), against at least mergeDays + a fresh cycle without a rebase")
+    out["r"] = {"bounty": b2, "original": s2, "rebase": rid, "k": k, "gapSeconds": gap, "mergesBefore": len(merges)}
+    print("\n== r. a rebase that breaks the first fix's tests: failed, and the bounty reopens at once ==", flush=True)
+    b4, s4, issue4, t3 = stale_pair(n, "r2", other, n.solver)
+    data = rebase_with_pofctl(n, n.solver, b4, issue4, "r2 rebased, conflicting", good=False)
+    rid2 = data["check"]
+    n.drive(lambda: n.bounty_state(b4) == SV.OPEN, "r2: reopened after the failed rebase", poke=True,
+            explain=(rid2,))
+    reopened = n.when(n.evs(c.race, "ClawedBack(uint256,uint256,uint256)", b4)[-1])
+    check(not c.verdict(rid2)["pass"] and c.award(b4, 1)["closed"] and c.award(b4, 1)["earned"] == 0,
+          f"its panel failed rebase check {rid2}; the award closed with nothing earned and bounty {b4} reopened "
+          f"{SV.hours(reopened - t3)} after the first merge (no merge deadline: mergeDays is "
+          f"{c.config()['mergeDays']} days)")
+    out["r2"] = {"bounty": b4, "original": s4, "rebase": rid2, "reopenedAfterSeconds": reopened - t3}
+
+
+# ---------- p: who draws and keeps, with the harness's keeper off (v3.1 polish, task 8.1) ----------
+
+NEW_FAMILY = "anthropic/claude"  # `provider/line` (VP12): a family no launch validator has, priced during p
+WATCHER = ROOT / "validator-kit" / "sevsnp" / "lambda" / "watcher.py"
+PAID_EV = "PanelPaid(uint256,uint256,uint256,uint256)"
+
+
+def _watcher_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("pof_kit_watcher_p", WATCHER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class _Param:
+    """The watcher's SSM parameter (its state), in memory."""
+
+    class exceptions:
+        ParameterNotFound = KeyError
+
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def get_parameter(self, Name):  # noqa: N803 (boto3's names)
+        return {"Parameter": {"Value": self.value}}
+
+    def put_parameter(self, Name, Value, Type, Overwrite):  # noqa: N803
+        self.value = Value
+
+
+class _Instance:
+    """The validator's stopped instance as the watcher sees it through EC2: a start wakes its node."""
+
+    def __init__(self, wake) -> None:
+        self.wake, self.starts, self.running = wake, 0, False
+
+    def describe_instances(self, InstanceIds):  # noqa: N803
+        return {"Reservations": [{"Instances": [{"State": {"Name": "running" if self.running else "stopped"}}]}]}
+
+    def start_instances(self, InstanceIds):  # noqa: N803
+        self.starts += 1
+        self.running = True
+        self.wake()
+
+
+def _drawn(c, s: int) -> bool:
+    return c.verdict(s)["status"] not in (v3.SEALED, v3.WAITING)
+
+
+def _past_seed(n: ScenarioNet, s: int) -> None:
+    """Mines until check `s`'s seed block is behind (a draw waits for it)."""
+    for _ in range(20):
+        if n.chain.block() > n.chain.verdict(s)["seedBlock"]:
+            return
+        n.warp(12)
+    raise AssertionError(f"check {s}'s seed block never passed")
+
+
+def _paid_by(n: ScenarioNet, log: dict) -> str:
+    return crypto.checksum(n.rpc.call("eth_getTransactionByHash", [log["transactionHash"]])["from"])
+
+
+def _keeper_only(n: ScenarioNet, secret: int, from_block: int) -> str:
+    """`python3 -m oracle.keeper run --once`, the keeper-only node, as its own process on this devnet. Returns its
+    output (its key comes through the environment, never a command line or a log)."""
+    import os
+    import subprocess
+
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(n.work), "ORACLE_RPC": n.rpc.url,
+           "ORACLE_RACE": n.chain.race, "ORACLE_PRIVATE_KEY": f"0x{secret:064x}", "ORACLE_FROM_BLOCK": str(from_block),
+           "ORACLE_TX_POLL": "0.05", "PYTHONPATH": str(ROOT)}
+    r = subprocess.run([sys.executable, "-m", "oracle.keeper", "run", "--once", "--from-block", str(from_block)],
+                       cwd=ROOT, env=env, capture_output=True, text=True, timeout=300)
+    out = r.stdout + r.stderr
+    (n.work / "keeper-only.log").write_text(out, encoding="utf-8")
+    check(r.returncode == 0, f"`python3 -m oracle.keeper run --once` exited {r.returncode}: {out[-400:]}")
+    return out
+
+
+def scenario_p(n: ScenarioNet, out: dict) -> None:
+    print("\n== p. who draws and keeps with the harness's keeper off (v3.1 polish): the watcher's draw duty, `pofctl "
+          "--v3 draw`, a keeper-only node; a family priced mid-flight; a missing report paid after its window ==",
+          flush=True)
+    from types import SimpleNamespace
+
+    from oracle.keeper import Keeper, KeeperWallet
+
+    c, rpc = n.chain, n.rpc
+    genesis = n.nodes["genesis"]
+    genesis.keeper = False  # the harness's keeper: off for the whole scenario
+    secret = int.from_bytes(crypto.keccak256(b"pof devnet v3 e2e p keeper"), "big") % crypto.N or 1
+    kw = KeeperWallet(rpc, secret, "keeper", log=n.log("keeper"), max_per_hour=10**9)
+    keeper_address = kw.address
+    rpc.call("anvil_setBalance", [keeper_address, SV.ETH_100])
+    res: dict = {}
+
+    # the earlier scenarios' checks drawn and judged first: nothing of theirs is due while every node is stopped
+    genesis.keeper = True
+    n.drive(lambda: not any(c.verdict(s)["status"] in (v3.SEALED, v3.JUDGING) for s in list(c.live)),
+            "p: the earlier checks drawn and counted", poke=False)
+    genesis.keeper = False
+
+    # (a) every validator node stopped
+    stopped = dict(n.nodes)
+    n.nodes.clear()
+    try:
+        # 1. the watcher's draw duty starts one validator's node, whose keeper (on by default) draws the check
+        W = _watcher_module()
+        name = "v1"
+        node = stopped[name]
+
+        def wake() -> None:
+            node.keeper = True
+            n.nodes[name] = node
+
+        inst = _Instance(wake)
+        param = _Param(json.dumps({"last": c.block()}))
+        env = {"ENABLED": "true", "STATE_PARAM": f"/pof-snp/{name}/watcher", "RACE_ADDRESS": c.race,
+               "VALIDATOR_ADDRESS": node.address, "INSTANCE_ID": f"i-{name}", "UNPAUSE_CHECK": "off",
+               "MAX_BLOCK_RANGE": "100000", "WAKE_ON_DRAW": "true", "WAKE_ON_HEAD": "false"}
+        _, s1 = n.register_issue()
+        runs, action = [], None
+        for _ in range(80):
+            r = W.run(env, rpc, param, inst, now=time.time)
+            runs.append(r.get("action"))
+            if r.get("action") == "started":
+                action = r
+                break
+            check(not _drawn(c, s1), f"check {s1} stays undrawn while every node is stopped")
+            n.warp(30)  # 6 blocks and 30 s of chain time: past the grace (25 blocks), then this validator's stagger
+        check(action is not None and action.get("draw") == [s1] and inst.starts == 1,
+              f"{name}'s watcher ({len(runs)} run(s), the draw duty on: grace {25} blocks, then its stagger) started "
+              f"its stopped instance once for undrawn check {s1}: {action}")
+        n.drive(lambda: _drawn(c, s1), f"p: check {s1} drawn by {name}'s node", poke=False, only=[name], idle_max=60)
+        by = _paid_by(n, n.evs(c.panels, "Drawn(uint256,uint256,uint8,uint256,bytes32)", s1)[0])
+        check(by == crypto.checksum(node.address),
+              f"check {s1} drawn by {name}'s own node (its keeper's Panels.draw, from {by[:10]}), started by the "
+              f"watcher; no other node runs")
+        node.keeper = False
+        del n.nodes[name]
+        inst.running = False
+        n.warp(30)
+        again = W.run(env, rpc, param, inst, now=time.time)
+        # a start now is for its seat on the check it drew (the watcher's seat duty), never a second draw start
+        check(s1 not in (again.get("draw") or []),
+              f"its instance stopped again, the next watcher run asks no draw start for check {s1} ({again})")
+        res["watcher"] = {"check": s1, "runs": len(runs), "starts": inst.starts}
+
+        # 2. `pofctl --v3 draw <check>` by anyone
+        _, s2 = n.register_issue()
+        ctx, v3cli = pofctl_ctx(n, n.anyone)
+        try:
+            v3cli.cmd_draw(ctx, SimpleNamespace(check=s2, role="reporter"))
+            early = ""
+        except v3cli.Fail as e:
+            early = str(e)
+        check("seed block" in early and "Nothing was sent" in early or _drawn(c, s2),
+              f"pofctl before the seed block: {early[:120]}")
+        _past_seed(n, s2)
+        data, lines = v3cli.cmd_draw(ctx, SimpleNamespace(check=s2, role="reporter"))
+        for line in lines:
+            print(f"  pofctl: {line}", flush=True)
+        check(_drawn(c, s2) and data.get("tx"), f"`pofctl --v3 draw {s2}` drew it ({data['status']}, k = {data['k']}, "
+                                                f"tx {str(data.get('tx'))[:12]}…) with every node stopped")
+        res["pofctl"] = {"check": s2, "status": data["status"]}
+
+        # 3. the keeper-only node, one pass
+        b3 = c.block()
+        _, s3 = n.register_issue()
+        _past_seed(n, s3)
+        said = _keeper_only(n, secret, b3)
+        check(_drawn(c, s3) and "draw(" in said,
+              f"`python3 -m oracle.keeper run --once` (no registration, a gas-only key) drew check {s3}: "
+              + next((x.strip() for x in said.splitlines() if "draw(" in x), "")[:160])
+        res["keeperOnly"] = {"check": s3}
+    finally:
+        n.nodes.update(stopped)
+        genesis.keeper = False
+
+    # from here the keeper-only node's keeper (oracle/keeper.py's Keeper, in this process) keeps, the nodes judge
+    keeper = Keeper(c, kw, log=n.log("keeper"))
+    keeper.lies, keeper.mute = set(), set()
+    n.nodes["keeper"] = keeper
+    try:
+        n.drive(lambda: all(c.submission(s)["paid"] for s in (s1, s2, s3)), "p: the three checks judged, results "
+                "taken by the keeper", poke=False, explain=(s1, s2, s3))
+        check(all(c.verdict(s)["k"] >= 1 for s in (s1, s2, s3)),
+              f"checks {s1}, {s2}, {s3} judged and their results taken")
+
+        # (b) a new family priced while 12 checks are in flight
+        fam = v3.name_id(NEW_FAMILY)
+
+        def priced() -> bool:
+            return rpc.view(c.fees, "isPriced(bytes32)", ["bool"], fam)[0]
+
+        check(not priced(), f"{NEW_FAMILY} isn't priced on this deployment")
+        n.family_next = NEW_FAMILY
+        try:
+            name = n.join_next()
+        finally:
+            n.family_next = None
+        newbie = n.nodes[name]
+        check(v3.b32(c.validator(newbie.address)["family"]) == fam,
+              f"{name} registered with family {NEW_FAMILY} (`provider/line`, VP12), a candidate")
+        regs = [n.register_issue()[1] for _ in range(12)]
+        epochs = {s: rpc.view(c.fees, "drawEpoch(uint256)", ["uint256"], s)[0] for s in regs}
+
+        def pending() -> bool:
+            return fam in c.pending_families() or priced()
+        # a challenge on one of them, in its window
+        n.drive(lambda: any(c.verdict(s)["status"] == v3.WINDOW for s in regs), "p: one of the 12 in its window",
+                poke=False)
+        target = next(s for s in regs if c.verdict(s)["status"] == v3.WINDOW)
+        watcher = n.nodes[n.outside(target)[0]]
+        check(watcher.challenge(target, force=True) is not None and c.verdict(target)["challengeOpen"],
+              f"{n.name(watcher.address)} challenged check {target}")
+        met = pending()
+        if not met:  # no draw met it yet: anyone may announce a registered validator's family, so it's priced sooner
+            n.anyone.send(c.fees, "announce(address)", newbie.address)
+        n.drive(priced, f"p: {NEW_FAMILY} priced by the keeper's roll", poke=False)
+        at = rpc.view(c.fees, "pricedFrom(bytes32)", ["uint256"], fam)[0]
+        flight = [s for s in regs if not c.submission(s)["done"]]
+        # the 12 opened before the first price; how many are still in flight then depends on the roll's timing (a
+        # full run found 4 periods between), so at least one, and every one of the 12 must settle below
+        check(flight and all(e < at for e in epochs.values()),
+              f"{NEW_FAMILY} announced ({'a draw met its candidate' if met else 'by anyone'}) and priced from epoch "
+              f"{at} by the keeper's rollPart loop while {len(flight)} of the 12 checks, opened at epoch "
+              f"{sorted(set(epochs.values()))}, were in flight")
+        n.drive(lambda: not c.verdict(target)["challengeOpen"]
+                and n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", target) != [],
+                "p: the challenge judged and settled", poke=False, explain=(target,))
+        upheld = abi.decode(["bool"], abi.hexdata(n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)",
+                                                         target)[-1]["data"]))[0]
+
+        def paid_ids() -> set:
+            return {int(x["topics"][2], 16) for s in regs for x in n.evs(c.race, PAID_EV, s)}
+
+        def settled() -> bool:
+            if not all(c.submission(s)["done"] for s in regs):
+                return False
+            got = paid_ids()
+            return all(pid in got for s in regs for pid, _, _ in SV.panels_of(n, s, v3.AUDIT))
+        n.drive(settled, "p: the 12 checks settled, their audits paid", poke=False, explain=regs[:3])
+        audits = [(s, pid) for s in regs for pid, _, _ in SV.panels_of(n, s, v3.AUDIT)]
+        paid = paid_ids()
+        check(all(c.submission(s)["paid"] for s in regs) and all(pid in paid for _, pid in audits),
+              f"every one of the 12 settled: its `result` taken, its {len(audits)} audit panel(s) paid, and the "
+              f"challenge of check {target} settled ({'upheld' if upheld else 'rejected'})")
+        fresh = {newbie.address.lower()}
+        seats = [k.lower() for s in regs for kind in (v3.COUNTED, v3.AUDIT, v3.CHALLENGE)
+                 for pid, _, _ in SV.panels_of(n, s, kind) for k in c.judges(pid) if k]
+        check(not (set(seats) & fresh), f"no paid seat of the 12 went to {NEW_FAMILY}, priced after their epoch (F1)")
+        res["b"] = {"checks": regs, "pricedFrom": at, "challenge": target, "audits": len(audits)}
+
+        # (c) an auditor that never reports: its panel is paid after the report window, by the keeper
+        mute: set = set()
+        for x in n.nodes.values():
+            if hasattr(x, "no_report"):
+                x.no_report = mute
+        chosen: dict = {}
+
+        def pick() -> None:
+            for s in watched:
+                for pid, _, _ in SV.panels_of(n, s, v3.AUDIT):
+                    if pid not in chosen:
+                        keys = [k for k in c.judges(pid) if k]
+                        if keys:
+                            chosen[pid] = (s, keys[0])
+                            mute.add((pid, keys[0].lower()))
+        watched: list = []
+        n.watches.append(pick)
+        try:
+            for _ in range(8):
+                watched[:] = [n.register_issue()[1] for _ in range(10)]
+                n.drive(lambda: all(n.counted(s) for s in watched) and all(
+                    c.verdict(s)["status"] == v3.FINAL or c.verdict(s)["auditDecided"] for s in watched),
+                    "p: a batch counted and its audits decided", poke=False)
+                if chosen:
+                    break
+            check(bool(chosen), "an audit fell due and was drawn")
+            pid, (s, quiet) = next(iter(chosen.items()))
+            n.drive(lambda: any(int(x["topics"][2], 16) == pid for x in n.evs(c.race, PAID_EV, s)),
+                    f"p: audit panel {pid} paid", poke=False, explain=(s,))
+        finally:
+            n.watches.remove(pick)
+            mute.clear()
+        log = next(x for x in n.evs(c.race, PAID_EV, s) if int(x["topics"][2], 16) == pid)
+        slot = [k.lower() if k else "" for k in c.judges(pid)].index(quiet.lower())
+        reveal_by = c.panel(pid)["revealBy"]
+        # paid only once REPORT_WINDOW had passed (the missing report held it until then), by whichever keeper came
+        # first: the keeper-only node or a validator's own (the auditor may report once unmuted, after the pay)
+        payer = _paid_by(n, log)
+        who = "the keeper-only node's keeper" if payer == keeper_address else f"{n.name(payer)}'s keeper"
+        check(n.when(log) > reveal_by + SV.REPORT_WINDOW,
+              f"auditor {n.name(quiet)} of check {s} never reported in time; its audit panel {pid} was paid "
+              f"{SV.hours(n.when(log) - reveal_by)} after its reveal deadline (REPORT_WINDOW "
+              f"{SV.hours(SV.REPORT_WINDOW)}) by {who} ({payer[:10]})")
+        res["c"] = {"check": s, "panel": pid, "paidAfter": n.when(log) - reveal_by}
+    finally:
+        del n.nodes["keeper"]
+        genesis.keeper = True
+    out["p"] = res
+
+
+SCENARIOS = {"u": scenario_u, "v": scenario_v, "w": scenario_w, "x": scenario_x, "e": scenario_e, "f": scenario_f,
+             "g": scenario_g, "r": scenario_r, "p": scenario_p}
 
 
 def run(rpc: Rpc, record: dict, work: Path, name: str, verbose: bool, report: str | None, only: str = "") -> int:

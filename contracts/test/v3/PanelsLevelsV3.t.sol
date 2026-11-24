@@ -329,8 +329,10 @@ contract PanelsLevelsV3Test is PanelsSetup {
         }
         vm.expectRevert(Panels.NotReady.selector);
         pn.startWindow(id);
-        for (uint256 i = 1; i <= 6; ++i) { // three challengers and room for its audits (#290)
-            _add(keccak256(abi.encode("tee", i)), _family(i + 3), _tee(i % 3), 2, FULL_BOND);
+        // three challengers and room for its audits (#290), of priced families (v3.1 polish F1: the hold counts only
+        // families its challenge panel could seat)
+        for (uint256 i = 1; i <= 6; ++i) {
+            _add(keccak256(abi.encode("tee", i)), _family((i + 3) % FAMILIES), _tee(i % 3), 2, FULL_BOND);
         }
         pn.startWindow(id);
         assertEq(uint256(pn.submission(id).status), uint256(Status.Window));

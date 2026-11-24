@@ -8,14 +8,16 @@ What it does:
 2. Every seat Panels gives its key (the `Seated` events), whatever the panel's kind:
    - counted: one of the k judges whose reveals decide the verdict;
    - shadow: a candidate's (or a barred family's) unpaid verdict, on a drawn submission or on one that waits for a
-     panel; it seals in the counted panel's seal window, so before any counted reveal is public;
+     panel; it seals in the counted panel's seal window, and no counted reveal is taken while it still may (#311);
    - audit: a one-seat panel checking a counted verdict;
    - challenge: a fresh panel (larger, or of the verdict's size under the deployment's `Same` rule, #251 L24), which
      also names the original judges' false receipts (the mask).
    For each: the check (the fix's tests in the sandbox and the judge, as in v2; a registration check: the issue that
    claims the registration, on the host or on Radicle, judged a genuine bug report in scope or not), a receipt,
-   then its seal, and after the seal window its receipt's hash and its reveal, all on-chain through
-   the `onchain` transport, and its usage report to RaceV3. Seals always go out before reveals in a pass.
+   then its seal, and once the reveal opens its receipt's hash and its reveal, all on-chain through the `onchain`
+   transport, and its usage report to RaceV3. Seals always go out before reveals in a pass. Since #311 a judging
+   panel's reveal opens as soon as every seat (and, for a counted panel, every shadow drawn with it) has sealed, not
+   at the end of the seal window; the node reveals then.
 3. Its cost table, once a pricing period: its own shared-unit costs and every family's public list price (D9, D19).
 4. The keeper's calls anyone may make (ORACLE_KEEPER, on by default): draws, replacements, audits, challenge draws,
    shadow settlement, finality, the result, the panels' pay, FeesV3's signals and roll; since #251's contract batch 2
@@ -38,13 +40,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import secrets
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 
-from . import delegates, evidence, receipt as receipts, v2, v3
+from . import delegates, evidence, rebase_v3, receipt as receipts, v2, v3
 from .crypto import checksum, keccak256, word
 from .judge import MAX_ISSUE_CHARS, case_for, refused, refused_registration, registration_case
 from .models import ModelError
@@ -72,11 +75,57 @@ CHALLENGE_TRIES = 3  # drawChallenge calls per state of the challenge, the regis
 # lapseChallenge and settleLapse calls per state (#251 batch 4, L25): a lapse is due once past CHALLENGE_DEADLINE with
 # no panel, and the race's settlement once per lapse of a filed challenge
 LAPSE_TRIES = 3
-GIVE_UP = 50  # a keeper's once-only call refused this often is left to others
+# The keeper's retry model (v3.1 polish VP6; #314, audit F4/F5). A refusal for one of these reasons says "not yet" or
+# "nothing to do now": it doesn't count toward giving up. Any other refusal of a once-only call starts GIVE_UP_S of
+# chain time, after which the call is left to others.
+GATED_REFUSALS = frozenset({"NotYet", "NotReady", "TooEarly", "NothingDue", "NothingChanged", "ShortOfGas"})
+GIVE_UP_S = 86_400
+# Every refused call waits min(BACKOFF_BASE_S × 2^(n-1), BACKOFF_MAX_S) before its next try; n starts again when the
+# call's state fingerprint changes (the registry's epoch, the capacity window, FeesV3's `rolled`, the verdict's status)
+BACKOFF_BASE_S, BACKOFF_MAX_S = 30, 3600
+# payShadow's gas limit at least this: ≥ 2× its paying branch under EIP-8037 (≈418k: 222k + 2 new slots × 97,920,
+# PolishV31's test_payShadowsPayingBranchGas), so the call takes the paying branch, not the catch (VP7, #325)
+PAY_SHADOW_GAS_FLOOR = 850_000
+ROLL_PARTS_PER_PASS = 10  # FeesV3.rollPart calls a keeper section makes at most (VP8)
+KEEPER_BUDGET = 300  # about this many RPC calls a keeper section, then the next one goes on from there
+KEEPER_TX_CALLS = 6  # what one mined transaction costs in RPC calls, about (estimate, nonce, price, send, receipts)
+RATE_PAUSE_MAX_S = 600  # the longest keeper pause after an Unavailable (HTTP 429) without Retry-After
+SCAN_REREAD = 64  # events at an event list's end taken again each section (a reorg may change the list's tail)
+# A model family's name (#251 v3.1 polish VP12): the provider's model line, `provider/line` ("anthropic/claude")
+FAMILY_FORM = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9.-]*$")
 
 
 class SetupError(RuntimeError):
     """The node can't act as the validator its registration says it is."""
+
+
+class _Metered:
+    """The chain as a keeper section reads it: each call of one of its methods counts toward the section's budget
+    (about one RPC call each). Everything else is the chain's own."""
+
+    def __init__(self, chain, node) -> None:
+        self.__dict__.update(_chain=chain, _node=node)
+
+    def __getattr__(self, name):
+        attr = getattr(self._chain, name)
+        if not callable(attr):
+            return attr
+        node = self._node
+
+        def metered(*args, **kw):
+            node._spent += 1
+            return attr(*args, **kw)
+        return metered
+
+    def __setattr__(self, name, value) -> None:
+        setattr(self._chain, name, value)
+
+
+def _what(key) -> str:
+    """A keeper call's key, (to, signature, args), as the log says it."""
+    if isinstance(key, tuple) and len(key) == 3 and isinstance(key[1], str) and "(" in key[1]:
+        return f"{key[1].split('(')[0]}({', '.join(str(a) for a in key[2])})"
+    return str(key)
 
 
 def _hex(b: bytes) -> str:
@@ -92,16 +141,25 @@ def default_list_prices() -> dict:
             for f, m in costs.JUDGE.items() if f in LIST_NAMES}
 
 
-def build_table(chain, costs: dict | None, list_prices: dict, log=None) -> tuple:
+def build_table(chain, costs: dict | None, list_prices: dict, log=None, priced_only: bool = False) -> tuple:
     """(shared, families, tokens) for FeesV3.post. `costs`: this validator's own shared-unit costs by SHARED_UNITS
     name; a unit it doesn't give is posted at the price in force (which moves nothing). `list_prices`: the public list
     prices by family name; a priced or announced family with no list price here is also posted at the price in force,
-    so the table still counts (a table must price every priced family)."""
+    so the table still counts (a table must price every priced family). `priced_only` (v3.1 polish VP2: a FeesV3 with
+    no `drawEpoch`, live v3): a listed family that isn't priced yet is left out, so no new family is priced there (a
+    family priced after a check opened would be seated and never paid, audit F1)."""
     in_force = chain.shared_prices()
     shared = [int((costs or {}).get(u) or in_force[i]) for i, u in enumerate(SHARED_UNITS)]
     by_id = {v3.name_id(name): [int(x) for x in t] for name, t in list_prices.items()}
+    priced = chain.priced_families()
+    if priced_only:
+        left = sorted(name for name in list_prices if v3.name_id(name) not in priced)
+        by_id = {fam: t for fam, t in by_id.items() if fam in priced}
+        if left and log:
+            log(f"table: this FeesV3 has no drawEpoch (v3), so a family priced now could be seated on a check it can't "
+                f"be paid for (F1): posting only the families already priced; left out: {', '.join(left)}")
     families, tokens = [], []
-    for fam in chain.priced_families():
+    for fam in priced:
         if fam not in by_id:
             by_id[fam] = [int(x) for x in chain.token_prices(fam)]
             if log:
@@ -186,6 +244,7 @@ class Round:
     judged: bool = False
     done: bool = False
     note: str = ""
+    reason: str = ""  # the judge's one-line reason, kept on this node's disk only (the verdict comment, VP18)
 
     FIELDS = ("pid", "submission", "kind", "vote", "mask", "salt", "receipt", "judged")
 
@@ -193,6 +252,8 @@ class Round:
         data = {f: getattr(self, f) for f in self.FIELDS}
         if self.usage is not None:
             data["usage"] = list(self.usage.as_tuple())
+        if self.reason:
+            data["reason"] = self.reason
         return data
 
     @classmethod
@@ -200,6 +261,7 @@ class Round:
         r = cls(**{f: data[f] for f in cls.FIELDS})
         if data.get("usage"):
             r.usage = v2.Usage(*data["usage"])
+        r.reason = str(data.get("reason") or "")
         return r
 
 
@@ -210,6 +272,7 @@ class Judgement:
     receipt: str
     usage: v2.Usage
     tests_passed: bool | None
+    reason: str = ""  # the judge's one-line reason (oracle/verdict_comment.py's `reason_of`), never in the receipt
 
 
 class NodeV3(NodeV2):
@@ -229,13 +292,14 @@ class NodeV3(NodeV2):
         self.validator: dict | None = None
         self.posted_period = -1
         self._said: set = set()
-        self._tries: dict = {}
-        self._kept: set = set()
-        self._live: dict | None = None
+        self._draw_epoch: bool | None = None  # FeesV3.drawEpoch answers (v3.1); None: not probed yet
+        self._init_keeper_state()
+        self._no_early: set = set()  # panels whose early reveal the chain refused (v3): they wait for `sealBy`
         self.fixes = None  # a Radicle fix source (oracle/radicle_v3.py, #251 task 4.2); None: the host's pull requests
         self.claims = None  # the registrations' Radicle issues (radicle_v3.RadicleIssues, task 4.3); None: the host's
         self.radicle_seat = None  # model (a) on this node's Radicle node (#251 task 4.1); None: nothing on Radicle
         self.spend = None  # the daily and monthly model-spending caps and their on-chain pause (oracle/spend.py, #253)
+        self.verdicts = None  # the verdict on the Radicle issue (oracle/verdict_comment.py, VP18); None: no comments
 
     # ---------- setup ----------
 
@@ -308,6 +372,8 @@ class NodeV3(NodeV2):
                     self._finish(r, "not judged")
                 except evidence.NotReady as e:
                     self._say((r.pid, "not ready", str(e)), f"panel {r.pid}: not judged yet: {e}; trying again")
+        if self.verdicts is not None:  # after the seat steps, never blocking them: it catches its own failures
+            progress |= self.verdicts.step(self, now)
         try:
             progress |= self._table()
         except Reverted as e:
@@ -315,7 +381,7 @@ class NodeV3(NodeV2):
         if self.spend is not None:
             progress |= self._spend_pause()
         if self.keeper:
-            progress |= self._keep(from_block, now)
+            progress |= self._keep_section(self._keep_from(from_block), now)
         if self.radicle_seat is not None:
             progress |= self._radicle()
         return progress
@@ -378,6 +444,8 @@ class NodeV3(NodeV2):
 
     def _finish(self, r: Round, note: str = "") -> None:
         r.done, r.note = True, note
+        if getattr(self, "verdicts", None) is not None:  # its verdict comment outlives the seat (VP18)
+            self.verdicts.remember(self, r)
         self.seats.pop(r.pid, None)
         self.finished.add(r.pid)
         if self.rounds is not None:
@@ -403,7 +471,7 @@ class NodeV3(NodeV2):
             return True
         if not r.judged:
             j = self._judge(r.submission, p, late=now > p["sealBy"] - self.seal_margin, seat=(r.pid, slot))
-            r.vote, r.receipt, r.usage, r.judged = j.vote, j.receipt, j.usage, True
+            r.vote, r.receipt, r.usage, r.judged, r.reason = j.vote, j.receipt, j.usage, True, j.reason
             if r.kind == v3.CHALLENGE:
                 r.mask = self._mask(p["ex"], j.tests_passed)
             self._save(r)  # on disk before the seal leaves the node
@@ -419,23 +487,52 @@ class NodeV3(NodeV2):
         if p["counted"] or p["closed"] or now > p["revealBy"]:
             self._finish(r, "its reveal window closed before this node revealed")
             return True
-        if now <= p["sealBy"] or (r.kind != v3.SHADOW and (p["seats"] < p["k"] or p["nSealed"] < p["k"])):
-            return False  # the reveal window isn't open: every seat seals first
+        if not self._reveal_open(r, now, p):
+            return False
         mine = v3.commitment_of(self.chain.panels, r.pid, self.address, r.vote, r.mask, r.salt)
         if not r.judged or v3.b32(seat["seal"]) != mine:
             self._finish(r, "the seal on-chain isn't one this node can open; not revealing")
             return True
-        if not seat["receipted"]:
-            rh = bytes.fromhex(r.receipt)
-            self.exchange.put(r.pid, self.address, "receipt",
-                              {"receipt": _hex(rh), "sig": self._sign(v3.RECEIPT_TAG, self.chain.panels, r.pid, rh)})
-        if not seat["revealed"]:
-            content = v3.reveal_content(r.vote, r.mask, r.salt)
-            self.exchange.put(r.pid, self.address, "reveal",
-                              {"vote": r.vote, "mask": r.mask, "salt": _hex(r.salt),
-                               "sig": self._sign(v3.REVEAL_TAG, self.chain.panels, r.pid, content)})
+        try:
+            if not seat["receipted"]:
+                rh = bytes.fromhex(r.receipt)
+                self.exchange.put(r.pid, self.address, "receipt",
+                                  {"receipt": _hex(rh),
+                                   "sig": self._sign(v3.RECEIPT_TAG, self.chain.panels, r.pid, rh)})
+            if not seat["revealed"]:
+                content = v3.reveal_content(r.vote, r.mask, r.salt)
+                self.exchange.put(r.pid, self.address, "reveal",
+                                  {"vote": r.vote, "mask": r.mask, "salt": _hex(r.salt),
+                                   "sig": self._sign(v3.REVEAL_TAG, self.chain.panels, r.pid, content)})
+        except Reverted as e:
+            if now > p["sealBy"] or "TooEarly" not in e.reason:
+                raise
+            self._no_early.add(r.pid)  # a deployment without #311's early reveal (v3): this panel waits for `sealBy`
+            self.log(f"panel {r.pid}: the chain opens the reveal only after the seal window; waiting for it")
+            return False
         self.log(f"panel {r.pid}: revealed {'pass' if r.vote else 'fail'}, receipt {r.receipt[:12]} on-chain")
         return True
+
+    def _reveal_open(self, r: Round, now: int, p: dict) -> bool:
+        """Whether Panels takes this seat's reveal now (#311, design E1 and E2): a shadow's after its `sealBy`; a
+        judging panel's once every seat has sealed, and a counted panel's before its `sealBy` also once every shadow
+        drawn with it has sealed or the shadows' window is over. A panel whose early attempt the chain refused
+        (`TooEarly`: a deployment that opens reveals only after `sealBy`, v3) waits for `sealBy`."""
+        if r.kind == v3.SHADOW:
+            return now > p["sealBy"]
+        if p["seats"] < p["k"] or p["nSealed"] < p["k"]:
+            return False  # every seat seals first
+        if now > p["sealBy"]:
+            return True
+        if r.pid in self._no_early:
+            return False
+        if r.kind != v3.COUNTED:
+            return True
+        sp = self.chain.verdict(r.submission)["shadowPid"]
+        if sp == 0:
+            return True
+        q = self.chain.panel(sp)
+        return q["ex"] != r.pid or q["nSealed"] == q["k"] or now > q["sealBy"]
 
     def _report(self, r: Round, now: int, p: dict, slot: int, seat: dict) -> bool:
         if not (seat["revealed"] and seat["receipted"]) or r.usage is None:
@@ -495,6 +592,8 @@ class NodeV3(NodeV2):
             return answer, _no_run(), pull["head_sha"], 0.0
         c = SimpleNamespace(pull=pull, bounty=sub["bounty"], submission=s)
         case, refusal = self._case(c, onchain, issue_id)
+        if sub.get("rebaseOf"):  # a rebase check (#310, RB3): the approved diff and the range-diff join its case
+            case, refusal = rebase_v3.judge_case(self, sub, pull, case, refusal)
         project, protected, why = self._test_config(pull)
         tests, unsafe = self._run_check(pull, project, protected, timeout_s)
         refusal = refusal or why or unsafe
@@ -696,7 +795,10 @@ class NodeV3(NodeV2):
                                   profile["memoryMb"], len(receipts.canonical(doc)), getattr(answer, "usage", None))
         self.log(f"submission {s}: {'pass' if answer.solves else 'fail'} (tests exit {tests.exit_code}, "
                  f"{answer.model}); receipt {h[:12]}")
-        return Judgement(bool(answer.solves), doc, h, usage, None if not fix_tree else tests.passed)
+        from .verdict_comment import reason_of
+
+        return Judgement(bool(answer.solves), doc, h, usage, None if not fix_tree else tests.passed,
+                         reason_of(answer.response))
 
     def _mask(self, original: int, tests_passed: bool | None) -> int:
         """A challenge judge's finding of false receipts: one bit per seat of the challenged panel. A receipt this
@@ -729,92 +831,377 @@ class NodeV3(NodeV2):
 
     def post_table(self) -> tuple:
         shared, families, tokens = build_table(self.chain, self.costs, self.list_prices,
-                                               lambda m: self._say(("table", m), m))
+                                               lambda m: self._say(("table", m), m),
+                                               priced_only=not self.fees_draw_epoch())
         self.wallet.send(self.chain.fees, "post(uint256[4],bytes32[],uint256[3][])", shared, families, tokens)
         self.log(f"table posted: {len(families)} families' list prices and this validator's shared-unit costs")
         return shared, families, tokens
 
+    def fees_draw_epoch(self) -> bool:
+        """Whether this deployment's FeesV3 has `drawEpoch` (v3.1, where a family's price applies from the draw's
+        epoch), probed once with drawEpoch(0): live v3's FeesV3 has no such function and the call reverts with no
+        data (VP2). A revert with an error of its own (data) is a v3.1 function refusing check 0: it exists."""
+        if self._draw_epoch is None:
+            probe = getattr(self.chain, "draw_epoch", None)  # a chain that offers the read; else the raw call
+            try:
+                if probe is not None:
+                    probe(0)
+                else:
+                    from . import abi
+
+                    self.chain.rpc.eth_call(self.chain.fees, abi.call_data("drawEpoch(uint256)", 0))
+                self._draw_epoch = True
+            except Reverted as e:
+                self._draw_epoch = bool((e.data or "").removeprefix("0x"))
+        return self._draw_epoch
+
     # ---------- the keeper ----------
 
-    def _call(self, to: str, signature: str, *args, once: bool = False) -> bool:
-        """A call anyone may make. A revert means it isn't due (or someone else made it): no progress. `once`: a call
-        that succeeds one time only (a panel's pay): not sent again after it worked, or after GIVE_UP refusals."""
+    def _init_keeper_state(self, every: float = 0, budget: int = KEEPER_BUDGET) -> None:
+        """The keeper's own state (v3.1 polish VP6), apart from the seats', so a keeper-only node (oracle/keeper.py,
+        which leaves out the rest of __init__) sets it up with this call alone; the keeper needs only `chain`, `wallet`
+        and `log` besides. `every`: chain seconds between two keeper sections (ORACLE_KEEPER_EVERY; 0: every pass);
+        `budget`: about this many RPC calls a section (ORACLE_KEEPER_BUDGET)."""
+        self.keeper_every, self.keeper_budget = every, budget
+        if not hasattr(self, "_said"):
+            self._said = set()
+        self._tries: dict = {}  # state-keyed try counts: drawAudits, drawChallenge, startWindow, refill, the lapses
+        self._kept: set = set()  # once-only calls that worked, and ("panel", pid) for panels with nothing left
+        self._given_up: set = set()  # once-only calls refused GIVE_UP_S long for a reason that isn't a gate
+        self._refused_since: dict = {}  # call key -> the chain time of its first refusal that isn't a gate's
+        self._backoff: dict = {}  # call key -> {"n", "next", "fp", "skipped"}
+        self._reported: set = set()  # (pid, slot): that seat's usage report is in
+        self._live: dict | None = None
+        self._race_config: dict | None = None
+        self._scan: set = set()  # the submissions each section reads
+        self._dropped: set = set()  # submissions with nothing left to call: not read again in this run
+        self._cursors: dict = {}  # (event list, from block) -> how many of its events are in the scan set
+        self._resume = None  # the item where a section's budget ran out: the next section starts there
+        self._keeper_next = 0  # the chain time of the next keeper section
+        self._paused_until, self._pauses = 0, 0  # a rate limit's pause of the keeper section, and how many in a row
+        self._now, self._fp, self._spent = 0, (), 0  # this section's time, state fingerprint and RPC calls
+
+    def _keep_from(self, from_block: int) -> int:
+        """Where the keeper's event scans start: the deployment's first block (ORACLE_FROM_BLOCK), so a restarted node
+        reads every check once and keeps the ones not finished; `from_block` for a chain that doesn't know it."""
+        first = getattr(self.chain, "first_block", None)
+        return from_block if first is None else min(int(first), from_block)
+
+    def _keep_section(self, from_block: int, now: int) -> bool:
+        """The keeper's part of a pass, after the seat steps: every `keeper_every` chain seconds, and not while a rate
+        limit pauses it. An Unavailable here (HTTP 429 once Rpc's own retries gave up, or no answer) doesn't end the
+        pass: the section pauses for the answer's Retry-After, else 30 s doubling up to RATE_PAUSE_MAX_S, said once,
+        and the next passes' seat steps run as usual."""
+        if now < self._keeper_next or now < self._paused_until:
+            return False
+        self._keeper_next = now + self.keeper_every
+        try:
+            progress = self._keep(from_block, now)
+        except Unavailable as e:
+            self._pauses += 1
+            after = getattr(e, "retry_after", None)
+            pause = min(float(after) if after else BACKOFF_BASE_S * 2 ** (self._pauses - 1), RATE_PAUSE_MAX_S)
+            self._paused_until = now + pause
+            if self._pauses == 1:
+                self.log(f"keeper: the chain isn't answering the keeper's calls ({e}); they pause (the seats' steps "
+                         f"don't), {pause:.0f} s at first, up to {RATE_PAUSE_MAX_S} s")
+            return False
+        if self._pauses:
+            self.log(f"keeper: the chain answers again after {self._pauses} pause(s); the keeper's calls go on")
+            self._pauses = 0
+        return progress
+
+    def _keep(self, from_block: int, now: int) -> bool:
+        """One keeper section: FeesV3's roll in parts, then each submission of the scan set and each panel not yet
+        kept, starting where the last section's budget ran out (a rotating cursor), until about `keeper_budget` RPC
+        calls are spent. Raises Unavailable if the chain doesn't answer (`_keep_section` pauses then)."""
+        real = self.chain
+        self.chain = _Metered(real, self)
+        self._now, self._spent = now, 0
+        try:
+            return self._keep_all(from_block, now)
+        finally:
+            self.chain = real
+
+    def _keep_all(self, from_block: int, now: int) -> bool:
+        c = self.chain
+        rolled = c.rolled()
+        self._fp = (c.epoch(), now // max(self._liveness()["capWindow"], 1), rolled)
+        progress = self._roll(rolled)
+        self._take_events(from_block)
+        block = c.block()
+        items = [(0, s) for s in sorted(self._scan)]
+        items += [(1, pid) for pid in range(1, c.panel_count() + 1) if ("panel", pid) not in self._kept]
+        start = 0
+        if self._resume is not None:
+            start = next((i for i, item in enumerate(items) if item >= self._resume), 0)
+            self._resume = None
+        order = items[start:] + items[:start]
+        for n, (kind, x) in enumerate(order):
+            if self._spent >= self.keeper_budget:
+                self._resume = (kind, x)
+                self._say(("budget", now // 3600), f"keeper: a section's budget ({self.keeper_budget} RPC calls) "
+                                                   f"was spent with {len(order) - n} of {len(items)} checks and "
+                                                   f"panels left; the next section goes on from there")
+                break
+            progress |= self._keep_submission(x, block, now) if kind == 0 else self._keep_panel(x, now)
+        return progress
+
+    def _roll(self, rolled: int) -> bool:
+        """FeesV3's period closed in parts (VP8): `rollPart()` while `rolled` is behind the current period, at most
+        ROLL_PARTS_PER_PASS a section. Each part is bounded, so its estimate is exact (`roll()`'s gas loop wasn't, F2)."""
+        c, progress = self.chain, False
+        period = c.current_period()
+        for _ in range(ROLL_PARTS_PER_PASS):
+            if rolled >= period or not self._call(c.fees, "rollPart()", state=rolled):
+                break
+            progress = True
+            rolled = c.rolled()
+        return progress
+
+    def _take_events(self, from_block: int) -> None:
+        """New checks into the scan set: the commitments, registrations and (v3.1, #310) rebase checks since the last
+        section, by a cursor over each event list (its last SCAN_REREAD taken again, for a reorg)."""
+        c = self.chain
+        lists = [("committed", c.committed), ("registered", c.registered)]
+        if hasattr(c, "rebased"):
+            lists.append(("rebased", c.rebased))
+        for name, read in lists:
+            events, at = read(from_block), (name, from_block)
+            for e in events[max(self._cursors.get(at, 0) - SCAN_REREAD, 0):]:
+                if e["submission"] not in self._dropped:
+                    self._scan.add(e["submission"])
+            self._cursors[at] = len(events)
+
+    def _keep_submission(self, s: int, block: int, now: int) -> bool:
+        c, progress = self.chain, False
+        v = c.verdict(s)
+        st = v["status"]
+        if st == v3.SEALED and block > v["seedBlock"]:
+            progress |= "draw" in self._draw_and_signal(s, v)
+        elif st == v3.WAITING:
+            # redrawn once the registry changes or at its scheduled time (L19's RETRY_DELAY, L16's capacity hour)
+            due = c.epoch() + 1 != v.get("waitEpoch", 0) or now >= v.get("retryAt", 0)
+            progress |= "draw" in self._draw_and_signal(s, v, due)
+        elif st in (v3.HELD, v3.WINDOW):
+            if st == v3.HELD and not v["challengeOpen"]:
+                # Not while its challenge is open: before contract batch 5 Panels' startWindow then left the
+                # window's frozen rest at 0, and the challenge's lapse or resolution resumed the window with nothing
+                # left (#256's flake). Since batch 5 (#290) Panels refuses it then; this guard only saves the
+                # reverting call. Held, the verdict can't be final anyway; the window starts whole once the
+                # challenge closes. Panels refuses it (NotReady) until enough challengers could be drawn: a few tries
+                # per state of the registry and per capacity window, as drawChallenge (VP6).
+                tried = ("startWindow", s, *self._fp[:2])
+                if self._tries.get(tried, 0) < CHALLENGE_TRIES:
+                    self._tries[tried] = self._tries.get(tried, 0) + 1
+                    progress |= self._call(c.panels, "startWindow(uint256)", s, state=st)
+            waits = v.get("auditWaits") and c.epoch() + 1 == v.get("auditEpoch")
+            if (block > v["auditBlock"] and not waits
+                    and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"])):
+                # With no auditor eligible the audits wait for the registry to change (`auditWaits`), and the
+                # contract refuses every call until it does (#251 task 3.10); then one call re-targets and the
+                # next draws from the new snapshot. With every auditor busy (L16) the call succeeds without drawing
+                # and the audits are retried from the same audit block once they have room. So a few tries per
+                # state of the registry, per released round (`releaseAudits` re-targets them) and per capacity
+                # window, as for a challenge: before, a keeper that spent its tries while every auditor was full
+                # never tried again, and the audits were released until the check was refunded (#311: with the
+                # early reveal a verdict counts minutes after its draw, while its auditors' hour is still full).
+                tried = ("audits", s, v["auditsDrawn"], v["auditDecided"], c.epoch(), v.get("redraws", 0),
+                         now // max(self._liveness()["capWindow"], 1))
+                if self._tries.get(tried, 0) < AUDIT_TRIES:
+                    self._tries[tried] = self._tries.get(tried, 0) + 1
+                    progress |= self._call(c.panels, "drawAudits(uint256)", s, state=st)
+            stuck = v.get("auditStuckAt", 0)
+            if (st == v3.WINDOW and stuck and not v["challengeOpen"] and v["auditsDrawn"] < v["auditsDue"]
+                    and now > stuck + self._liveness()["stuckGrace"]):
+                # audits nobody could take for STUCK_GRACE: the round is released (L19), the audit drawn afresh
+                progress |= self._call(c.panels, "releaseAudits(uint256)", s, state=st)
+            progress |= self._keep_challenge(s, v, block, now)
+            if (st == v3.WINDOW and now >= v["finalAt"] and not v["challengeOpen"] and v["auditDecided"]
+                    and v["auditsDone"] >= v["auditsDue"]):
+                progress |= self._call(c.panels, "finalize(uint256)", s, state=st)
+        sub = None
+        if st in (v3.HELD, v3.WINDOW, v3.FINAL) or (st == v3.RELEASED and v["pid"]):
+            sub = c.submission(s)
+            if not sub["paid"]:
+                # the counted judges' pay: once every seat reported, or REPORT_WINDOW after the reveal deadline (F4)
+                if self._reports_in(v["pid"]) and self._call(c.race, "result(uint256)", s, once=True, state=st):
+                    progress, sub = True, c.submission(s)
+            elif st == v3.FINAL and not sub["done"] and now > v["finalAt"] + REPORT_WINDOW_S:
+                progress |= self._call(c.race, "finish(uint256)", s, once=True, state=st)
+            progress |= self._after_count(s, v, sub, now)
+        if st in (v3.HELD, v3.WINDOW, v3.FINAL):
+            progress |= self._rebase_failed(s)
+        if st == v3.FINAL:
+            progress |= self._merge(s)
+        if st == v3.RELEASED or (v.get("redraws") and st in (v3.SEALED, v3.WAITING)):
+            # never judged: refunded once Panels released it for good, or at the race's deadline once a round was
+            # released (L19); a counted verdict's judges are paid first (`result`)
+            sub = sub if sub is not None else c.submission(s)
+            if not sub["done"] and self._release_due(v, sub, now):
+                progress |= self._call(c.race, "release(uint256)", s, once=True, state=st)
+        self._drop_if_finished(s, v, sub)
+        return progress
+
+    def _draw_and_signal(self, s: int, v: dict, due: bool = True) -> list:
+        """v3.draw_and_signal's rule for a sealed or waiting check (VP24): waiting, the wait's signal, then the draw if
+        it is `due`, then the panel's signal if it seated one; sealed, the draw, then the signal. The wait is signalled
+        once a wait round (its released rounds and retry time: FeesV3 counts it once a period anyway, and each signal
+        costs gas); after a draw, the signal carries the new status, so a refused wait signal's backoff doesn't hold
+        it. Returns the steps sent."""
+        c, st = self.chain, v["status"]
+        waited = ("signalWait", s, v.get("redraws", 0), v.get("waitEpoch", 0), v.get("retryAt", 0))
+
+        def draw() -> bool:
+            return due and self._call(c.panels, "draw(uint256)", s, state=st)
+
+        def signal(kind: str) -> bool:
+            if kind == "wait":
+                if waited in self._tries:
+                    return False
+                if not self._call(c.race, "signal(uint256)", s, state=st):
+                    return False
+                self._tries[waited] = 1
+                return True
+            return self._call(c.race, "signal(uint256)", s, state=(st, "drawn"))
+
+        return v3.draw_and_signal(st, draw, signal, lambda: bool(c.verdict(s)["pid"]))
+
+    def _after_count(self, s: int, v: dict, sub: dict, now: int) -> bool:
+        """A hook for a step after a verdict has counted (VP18's verdict comment, task 2.11): called each section for
+        each scanned submission whose verdict counted (held, in its window, final, or released with a panel), with
+        Panels' record `v` and the race's `sub`. Returns progress. A step that can fail retries with the keeper's
+        backoff: `self._due(key)` before a try, `self._failed(key, reason)` after a failure, `self._succeeded(key)`
+        after it worked; `_holds` keeps the submission in the scan set while the step still has work."""
+        return False
+
+    def _holds(self, s: int) -> bool:
+        """True keeps a finished submission in the scan set (a later step's work, `_after_count`)."""
+        return False
+
+    def _drop_if_finished(self, s: int, v: dict, sub: dict | None) -> None:
+        """A submission done with its verdict final or released and nothing owed (a merge, a lapse to settle), or
+        withdrawn or expired, leaves the scan set: it isn't read again in this run (VP6)."""
+        st = v["status"]
+        if st in (v3.FINAL, v3.RELEASED):
+            if sub is None or not sub["done"] or self._owes(s, v, sub):
+                return
+        elif st not in (v3.WITHDRAWN, v3.EXPIRED):
+            return
+        if not self._holds(s):
+            self._scan.discard(s)
+            self._dropped.add(s)
+
+    def _owes(self, s: int, v: dict, sub: dict) -> bool:
+        if v.get("filedLapsed") and self._tries.get(("settleLapse", s, v.get("lapses", 0)), 0) < LAPSE_TRIES:
+            return True
+        b = sub.get("bounty")
+        if not b:
+            return False
+        bt = self.chain.bounty(b)
+        if bt["state"] == v3.WON and bt["winner"] in (s, sub.get("rebaseOf")):
+            return True  # its solver's `claim` is still to come, and its merge after that
+        if bt["state"] != v3.CLAIMED or not bt["epoch"] or bt["winner"] not in (s, sub.get("rebaseOf")):
+            return False
+        if (self.chain.race, "merge(uint256)", (b,)) in self._given_up:
+            return False
+        a = self.chain.award(b, bt["epoch"])
+        return not (a["merged"] or a["closed"])  # its merge (or the failed rebase's reopening) is still to call
+
+    def _reports_in(self, pid: int, p: dict | None = None) -> bool:
+        """RaceV3's `_reportsDue` for panel `pid`: every seated key's usage report is in, or REPORT_WINDOW has passed
+        since the reveal deadline. Before that `result`, `payPanel` and `settleChallenge` refuse NotYet (F4)."""
+        c = self.chain
+        p = p if p is not None else c.panel(pid)
+        if self._now > p["revealBy"] + REPORT_WINDOW_S:
+            return True
+        for slot, key in enumerate(c.judges(pid)):
+            if not key or (pid, slot) in self._reported:
+                continue
+            if c.usage_of(pid, slot).receipt == v3.ZERO:
+                return False
+            self._reported.add((pid, slot))
+        return True
+
+    def _release_due(self, v: dict, sub: dict, now: int) -> bool:
+        """RaceV3.release's own gate: a counted verdict's judges paid first; then a check Panels released for good,
+        or one with a released round once `resultDays` (read once) have passed since its day."""
+        if v["pid"] and not sub["paid"]:
+            return False
+        if v["status"] == v3.RELEASED:
+            return True
+        if self._race_config is None:
+            self._race_config = self.chain.config()
+        day = (now - int(getattr(self.chain, "start", 0))) // 86_400
+        return bool(v.get("redraws")) and day >= sub["day"] + int(self._race_config.get("resultDays", 0))
+
+    def _call(self, to: str, signature: str, *args, once: bool = False, state=None,
+              gas_floor: int | None = None) -> bool:
+        """A call anyone may make. A revert means it isn't due (or someone else made it): no progress, and the call
+        waits out its backoff (`_failed`). `once`: a call that succeeds one time only (a panel's pay): not sent again
+        after it worked, or after GIVE_UP_S of refusals that aren't a gate's. `state`: what, besides the section's
+        fingerprint, restarts the backoff when it changes (the verdict's status)."""
         key = (to, signature, args)
         if once and self._settled(key):
             return False
-        try:
-            self.wallet.send(to, signature, *args)
-        except Reverted:
-            self._tries[key] = self._tries.get(key, 0) + 1
+        if not self._due(key, state):
             return False
+        self._spent += 1  # the estimate
+        try:
+            if gas_floor:
+                self.wallet.send(to, signature, *args, gas_floor=gas_floor)
+            else:
+                self.wallet.send(to, signature, *args)
+        except Reverted as e:
+            self._failed(key, e.reason, state, once=once)
+            return False
+        self._spent += KEEPER_TX_CALLS - 1
+        self._succeeded(key)
         if once:
             self._kept.add(key)
         self.log(f"keeper: {signature.split('(')[0]}({', '.join(str(a) for a in args)})")
         return True
 
     def _settled(self, key) -> bool:
-        return key in self._kept or self._tries.get(key, 0) >= GIVE_UP
+        return key in self._kept or key in self._given_up
 
-    def _keep(self, from_block: int, now: int) -> bool:
-        c, progress = self.chain, False
-        ids = {e["submission"] for e in c.committed(from_block)} | {e["submission"] for e in c.registered(from_block)}
-        block = c.block()
-        for s in sorted(ids):
-            v = c.verdict(s)
-            st = v["status"]
-            if st == v3.SEALED and block > v["seedBlock"]:
-                progress |= self._call(c.panels, "draw(uint256)", s) and self._call(c.race, "signal(uint256)", s)
-            elif st == v3.WAITING:
-                self._call(c.race, "signal(uint256)", s, once=True)  # FeesV3 counts the wait once
-                # redrawn once the registry changes or at its scheduled time (L19's RETRY_DELAY, L16's capacity hour)
-                if c.epoch() + 1 != v.get("waitEpoch", 0) or now >= v.get("retryAt", 0):
-                    progress |= self._call(c.panels, "draw(uint256)", s)
-            elif st in (v3.HELD, v3.WINDOW):
-                if st == v3.HELD and not v["challengeOpen"]:
-                    # Not while its challenge is open: before contract batch 5 Panels' startWindow then left the
-                    # window's frozen rest at 0, and the challenge's lapse or resolution resumed the window with nothing
-                    # left (#256's flake). Since batch 5 (#290) Panels refuses it then; this guard only saves the
-                    # reverting call. Held, the verdict can't be final anyway; the window starts whole once the
-                    # challenge closes.
-                    progress |= self._call(c.panels, "startWindow(uint256)", s)
-                waits = v.get("auditWaits") and c.epoch() + 1 == v.get("auditEpoch")
-                if (block > v["auditBlock"] and not waits
-                        and not (v["auditDecided"] and v["auditsDrawn"] == v["auditsDue"])):
-                    # With no auditor eligible the audits wait for the registry to change (`auditWaits`), and the
-                    # contract refuses every call until it does (#251 task 3.10); then one call re-targets and the
-                    # next draws from the new snapshot. A few tries per state of the registry, as before.
-                    tried = ("audits", s, v["auditsDrawn"], v["auditDecided"], c.epoch())
-                    if self._tries.get(tried, 0) < AUDIT_TRIES:
-                        self._tries[tried] = self._tries.get(tried, 0) + 1
-                        progress |= self._call(c.panels, "drawAudits(uint256)", s)
-                stuck = v.get("auditStuckAt", 0)
-                if (st == v3.WINDOW and stuck and not v["challengeOpen"] and v["auditsDrawn"] < v["auditsDue"]
-                        and now > stuck + self._liveness()["stuckGrace"]):
-                    # audits nobody could take for STUCK_GRACE: the round is released (L19), the audit drawn afresh
-                    progress |= self._call(c.panels, "releaseAudits(uint256)", s)
-                progress |= self._keep_challenge(s, v, block, now)
-                if (st == v3.WINDOW and now >= v["finalAt"] and not v["challengeOpen"] and v["auditDecided"]
-                        and v["auditsDone"] >= v["auditsDue"]):
-                    progress |= self._call(c.panels, "finalize(uint256)", s)
-            if st in (v3.HELD, v3.WINDOW, v3.FINAL) or (st == v3.RELEASED and v["pid"]):
-                sub = c.submission(s)
-                if not sub["paid"]:
-                    progress |= self._call(c.race, "result(uint256)", s)
-                elif st == v3.FINAL and not sub["done"]:
-                    progress |= self._call(c.race, "finish(uint256)", s)
-            if st == v3.FINAL:
-                progress |= self._merge(s)
-            if st == v3.RELEASED or (v.get("redraws") and st in (v3.SEALED, v3.WAITING)):
-                # never judged: refunded once Panels released it for good, or at the race's deadline once a round was
-                # released (L19). Before the deadline the race refuses (no progress).
-                if not c.submission(s)["done"]:
-                    progress |= self._call(c.race, "release(uint256)", s)
-        for pid in range(1, c.panel_count() + 1):
-            if ("panel", pid) not in self._kept:
-                progress |= self._keep_panel(pid, now)
-        if c.rolled() < c.current_period():
-            progress |= self._call(c.fees, "roll()")
-        return progress
+    def _due(self, key, state=None) -> bool:
+        """Whether `key`'s backoff allows a try now: none, run out, or its state fingerprint changed since."""
+        b = self._backoff.get(key)
+        if b is None:
+            return True
+        if b["fp"] != (self._fp, state):
+            del self._backoff[key]
+            return True
+        if self._now >= b["next"]:
+            return True
+        b["skipped"] += 1
+        return False
+
+    def _succeeded(self, key) -> None:
+        self._backoff.pop(key, None)
+        self._refused_since.pop(key, None)
+
+    def _failed(self, key, reason: str, state=None, once: bool = False) -> None:
+        """A refused try: the next waits min(BACKOFF_BASE_S × 2^(n-1), BACKOFF_MAX_S), n counting the refusals since
+        the fingerprint last changed; one log line, with the passes skipped in the backoff before. A refusal that
+        isn't a gate's starts GIVE_UP_S, after which a once-only call is left to others."""
+        now, fp = self._now, (self._fp, state)
+        b = self._backoff.get(key)
+        n = b["n"] + 1 if b is not None and b["fp"] == fp else 1
+        skipped = b["skipped"] if b is not None else 0
+        wait = min(BACKOFF_BASE_S * 2 ** (n - 1), BACKOFF_MAX_S)
+        self._backoff[key] = {"n": n, "next": now + wait, "fp": fp, "skipped": 0}
+        what = _what(key)
+        if str(reason).split("(")[0] not in GATED_REFUSALS:
+            first = self._refused_since.setdefault(key, now)
+            if once and now - first >= GIVE_UP_S:
+                self._given_up.add(key)
+                self._backoff.pop(key, None)
+                self.log(f"keeper: {what} refused for {(now - first) / 3600:.0f} h ({reason}); left to others")
+                return
+        self.log(f"keeper: {what} refused ({reason}); next try in {wait} s"
+                 + (f" ({skipped} pass(es) skipped before this one)" if skipped else ""))
 
     def _keep_challenge(self, s: int, v: dict, block: int, now: int) -> bool:
         """An open challenge with no panel (#251 batch 4, L25): drawn from its seed block; while it waits, drawn again
@@ -866,13 +1253,16 @@ class NodeV3(NodeV2):
                     continue
                 pay = (c.race, "payShadow(uint256,uint256)", (pid, slot))
                 if c.usage_of(pid, slot).receipt != v3.ZERO:
-                    progress |= self._call(pay[0], pay[1], pid, slot, once=True)
+                    # with at least PAY_SHADOW_GAS_FLOOR: on v3 too little gas closes the seat unpaid (#325)
+                    progress |= self._call(pay[0], pay[1], pid, slot, once=True, gas_floor=PAY_SHADOW_GAS_FLOOR)
                 owed |= not self._settled(pay) and now <= p["revealBy"] + REPORT_WINDOW_S  # its report may still come
             if p["closed"] and p["scored"] and not owed:
                 self._kept.add(("panel", pid))
             return progress
         if p["counted"]:
             if p["kind"] in (v3.AUDIT, v3.CHALLENGE):  # a race-filed challenge's panel is settled, the others paid
+                if not self._reports_in(pid, p):
+                    return False  # a seat's report may still come: the race refuses NotYet until REPORT_WINDOW (F4)
                 pay = (c.race, "payPanel(uint256)", (pid,))
                 settle = (c.race, "settleChallenge(uint256,uint256)", (p["id"], pid))
                 progress |= self._call(pay[0], pay[1], pid, once=True)
@@ -885,6 +1275,8 @@ class NodeV3(NodeV2):
         if p["closed"]:
             if p["kind"] == v3.CHALLENGE:
                 # a released challenge panel (L25): its seats that revealed with receipts are paid (deposit, pool)
+                if not self._reports_in(pid, p):
+                    return False
                 pay = (c.race, "payPanel(uint256)", (pid,))
                 progress = self._call(pay[0], pay[1], pid, once=True)
                 if pay in self._kept or self._settled(pay):
@@ -892,8 +1284,13 @@ class NodeV3(NodeV2):
                 return progress
             return False
         if p["seats"] < p["k"]:
-            if self._call(c.panels, "refill(uint256)", pid):
-                return self._call(c.race, "signal(uint256)", p["id"]) or True
+            # a replacement for a seat: Panels refuses (NotReady) while none can be drawn; a few tries per state of
+            # the registry and per capacity window (VP6), not every pass
+            tried = ("refill", pid, *self._fp[:2])
+            if self._tries.get(tried, 0) < CHALLENGE_TRIES:
+                self._tries[tried] = self._tries.get(tried, 0) + 1
+                if self._call(c.panels, "refill(uint256)", pid):
+                    return self._call(c.race, "signal(uint256)", p["id"]) or True
             if now > p["revealBy"] + self._liveness()["stuckGrace"]:
                 # replacements exhausted: the round ends, its silent seats slashed, the submission waits (L19); a
                 # challenge panel's challenge waits for a redraw, or lapses past its deadline (L25)
@@ -904,19 +1301,51 @@ class NodeV3(NodeV2):
         return False
 
     def _merge(self, s: int) -> bool:
-        """#251 L9: a claimed fix whose verdict is final moves the head (`merge`, anyone, once). A stale base reverts
-        (the winner keeps its place until the merge deadline); the keeper leaves it after GIVE_UP refusals."""
+        """#251 L9: a claimed fix whose verdict is final moves the head (`merge`, anyone, once). The keeper reads which
+        tree the merge would move the head to (the award's rebase check while it stands as a pass, #310 RB5, else the
+        fix) and calls it once both verdicts are final and that tree's base is still `Heads.head`; a stale base is
+        left for a rebase (`pofctl --v3 rebase`), with no reverting call (#314)."""
         c = self.chain
         sub = c.submission(s)
         b = sub["bounty"]
         if not b:
             return False
         bt = c.bounty(b)
-        if bt["state"] != v3.CLAIMED or bt["winner"] != s or not bt["epoch"]:
+        original = sub.get("rebaseOf") or s
+        if bt["state"] != v3.CLAIMED or bt["winner"] != original or not bt["epoch"]:
             return False
-        if c.award(b, bt["epoch"])["merged"]:
+        target, a = rebase_v3.merge_target(c, b)
+        if not target or a["sub"] != original:
+            return False
+        if target != original and (c.verdict(original)["status"] != v3.FINAL
+                                   or c.verdict(target)["status"] != v3.FINAL):
+            return False  # both verdicts final first (#310, RB5)
+        base = c.submission(target).get("base")
+        if base is not None and hasattr(c, "head") and v3.b32(base) != c.head():
+            self._say(("stale", b, target), f"bounty {b}: not merged: check {target}'s base "
+                                            f"{rebase_v3.sha_of(base)[:12]} isn't Heads.head any more; its solver (or "
+                                            f"anyone, a day after the head moved) may rebase it: pofctl --v3 rebase")
             return False
         return self._call(c.race, "merge(uint256)", b, once=True)
+
+    def _rebase_failed(self, s: int) -> bool:
+        """#310 RB5: the winning solver's own rebase check counted as a fail while its base is still the head closes the
+        award and reopens the bounty at once (`mergeExpired`, anyone). Any other ending of a rebase check only frees
+        its slot: nothing to call."""
+        c = self.chain
+        sub = c.submission(s)
+        if not sub.get("rebaseOf") or sub["outcome"] != 2:  # Outcome.Fail
+            return False
+        b = sub["bounty"]
+        bt = c.bounty(b)
+        if bt["state"] != v3.CLAIMED or not bt["epoch"]:
+            return False
+        a = c.award(b, bt["epoch"])
+        if a.get("rebase") != s or a["merged"] or a["closed"] or sub["solver"].lower() != a["winner"].lower():
+            return False
+        if not hasattr(c, "head") or v3.b32(sub["base"]) != c.head():
+            return False  # the head moved during its check: only the slot is freed
+        return self._call(c.race, "mergeExpired(uint256)", b, once=True)
 
     def _liveness(self) -> dict:
         """Panels' L19 and L16 values (read once): STUCK_GRACE, RETRY_DELAY, MAX_REDRAWS, CAP_WINDOW."""
@@ -1039,8 +1468,24 @@ def rad_node_arg(value: str, env, run=None) -> bytes:
     return key
 
 
+def check_family(chain: v3.Chain, family: str, log=print) -> None:
+    """#251 v3.1 polish VP12 (F10): a family is named `provider/line` (FAMILY_FORM, "anthropic/claude"). Another name
+    is refused unless that exact name is already priced on this deployment (live v3's `anthropic.claude`, a devnet's
+    `fake`), so a validator can't register a family that no table will ever price under that name."""
+    if FAMILY_FORM.match(family or ""):
+        return
+    if v3.name_id(family or "") in {v3.b32(f) for f in chain.priced_families()}:
+        if "." in family and "/" not in family:
+            log(f"family {family!r} is accepted because this deployment prices it; v3.1 renames it "
+                f"{family.replace('.', '/', 1)!r} (one form: provider/line)")
+        return
+    raise SetupError(f"the family {family!r} isn't in the provider/line form (lowercase, e.g. anthropic/claude: "
+                     f"{FAMILY_FORM.pattern}), and this deployment doesn't price that name")
+
+
 def register(chain: v3.Chain, keys, wallet, bond: int, store_root: Path | None = None, log=print, **what):
     """Registers this node's key as a candidate with `bond` micro-coins from the wallet's account."""
+    check_family(chain, what.get("family", ""), log)
     r, attestation = registration(chain, keys, **what)
     digest = r.digest(chain.domain())
     if digest != chain.registration_digest(r):

@@ -234,6 +234,12 @@ class Node(NodeV3):
         self.lies: set = set()
         self.mute: set = set()  # panels this node never answers on, as if it were down for them
         self.silent_on = None  # or a test of a panel id: True keeps it silent there (scenarios_v3's stuck panel)
+        self.no_report: set = set()  # (pid, its address): seals and reveals there, never reports its usage (p)
+
+    def _report(self, r, now: int, p: dict, slot: int, seat: dict) -> bool:
+        if (r.pid, self.address.lower()) in self.no_report:
+            return False
+        return super()._report(r, now, p, slot, seat)
 
     def _take(self, pid: int) -> bool:
         if pid in self.mute or (self.silent_on is not None and self.silent_on(pid)):
@@ -577,6 +583,14 @@ class Net(Run):
         if hold is not None and min(ahead) > hold:
             time.sleep(2)  # an outside validator's seat is open: wall time, not the moved clock, until it acts
             return True
+        if min(ahead) - now > 6 * HOUR and os.environ.get("POF_V3_SHOW_JUMPS"):  # a long jump, said (diagnostics)
+            vs = {s_: c.verdict(s_) for s_ in c.live}
+            shown = sorted(vs, key=lambda s_: vs[s_]["status"] == v3.FINAL)[:12]  # the ones not final first
+
+            def said(s_: int) -> str:
+                seed = f" (seed block {vs[s_]['seedBlock']})" if vs[s_]["status"] == v3.SEALED else ""
+                return f"{s_}:{v3.STATUS[vs[s_]['status']]}{seed}"
+            print(f"  jump {hours(min(ahead) - now)} at block {block}: live " + ", ".join(map(said, shown)), flush=True)
         self.warp(min(ahead) - now)
         self.jumps += 1
         return True
