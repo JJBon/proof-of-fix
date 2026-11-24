@@ -17,11 +17,51 @@ a faucet; if you run a validator, your AWS and model costs are real.
 
 | You want to… | Guide | You need |
 |---|---|---|
-| Put a bug up for fixing, and back it with test coins | [Fund an issue](guides/fund-an-issue.md) | git, Python 3.9+, Radicle 1.10.3, Foundry's `cast`, a Sepolia RPC endpoint |
+| Put a bug up for fixing, and back it with test coins | [Fund an issue](guides/fund-an-issue.md) | git, Python 3.9+, Radicle 1.10.3, Foundry's `cast`, a Sepolia RPC endpoint, 0.01 Sepolia ETH |
 | Fix a bug and get paid for it | [Submit a fix](guides/submit-a-fix.md) | the same |
-| Check other people's fixes and get paid per check | [Run a validator](guides/run-a-validator.md) | an AWS account (SEV-SNP instances), Bedrock access to a Claude model, OpenTofu, Docker |
+| Check other people's fixes and get paid per check | [Run a validator](guides/run-a-validator.md) | an AWS account (SEV-SNP instances), a Claude model on Bedrock or an Anthropic API key, OpenTofu, Docker |
 
-Any Sepolia JSON-RPC endpoint works (Infura, Alchemy or your own). Each guide starts from a clean machine.
+Each guide starts from a clean Linux machine (x86-64) once you've done [Before you start](#before-you-start).
+
+## Before you start
+
+**Tools.** git, Python 3.9 or later, curl and xz (on Debian or Ubuntu:
+`sudo apt-get install -y git python3 curl xz-utils ca-certificates`), then Radicle 1.10.3, checked against its
+SHA-256:
+
+```bash
+TAR=radicle-1.10.3-x86_64-unknown-linux-musl.tar.xz
+curl -fsSLO "https://files.radicle.dev/releases/1.10.3/$TAR"
+echo "3d78e3ffc17f9e6eca7fcd3acc439f2252060532eb457cf17f2747fed4cc6751  $TAR" | sha256sum --check   # "…: OK"
+mkdir -p ~/.radicle && tar -xJf "$TAR" -C ~/.radicle --strip-components=1
+export PATH="$HOME/.radicle/bin:$PATH"       # rad, radicle-node and git-remote-rad
+rad --version                                # rad 1.10.3 (7e1cb40…)
+```
+
+and Foundry's `cast` (the funder and the solver need it to create their key):
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash  # installs foundryup into ~/.foundry/bin
+export PATH="$HOME/.foundry/bin:$PATH"
+foundryup --install v1.8.5
+cast --version
+```
+
+Both `~/.radicle/bin` and `~/.foundry/bin` must be on your `PATH` in every shell you follow a guide in: add the two
+`export PATH=…` lines to your `~/.bashrc` (foundryup adds its own; check it's there).
+
+**A Sepolia JSON-RPC endpoint.** Any works (Infura, Alchemy or your own node). Use **your own key** or provider:
+Infura's free plan answers some calls with HTTP 429 at times (pofctl and the node retry them), and several people or
+validators on one key soon hit its daily quota. Never paste an RPC URL with a key in it into an issue.
+
+**Sepolia ETH for gas.** About 0.01 Sepolia ETH, from any Sepolia faucet, is plenty for every step of the funder's or
+the solver's guide. Each guide shows how to check it arrived.
+
+**Which code.** The repository's canonical `main` on Radicle moves only through the race (below), so it is older than
+the code the deployment runs and has neither the deployment record nor these guides. Each guide checks out the
+organiser's branch `sepolia-v3` after cloning: it holds the current code and the record
+(`contracts/deployments/sepolia-v3.json`), the same tree as the GitHub mirror's branch `snapshot`
+([github.com/JJBon/proof-of-fix](https://github.com/JJBon/proof-of-fix/tree/snapshot)).
 
 ## What to expect at launch
 
@@ -32,8 +72,8 @@ Any Sepolia JSON-RPC endpoint works (Infura, Alchemy or your own). Each guide st
   so a fix reaches `main` when it is final and merged, not when someone with commit rights pushes it.
 - **Pledges wait for 3 active solvers.** Until 3 solvers have had a fix merged, bounties are raced unfunded.
 - **The bond for a validator (250 POFTEST)** comes from the organiser, because the faucet's 20 coins every 2 hours
-  would take days: ask on a Radicle issue, as [Run a validator](guides/run-a-validator.md#33-the-signing-key-gas-and-the-bond)
-  shows.
+  would take days: ask on a Radicle issue, as
+  [Run a validator](guides/run-a-validator.md#33-the-signing-key-gas-and-the-bond) shows.
 
 ## Questions and problems
 

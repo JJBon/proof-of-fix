@@ -7,13 +7,14 @@ drawn. Everything here is on the Sepolia testnet with the project's **test coin,
 ([intended use](../../README.md#intended-use)); your AWS and model costs are real (the kit's
 [COSTS.md](../../validator-kit/COSTS.md), and its spending caps).
 
-You need: an AWS account, OpenTofu, Docker, git, Python 3.9 or later and [Radicle 1.10.3](https://radicle.xyz).
+You need: an AWS account, OpenTofu, Docker, and the tools in [Before you start](../take-part.md#before-you-start)
+(git, Python 3.9 or later and Radicle 1.10.3 on your `PATH`, your own Sepolia JSON-RPC endpoint).
 
 <!-- test: values -->
 ```bash
 export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint: Infura, Alchemy or your own>
 export RID=rad:zyZXC9NqVuse8nXdpv7iYRScDHsN           # proof-of-fix on Radicle
-export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record (RaceV3 0xD622…9829, block 12196904)
+export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record, on the branch sepolia-v3 (step 1)
 export FAMILY=anthropic.claude                       # the family the deployment seats at launch (its plan's `families`)
 ```
 
@@ -33,10 +34,29 @@ rad auth --alias "$(whoami)"                 # once: your Radicle key (it asks f
 rad node start
 ```
 
+A new node doesn't know yet which seeds hold the repository, so a plain `rad clone` stops with "no candidate seeds
+were found". Connect to the project's seed and clone from it:
+
+<!-- test: skip (the devnet's node dials its peers from the config the radicle-config step wrote) -->
+```bash
+rad node connect z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem@77.113.144.207:8776   # the project's seed
+```
+
 <!-- test: radicle-peers -->
 ```bash
-rad clone "$RID" proof-of-fix && cd proof-of-fix
+rad clone --seed z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem --timeout 2min "$RID" proof-of-fix && cd proof-of-fix
 export RAD_NODE=$(rad self --did)            # did:key:z6Mk…: your registration names it
+```
+
+The canonical `main` moves only through the race (a fix reaches it when it's final and merged), so it's older than
+the code the deployment runs and has no deployment record. Take the current code, the organiser's branch `sepolia-v3`
+(you build the validator's disk from it in step 3.1):
+
+<!-- test: skip (the devnet's repository has the program and the record on its main) -->
+```bash
+rad remote add z6Mkjgv8wBE6A963vtYC9VCBcxBPn6TBTKxjfMqgk6VFubdq --name asclepius --fetch   # the organiser's node
+git checkout -b sepolia-v3 asclepius/sepolia-v3
+ls "$RECORD"                                 # the deployment record (RaceV3 0xD622…9829, block 12196904)
 ```
 
 ## 2. Rehearse the registration on a devnet
@@ -71,15 +91,19 @@ verdicts qualify it.
 
 Your validator is the kit's host: an AMD SEV-SNP instance (c6a, m6a or r6a; `us-east-2` is the region tested) booted
 from the measured disk. The registry accepts only the disk images the deployment lists, so you build the disk from
-the deployment's own commit and check that you get its image digest. The steps below are
+the same image files as the deployment's and check that you get its image digest. The steps below are
 [`validator-kit/SEVSNP-PLAN.md`](../../validator-kit/SEVSNP-PLAN.md)'s, with Sepolia's values.
 
-### 3.1 Build the disk at the deployment's commit
+### 3.1 Build the disk on `sepolia-v3`
+
+Build it on the branch `sepolia-v3` you checked out in step 1. The record's `commit` (8946b9c…) isn't in the public
+snapshots, but the branch's image files (`oracle/`, `pof/`, `bot/`, `pofctl/`, `scripts/judge_run.py`,
+`scripts/checker-disk.sh` and `validator-kit/sevsnp/disk/`) are byte-identical to that commit's, so the build gives
+the deployed image:
 
 <!-- test: skip (builds the disk from a Debian snapshot download; task 4.9 built and checked it) -->
 ```bash
-COMMIT=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["commit"])' "$RECORD")   # 8946b9c…
-git checkout --detach "$COMMIT"
+git switch sepolia-v3 && git status --short  # on the branch, nothing changed
 scripts/checker-disk.sh --twice              # two builds without the cache must agree; no AWS
 python3 -c 'import json; print(json.load(open("validator-kit/sevsnp/out/manifest.json"))["image_digest"])'
 ```
@@ -110,11 +134,40 @@ Send that address a little Sepolia ETH from any Sepolia faucet (gas). The bond i
 model>"`, then `rad sync --announce`). The organiser sends the bond from the deployment's genesis mint and answers on
 the issue.
 
+The node's RPC endpoint should be **your own key or provider**, not one shared with other validators: Infura's free
+plan answers some calls with HTTP 429 at times (the node retries them), and several validators on one key soon hit its
+daily quota.
+
 ### 3.4 Your model
 
-Your node calls the model directly from inside the TEE, with your account's credentials: give the kit an Anthropic
-Claude model on Bedrock (`bedrock_model_arns` in your tfvars: the inference profile and its regional models) and
-accept the model's terms in the Bedrock console first (a model whose agreement isn't accepted answers 403).
+Your node calls the model directly from inside the TEE, with your own credentials, on Bedrock or on the Anthropic
+API.
+
+**Claude on Bedrock** (as step 3.5's tfvars show): `bedrock_model_arns` in your tfvars (the inference profile and
+its regional models), with the model's terms accepted in the Bedrock console first (a model whose agreement isn't
+accepted answers 403). On a new AWS account Bedrock can answer that the newest Claude models (Opus 5.5, for one) are
+"not available for this account", even after the agreement is accepted; then use the Anthropic API.
+
+**Claude on the Anthropic API:** put the API key in a Secrets Manager secret of its own, in the kit's region, as a
+plain string, and give the node its ARN (the kit reads only the secrets you list):
+
+<!-- test: skip (AWS) -->
+```hcl
+extra_secret_arns = ["<the key's secret ARN>"]      # with your RPC key's, if it has one
+node_config = {
+  # … step 3.5's settings, with these in place of the Bedrock ones:
+  ORACLE_JUDGE             = "direct:anthropic:<model id, e.g. claude-opus-5-5>"
+  ORACLE_MODEL_ALLOW       = "<the same id>"
+  MODEL_API_KEY_SECRET_ARN = "<the key's secret ARN>"
+  ORACLE_PRICE_PER_MTOK    = "<input,cached,output>"   # USD per million tokens, set above the model's list price
+}
+```
+
+`bedrock_model_arns` can then stay empty. `ORACLE_PRICE_PER_MTOK` is what the node counts each call at, so a price
+above the list price makes the caps below stop early rather than late. An Anthropic Console organisation's key works
+only once the organisation's billing is set up (prepaid credits); give the key's workspace a spend limit too, as a
+second cap behind the node's.
+
 `ORACLE_SPEND_DAILY_USD` and `ORACLE_SPEND_MONTHLY_USD` cap what your node spends; the kit's budget stops the
 instance at its limit.
 
@@ -131,7 +184,7 @@ node_config = {
   ORACLE_RACE        = "0xD622adB4CbC82fF51d5D2ddbD56681b5f2d89829"
   ORACLE_FROM_BLOCK  = "12196904"                     # the record's block: no event scan starts before it
   ORACLE_FAMILY      = "anthropic.claude"
-  ORACLE_JUDGE       = "direct:bedrock:<your model's inference profile id>"
+  ORACLE_JUDGE       = "direct:bedrock:<your model's inference profile id>"   # or the Anthropic API's (3.4)
   ORACLE_MODEL_ALLOW = "<the same id>"
   ORACLE_IMAGE       = "0xd95b0458a321963e59ab86a8575ef67dca7bdf5db55c86c3098764dc55f887d1"
   ORACLE_HOST_ID     = "aws:<your region>"
@@ -148,7 +201,8 @@ node_command = "register --bond 250 --proof tee --tee-type amd-sev-snp --level A
 
 Apply with `power_off=false` and read the console: `registered 0x… as a candidate (…, Radicle node did:key:z6Mk…)`.
 A provider that limits `eth_getLogs` ranges (Alchemy's free plan: 10 blocks) needs `ORACLE_LOG_RANGE` set to its
-limit; Infura's free plan answers some calls with HTTP 429 at times, which the node retries.
+limit; Infura's free plan answers some calls with HTTP 429 at times, which the node retries (and a key shared by
+several validators runs out of its daily quota: step 3.3).
 
 ### 3.6 Run
 

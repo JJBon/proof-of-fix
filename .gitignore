@@ -105,3 +105,5 @@ __pycache__/
 # The measured checker disk's build output (scripts/checker-disk.sh, #251 L21): disk.raw is GiBs; the manifest is
 # what a release records.
 /validator-kit/sevsnp/out/
+# pofctl's config in a checkout (docs/guides/: the record's and the keystore's paths, no secret), #251 task 5.7.
+/pofctl.json
