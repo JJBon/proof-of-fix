@@ -371,7 +371,10 @@ contract DeploySepoliaScript is Script {
         for (uint256 i; i < p.families.length; ++i) {
             g.tokens[i] = [uint256(4_000_000), 200_000, 20_000_000];
         }
-        g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 50_000, 1 gwei);
+        // v3.1 (VP13, F11): `gasOverhead` 500,000, the measured k = 1 tail (480,361 of 698,932) rounded up, so a
+        // result's relay is repaid about 103 % at k = 1; `gasAllowance` 1M and `maxGasPrice` 1 gwei as v3 (the
+        // deposit's gas line stays 1M x 1 gwei). scripts/deploy_sepolia.py reads the three back from the record.
+        g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 500_000, 1 gwei);
         g.repo = p.repo;
         // The time limit is the whole check's, and each of its two runs gets half (#251 L22): 2,400 s gives each run
         // 1,200 s, about 2.3 times the 513 s one run of proof-of-fix's suite took in the sandbox (1 vCPU, 2026-11-19),
@@ -397,7 +400,8 @@ contract DeploySepoliaScript is Script {
         c.finderFeeBps = 1_765;
         c.idleDays = 28;
         c.resultDays = 7;
-        c.mergeDays = 14;
+        c.mergeDays = 3; // v3.1 (#310, O4, the owner 2026-11-23): a stale winner is rebased in place, so the deadline
+        // only bounds one nobody rebases or merges; every passing rebase gets mergeDays after its own finality
         c.releaseEveryDays = 7;
         c.instalments = 4;
         c.judgeFee = JUDGES_FEE;

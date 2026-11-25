@@ -1,0 +1,69 @@
+{
+  "format": "pof-external-run/1",
+  "mode": "aws",
+  "result": "passed",
+  "chainId": 31337,
+  "race": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "registry": "0xaF79b9F48d2939529B9Eae7aBd0B8D3440807E40",
+  "windowsKind": "production",
+  "acceptedImages": [
+    "0x4d5decb4510662eeec5233e778a24db2fb19026fdc18e88476409b7f4b099a8b",
+    "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a"
+  ],
+  "rid": "rad:z28TLjwqZe1x3sZpPVf1EHtfVMhUG",
+  "seed": "z6MkvMmB3GF13E3nHJTyQr9Ki4ZHB3SfkBfwL389QUR5frtz@10.82.0.145:8776",
+  "rpc": "http://10.82.0.145:8545",
+  "registration": {
+    "key": "0x6C423661490653b44d02B2F298A99252F4423045",
+    "proofType": "tee",
+    "teeType": "amd-sev-snp",
+    "image": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+    "family": "anthropic/claude",
+    "level": 1,
+    "attestation": "0x01ab1c6c266c2b9a1495044830619c2eb9b374dcbe60989adb19de3379d266b1",
+    "bond": 250000000,
+    "radNode": "z6MkvmUFxbiDzS5BeoNxXPyePVs8z3B3o8KXEq4Q2Gk5NqCw",
+    "waitedSeconds": 128
+  },
+  "qualification": {
+    "checks": 12,
+    "seats": 29,
+    "revealed": 24,
+    "wallSeconds": 287,
+    "holds": 40
+  },
+  "judged": {
+    "submission": 62,
+    "bounty": 1,
+    "fix": "abd21a9d54f33d70745e657a2745d036a5ad819a",
+    "patch": "b58356386a86d9cf95a4bfb38ad653b9553c6c82",
+    "pid": 181,
+    "slot": 0,
+    "kind": "Counted",
+    "sealed": true,
+    "revealed": true,
+    "counted": true,
+    "receipted": true,
+    "pass": true,
+    "status": "Window",
+    "wallSeconds": 4,
+    "holds": 41
+  },
+  "drawDuty": {
+    "check": 63,
+    "starts": 1,
+    "drawnBy": "0x6c423661490653b44d02b2f298a99252f4423045",
+    "tries": 1
+  },
+  "results": {
+    "S": "PASS",
+    "X": "PASS",
+    "Q": "PASS",
+    "F": "PASS",
+    "D": "PASS",
+    "R": "PASS",
+    "I": "PASS"
+  },
+  "wallSeconds": 757,
+  "commit": "6f23f52e8114e514056c89dfc9022ec3300726cf"
+}

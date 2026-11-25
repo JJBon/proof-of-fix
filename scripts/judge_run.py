@@ -6,7 +6,8 @@ data/judges/cases.jsonl (built by scripts/judge-set.sh), stores the verdicts, an
     fake                 run the whole pipeline with pof.judges.fake (no model, no cost) into data/judges/fake/
     run --execute        THE PAID RUN. Only with the owner's approval of the plan: the environment variable
                          POF_JUDGE_RUN_APPROVED must equal the plan's hash, and the estimate must fit --max-usd.
-                         Every call goes through the owner's model gateway (MODEL_GATEWAY_URL, agentcore#90) as
+                         Every call goes through the owner's model gateway (MODEL_GATEWAY_URL, agentcore#90; no
+                         default: unset, the run stops before anything else) as
                          the judges caller pof-judges-models, whose token budget the gateway enforces. Hard
                          limits here too: before each call, the running total plus that call's worst case must
                          fit --max-tokens and --max-usd, or the run stops. Resumable.
@@ -52,8 +53,8 @@ PLAN = ROOT / "reports" / "judges-v1.plan.json"
 PLAN_V2 = Path(os.environ.get("POF_JUDGES_PLAN_V2") or ROOT / "reports" / "judges-v2.plan.json")
 BACKOFF = float(os.environ.get("POF_JUDGE_BACKOFF", "5"))  # seconds: retries wait BACKOFF x 1, 2, 4, 8
 HTTP_TIMEOUT = float(os.environ.get("POF_JUDGE_HTTP_TIMEOUT", "600"))
-GATEWAY = "https://models-xxtlwrjxy7.gateway.bedrock-agentcore.us-east-1.amazonaws.com/inference"
-CLIENT_ID = "pof-judges-models"  # the gateway's judges caller (platform#192), with its own token budget
+GATEWAY_VARIABLE = "MODEL_GATEWAY_URL"  # the gateway's inference URL: required, no default (v3.1 polish VP25)
+CLIENT_ID = "pof-judges-models"  # the gateway's caller for the judges, with its own token budget
 TOKEN_HELPER = Path(os.environ.get("MODEL_GATEWAY_TOKEN_HELPER")
                     or Path.home() / "dev" / "agentcore" / "scripts" / "model-gateway-token.sh")
 
@@ -343,7 +344,19 @@ def answerer(gateway: Gateway, limits: Limits, sleep=time.sleep):
     return answer
 
 
+def gateway_url() -> str:
+    """The model gateway's inference URL, from MODEL_GATEWAY_URL. It has no default (v3.1 polish VP25: no internal
+    host name in this file, which the checker image carries verbatim), so a paid run without it stops here, first,
+    with this one message and nothing else printed or sent."""
+    url = os.environ.get(GATEWAY_VARIABLE, "").strip()
+    if not url:
+        raise SystemExit(f"{GATEWAY_VARIABLE} is not set: the paid run calls the model gateway at that URL (its "
+                         f"/inference endpoint) and has no default. Nothing was sent.")
+    return url
+
+
 def cmd_run(a) -> int:
+    url = gateway_url()
     plan = json.loads(PLAN.read_text(encoding="utf-8"))
     current = make_plan(load_cases())
     refusal = approval(plan["hash"], current["hash"], os.environ.get("POF_JUDGE_RUN_APPROVED"))
@@ -355,7 +368,7 @@ def cmd_run(a) -> int:
         raise SystemExit(f"estimate ${estimate:.2f} is over --max-usd {a.max_usd}")
     out = DATA / "verdicts"
     limits = Limits(a.max_tokens, a.max_usd, *prior_spend(out, families))
-    gateway = Gateway(os.environ.get("MODEL_GATEWAY_URL", GATEWAY), gateway_token())
+    gateway = Gateway(url, gateway_token())
     try:
         judge(out, families, answerer(gateway, limits))
     except Stop as e:
@@ -594,6 +607,7 @@ def cmd_fake_v2(a) -> int:
 
 
 def cmd_run_v2(a) -> int:
+    url = gateway_url()
     plan = json.loads(PLAN_V2.read_text(encoding="utf-8"))
     sets = load_sets()
     current = PR.make_plan(sets, (plan["design"]["design"], plan["design"]["h3"]))
@@ -606,7 +620,7 @@ def cmd_run_v2(a) -> int:
     out = DATA / "verdicts-v2"
     seats = PR.all_seats(PR.H3_ADDS[plan["design"]["h3"]])
     limits = Limits(a.max_tokens, a.max_usd, *prior_spend_v2(out, list(seats)))
-    gateway = Gateway(os.environ.get("MODEL_GATEWAY_URL", GATEWAY), gateway_token(TOKEN_HELPER))
+    gateway = Gateway(url, gateway_token(TOKEN_HELPER))
     answer = answerer_v2(gateway, limits, seats)
     try:
         smoke = out / "smoke"

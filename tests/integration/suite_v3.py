@@ -82,7 +82,7 @@ from oracle.transport import OnchainExchange  # noqa: E402
 from panel import PanelV3  # noqa: E402
 
 TEES = ("intel-tdx", "amd-sev-snp", "aws-nitro-enclaves")  # spread, so the TEE-type cap lets k = 5 and 7 fill
-FAMILIES = ["fake"] + [f"fake-{i}" for i in range(1, 9)]  # one family per validator: the family cap allows 1 at k = 3
+FAMILIES = ["fake"] + [f"fake-{i}" for i in range(1, 10)]  # one family per validator: the family cap allows 1 at k = 3
 HOUR, DAY, WEEK = 3600, 86400, 7 * 86400
 REPORT_WINDOW = 86400
 WON, CLAIMED, OPEN = 2, 3, 1  # RaceV3Base.State ("Merged": claimed; the head moves at finality, #251 L9)
@@ -234,6 +234,12 @@ class Node(NodeV3):
         self.lies: set = set()
         self.mute: set = set()  # panels this node never answers on, as if it were down for them
         self.silent_on = None  # or a test of a panel id: True keeps it silent there (scenarios_v3's stuck panel)
+        self.no_report: set = set()  # (pid, its address): seals and reveals there, never reports its usage (p)
+
+    def _report(self, r, now: int, p: dict, slot: int, seat: dict) -> bool:
+        if (r.pid, self.address.lower()) in self.no_report:
+            return False
+        return super()._report(r, now, p, slot, seat)
 
     def _take(self, pid: int) -> bool:
         if pid in self.mute or (self.silent_on is not None and self.silent_on(pid)):
@@ -278,6 +284,7 @@ class Net(Run):
         self.jumps = 0
         self.pokes = 0
         self.live_values: dict | None = None  # Panels' L19 values, read once (jump)
+        self.scores: str | None = None  # PanelScores' address, read once (`seated`)
         self.names: dict = {}
         self.next_index = 1
         self.rad_nodes: dict = {}  # name -> its Radicle node key (32 bytes); the spike sets its nodes' real keys
@@ -351,12 +358,22 @@ class Net(Run):
         return f"v{self.next_index - 1}"
 
     def outside(self, s: int) -> list:
-        """The active validators that could judge a challenge of `s`: not on its counted panel, not its auditors."""
+        """The active validators that could judge a challenge of `s`: of a seated family, not on its counted panel,
+        not its auditors."""
         inside = {k.lower() for k in self.panel.drawn(s)}
         for pid, _, _ in panels_of(self, s, v3.AUDIT):  # every auditor ever seated, a replaced one too: all sit out
             inside |= {"0x" + log["topics"][2][-40:].lower() for log in self.evs(self.chain.panels, v3.SEATED, pid)}
         return [name for name, node in self.nodes.items()
-                if self.drawable(node.address) and node.address.lower() not in inside]
+                if node.address.lower() not in inside and self.drawable(node.address) and self.seated(node.address)]
+
+    def seated(self, key: str) -> bool:
+        """`key`'s family is seated (PanelScores: not barred by its score, not a contender, #132 D20): only then is it
+        drawn for a counted or challenge panel (PanelsDraw.fill, `isSeatedSince`). The registry's `isDrawable`
+        doesn't know scores: a barred family's validators judge only as shadows until a block of its shadow verdicts
+        recovers it (#339: step 7 bars the genesis validator's family)."""
+        if self.scores is None:
+            self.scores = self.rpc.view(self.chain.panels, "scores()", ["address"])[0]
+        return self.rpc.view(self.scores, "isSeated(bytes32)", ["bool"], self.chain.validator(key)["family"])[0]
 
     def watch(self, watcher, s: int) -> None:
         """`watcher` re-files `s`'s challenge after a lapse (`rechallenge`), and the clock stops LAST_CALL before
@@ -552,6 +569,8 @@ class Net(Run):
                     targets.append(v["challengeRetryAt"])  # a waiting challenge's scheduled redraw (L25)
             if st == v3.WAITING and v["retryAt"]:
                 targets.append(v["retryAt"])  # its scheduled redraw (L19's RETRY_DELAY, L16's capacity hour)
+            if st in (v3.HELD, v3.WINDOW) and v.get("auditWaits") and v["auditsDrawn"] < v["auditsDue"]:
+                targets.append(v["retryAt"])  # waiting audits' scheduled retry (#336, RETRY_DELAY)
             if st == v3.WINDOW and v["auditStuckAt"] and v["auditsDrawn"] < v["auditsDue"]:
                 targets.append(v["auditStuckAt"] + grace + 1)  # audits nobody can take: released then (L19)
             if v["status"] == v3.WINDOW and not v["challengeOpen"]:
@@ -577,6 +596,14 @@ class Net(Run):
         if hold is not None and min(ahead) > hold:
             time.sleep(2)  # an outside validator's seat is open: wall time, not the moved clock, until it acts
             return True
+        if min(ahead) - now > 6 * HOUR and os.environ.get("POF_V3_SHOW_JUMPS"):  # a long jump, said (diagnostics)
+            vs = {s_: c.verdict(s_) for s_ in c.live}
+            shown = sorted(vs, key=lambda s_: vs[s_]["status"] == v3.FINAL)[:12]  # the ones not final first
+
+            def said(s_: int) -> str:
+                seed = f" (seed block {vs[s_]['seedBlock']})" if vs[s_]["status"] == v3.SEALED else ""
+                return f"{s_}:{v3.STATUS[vs[s_]['status']]}{seed}"
+            print(f"  jump {hours(min(ahead) - now)} at block {block}: live " + ", ".join(map(said, shown)), flush=True)
         self.warp(min(ahead) - now)
         self.jumps += 1
         return True
@@ -1146,11 +1173,24 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
         # #251 L25: a challenge is judged by CHALLENGE_DEADLINE or lapses, the wrong pass standing; before batch 4 this
         # fix's challenge waited, its window frozen, while validators qualified for a fresh panel of 5. So the network
         # that can draw that panel is grown first: every validator qualified, only four bonded for the bounty (a panel
-        # of 3 from them, of which three lie); the others top up once it's claimed and challenged.
-        while n.next_index <= 8:
+        # of 3 from them, of which three lie); the others top up once it's claimed and challenged. That panel needs
+        # five validators of seated families outside the panel of 3 (at worst the three liars) and its random audit
+        # (AUDIT_RATE_BPS: one verdict of 3 in ten), so six beside the liars. Step 7 bars the genesis validator's
+        # family until a block of its shadow verdicts recovers it (`seated`): with it still barred and an audit drawn
+        # from the five others, four were left and the challenge lapsed MAX_REDRAWS times, never judged (#339). So
+        # one more validator qualifies while the genesis one's family is barred.
+        def room() -> int:
+            return sum(1 for name, node in n.nodes.items()
+                       if name not in ("v1", "v2", "v3") and n.drawable(node.address) and n.seated(node.address))
+
+        while n.next_index <= 8 or (room() < 6 and n.next_index < len(FAMILIES)):
             extra = n.join_next()
             made = n.grow([extra], 12, f"{extra} qualifies")
             print(f"    ({extra} registered and qualified after {made} more checks)", flush=True)
+        barred_now = not n.seated(genesis.address)
+        check(room() >= 6, f"six validators of seated families beside v1, v2 and v3 (the genesis validator's family "
+                           f"{'still barred: one more qualified' if barred_now else 'seated again'}), for a fresh "
+                           f"panel of 5 outside the panel of 3 and a random audit of it")
         for name in ("v1", "v2", "v3"):  # bonded for the bounty, as in step 3 (a silence may have cost one 5.00)
             n.top_up(name, n.bond_for(85 * COIN))
         # on the good fix, as a solver building on a pending fix would: the good fix's merge at its finality moves the
@@ -1180,7 +1220,7 @@ def run(rpc: Rpc, record: dict, work: Path, heal: bool, verbose: bool, report: s
               "the check and challenged it inside its window")
         n.drive(lambda: not c.verdict(s_h)["challengeOpen"]
                 and n.evs(c.race, "ChallengeSettled(uint256,uint256,bool)", s_h) != [],
-                "the fix's challenge judged and settled", poke=True)
+                "the fix's challenge judged and settled", poke=True, explain=(s_h,))
         hh = heal_times(n, s_h)
         resolved = n.evs(c.panels, "ChallengeResolved(uint256,uint256,bool,bool,bool)", s_h)[-1]
         upheld, now_pass, false_receipt = abi.decode(["bool", "bool", "bool"], abi.hexdata(resolved["data"]))

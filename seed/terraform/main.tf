@@ -46,7 +46,7 @@ resource "aws_iam_role" "seed" {
 }
 
 # A shell through Session Manager, with no SSH and no inbound port: the agent's registration and its channels, nothing
-# else (narrower than AmazonSSMManagedInstanceCore). The seed reads no secret and calls no other AWS API.
+# else (narrower than AmazonSSMManagedInstanceCore). The seed itself reads no secret; the keeper's two are below.
 data "aws_iam_policy_document" "ssm" {
   statement {
     sid       = "SessionManagerOnly"
@@ -60,6 +60,25 @@ resource "aws_iam_role_policy" "ssm" {
   name   = "session-manager"
   role   = aws_iam_role.seed.id
   policy = data.aws_iam_policy_document.ssm.json
+}
+
+# The keeper (owner's approval, 2026-11-23): a keeper-only v3 node on this host (oracle/keeper.py, run as the
+# pof-keeper systemd unit) reads its account's key and the chain's RPC URL from Secrets Manager with this role. Exactly
+# the listed secrets, GetSecretValue only (both are under the account's default aws/secretsmanager key). Empty: none.
+data "aws_iam_policy_document" "keeper" {
+  count = length(var.keeper_secret_arns) > 0 ? 1 : 0
+  statement {
+    sid       = "KeeperSecrets"
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = var.keeper_secret_arns
+  }
+}
+
+resource "aws_iam_role_policy" "keeper" {
+  count  = length(var.keeper_secret_arns) > 0 ? 1 : 0
+  name   = "keeper-secrets"
+  role   = aws_iam_role.seed.id
+  policy = data.aws_iam_policy_document.keeper[0].json
 }
 
 resource "aws_iam_instance_profile" "seed" {

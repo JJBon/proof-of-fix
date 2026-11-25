@@ -162,6 +162,14 @@ class Paid(unittest.TestCase):
         self.assertIn("not approved", p.stderr)
         self.assertEqual(self.stub.log, [])
 
+    def test_without_model_gateway_url_it_stops_first(self):
+        del self.env["MODEL_GATEWAY_URL"]
+        p = self.cli("run", "--execute", "--max-usd", "5", approved=self.hash)
+        self.assertEqual((p.returncode, p.stdout), (1, ""))
+        self.assertIn("MODEL_GATEWAY_URL is not set", p.stderr)
+        self.assertEqual(self.stub.log, [])
+        self.assertFalse(self.out.exists())
+
     def test_runs_stops_on_budget_resumes_and_reports(self):
         p = self.cli("run", "--execute", "--max-usd", "0.06", approved=self.hash)
         self.assertEqual(p.returncode, 3, p.stderr)

@@ -1,0 +1,22 @@
+# An example of the seed's variables (seed/README.md). Copy it to seed.tfvars (git-ignored, with *.tfstate*) and fill
+# in your own values; never commit the copy.
+#
+#   cp seed.tfvars.example seed.tfvars
+#   tofu plan -var-file=seed.tfvars          # read the plan before every apply
+#
+# WARNING: create_instance defaults to false. Once the seed runs, a plan or apply without create_instance = true
+# DESTROYS the instance, its data volume (the seed's Radicle key: a new one is a new Node ID) and its Elastic IP (its
+# address). Keep both lines below in this file.
+create_instance = true
+ssm_access      = true
+
+publication_record = "/path/to/radicle-publication.json" # task 6.2's record (pof-radicle-publication/1)
+budget_emails      = ["you@example.org"]
+# budget_limit_usd = 15
+
+# The keeper on this host (oracle/keeper.py as the pof-keeper unit): exactly these secrets, GetSecretValue only. Its
+# account's key and its own RPC URL, as full Secrets Manager ARNs with their random suffix. Empty: no keeper policy.
+# keeper_secret_arns = [
+#   "arn:aws:secretsmanager:us-east-2:<account-id>:secret:pof-seed/keeper-key-AbCdEf",
+#   "arn:aws:secretsmanager:us-east-2:<account-id>:secret:pof-seed/keeper-rpc-url-AbCdEf",
+# ]

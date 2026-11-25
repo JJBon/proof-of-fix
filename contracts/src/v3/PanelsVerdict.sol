@@ -61,6 +61,10 @@ library PanelsVerdict {
             }
             return;
         }
+        // #311 (design E3): the shadows drawn while it waited can't seal from now on (not even in this block),
+        // since the counted panel's reveal could open before their window ends; those that hadn't sealed count no miss
+        Panel storage w = st.panels[s.shadowPid];
+        if (w.sealBy >= block.timestamp) w.sealBy = uint64(block.timestamp - 1);
         (uint256 pid, Panel storage p) = PanelsBase.newPanel(st, e, id, Kind.Counted, seed, k, 0, s.snap, c.counter);
         for (uint256 i; i < k; ++i) {
             PanelsBase.seat(st, e, pid, p, i, c.members[i].key, c.members[i].level);
@@ -75,15 +79,17 @@ library PanelsVerdict {
 
     /// #251 task 3.10 (open problems 7.5): repeat calls are refused. A draw that finds no auditor re-targets (a fresh
     /// audit block and snapshot) only if the registry changed since its snapshot was taken (`auditEpoch`); otherwise the
-    /// audits wait (`auditWaits`), and every call is refused until the registry changes, as a waiting submission's
-    /// `draw` and a waiting challenge's `drawChallenge` are. Then one call re-targets and the next, from the new audit
-    /// block, draws. So nobody can roll fresh audit blocks at will.
+    /// audits wait (`auditWaits`), and every call is refused until the registry changes or their retry time
+    /// (`retryAt`, RETRY_DELAY later; #336: un-pausing doesn't change the registry), as a waiting submission's `draw`
+    /// and a waiting challenge's `drawChallenge` are. Then one call re-targets and the next, from the new audit block,
+    /// draws. So nobody can roll fresh audit blocks at will: at most one a RETRY_DELAY while nobody can audit.
     function drawAudits(Store storage st, Env memory e, uint256 id) external {
         Submission storage s = st.subs[id];
         if (s.status != Status.Held && s.status != Status.Window) revert WrongStatus();
         if (s.auditDecided && s.auditsDrawn == s.auditsDue) revert NothingDue();
         if (s.auditWaits) {
-            if (e.reg.epoch() + 1 == s.auditEpoch) revert NothingChanged();
+            // #336: or at their retry time (RETRY_DELAY; `retryAt` is free once the submission is drawn), as L19
+            if (e.reg.epoch() + 1 == s.auditEpoch && block.timestamp < s.retryAt) revert NothingChanged();
             s.auditWaits = false;
             return _retargetAudits(e, id, s);
         }
@@ -117,6 +123,7 @@ library PanelsVerdict {
             if (full) return; // busy auditors: retried from the same audit block once they have room (L16)
             if (e.reg.epoch() + 1 == s.auditEpoch) {
                 s.auditWaits = true; // no auditor in a snapshot of the registry as it is: wait for it to change
+                s.retryAt = uint64(block.timestamp + e.retryDelay);
                 emit AuditWaits(id, s.auditBlock);
                 return;
             }
@@ -439,6 +446,7 @@ library PanelsVerdict {
         );
         if (unpriced != address(0)) PanelsBase.announce(e, unpriced);
         if (keys.length == 0) return;
+        // the timeline is set here once and never reset (#311: `_settleShadows` reads an early close from it)
         (uint256 spid, Panel storage p) =
             PanelsBase.newPanel(st, e, id, Kind.Shadow, seed, keys.length, countedPid, s.snap, 0);
         p.sealBy = uint64(sealBy);
@@ -459,8 +467,12 @@ library PanelsVerdict {
         if (!p.closed) {
             p.closed = true;
             changed = true;
+            // #311 (design E4): a waiting panel whose seal window the counted draw closed early (shadow timelines are
+            // set once, revealBy = sealBy + REVEAL_WINDOW, and never reset): its seats that hadn't sealed count no draw
+            bool cut = p.sealBy + e.reveal < p.revealBy;
             for (uint256 i; i < n; ++i) {
                 Seat storage x = st.seats[spid][i];
+                if (cut && !x.hasSeal) continue;
                 e.reg.recordShadow(x.key, x.revealed && x.receipted);
             }
         }

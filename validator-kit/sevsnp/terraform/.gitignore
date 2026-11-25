@@ -2,3 +2,9 @@
 .build/
 *.tfstate*
 *.tfvars
+# Copies and saved plans hold the same values (keys in URLs, ARNs): test.tfvars.live, rc3.plan, rc3.plan.txt, ...
+*.tfvars.*
+!*.tfvars.example
+*.plan
+*.plan.txt
+*.apply.txt

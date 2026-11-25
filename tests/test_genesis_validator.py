@@ -82,7 +82,7 @@ class Work(unittest.TestCase):
             shutil.copy(EVIDENCE / name, self.tmp / name)
         self.plan = self.tmp / "plan.json"
         self.plan.write_text(json.dumps({"rid": "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5", "genesisHead": "1" * 40,
-                                         "families": ["anthropic.claude"], "teeTypes": ["amd-sev-snp"],
+                                         "families": ["anthropic/claude"], "teeTypes": ["amd-sev-snp"],
                                          "images": [IMAGE]}), encoding="utf-8")
 
     def fields_args(self, *extra):
@@ -539,6 +539,10 @@ class TheAwsSecret(unittest.TestCase):
                                  "signing_key_secret_arn"]])
         a = gv.parser().parse_args(["new-key", "--secret-arn", "x"])
         self.assertEqual(gv.secret_arn(a, runner), "x")
+        # another validator's kit: its own state directory, never the genesis kit's secret by default
+        a = gv.parser().parse_args(["new-key", "--kit-dir", "/srv/validators/v2"])
+        self.assertEqual(gv.secret_arn(a, runner), ARN)
+        self.assertEqual(seen[-1], ["tofu", "-chdir=/srv/validators/v2", "output", "-raw", "signing_key_secret_arn"])
 
         def failing(cmd, **kw):
             return mock.Mock(returncode=1, stdout="", stderr="no state")

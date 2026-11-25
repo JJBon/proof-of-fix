@@ -6,7 +6,9 @@ Run it as scripts/deploy-sepolia.sh. It is a dry run unless given `--broadcast-s
     scripts/deploy-sepolia.sh hashes          each contract's creation-code hash, for a release-candidate record
 
 Before anything is signed, in this order, and stopping at the first refusal (exit 2) with nothing sent:
-1. the plan (the RID, the genesis head, the genesis validator, the families, TEE types and images) is well formed,
+1. the plan (the RID, the genesis head, the genesis validator, the families, TEE types and images, and on a remote
+   endpoint the keeper) is well formed, each family in the `provider/line` form (`anthropic/claude`; only live v3's
+   committed plan keeps its dotted `anthropic.claude`, v3.1 polish VP12),
    the genesis validator's Radicle node (`--genesis-rad-node`, a did:key or 0x and 64 hex digits, never zero) is
    well formed, and a test key (`--dev-key`, `--genesis-dev-key`) is given only for a local endpoint;
 2. the endpoint's chain id (`eth_chainId`, the only call made before the checks pass): 11155111 goes on; 31337 and
@@ -23,7 +25,7 @@ Only then, and only with `--broadcast-sepolia`, forge broadcasts; the wrapper ch
 has code, that the race reports the chain id, and that Panels reads back the panel rules asked for. The record (chain id, addresses, every constructor argument, the
 deployer, the bytecode hashes, the limit of the binding; plus Panels' linked libraries, which forge deploys through the
 CREATE2 deployer at addresses that follow from their code, the release candidate, the commit and the genesis-head
-check) is written under contracts/deployments: `sepolia-v3.json` on Sepolia, `sepolia-local/chain-<id>.json` on a
+check, and the plan's keeper) is written under contracts/deployments: `sepolia-v3.json` on Sepolia, `sepolia-local/chain-<id>.json` on a
 local endpoint, `.dry-run.json` for a dry run.
 
 The fee coin (design L17, amended by the owner on 2026-11-20): the deployment brings its own, on Sepolia and on the
@@ -94,13 +96,22 @@ hashes, the integration runs and `productionWindows`; the items it can't check s
 "passed", if it names other contracts, or if its commit isn't this checkout's HEAD or an ancestor of it; forge then
 refuses any contract whose hash differs, so a change after the run means a new release candidate.
 
-The plan (task 7.1 prepares it):
+The plan (task 7.1 prepares it; the v3.1 plan, contracts/deployments/sepolia-v3.1.plan.json, from this template):
 
     {"rid": "rad:z…", "genesisHead": "<40-hex SHA-1: Radicle main now>",
-     "families": ["<the genesis validator's family>", …], "teeTypes": ["amd-sev-snp", …], "images": ["0x<digest>", …],
+     "families": ["anthropic/claude", …],                  # provider/line; the first is the genesis validator's
+     "teeTypes": ["amd-sev-snp", …], "images": ["0x<digest>", …],
      "genesisValidator": {"key": "0x…", "operator": "0x…", "teeType": "amd-sev-snp", "level": 1,
                           "attestation": "0x<hash>", "image": "0x<digest>", "host": "0x<hash>", "firmware": 0,
-                          "signature": "0x<65 bytes, over GENESIS_DIGEST>"}}
+                          "signature": "0x<65 bytes, over GENESIS_DIGEST>"},
+     "keeper": {"address": "0x<the seed host's keeper account>",          # launch infrastructure (v3.1 polish VP16)
+                "role": "the seed host's keeper-only node",
+                "cost": "about $0 (it runs on the seed's existing instance) plus Sepolia gas, about 1.5-2M gas a …"}}
+
+The keeper is required on a remote endpoint (live v3's plan predates it) and copied into the record as `keeper`. The
+record's values that the forge script fixes and the wrapper reads back before writing the record: FeesV3's repayment
+caps (`gasAllowance` 1,000,000, `gasOverhead` 500,000, `maxGasPrice` 1 gwei; VP13) and RaceV3's `mergeDays` 3 (#310,
+O4).
 """
 
 from __future__ import annotations
@@ -148,6 +159,22 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 B32_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
 NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+# A model family is `provider/line` (v3.1 polish VP12, #132's admission spec, the node's LIST_NAMES): `anthropic/claude`.
+FAMILY_RE = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9.-]*$")
+FAMILY_FORM = "provider/line, e.g. anthropic/claude (^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9.-]*$)"
+# Live v3's committed plan seats the dotted `anthropic.claude` (its record is history): that plan alone, named by its
+# RID and genesis head, keeps its family as it is. Every other plan (v3.1's included) names `provider/line`.
+V3_PLAN = ROOT / "contracts" / "deployments" / "sepolia-v3.plan.json"
+# FeesV3's repayment caps as DeploySepolia.s.sol sets them (v3.1 polish VP13, F11): checked in the record before it is
+# written. `gasOverhead` 500,000 (the measured k = 1 tail rounded up), `gasAllowance` 1M and `maxGasPrice` 1 gwei
+# unchanged from v3, so the deposit's gas line stays 1M x 1 gwei.
+REPAYMENT = {"gasAllowance": 1_000_000, "gasOverhead": 500_000, "maxGasPrice": 1_000_000_000}
+MERGE_DAYS = 3  # RaceV3's mergeDays in DeploySepolia.s.sol (#310, O4): checked in the record too
+# The seed host's keeper as launch infrastructure (v3.1 polish VP16, the owner's Q1, 2026-11-23): the plan's `keeper`,
+# copied into the record. Required on a remote endpoint for any plan but v3's (which predates it).
+KEEPER_ROLE = "the seed host's keeper-only node"
+KEEPER_COST = ("about $0 (it runs on the seed's existing instance) plus Sepolia gas, about 1.5-2M gas a check "
+               "(at about 20 wei a gas, effectively nothing); the watchers' draw duty stays on as the fallback")
 REFUSED = 2
 
 
@@ -315,7 +342,47 @@ def _names(v, what: str) -> list:
     return v
 
 
-def load_plan(path: str, genesis_key: int | None) -> dict:
+def is_v3_plan(plan: dict) -> bool:
+    """Whether this is live v3's committed plan (its RID and genesis head): the one plan that keeps the dotted family
+    and has no keeper (it predates VP12 and VP16)."""
+    try:
+        v3 = json.loads(V3_PLAN.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return (plan.get("rid"), str(plan.get("genesisHead", "")).lower()) == (v3.get("rid"), v3.get("genesisHead"))
+
+
+def _families(plan: dict) -> list:
+    v = plan.get("families")
+    if not isinstance(v, list) or not v or not all(isinstance(n, str) for n in v):
+        raise Refused("the plan's families must be a nonempty list of names")
+    if len(set(v)) != len(v):
+        raise Refused("the plan's families repeat a name")
+    if is_v3_plan(plan):
+        return _names(v, "families")
+    for n in v:
+        if not FAMILY_RE.match(n):
+            raise Refused(f"the plan's family {n!r} isn't in the form {FAMILY_FORM}")
+    return v
+
+
+def _keeper(plan: dict, required: bool) -> dict | None:
+    """The plan's `keeper` (VP16): the seed host's keeper account, its role and its cost line."""
+    k = plan.get("keeper")
+    if k is None:
+        if required and not is_v3_plan(plan):
+            raise Refused(f"the plan names no keeper: a Sepolia plan names {KEEPER_ROLE} (keeper: address, role, cost)")
+        return None
+    if not isinstance(k, dict):
+        raise Refused("the plan's keeper must be an object (address, role, cost)")
+    _addr(k.get("address"), "keeper.address")
+    for field in ("role", "cost"):
+        if not isinstance(k.get(field), str) or not k[field].strip():
+            raise Refused(f"the plan's keeper.{field} must be a nonempty text")
+    return {"address": k["address"], "role": k["role"], "cost": k["cost"]}
+
+
+def load_plan(path: str, genesis_key: int | None, sepolia: bool = False) -> dict:
     p = Path(path)
     if not p.is_file():
         raise Refused(f"no plan at {path}")
@@ -331,8 +398,11 @@ def load_plan(path: str, genesis_key: int | None) -> dict:
     if not SHA_RE.match(head):
         raise Refused("the plan's genesisHead must be a 40-hex SHA-1 (Radicle main)")
     plan["genesisHead"] = head
-    _names(plan.get("families"), "families")
+    _families(plan)
     _names(plan.get("teeTypes"), "teeTypes")
+    keeper = _keeper(plan, sepolia)
+    if keeper is not None:
+        plan["keeper"] = keeper
     images = plan.get("images")
     if not isinstance(images, list) or not images:
         raise Refused("the plan's images must be a nonempty list")
@@ -497,7 +567,7 @@ def deploy(a) -> int:
     if a.record and (".." in Path(a.record).parts or Path(a.record).is_absolute() or not a.record.endswith(".json")):
         raise Refused("--record is a .json path under contracts/deployments")
     gkey = derive(MNEMONIC, a.genesis_dev_key) if a.genesis_dev_key is not None else None
-    plan = load_plan(a.plan, gkey)
+    plan = load_plan(a.plan, gkey, sepolia=not local)
     deployer = _deployer(a)
     mint, mint_to = genesis_mint(a.genesis_mint, a.genesis_mint_to, deployer)
     rad_key, rad_did = genesis_rad_node(a.genesis_rad_node)
@@ -573,6 +643,16 @@ def deploy(a) -> int:
     if record.get("panelRules") != rules:
         raise Refused(f"the record's panel rules ({_rules_text(record.get('panelRules') or {})}) aren't the ones asked "
                       f"for ({_rules_text(rules)})")
+    caps = _args_of(record, "FeesV3").get("caps")
+    caps = json.loads(caps) if isinstance(caps, str) else (caps or {})
+    got = {k: caps.get(k) for k in REPAYMENT}
+    if got != REPAYMENT:
+        raise Refused(f"the record's repayment caps ({_caps_text(got)}) aren't DeploySepolia's v3.1 values "
+                      f"({_caps_text(REPAYMENT)})")
+    config = _args_of(record, "RaceV3").get("config")
+    config = json.loads(config) if isinstance(config, str) else (config or {})
+    if config.get("mergeDays") != MERGE_DAYS:
+        raise Refused(f"the record's mergeDays ({config.get('mergeDays')}) isn't {MERGE_DAYS} (#310, O4)")
     record["libraries"] = libraries(run_file)
     if a.broadcast_sepolia:
         _check_deployed(url, record, cid)
@@ -586,10 +666,27 @@ def deploy(a) -> int:
         "genesisHeadCheck": {"rid": plan["rid"], "commit": plan["genesisHead"], "result": checked[-300:]},
         "genesisRadNode": {"key": rad_key, "did": rad_did, "registry": "Validators.radNodeOf(genesis key)"},
     })
+    if plan.get("keeper"):
+        record["keeper"] = plan["keeper"]
     out.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     verb = "deployed" if a.broadcast_sepolia else "dry run passed (nothing sent)"
     say(f"{verb}: RaceV3 {record['addresses']['race']}; record {out.relative_to(ROOT)}")
     return 0
+
+
+def _args_of(record: dict, contract: str) -> dict:
+    """A contract's constructor arguments in the record (forge writes a nested object, or its text)."""
+    found = (record.get("constructorArgs") or {}).get(contract) or {}
+    if isinstance(found, str):
+        try:
+            found = json.loads(found)
+        except ValueError:
+            return {}
+    return found if isinstance(found, dict) else {}
+
+
+def _caps_text(c: dict) -> str:
+    return ", ".join(f"{k} {c.get(k)}" for k in REPAYMENT)
 
 
 def _genesis_args(record: dict) -> dict:

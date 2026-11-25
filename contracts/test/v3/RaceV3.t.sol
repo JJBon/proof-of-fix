@@ -613,6 +613,45 @@ contract RaceV3Test is RaceV3Setup {
         rc.payShadow(spid, 1);
     }
 
+    /// #310's extra chain day: a `payShadow` sent with too little gas for FeesV3's `shadowCost` must revert, not take
+    /// the catch branch and mark the seat paid with nothing paid. Before the guard, the lowest gas that succeeded was
+    /// the catch branch's, so `eth_estimateGas` priced that path: anyone could close a shadow's pay for nothing, and
+    /// the keeper's estimate (×1.25) landed between the two paths and reverted on-chain on every pass, one block each.
+    /// For any gas: the call either pays the seat in full or reverts, leaving it payable.
+    function test_payShadowNeverClosesASeatUnpaidOnShortGas() public {
+        _addCandidate(keccak256("cand host 1"), _family(1), _tee(0), 1, 200e6);
+        _addCandidate(keccak256("cand host 2"), _family(2), _tee(1), 1, 200e6);
+        uint256 b = _openBounty();
+        _fund(address(this), 50 * C);
+        usd.approve(address(pool3), 50 * C);
+        pool3.fund(address(usd), 50 * C);
+        uint256 id = _commit(solver1, b, FIX);
+        _draw(id);
+        uint256 spid = pn.submission(id).shadowPid;
+        address[] memory sh = pn.judges(spid);
+        for (uint256 i; i < 2; ++i) {
+            _seal(spid, sh[i], true);
+        }
+        vm.warp(pn.panel(spid).sealBy + 1);
+        _reveal(spid, sh[0]);
+        _receipt(spid, sh[0]);
+        _reportSeat(spid, sh[0]);
+        address op = reg.validator(sh[0]).operator;
+        uint256 cost = fees.shadowCost(id, TEST_REPO, reg.validator(sh[0]).family, _usage(spid, sh[0]));
+        assertGt(cost, 0);
+        uint256 paid;
+        for (uint256 gas = 20_000; gas <= 400_000; gas += 1_000) {
+            uint256 snap = vm.snapshotState();
+            (bool ok,) = address(rc).call{gas: gas}(abi.encodeCall(rc.payShadow, (spid, 0)));
+            if (ok) {
+                assertEq(usd.balanceOf(op), cost, "a payShadow that succeeded paid the seat in full");
+                ++paid;
+            }
+            vm.revertToState(snap);
+        }
+        assertGt(paid, 0); // with enough gas it pays
+    }
+
     // ---------- FeesV3's queue signals ----------
 
     /// A submission above k = 1's limit while only one validator isn't a party waits: it counts once as waited.
@@ -905,10 +944,10 @@ contract RaceV3Test is RaceV3Setup {
     /// No owner, admin, setter or pause: every state-changing function is a race action anyone may call.
     function test_noPrivilegedCall() public view {
         string memory json = vm.readFile("out/RaceV3.sol/RaceV3.json");
-        string[31] memory writers = [
+        string[32] memory writers = [
             "register", "withdrawIssue", "openBounty", "pledge", "sunset", "attempt", "stop", "commit", "report",
             "result", "claim", "merge", "release", "claimInstalments", "settle", "appeal", "withdraw", "timeOut",
-            "mergeExpired", "dispute", "close",
+            "mergeExpired", "rebase", "dispute", "close",
             "challenge", "settleChallenge", "settleLapse", "sync", "payPanel", "payShadow", "signal", "finish",
             // Baskets: refunds, credits and swaps
             "claimRefund", "check"
@@ -934,7 +973,7 @@ contract RaceV3Test is RaceV3Setup {
             assertTrue(ok, string.concat("unexpected state-changing function: ", name));
             ++n;
         }
-        assertEq(n, 35); // two named withdraw: the race's and Baskets' credit withdrawal; settleLapse since batch 4
+        assertEq(n, 36); // two named withdraw: the race's and Baskets' credit withdrawal; settleLapse since batch 4; rebase (#310)
     }
 
     /// The annex's actions run only in a race's storage, through its DELEGATECALL; and a race refuses an annex built

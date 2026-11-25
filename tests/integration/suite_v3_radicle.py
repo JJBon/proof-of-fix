@@ -35,6 +35,10 @@ S. setup: seven validators (a genesis one and six who qualify by their shadow ve
 4. a panel of 3 judges it: each judge takes the patch from its own node, runs the tests twice on a run tree with the
    protected tests overlaid, and the fake judge follows them;
 5. finality, then `pofctl --v3 merge`: the canonical `main` on every delegate's node equals `Heads.head`;
+R. rebase in place (#310, v3.1): two fixes on the same head; the first merges, the second's merge is refused as stale;
+   its solver rebases it on its node, `pofctl --v3 rebase` opens the rebase check and the command it prints pushes a
+   new revision of the same Radicle patch; the judges take it from their own nodes, and at both verdicts' finality
+   `pofctl --v3 merge` moves Heads.head to the rebased commit, which canonical main follows on every delegate's node;
 6. a bad fix (it breaks `mean` and weakens the protected test of it) passed by a lying counted panel is claimed,
    challenged by an honest validator, and reversed by a fresh panel of 3: it never reaches `Heads.head` or `main`;
 7. `pofctl --v3 verify-head` exits 0 on a delegate's node and on a node that isn't one, and `pofctl --v3
@@ -81,7 +85,7 @@ from oracle.rpc import Wallet  # noqa: E402
 from oracle.transport import OnchainExchange  # noqa: E402
 from pofctl import keys as keysrc  # noqa: E402
 
-PREFIX = "pof251i"
+PREFIX = os.environ.get("POF_RADICLE_PREFIX", "pof251i")  # containers and network: pof251i-*, unless set
 VALIDATORS = ["genesis"] + [f"v{i}" for i in range(1, 7)]  # seven: a panel of 3, an auditor and a fresh 3 (L24)
 NODES = ["owner", *VALIDATORS, "reporter", "solver"]
 OUT = ROOT / ".integration-radicle-v3"
@@ -95,7 +99,10 @@ FOLLOW_S = 180  # wall seconds for the seats' nodes to bring the canonical main 
 GENESIS_MINT = 100_000_000 * COIN  # the test coin's genesis mint to the run's minter (L17's 5,000 is Sepolia's)
 LAUNCH = {"LOCAL_WINDOWS": "minutes", "LOCAL_PANEL_CAPS": "launch", "LOCAL_K_TOP": "3",
           "LOCAL_CHALLENGE_SIZE": "same", "LOCAL_COIN": "test", "LOCAL_GENESIS_MINT": str(GENESIS_MINT),
-          "LOCAL_FAMILIES": ",".join(SV.FAMILIES[:len(VALIDATORS)])}
+          "LOCAL_FAMILIES": ",".join(["anthropic/claude"] + SV.FAMILIES[1:len(VALIDATORS)])}
+# the genesis validator's family: the launch's (v3.1 polish VP12, `provider/line`); the others keep the suite's names,
+# priced from genesis too (a family the node's `register` accepts: `provider/line`, or already priced)
+GENESIS_FAMILY = "anthropic/claude"
 SOLVER_C = int.from_bytes(crypto.keccak256(b"pof integration radicle v3 solver-c"), "big") % crypto.N or 1
 
 # The repository: Python code whose tests/ are protected (.pof/check.json), as suite_v3's step 10's, on Radicle.
@@ -108,16 +115,20 @@ FUNCS = {
     "spread": "def spread(xs):\n    return max(xs) - min(xs)\n",
     "total": "def total(xs):\n    return sum(xs)\n",
     "middle": "def middle(xs):\n    return sorted(xs)[len(xs) // 2]\n",
+    "count": "def count(xs):\n    return len(xs)\n",
+    "first": "def first(xs):\n    return xs[0]\n",
 }
 CHECKS = {"median": ("median([4, 1, 3, 2])", "2.5"), "mode": ("mode([1, 2, 2, 3])", "2"),
           "spread": ("spread([4, 1, 9])", "8"), "total": ("total([1, 2, 3])", "6"),
-          "middle": ("middle([3, 1, 2])", "2")}
+          "middle": ("middle([3, 1, 2])", "2"), "count": ("count([3, 1, 2])", "3"), "first": ("first([3, 1, 2])", "3")}
 ISSUES = {
     "median": ("median() of an even list is wrong", "median([4, 1, 3, 2]) returns 0; expected 2.5."),
     "mode": ("No mode()", "stats has no mode(): mode([1, 2, 2, 3]) should be 2."),
     "spread": ("No spread()", "stats has no spread(): spread([4, 1, 9]) should be 8."),
     "total": ("No total()", "stats has no total(): total([1, 2, 3]) should be 6."),
     "middle": ("No middle()", "stats has no middle(): middle([3, 1, 2]) should be 2."),
+    "count": ("No count()", "stats has no count(): count([3, 1, 2]) should be 3."),
+    "first": ("No first()", "stats has no first(): first([3, 1, 2]) should be 3."),
 }
 
 
@@ -423,6 +434,7 @@ class Story(VS.Spike):
         iss = self.issues
         self.activation(iss)
         out = self.funded(iss)
+        self.rebase_in_place(iss)
         self.reversed(iss, out)
         self.verify()
         self.summary()
@@ -459,7 +471,7 @@ class Story(VS.Spike):
         self.must(name == "POFTEST" and crypto.checksum(self.rpc.view(c.coin(), "faucet()", ["address"])[0])
                   == crypto.checksum(record["faucet"]),
                   f"the fee coin is {name}, minted only by its faucet; the run's keys are funded from its genesis mint")
-        g = n.make_node("genesis", SV.FAMILIES[0], keeper=True)
+        g = n.make_node("genesis", GENESIS_FAMILY, keeper=True)
         self.rpc.call("anvil_setBalance", [g.address, ETH_100])
         n.nodes["genesis"] = g
         self.owner_seat = RV.SeatAdapter(R.Radicle(rad.rid["a"], ["docker", "exec", "-i", rad.c("owner")], REPO),
@@ -504,23 +516,46 @@ class Story(VS.Spike):
         self.issues = {}
         for f in ("total", "median", "mode", "spread", "middle"):
             title, body = ISSUES[f]
-            iid = self.rad_issue("reporter", "a", title, body)
-            d = self.ctl("issue", "register", "--rad-issue", iid, "--comment", "--rad-exec",
-                         f"docker exec -i {rad.c('reporter')}", as_="reporter")
+            if f == "total":  # v3.1 (VP11): pofctl opens the Radicle issue itself, its id from `rad issue open`'s box
+                d = self.ctl("issue", "register", "--title", title, "--description", body, "--comment", "--rad-exec",
+                             f"docker exec -i {rad.c('reporter')}", as_="reporter")
+                iid = d["radIssue"]
+                listed = rad.sh("reporter", f"rad cob list --repo {rad.rid['a']} --type xyz.radicle.issue").split()
+                self.must(d["opened"] and iid in listed,
+                          f"`pofctl --v3 issue register --title {title!r} --description …` opened Radicle issue "
+                          f"{iid[:12]} on the reporter's node (real Radicle 1.10.3: its id read from `rad issue "
+                          f"open`'s box, checked with `rad issue show`), then registered it (registration "
+                          f"{d['issue']})")
+            else:
+                iid = self.rad_issue("reporter", "a", title, body)
+                d = self.ctl("issue", "register", "--rad-issue", iid, "--comment", "--rad-exec",
+                             f"docker exec -i {rad.c('reporter')}", as_="reporter")
             self.issues[f] = {"rad": iid, "issue": d["issue"], "check": d["check"], "lines": d["lines"],
                               "at": c.now()}
             c.live[d["check"]] = True
         rad.sync("a", ["reporter"], "announce")
         first = self.issues["total"]
+        shown = self.ctl("issue", "show", "--issue", first["issue"])
+        self.must(shown["check"] == first["check"] and shown["status"] in ("sealed", "judging", "held", "window",
+                                                                         "final"),
+                  f"`pofctl --v3 issue show --issue {first['issue']}` reads its check {shown['check']}: "
+                  f"{shown['status']}, k = {shown['k']}")
         self.must(all(x["lines"][0] == f"Registration: {x['issue']}" and x["lines"][2].startswith("Claim signature: 0x")
                       for x in self.issues.values()),
-                  f"5 Radicle issues opened on the reporter's node and registered on-chain; pofctl commented each "
+                  f"{len(self.issues)} Radicle issues opened on the reporter's node and registered on-chain; pofctl "
+                  f"commented each "
                   f"claim with the reporter's signature for that issue (first: Radicle issue {first['rad'][:7]}, "
                   f"registration {first['issue']}, check {first['check']})")
         checks = [x["check"] for x in self.issues.values()]
-        n.drive(lambda: all(c.verdict(s)["status"] == v3.FINAL for s in checks), "the 5 registration checks final",
+        n.drive(lambda: all(c.verdict(s)["status"] == v3.FINAL for s in checks), "the registration checks final",
                 poke=True)
         s = first["check"]
+        shown = self.ctl("issue", "show", "--issue", first["issue"])
+        self.must(shown["status"] == "final" and shown["result"] == "pass" and shown["k"] == 3
+                  and shown["deposit"]["paid"] > 0,
+                  f"`pofctl --v3 issue show` once it is final: {shown['status']}, result {shown['result']} at k = "
+                  f"{shown['k']}, {shown['deposit']['paid'] / COIN:,.2f} of its deposit paid to its judges")
+        self.verdict_comments(first["rad"], [x["check"] for x in self.issues.values() if x["rad"] == first["rad"]])
         v = c.verdict(s)
         views = {i["id"]: i for i in RV.RadicleIssues(R.Radicle(rad.rid["a"], ["docker", "exec", "-i",
                                                                                rad.c("v1")])).issues()[0]}
@@ -542,6 +577,43 @@ class Story(VS.Spike):
             x["bounty"] = self.ctl("issue", "open", "--issue", x["issue"], as_="reporter")["bounty"]
         res.info("bounties opened: " + ", ".join(f"{x['bounty']} ({f})" for f, x in self.issues.items()))
 
+    def verdict_comments(self, iid: str, checks: list) -> None:
+        """VP18: the verdict on the Radicle issue, one comment per verdict (its marker line), with the judge's reason
+        for a registration check, made by the counted panel's first revealed seat's node through its own Radicle node
+        and read on another node after a sync."""
+        rad, c = self.rad, self.n.chain
+        marks = {s: f"pof-verdict: {c.chain_id()}/{c.race.lower()}/{s}" for s in checks}
+
+        def bodies() -> list:
+            rad.sync("a", VALIDATORS, "announce")
+            rad.sync("a", ["reporter"], "fetch")
+            views = {i["id"]: i for i in RV.RadicleIssues(R.Radicle(rad.rid["a"], ["docker", "exec", "-i",
+                                                                                   rad.c("reporter")])).issues()[0]}
+            return [x["body"] for x in views.get(iid, {}).get("comments") or []]
+
+        found: list = []
+        end = time.time() + FOLLOW_S
+        while time.time() < end:
+            # the nodes' passes go on meanwhile (as a running node's would): the comment step reads a panel that
+            # wasn't counted at its last look again CHECK_EVERY_S (wall) later, and this wait is the only pass then
+            for node in self.n.nodes.values():
+                try:
+                    node.tick(self.n.start)
+                except Exception as err:  # noqa: BLE001 - a pass that fails is tried again next round, as a node does
+                    self.res.info(f"a node's pass during the verdict wait: {err}")
+            found = bodies()
+            if all(any(m in b.splitlines() for b in found) for m in marks.values()):
+                break
+            time.sleep(3)
+        for s, m in marks.items():
+            mine = [b for b in found if m in b.splitlines()]
+            self.must(len(mine) == 1 and "Reason (" in mine[0] and "registration check" in mine[0],
+                      f"the verdict of check {s} on Radicle issue {iid[:7]} (read on the reporter's node): "
+                      f"{len(mine)} comment with its marker `{m[:40]}…`; "
+                      + (" / ".join(x for x in mine[0].splitlines() if x.startswith(("proof-of-fix verdict", "Reason")))
+                         if mine else "none"))
+        self.res.info(f"Radicle issue {iid[:7]}: {len(found)} comment(s) in all (the claim and the verdict)")
+
     def receipts(self, s: int) -> list:
         """[(judge, its stored receipt)] of submission `s`'s counted panel."""
         c, n = self.n.chain, self.n
@@ -556,14 +628,20 @@ class Story(VS.Spike):
     # ---------- a fix through pofctl and Radicle ----------
 
     def fix(self, role: str, x: dict, funcs: list, label: str, broken: bool = False, merge: bool = True,
-            early_merge: bool = False, lie: bool = False) -> dict:
+            early_merge: bool = False, lie: bool = False, attempt: bool = False) -> dict:
         """`role`'s fix of bounty x["bounty"]: committed on the solver's node on Heads.head, sealed with `pofctl --v3
         submit --patch`, opened as a Radicle patch with the command it prints, judged; then claimed, and (`merge`)
         merged with pofctl at finality and followed by the canonical main. `lie`: every validator lies on its counted
-        seat for it. Returns what happened."""
+        seat for it. `attempt`: the solver first records its attempt with `pofctl --v3 attempt` (v3.1 polish VP26), as
+        the solver's guide does. Returns what happened."""
         res, rad, n = self.res, self.rad, self.n
         c = n.chain
         b = x["bounty"]
+        if attempt:
+            a = self.ctl("attempt", "--bounty", b, as_=role)
+            self.must(a["locked"] and a["attempting"] >= 1 and a["tx"] and "submit" in a["next"],
+                      f"{role} recorded its attempt on bounty {b} with `pofctl --v3 attempt`: the share locked at "
+                      f"{a['lockBps'] / 100:g} %, {a['attempting']} attempt(s), tx in block {a['block']}")
         base = self.head()
         sha = rad.commit_on("solver", "a", base, files_with(funcs, broken), label)
         d = self.ctl("submit", "--bounty", b, "--patch", sha, "--title", label, as_=role)
@@ -677,13 +755,87 @@ class Story(VS.Spike):
         res.scenario("4", "a panel of 3 judges it, with protected tests and two runs, using the fake judge")
         res.scenario("5", "finality, then merge: the canonical main on the delegates' nodes equals Heads.head")
         res.cur = "4"
-        out = self.fix("solver-a", x, self.funcs + ["total"], "fix total (funded)", early_merge=True)
+        out = self.fix("solver-a", x, self.funcs + ["total"], "fix total (funded)", early_merge=True, attempt=True)
         self.funded_fix = out
         res.cur = "5"
         self.must(c.award(x["bounty"], c.bounty(x["bounty"])["epoch"])["merged"],
                   f"bounty {x['bounty']}'s fix is merged; its claim of {out['claim'] / COIN:,.2f} closes into "
                   f"solver-a's reputation")
         return out
+
+    def registered(self, f: str) -> dict:
+        """Issue `f` (ISSUES) opened on the reporter's node and registered with pofctl, its check final, its bounty
+        open: step 1's way, for one more issue."""
+        rad, n = self.rad, self.n
+        c = n.chain
+        title, body = ISSUES[f]
+        iid = self.rad_issue("reporter", "a", title, body)
+        d = self.ctl("issue", "register", "--rad-issue", iid, "--comment", "--rad-exec",
+                     f"docker exec -i {rad.c('reporter')}", as_="reporter")
+        c.live[d["check"]] = True
+        rad.sync("a", ["reporter"], "announce")
+        n.drive(lambda: c.verdict(d["check"])["status"] == v3.FINAL, f"{f}: its registration check final", poke=True)
+        b = self.ctl("issue", "open", "--issue", d["issue"], as_="reporter")["bounty"]
+        return {"rad": iid, "issue": d["issue"], "check": d["check"], "bounty": b}
+
+    def rebase_in_place(self, iss: dict) -> None:
+        """Step R (#310, task 6.2): two fixes on the same head; the first merges; the second's merge is refused as
+        stale; its solver rebases it onto the new head on its own node, `pofctl --v3 rebase` opens the rebase check,
+        and the command it prints pushes the rebased commit as a new revision of the same Radicle patch; the judges
+        take that revision from their own nodes, and at both verdicts' finality `pofctl --v3 merge` moves Heads.head to
+        the rebased commit, which canonical main follows on every delegate's node."""
+        res, rad, n = self.res, self.rad, self.n
+        c = n.chain
+        res.scenario("R", "rebase in place: a stale winner's fix rebased as a new revision of its Radicle patch, judged "
+                          "and merged; canonical main fast-forwards to it")
+        for f in ("count", "first"):  # registered here: earlier, their checks would move the funded fix's price on
+            iss[f] = self.registered(f)
+        funcs = list(self.funcs)
+        first = self.fix("solver-a", iss["count"], funcs + ["count"], "fix count (merged first)", merge=False)
+        second = self.fix("solver-b", iss["first"], funcs + ["first"], "fix first (on the same head)", merge=False)
+        n.drive(lambda: all(c.verdict(x["submission"])["status"] == v3.FINAL for x in (first, second)),
+                "R: both final", poke=True)
+        self.ctl("merge", "--bounty", first["bounty"], as_="solver-a")
+        new_head = first["fix"]
+        self.follow(new_head, "R: the first fix")
+        self.ctl("merge", "--bounty", second["bounty"], as_="solver-b", expect_fail="stale base")
+        sha = rad.commit_on("solver", "a", new_head, files_with(funcs + ["count", "first"]),
+                            "fix first, rebased onto fix count")
+        d = self.ctl("rebase", "--bounty", second["bounty"], "--patch", sha, "--patch-id", second["patch"],
+                     as_="solver-b")
+        rid = d["check"]
+        c.live[rid] = True
+        self.must(d["original"] == second["submission"] and d["base"] == new_head and not d["thirdParty"],
+                  f"solver-b opened rebase check {rid} of submission {second['submission']} with pofctl: commit "
+                  f"{sha[:12]} on Heads.head {new_head[:12]}")
+        pushed = rad.sh("solver", f"cd {REPO} && {d['patchCommand']} 2>&1", check=False)
+        rad.sync("a", ["solver"], "announce")
+        seen = {}
+        for name in VALIDATORS:
+            for _ in range(20):
+                pulls, _ = n.nodes[name].fixes.revisions()
+                if any(p["patch"] == second["patch"] and p["head_sha"] == sha and p["base_sha"] == new_head
+                       for p in pulls):
+                    seen[name] = True
+                    break
+                time.sleep(0.5)
+        self.must(len(seen) == len(VALIDATORS),
+                  f"the rebased commit is a new revision of the same patch {second['patch'][:7]} on all 7 validators' "
+                  f"nodes, its base the new Heads.head (pofctl's printed push: {pushed.splitlines()[-1][:120] if pushed else ''})")
+        n.drive(lambda: c.verdict(rid)["status"] == v3.FINAL, "R: the rebase check final", poke=True)
+        self.must(c.verdict(rid)["pass"] and c.verdict(rid)["k"] == 3,
+                  f"a fresh panel of 3 ({', '.join(n.name(k) for k in n.panel.drawn(rid))}) passed the rebased tree, "
+                  f"with the new head's protected tests")
+        m = self.ctl("merge", "--bounty", second["bounty"], as_="solver-b")
+        self.must(m["merged"] and m["rebase"] == rid and m["head"] == sha and self.head() == sha,
+                  f"at both verdicts' finality `pofctl --v3 merge` moved Heads.head {new_head[:12]} -> {sha[:12]}: the "
+                  f"rebased commit, not the original {second['fix'][:12]}")
+        secs = self.follow(sha, "R: the rebased fix")
+        self.must(True, f"canonical main fast-forwarded to the rebased commit on every delegate's node ({secs} s)")
+        self.funcs = funcs + ["count", "first"]
+        code, out = self.ctl_exit("verify-head", "--rad-exec", f"docker exec -i {rad.c('genesis')}")
+        self.must(code == 0, f"pofctl --v3 verify-head exits {code} after the rebase: {out[-160:]}")
+        self.rebase = {"first": first, "second": second, "rebase": rid, "fix": sha}
 
     def reversed(self, iss: dict, good: dict) -> None:
         res, rad, n = self.res, self.rad, self.n

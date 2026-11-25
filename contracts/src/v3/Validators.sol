@@ -379,7 +379,10 @@ contract Validators is IValidators, ReentrancyGuardTransient {
     }
 
     /// Anyone adds to a candidate's, an active or a below-floor validator's bond (to get back to the floor after a
-    /// slash, which makes a BelowFloor validator Active again without qualifying, or to a higher tier).
+    /// slash, which makes a BelowFloor validator Active again without qualifying, or to a higher tier). `epoch` moves
+    /// only if the key's bucket or state did, as in `recheck` (v3.1 polish, F8): a top-up that changes neither can't
+    /// re-open the draws, audits and challenges that wait for the registry to change. A candidate's bond feeds nothing
+    /// a draw reads (`canShadow` doesn't read it), so a candidate's top-up never moves it.
     function topUp(address key, uint256 amount) external nonReentrant {
         Validator storage v = _v[key];
         State s = v.state;
@@ -387,8 +390,9 @@ contract Validators is IValidators, ReentrancyGuardTransient {
         uint256 received = _pull(msg.sender, amount);
         v.bond += uint128(received);
         totalBonds += received;
+        uint8 was = _place[key].bucket;
         _rebucket(key);
-        ++epoch;
+        if (_place[key].bucket != was || v.state != s) ++epoch;
         emit ToppedUp(key, msg.sender, received);
     }
 

@@ -75,10 +75,10 @@ contract FeesV3 is IFeesV3 {
     uint256 public constant FEE_CEILING = 250_000; // $0.25 a counted check; FEE_START
     // a gas bound, not a market rule: an announced family waits at most this many periods for its first price
     uint256 public constant PENDING_PERIODS = 7;
-    // gas bounds, not market rules (task 3.5): a roll part reads at most about ROLL_WORK posted entries (a poster's
-    // table in the counting part, a family's in the others); `roll` keeps going while ROLL_PART_GAS is left
-    uint256 public constant ROLL_WORK = 100;
-    uint256 public constant ROLL_PART_GAS = 1_000_000;
+    // a gas bound, not a market rule (task 3.5): a roll part reads at most about ROLL_WORK posted entries (a poster's
+    // table in the counting part, a family's in the others). 40 keeps the worst part (a new families part at
+    // MEDIAN_MIN_POSTERS) under 8M gas with EIP-8037's state gas for its new slots (v3.1 polish, F2)
+    uint256 public constant ROLL_WORK = 40;
 
     // D14 and ADR 0004's accepted values (WAD: 1e18 = 100 % or 1 ×)
     uint256 public constant SCORE_MIN = 0.7e18;
@@ -337,17 +337,16 @@ contract FeesV3 is IFeesV3 {
     }
 
     /// Anyone closes the oldest open period once it has ended: the unit prices by the median rule, new families' first
-    /// prices, the service fee by the queue rule, and the score factor's normaliser. One period a call, in bounded
-    /// parts (`rollPart`): this runs parts while more than ROLL_PART_GAS gas is left, at least one, and stops once the
-    /// period has closed. With the gas a busy block allows, a caller passes a smaller limit and calls again.
+    /// prices, the service fee by the queue rule, and the score factor's normaliser. One bounded part a call, exactly
+    /// `rollPart` (kept for the ABI): a period closes after several calls (at least five: counting, shared, families,
+    /// new families, close). No branch depends on the gas left, so a call's gas estimate is exact and any limit at or
+    /// above it succeeds (v3.1 polish, F2).
     function roll() external {
-        uint256 p = rolled;
-        do {
-            rollPart();
-        } while (rolled == p && gasleft() > ROLL_PART_GAS);
+        rollPart();
     }
 
-    /// One bounded part of closing the oldest open period (#222's roll split, task 3.5). The parts, in order:
+    /// One bounded part of closing the oldest open period (#222's roll split, task 3.5; at most about ROLL_WORK entries,
+    /// under 8M gas at EIP-8037's state gas, v3.1 polish F2). The parts, in order:
     /// - **counting:** up to ROLL_WORK table entries (a poster's every priced family) of the posters whose latest
     ///   table counts, kept in order with their versions; a poster no longer active leaves the list;
     /// - **shared:** the four shared units, toward the counting tables' lower median;
@@ -484,6 +483,14 @@ contract FeesV3 is IFeesV3 {
     /// The epoch whose prices attempt `id` is charged (reverts if it isn't open).
     function epochOf(uint256 id) external view returns (uint256) {
         return _epoch(id);
+    }
+
+    /// The epoch a draw for attempt `id` prices its seats at (v3.1 polish, F1): the attempt's own epoch once it is open,
+    /// else the epoch in force. Panels seats only a family priced by then, since the attempt is charged that epoch's
+    /// prices (`settle`, `checkCost`), and a family priced later can't be.
+    function drawEpoch(uint256 id) external view returns (uint256) {
+        uint256 e = _epochOf[id];
+        return e == 0 ? rolled : e - 1;
     }
 
     /// A validator's latest complete shared units (as kept: within 64 bits), and whether its latest table has them.

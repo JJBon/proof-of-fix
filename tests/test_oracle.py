@@ -15,7 +15,7 @@ from pathlib import Path
 
 from oracle import crypto
 from oracle.aggregator import Round, Scoreboard, assemble
-from oracle.judge import FakeJudge, GatewayJudge, build_prompt, case_for
+from oracle.judge import FakeJudge, GatewayJudge, build_prompt, case_for, judge_from_env
 from oracle.keys import DevnetKeys, DstackKeys, LocalDevKeys
 from oracle.node import Claim, Node, RefusedClaim, fees_for, result_digest
 from oracle.receipt import Store, receipt_hash
@@ -227,6 +227,16 @@ class Judges(unittest.TestCase):
         self.assertEqual(sent["url"], "https://gw.example/inference/v1/chat/completions")
         self.assertEqual(sent["headers"]["Authorization"], "Bearer tok")
         self.assertEqual((sent["body"]["model"], sent["body"]["max_tokens"]), ("deepseek.v3.2", 1000))
+
+    def test_the_gateway_judge_needs_model_gateway_url(self):
+        """v3.1 polish VP25: no default gateway; judge_from_env passes MODEL_GATEWAY_URL."""
+        with self.assertRaises(ValueError) as e:
+            judge_from_env({"ORACLE_JUDGE": "gateway:deepseek"})
+        self.assertIn("MODEL_GATEWAY_URL is not set", str(e.exception))
+        with self.assertRaises(ValueError):
+            GatewayJudge("deepseek", token=lambda: "tok")
+        j = judge_from_env({"ORACLE_JUDGE": "gateway:deepseek", "MODEL_GATEWAY_URL": "https://gw.example/inference"})
+        self.assertEqual(j.gateway.url, "https://gw.example/inference")
 
     def test_gateway_answer_without_evidence_fails(self):
         post = lambda url, h, b: (200, json.dumps({"choices": [{"message": {"content": '{"solves": true}'}}]}))

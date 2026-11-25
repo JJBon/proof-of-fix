@@ -27,11 +27,14 @@ import {LaunchChain} from "./LaunchChain.sol";
 ///
 /// **Seals, reveals and receipts on-chain (D18).** Each drawn judge posts, signed by its key as a registry
 /// `Statement(subject, content)` (two contents for one subject are provable equivocation): its seal,
-/// `commitmentOf(pid, key, vote, mask, salt)`, by `sealBy`; then its reveal and its receipt's hash after `sealBy` and by
-/// `revealBy`. A judging panel's reveal window opens only once every seat has sealed. Early and replayed reveals are
-/// refused; a reveal that doesn't match its seal is `Fault.Mismatch` (the whole bond). The counted result is the
-/// majority of the k reveals with receipts (CONSTITUTION_QUORUM of K_MAX at the constitution tier). `mask` is a
-/// challenge judge's finding of false receipts, one bit per seat of the challenged panel (0 elsewhere).
+/// `commitmentOf(pid, key, vote, mask, salt)`, by `sealBy`; then its reveal and its receipt's hash by `revealBy`. A
+/// judging panel's reveal opens as soon as every seat is filled and sealed, without waiting for `sealBy` (#311); a
+/// counted panel's, before its `sealBy`, also only once every shadow drawn with it has sealed, so no counted vote is
+/// public while a shadow can still seal. `sealBy` stays the limit for a silent seat and `revealBy` for a reveal. Early
+/// and replayed reveals are refused; a reveal that doesn't match its seal is `Fault.Mismatch` (the whole bond). The
+/// counted result is the majority of the k reveals with receipts (CONSTITUTION_QUORUM of K_MAX at the constitution
+/// tier). `mask` is a challenge judge's finding of false receipts, one bit per seat of the challenged panel (0
+/// elsewhere).
 ///
 /// **Replacement.** At a missed deadline anyone calls `advance`: silence costs SILENCE_SLASH, a sealed vote without its
 /// reveal and receipt SEALED_NO_REVEAL_SLASH (the registry also counts the miss), and the next eligible validator in the
@@ -43,11 +46,13 @@ import {LaunchChain} from "./LaunchChain.sol";
 /// (`judges` returns 0 for it). Challenge and audit panels always replace.
 ///
 /// **Shadows (D5).** Each draw also seats SHADOW_PER_DRAW (SHADOW_PER_DRAW_SMALL while fewer than K_MAX are active)
-/// shadows, candidates or validators of a barred family, sealing in the same seal window; a submission that waits gets
-/// SHADOW_PER_WAITING. They're never replaced or slashed for silence; after their deadline the registry counts each
-/// reveal or miss (`settleShadows`). Each revealed shadow is scored once: against the final outcome of a panel no lone
-/// validator decided, or, for a k = 1 verdict held at its count and for a waiting or withdrawn submission, against the
-/// majority of the verdicts sealed on it (counted and shadow) when at least 3 were revealed.
+/// shadows, candidates or validators of a barred family, sealing in the same seal window (the counted reveal waits for
+/// them, up to `sealBy`); a submission that waits gets SHADOW_PER_WAITING, whose seal window closes when its counted
+/// panel is drawn (#311). They're never replaced or slashed for silence; after their deadline the registry counts each
+/// reveal or miss (`settleShadows`; a waiting shadow cut short by the draw that hadn't sealed counts neither). Each
+/// revealed shadow is scored once: against the final outcome of a panel no lone validator decided, or, for a k = 1
+/// verdict held at its count and for a waiting or withdrawn submission, against the majority of the verdicts sealed on
+/// it (counted and shadow) when at least 3 were revealed.
 ///
 /// **Audits (D13).** At a counted verdict an audit block and snapshot are fixed; from that block a random
 /// AUDIT_RATE_BPS share is decided, and every k = 1 verdict gets K1_AUDITS and every split level C pass one. Each auditor,

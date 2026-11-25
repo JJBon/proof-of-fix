@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -342,13 +343,42 @@ class TheClockWaitsForAnOutsideValidator(unittest.TestCase):
         self.assertEqual(suite_v3.external_hold([seat(key="0xdef")], self.EXT, 50), [])
 
 
+class TheChallengersOutsideThePanel(unittest.TestCase):
+    """#339: a challenge panel seats only validators of a seated family (PanelsDraw.fill, `isSeatedSince`: not one
+    barred by its score or a contender), so the watcher's count of who could judge (`Net.outside`, which decides
+    when it files again after a lapse) leaves the others out, as it leaves out the panel and its auditors."""
+
+    def net(self, unseated=(), undrawable=()):
+        n = suite_v3.Net.__new__(suite_v3.Net)
+        n.nodes = {name: SimpleNamespace(address=f"0x{i + 1:040x}")
+                   for i, name in enumerate(("genesis", "v1", "v2", "v3", "v4", "v5"))}
+        key = {name: node.address for name, node in n.nodes.items()}
+        n.panel = SimpleNamespace(drawn=lambda s: [key["v1"], key["v2"], key["v3"]])
+        n.chain = SimpleNamespace(panels="0xpanels")
+        n.evs = lambda *a: []  # no audit panel
+        n.drawable = lambda k: k not in {key[x] for x in undrawable}
+        n.seated = lambda k: k not in {key[x] for x in unseated}
+        return n
+
+    def test_everyone_seated_and_drawable_outside_the_panel_counts(self):
+        self.assertEqual(self.net().outside(9), ["genesis", "v4", "v5"])
+
+    def test_a_validator_of_a_barred_family_is_left_out(self):
+        # step 7 bars the genesis validator's family; until a block of its shadow verdicts recovers it, it can't judge
+        # step 8's challenge, and a fresh panel of 5 needs five others
+        self.assertEqual(self.net(unseated=("genesis",)).outside(9), ["v4", "v5"])
+
+    def test_a_validator_the_registry_doesnt_draw_is_left_out(self):
+        self.assertEqual(self.net(undrawable=("v4",)).outside(9), ["genesis", "v5"])
+
+
 class TheSets(unittest.TestCase):
     def test_the_launch_set_is_the_sepolia_record(self):
         s = scenarios_v3.SETS["launch"]
         self.assertEqual(ds.panel_rules(s["caps"], s["kTop"], s["size"]), LAUNCH)
         self.assertEqual(s["layout"], "one")
         self.assertEqual(s["validators"] + 1, 7)
-        self.assertEqual(s["scenarios"].split(), ["u", "w", "v", "x"])
+        self.assertEqual(s["scenarios"].split(), ["u", "w", "v", "x", "e", "p"])
 
     def test_f_and_g_under_both_challenge_sizes(self):
         sizes = {scenarios_v3.SETS[n]["size"] for n in scenarios_v3.SETS if "f" in scenarios_v3.SETS[n]["scenarios"]}

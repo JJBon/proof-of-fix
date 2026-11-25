@@ -13,10 +13,14 @@ You need: an AWS account, OpenTofu, Docker, and the tools in [Before you start](
 <!-- test: values -->
 ```bash
 export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint: Infura, Alchemy or your own>
-export RID=rad:zyZXC9NqVuse8nXdpv7iYRScDHsN           # proof-of-fix on Radicle
-export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record, on the branch sepolia-v3 (step 1)
-export FAMILY=anthropic.claude                       # the family the deployment seats at launch (its plan's `families`)
+export RID=rad:z2whCPbrSKbtyvwYjHXPZhN9ZkK5z            # proof-of-fix on Radicle
+export RECORD=contracts/deployments/sepolia-v3.1.json   # the deployment record, on the branch sepolia-v3.1 (step 1)
+export FAMILY=anthropic/claude                          # the family the deployment seats at launch (its plan's `families`)
 ```
+
+v3.1 seats the family as `anthropic/claude` (the `provider/line` form every receipt uses). The superseded v3 named it
+`anthropic.claude`; its repository `rad:zyZXC9NqVuse8nXdpv7iYRScDHsN` is frozen (history only), so don't register
+there ([take part](../take-part.md#whats-live)).
 
 ## 1. Your Radicle node and the code
 
@@ -48,15 +52,15 @@ rad clone --seed z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem --timeout 2min
 export RAD_NODE=$(rad self --did)            # did:key:z6Mk…: your registration names it
 ```
 
-The canonical `main` moves only through the race (a fix reaches it when it's final and merged), so it's older than
-the code the deployment runs and has no deployment record. Take the current code, the organiser's branch `sepolia-v3`
+The canonical `main` moves only through the race (a fix reaches it when it's final and merged), so it has no
+deployment record. Take the current code, the organiser's branch `sepolia-v3.1`
 (you build the validator's disk from it in step 3.1):
 
 <!-- test: skip (the devnet's repository has the program and the record on its main) -->
 ```bash
 rad remote add z6Mkjgv8wBE6A963vtYC9VCBcxBPn6TBTKxjfMqgk6VFubdq --name asclepius --fetch   # the organiser's node
-git checkout -b sepolia-v3 asclepius/sepolia-v3
-ls "$RECORD"                                 # the deployment record (RaceV3 0xD622…9829, block 12196904)
+git checkout -b sepolia-v3.1 asclepius/sepolia-v3.1
+ls "$RECORD"                                 # the deployment record (RaceV3 0xC02F…a790, block 12211341)
 ```
 
 ## 2. Rehearse the registration on a devnet
@@ -94,22 +98,23 @@ from the measured disk. The registry accepts only the disk images the deployment
 the same image files as the deployment's and check that you get its image digest. The steps below are
 [`validator-kit/SEVSNP-PLAN.md`](../../validator-kit/SEVSNP-PLAN.md)'s, with Sepolia's values.
 
-### 3.1 Build the disk on `sepolia-v3`
+### 3.1 Build the disk on `sepolia-v3.1`
 
-Build it on the branch `sepolia-v3` you checked out in step 1. The record's `commit` (8946b9c…) isn't in the public
+Build it on the branch `sepolia-v3.1` you checked out in step 1. The record's `commit` (6f23f52…) isn't in the public
 snapshots, but the branch's image files (`oracle/`, `pof/`, `bot/`, `pofctl/`, `scripts/judge_run.py`,
 `scripts/checker-disk.sh` and `validator-kit/sevsnp/disk/`) are byte-identical to that commit's, so the build gives
 the deployed image:
 
 <!-- test: skip (builds the disk from a Debian snapshot download; task 4.9 built and checked it) -->
 ```bash
-git switch sepolia-v3 && git status --short  # on the branch, nothing changed
+git switch sepolia-v3.1 && git status --short  # on the branch, nothing changed
 scripts/checker-disk.sh --twice              # two builds without the cache must agree; no AWS
 python3 -c 'import json; print(json.load(open("validator-kit/sevsnp/out/manifest.json"))["image_digest"])'
 ```
 
-It must print `0xd95b0458a321963e59ab86a8575ef67dca7bdf5db55c86c3098764dc55f887d1`, the image in the deployment's
-plan (`contracts/deployments/sepolia-v3.plan.json`, `images`). If it doesn't, stop and open an issue with your
+It must print `0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a`, the image in the deployment's
+plan (`contracts/deployments/sepolia-v3.1.plan.json`, `images`), and the manifest's `roothash` must be
+`ddfdf368532d37484c7f92e1c577d520cd678ca30da105ef77e331dfe1ed26f5`. If it doesn't, stop and open an issue with your
 `manifest.json`: a disk the deployment doesn't list can't register.
 
 ### 3.2 Upload it, apply the kit, check the attestation
@@ -120,6 +125,11 @@ the console while the instance runs (`aws ec2 get-console-output --latest`; a st
 read), run `verify.py` on it, then stop the instance. The console's `POF-RADICLE nid z6Mk…` line is **your validator's
 Radicle node**: you register that key, not your laptop's. Its key lives on the instance's data volume, so **keep the
 data volume**: a new volume is a new key, and a registration can't change its node.
+
+**Once the instance exists, every `tofu plan` and `tofu apply` needs `create_instance = true`** (in your tfvars, as
+`validator-kit/sevsnp/terraform/test.tfvars.example` has it, or `-var create_instance=true`): a plan without it
+destroys the instance and that data volume. Running more than one validator in an account: SEVSNP-PLAN.md, "Running
+several validators".
 
 ### 3.3 The signing key, gas and the bond
 
@@ -181,17 +191,17 @@ radicle_seed = "z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem@77.113.144.207:
 node_config = {
   ORACLE_VERSION     = "3"
   ORACLE_RPC         = "https://<your Sepolia endpoint>"
-  ORACLE_RACE        = "0xD622adB4CbC82fF51d5D2ddbD56681b5f2d89829"
-  ORACLE_FROM_BLOCK  = "12196904"                     # the record's block: no event scan starts before it
-  ORACLE_FAMILY      = "anthropic.claude"
+  ORACLE_RACE        = "0xC02F191a82f9459FB4C003B68245c872a256a790"
+  ORACLE_FROM_BLOCK  = "12211341"                     # the record's block: no event scan starts before it
+  ORACLE_FAMILY      = "anthropic/claude"
   ORACLE_JUDGE       = "direct:bedrock:<your model's inference profile id>"   # or the Anthropic API's (3.4)
   ORACLE_MODEL_ALLOW = "<the same id>"
-  ORACLE_IMAGE       = "0xd95b0458a321963e59ab86a8575ef67dca7bdf5db55c86c3098764dc55f887d1"
+  ORACLE_IMAGE       = "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a"
   ORACLE_HOST_ID     = "aws:<your region>"
   ORACLE_FIX_SOURCE  = "radicle"
   ORACLE_MERGE_VIA   = "radicle"
   ORACLE_SEAT_NODES  = "chain"
-  ORACLE_RADICLE_RID = "rad:zyZXC9NqVuse8nXdpv7iYRScDHsN"
+  ORACLE_RADICLE_RID = "rad:z2whCPbrSKbtyvwYjHXPZhN9ZkK5z"
   ORACLE_REPO        = "pof/proof-of-fix"
   ORACLE_SPEND_DAILY_USD   = "0.50"
   ORACLE_SPEND_MONTHLY_USD = "5"
@@ -215,7 +225,9 @@ validator_address = "0x<your signing key's address>"
 
 Apply with `power_off=true` (the default). The watcher checks the chain every minute and starts the instance only
 when your key is drawn, or when `Heads` moves (your node then pushes the canonical `main`); the node judges, reports,
-and powers off after 10 idle minutes.
+and powers off after 10 idle minutes. The watcher also draws: a check nobody drew within its grace
+(about 5 minutes) plus your stagger (up to 10 minutes) starts your instance once, and its keeper draws the panel
+(`WAKE_ON_DRAW`, on by default; [the runbook](../../validator-kit/runbook.md#run-a-keeper)).
 
 A new validator is drawn as a shadow first: its verdicts aren't counted until about 20 of them qualify it. Then it
 sits on counted panels, and its node becomes a delegate of the repository when the seats on-chain change.
@@ -223,3 +235,15 @@ sits on counted panels, and its node becomes a delegate of the repository when t
 The launch plans 7 to 15 validators (design L16). Until 7 are active, panels have one judge, a passed fix waits 7 days
 for challenges, and its verdict is held until enough validators are active to judge a challenge: more validators is
 what makes fixes merge sooner.
+
+How long a check takes. On v3.1 the reveal opens as soon as every seat has sealed, so a verdict takes minutes. A seat
+that doesn't seal makes it at most about 2–3 hours after the draw: the 2-hour seal window, then the reveal (up to an
+hour) and the count. A lone verdict is then held until 6–7 validators with room can judge a challenge:
+
+- **Before its audits are drawn** it needs six eligible validators outside its panel (seven in all, with the judge);
+  **after**, three outside the judge and its auditors (six in all, with two auditors). That is the challenge panel of
+  3, plus one for each audit still to be drawn, since an auditor sits out of the challenge.
+- **Each one counts only if** it is bonded for the bounty, not a party to it, and has room now (fewer than 10 k = 1
+  verdicts not yet final).
+- **Below that, every lone verdict stays held.** At exactly the threshold, one validator pausing (capacity 0) or
+  filling up holds them all; one more validator than the threshold keeps them moving.

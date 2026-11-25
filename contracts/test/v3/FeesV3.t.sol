@@ -2,6 +2,7 @@
 pragma solidity 0.8.37;
 
 import {Test, console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {FeesV3} from "../../src/v3/FeesV3.sol";
 import {IFeesV3, IFeesV3Scores} from "../../src/v3/IFeesV3.sol";
 import {MockValidators, MockScores} from "./helpers/FeesV3Mocks.sol";
@@ -133,7 +134,15 @@ contract FeesV3Test is Test {
     function _roll() internal {
         uint256 end = fees.start() + (fees.rolled() + 1) * 1 days;
         if (block.timestamp < end) vm.warp(end);
-        fees.roll();
+        _close(fees);
+    }
+
+    /// Closes `m`'s oldest ended period: `roll` (one part a call, v3.1 polish F2) until it has closed.
+    function _close(FeesV3 m) internal {
+        uint256 p = m.rolled();
+        while (m.rolled() == p) {
+            m.roll();
+        }
     }
 
     function _tp(bytes32 f, uint256 j) internal view returns (uint256) {
@@ -683,7 +692,8 @@ contract FeesV3Test is Test {
         assertEq(n, writers.length);
     }
 
-    /// The race's hooks are the race's alone, and it binds once; a period closes only once it has ended, one a call.
+    /// The race's hooks are the race's alone, and it binds once; a period closes only once it has ended, one at a time
+    /// (in parts: `roll` runs one, v3.1 polish F2).
     function test_hooksAreTheRacesAndRollWaits() public {
         address other = makeAddr("other");
         vm.startPrank(other);
@@ -704,8 +714,11 @@ contract FeesV3Test is Test {
         fees.roll();
         vm.warp(block.timestamp + 3 days);
         fees.roll();
-        fees.roll();
-        fees.roll();
+        assertEq(fees.rolled(), 0, "one part a call");
+        assertGt(fees.rollPhase(), 0);
+        _close(fees);
+        _close(fees);
+        _close(fees);
         assertEq(fees.rolled(), 3);
         vm.expectRevert(FeesV3.TooEarly.selector);
         fees.roll();
@@ -1033,24 +1046,25 @@ contract FeesV3Test is Test {
         }
         vm.warp(m.start() + 1 days);
         uint256 g1 = gasleft();
-        m.roll();
+        _close(m);
         uint256 rollGas = g1 - gasleft();
         assertEq(m.pricedFamilies().length, priced + fresh);
         vm.warp(m.start() + 2 days);
         g1 = gasleft();
-        m.roll();
+        _close(m);
         uint256 roll2Gas = g1 - gasleft();
         console.log("post, first (16 families):", postGas);
         console.log("post, again (16 families):", repostGas);
-        console.log("roll, 36 posters, 12 priced + 4 new families:", rollGas);
-        console.log("roll, 36 posters, 16 priced families:", roll2Gas);
+        console.log("a period's roll parts, 36 posters, 12 priced + 4 new families:", rollGas);
+        console.log("a period's roll parts, 36 posters, 16 priced families:", roll2Gas);
         assertLt(rollGas, 15_000_000);
         assertLt(roll2Gas, 15_000_000);
     }
 
     /// Task 3.5: `roll` in bounded parts. At #222's size (36 posters, 12 priced families and 4 new ones, then 16 priced),
-    /// each `rollPart` stays under ROLL_PART_GAS (1.5M), a period closes after its last part, and while it's under way
-    /// a post or an announcement waits. The parts give the same prices as `roll` in one call on a twin meter.
+    /// each `rollPart` stays under PART_GAS_MAX (8M) with EIP-8037's state gas for the slots it creates (v3.1 polish,
+    /// F2), a period closes after its last part, and while it's under way a post or an announcement waits. The parts
+    /// give the same prices on a twin meter closed by `roll` calls (one part each).
     function test_rollPartsAreBounded() public {
         (FeesV3 a, bytes32[] memory fs) = _dozens();
         (FeesV3 b,) = _dozens();
@@ -1058,13 +1072,12 @@ contract FeesV3Test is Test {
         uint256 parts;
         for (uint256 day = 1; day <= 2; ++day) {
             vm.warp(a.start() + day * 1 days);
-            b.roll();
+            _close(b);
             uint256 before = a.rolled();
             while (a.rolled() == before) {
-                uint256 g = gasleft();
-                a.rollPart();
-                g -= gasleft();
-                if (g > most) most = g;
+                (uint256 g, uint256 created) = _part(a);
+                uint256 cost = g + STATE_GAS_PER_SLOT * created;
+                if (cost > most) most = cost;
                 ++parts;
                 if (a.rolled() == before) {
                     vm.prank(_v(0));
@@ -1077,8 +1090,8 @@ contract FeesV3Test is Test {
             assertEq(a.rollPhase(), 0);
         }
         console.log("roll parts for two periods:", parts);
-        console.log("the largest part's gas:", most);
-        assertLt(most, a.ROLL_PART_GAS());
+        console.log("the largest part's gas with 8037's state gas:", most);
+        assertLe(most, PART_GAS_MAX);
         assertGt(parts, 4);
         assertEq(a.pricedFamilies().length, 16);
         assertEq(a.serviceFee(), b.serviceFee());
@@ -1123,6 +1136,210 @@ contract FeesV3Test is Test {
             }
             vm.prank(_v(i));
             m.post(_shared(9_100 + 50 * i), fs, toks);
+        }
+    }
+
+    // ---------- F2 (v3.1 polish): one bounded part a call ----------
+
+    /// EIP-8037's state gas for a new storage slot, and the bound a roll part keeps with it (design VP3).
+    uint256 constant STATE_GAS_PER_SLOT = 97_920;
+    uint256 constant PART_GAS_MAX = 8_000_000;
+
+    /// The audit's worst case (F2, its scratch `ScratchRoll`): the fewest counting posters (MEDIAN_MIN_POSTERS, 3), 40
+    /// priced families and 20 waiting for a first price, every price moving. Every part's gas plus 97,920 for each
+    /// slot it creates stays under 8M (at ROLL_WORK 100 a new-families part was ≈4.0M pre-8037 with ≈154 new slots,
+    /// ≈19M under 8037).
+    function test_rollPartsBoundedAtThreePosters() public {
+        FeesV3 m = _threePosters();
+        vm.warp(m.start() + 1 days);
+        uint256 parts;
+        uint256 most;
+        uint256 mostGas;
+        uint256 mostSlots;
+        while (m.rolled() == 0) {
+            uint256 phase = m.rollPhase();
+            (uint256 g, uint256 created) = _part(m);
+            uint256 cost = g + STATE_GAS_PER_SLOT * created;
+            console.log("part", parts, "phase before", phase);
+            console.log("  gas (pre-8037), new slots:", g, created);
+            console.log("  with 8037's state gas:", cost);
+            assertLe(cost, PART_GAS_MAX, "a roll part above 8M under EIP-8037");
+            if (cost > most) (most, mostGas, mostSlots) = (cost, g, created);
+            ++parts;
+        }
+        console.log("parts:", parts);
+        console.log("the largest part with 8037's state gas, its gas, its new slots:", most);
+        console.log("  ", mostGas, mostSlots);
+        assertEq(m.pricedFamilies().length, 60, "every waiting family priced");
+    }
+
+    /// No gas-dependent branch: at every part of the worst case, `roll()` succeeds at every gas limit from the least it
+    /// needs up to 30M (in steps of 50,000), with the same result. Before, `roll()` ran parts while 1M was left, so a
+    /// limit a little above one that succeeded could start a part it couldn't finish and revert (#325's shape). The
+    /// sweep is split by part so each test stays within forge's per-test gas (2^30): 13 parts, ≈600 limits each.
+    function test_rollAtEveryLimit_parts0to3() public {
+        _sweepParts(0, 3); // counting and shared
+    }
+
+    function test_rollAtEveryLimit_part4() public {
+        _sweepParts(4, 4); // families
+    }
+
+    function test_rollAtEveryLimit_part5() public {
+        _sweepParts(5, 5);
+    }
+
+    function test_rollAtEveryLimit_part6() public {
+        _sweepParts(6, 6);
+    }
+
+    function test_rollAtEveryLimit_part7() public {
+        _sweepParts(7, 7);
+    }
+
+    function test_rollAtEveryLimit_part8() public {
+        _sweepParts(8, 8); // new families
+    }
+
+    function test_rollAtEveryLimit_part9() public {
+        _sweepParts(9, 9);
+    }
+
+    function test_rollAtEveryLimit_part10() public {
+        _sweepParts(10, 10);
+    }
+
+    function test_rollAtEveryLimit_part11() public {
+        _sweepParts(11, 11);
+    }
+
+    function test_rollAtEveryLimit_part12() public {
+        _sweepParts(12, 12); // close
+        assertEq(_sweptRolled, 1, "the last part closes the period");
+    }
+
+    uint256 internal _sweptRolled;
+
+    /// The worst case's parts `first` to `last` (0-based), each swept from the least limit `roll()` needs to 30M.
+    function _sweepParts(uint256 first, uint256 last) internal {
+        FeesV3 m = _threePosters();
+        vm.warp(m.start() + 1 days);
+        for (uint256 i; i < first; ++i) {
+            m.roll();
+        }
+        for (uint256 part = first; part <= last; ++part) {
+            assertEq(m.rolled(), 0, "the period is still open");
+            uint256 s0 = vm.snapshotState();
+            m.roll();
+            (uint256 phase, uint256 rolled) = (m.rollPhase(), m.rolled());
+            vm.revertToState(s0);
+            uint256 need = _least(m);
+            uint256 calls;
+            for (uint256 gas = need; gas <= 30_000_000; gas += 50_000) {
+                uint256 s1 = vm.snapshotState();
+                (bool ok,) = address(m).call{gas: gas}(abi.encodeCall(m.roll, ()));
+                assertTrue(ok, "roll() reverted above the gas it needs");
+                assertEq(m.rollPhase(), phase);
+                assertEq(m.rolled(), rolled);
+                vm.revertToState(s1);
+                ++calls;
+            }
+            console.log("part, the least limit, limits tried:", part, need, calls);
+            m.roll();
+        }
+        _sweptRolled = m.rolled();
+    }
+
+    /// The least gas limit `roll()` succeeds with in this state (a binary search; the state is left as it was).
+    function _least(FeesV3 m) internal returns (uint256 lo) {
+        uint256 hi = 30_000_000;
+        lo = 0;
+        while (hi - lo > 1) {
+            uint256 mid = (lo + hi) / 2;
+            uint256 s = vm.snapshotState();
+            (bool ok,) = address(m).call{gas: mid}(abi.encodeCall(m.roll, ()));
+            vm.revertToState(s);
+            if (ok) hi = mid;
+            else lo = mid;
+        }
+        lo = hi;
+    }
+
+    /// One `rollPart` of `m`: its gas (pre-8037, as forge meters it) and the storage slots it created (zero before,
+    /// nonzero after), which EIP-8037 charges STATE_GAS_PER_SLOT each.
+    function _part(FeesV3 m) internal returns (uint256 used, uint256 created) {
+        vm.startStateDiffRecording();
+        uint256 g = gasleft();
+        m.rollPart();
+        used = g - gasleft();
+        Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
+        created = _created(acc, address(m));
+    }
+
+    function _created(Vm.AccountAccess[] memory acc, address who) internal pure returns (uint256 n) {
+        uint256 total;
+        for (uint256 i; i < acc.length; ++i) {
+            total += acc[i].storageAccesses.length;
+        }
+        bytes32[] memory slots = new bytes32[](total);
+        bytes32[] memory before = new bytes32[](total);
+        bytes32[] memory last = new bytes32[](total);
+        uint256 k;
+        for (uint256 i; i < acc.length; ++i) {
+            Vm.StorageAccess[] memory sa = acc[i].storageAccesses;
+            for (uint256 j; j < sa.length; ++j) {
+                if (sa[j].account != who || !sa[j].isWrite || sa[j].reverted) continue;
+                uint256 at = k;
+                for (uint256 q; q < k; ++q) {
+                    if (slots[q] == sa[j].slot) at = q;
+                }
+                if (at == k) {
+                    slots[k] = sa[j].slot;
+                    before[k] = sa[j].previousValue;
+                    ++k;
+                }
+                last[at] = sa[j].newValue;
+            }
+        }
+        for (uint256 q; q < k; ++q) {
+            if (before[q] == 0 && last[q] != 0) ++n;
+        }
+    }
+
+    /// The audit's worst case: 40 priced families, 20 announced, 3 counting posters of families of their own (so each
+    /// counts as "others" for every waiting family), every price moving by the step's limit.
+    function _threePosters() internal returns (FeesV3 m) {
+        uint256 priced = 40;
+        uint256 fresh = 20;
+        FeesV3.Genesis memory g;
+        g.coin = usd;
+        g.shared = S;
+        g.families = new bytes32[](priced);
+        g.tokens = new uint256[3][](priced);
+        for (uint256 f; f < priced; ++f) {
+            g.families[f] = bytes32(f + 1);
+            g.tokens[f] = T[f % 3];
+        }
+        g.caps = IFeesV3.Caps(CAP_IN, CAP_OUT, CAP_MB, GAS_ALLOWANCE, GAS_OVERHEAD, MAX_GAS_PRICE);
+        g.repo = REPO;
+        g.profile = _profile();
+        m = new FeesV3(vals, sc, g);
+        for (uint256 f; f < fresh; ++f) {
+            vals.setFamily(_v(200 + f), bytes32(priced + f + 1));
+            m.announce(_v(200 + f));
+        }
+        bytes32[] memory fs = new bytes32[](priced + fresh);
+        for (uint256 f; f < priced + fresh; ++f) {
+            fs[f] = bytes32(f + 1);
+        }
+        for (uint256 i; i < 3; ++i) {
+            _activateAs(i, bytes32(uint256(1000 + i)));
+            uint256[3][] memory toks = new uint256[3][](priced + fresh);
+            for (uint256 f; f < priced + fresh; ++f) {
+                toks[f] = _tokens(f % 3, 7_000); // every price moves (down 25 %, the step's limit)
+            }
+            vm.prank(_v(i));
+            m.post(_shared(7_000), fs, toks);
         }
     }
 }

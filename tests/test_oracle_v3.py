@@ -25,7 +25,7 @@ from oracle.models import Reply
 from oracle.node_v3 import NodeV3, SetupError
 from oracle.receipt import Store
 from oracle.rounds import Store as Rounds
-from oracle.rpc import Reverted
+from oracle.rpc import Reverted, Unavailable
 from oracle.transport import OnchainExchange, exchange_from_env
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -125,6 +125,11 @@ class Encodings(unittest.TestCase):
         base, panels, race = _text("PanelsBase.sol"), _text("Panels.sol"), _text("RaceV3Base.sol")
         self.assertIn("event Seated(uint256 indexed pid, uint256 slot, address indexed key, uint256 sealBy)", base)
         self.assertIn("event Registered(uint256 indexed issue, address indexed reporter, uint256 check)", race)
+        self.assertIn("event Rebased(uint256 indexed bounty, uint256 indexed original, uint256 indexed check, bytes32 "
+                      "fix, bytes32 base)", race)  # v3.1 (#310)
+        self.assertEqual(v3.REBASED, "Rebased(uint256,uint256,uint256,bytes32,bytes32)")
+        self.assertIn(f"REBASE_GRACE = {v3.REBASE_GRACE_S // 86400} days", race)
+        self.assertIn(f"REBASE_SHARE_BPS = {v3.REBASE_SHARE_BPS:_}", race)
         self.assertIn("event Committed(uint256 indexed bounty, uint256 indexed submission, address indexed solver)",
                       race)
         for sig in ("function seal(uint256 pid, address key, bytes32 sealHash, bytes calldata sig)",
@@ -189,9 +194,11 @@ def _fail(reason: str):
 
 class FakeChain:
     """Validators, Panels, FeesV3 and RaceV3 as far as the node reads and writes them. The rules kept are the ones the
-    node must respect: a seal within its window and signed; a reveal only after the seal window, once every seat of a
-    judging panel has sealed, signed, and opening the seal; a receipt in the reveal window; a usage report bound to the
-    on-chain receipt; a table only from an active validator. Every transaction is recorded in `txs`, in order."""
+    node must respect: a seal within its window and signed; a reveal once every seat of a judging panel has sealed
+    (and, for a counted panel before its seal window ends, every shadow drawn with it: #311), a shadow's after its
+    seal window (every panel's after it with `early = False`, v3's rule), signed, and opening the seal; a receipt in
+    the reveal window; a usage report bound to the on-chain receipt; a table only from an active validator. Every
+    transaction is recorded in `txs`, in order."""
 
     version = 3
     race, panels, fees, registry = RACE, PANELS, FEES, REGISTRY
@@ -199,6 +206,7 @@ class FakeChain:
 
     def __init__(self) -> None:
         self.time, self.height = 1_000_000, 100
+        self.start = self.time  # RaceV3's start: its day 0
         self.validators: dict = {}
         self.panels_: dict = {}
         self.subs: dict = {}  # id -> the race's submission
@@ -208,6 +216,7 @@ class FakeChain:
         self.usage: dict = {}
         self.txs: list = []
         self.allowances: dict = {}
+        self.early = True  # #311's early reveal (v3.1); False: v3's, every reveal after the seal window
         self.challenges: list = []
         self.posted: dict = {}
         self.period, self.rolled_ = 0, 0
@@ -217,6 +226,12 @@ class FakeChain:
         self.live = {"stuckGrace": 86400, "retryDelay": 86400, "maxRedraws": 3, "capWindow": 3600,
                      "challengeDeadline": 120 * 3600}
         self.settled_lapses: list = []
+        self.head_ = b"\x11" * 20 + b"\0" * 12  # Heads.head: the fixes' base in Net
+        self.rebases_: list = []  # Rebased events (v3.1)
+        self.v31_fees = True  # FeesV3 has drawEpoch (v3.1); False: live v3's, where the probe reverts
+        self.roll_parts, self.parts_left = 1, 1  # FeesV3.rollPart: parts a period takes, and those left of this one
+        self.estimates: dict = {}  # (name, args) -> the wallet's sends of that call, refused ones included
+        self.floors: dict = {}  # (name, args) -> the gas floor it was last sent with
 
     # ----- test helpers -----
 
@@ -236,7 +251,7 @@ class FakeChain:
         self.verdicts[s] = {"status": v3.SEALED, "seedBlock": self.height + 5, "pid": 0, "pass": False,
                             "challengeOpen": False, "auditBlock": 0, "auditDecided": False, "auditsDrawn": 0,
                             "auditsDue": 0, "auditsDone": 0, "challengePid": 0, "challengeBlock": 0, "finalAt": 0,
-                            "waitEpoch": 0, "redraws": 0, "retryAt": 0, "auditStuckAt": 0}
+                            "waitEpoch": 0, "redraws": 0, "retryAt": 0, "auditStuckAt": 0, "shadowPid": 0}
 
     def add_panel(self, s: int, kind: int, keys: list, ex: int = 0, seal_by: int | None = None) -> int:
         pid = len(self.panels_) + 1
@@ -250,6 +265,8 @@ class FakeChain:
                        "mask": 0, "seal": "0x" + "00" * 32, "receipt": "0x" + "00" * 32} for k in keys]}
         if kind == v3.COUNTED:
             self.verdicts[s].update(status=v3.JUDGING, pid=pid)
+        if kind == v3.SHADOW:
+            self.verdicts[s].update(shadowPid=pid)
         self.height += 1
         return pid
 
@@ -328,6 +345,21 @@ class FakeChain:
     def liveness(self):
         return dict(self.live)
 
+    def head(self):
+        return self.head_
+
+    def rebased(self, from_block, to_block=None):
+        return list(self.rebases_)
+
+    def mergeExpired(self, sender, b):  # noqa: N802 (the contract's name)
+        bt = self.bounties[b]
+        a = self.awards[(b, bt["epoch"])]
+        r = self.subs.get(a.get("rebase", 0))
+        if r is None or r["outcome"] != 2 or r["solver"] != a["winner"] or v3.b32(r["base"]) != self.head_:
+            _fail("NotYet()")
+        a["closed"] = True
+        bt["state"] = v3.OPEN
+
     def issue(self, i):
         return dict(self.issues[i])
 
@@ -335,7 +367,12 @@ class FakeChain:
         return sub["issue"] if sub["issue"] else self.bounty(sub["bounty"])["issue"]
 
     def config(self):
-        return {"challengeStake": 10 * 10**6}
+        return {"challengeStake": 10 * 10**6, "resultDays": 7}
+
+    def draw_epoch(self, s):
+        if not self.v31_fees:
+            _fail("reverted")
+        return self.rolled_ + 1
 
     def usage_of(self, pid, slot):
         return self.usage.get((pid, slot), v2.Usage(v3.ZERO, 0, 0, 0, 0, 0, 0))
@@ -389,9 +426,17 @@ class FakeChain:
                 return p, i, x
         _fail("NotSeated()")
 
-    def _reveal_window(self, p):
-        if self.time <= p["sealBy"] or (p["kind"] != v3.SHADOW and p["nSealed"] < p["k"]):
+    def _reveal_window(self, pid, p):
+        if p["kind"] == v3.SHADOW or not self.early:
+            if self.time <= p["sealBy"]:
+                _fail("TooEarly()")
+        if p["kind"] != v3.SHADOW and p["nSealed"] < p["k"]:
             _fail("TooEarly()")
+        if p["kind"] == v3.COUNTED and self.time <= p["sealBy"]:
+            sp = self.verdicts[p["id"]].get("shadowPid", 0)
+            q = self.panels_.get(sp)
+            if q and q["ex"] == pid and q["nSealed"] < q["k"] and self.time <= q["sealBy"]:
+                _fail("TooEarly()")
         if self.time > p["revealBy"]:
             _fail("TooLate()")
 
@@ -422,7 +467,7 @@ class FakeChain:
             _fail("NotSealed()")
         if x["revealed"]:
             _fail("AlreadyRevealed()")
-        self._reveal_window(p)
+        self._reveal_window(pid, p)
         self._signed(key, v3.REVEAL_TAG, PANELS, pid, v3.reveal_content(vote, mask, v3.b32(salt)), sig)
         if v3.commitment_of(PANELS, pid, key, vote, mask, v3.b32(salt)) != v3.b32(x["seal"]):
             raise AssertionError("a reveal that doesn't open its seal: the whole bond")
@@ -435,7 +480,7 @@ class FakeChain:
             _fail("NotSealed()")
         if x["receipted"]:
             _fail("AlreadyReceipted()")
-        self._reveal_window(p)
+        self._reveal_window(pid, p)
         self._signed(key, v3.RECEIPT_TAG, PANELS, pid, v3.b32(receipt), sig)
         x.update(receipted=True, receipt="0x" + v3.b32(receipt).hex())
         self._complete(pid, p, x)
@@ -552,7 +597,24 @@ class FakeChain:
         p = self.panels_[pid]
         if p.get("paid") or not (p["counted"] or (p["closed"] and p["kind"] == v3.CHALLENGE)):
             _fail("Refused()")
+        self._reports_due(pid)
         p["paid"] = True
+
+    def _reports_due(self, pid):
+        """RaceV3's `_reportsDue`: every seated key reported, or REPORT_WINDOW after the reveal deadline."""
+        p = self.panels_[pid]
+        if self.time <= p["revealBy"] + 86400 and any(
+                x["key"] and (pid, i) not in self.usage for i, x in enumerate(p["slots"])):
+            _fail("NotYet()")
+
+    def rollPart(self, sender):  # noqa: N802 (the contract's name)
+        """FeesV3.rollPart: `roll_parts` parts close the oldest open period."""
+        if self.rolled_ >= self.period:
+            _fail("TooEarly()")
+        self.parts_left -= 1
+        if self.parts_left <= 0:
+            self.rolled_ += 1
+            self.parts_left = self.roll_parts
 
     def releaseAudits(self, sender, s):  # noqa: N802 (the contract's name)
         v = self.verdicts[s]
@@ -562,10 +624,29 @@ class FakeChain:
         v["auditStuckAt"] = self.time
 
     def refund(self, sender, s):
-        """RaceV3.release, as the node calls it on the race (FakeWallet routes it here)."""
-        if self.verdicts[s]["status"] != v3.RELEASED or self.subs[s]["done"]:
+        """RaceV3.release, as the node calls it on the race (FakeWallet routes it here): a check Panels released for
+        good, or one with a released round once resultDays have passed since its day; a counted verdict's judges
+        paid first."""
+        v, x = self.verdicts[s], self.subs[s]
+        if x["done"] or (v["pid"] and not x["paid"]):
             _fail("NotYet()")
-        self.subs[s].update(done=True, outcome=6)
+        if v["status"] != v3.RELEASED and (
+                not v["redraws"] or (self.time - self.start) // 86400 < x["day"] + self.config()["resultDays"]):
+            _fail("NotYet()")
+        x.update(done=True, outcome=6)
+
+    def finish(self, sender, s):
+        """RaceV3.finish: REPORT_WINDOW after a paid check's verdict is final."""
+        v, x = self.verdicts[s], self.subs[s]
+        if x["done"] or not x["paid"] or v["status"] != v3.FINAL or self.time <= v["finalAt"] + 86400:
+            _fail("NotYet()")
+        x["done"] = True
+
+    def payShadow(self, sender, pid, slot):  # noqa: N802 (the contract's name)
+        p = self.panels_[pid]
+        if (pid, slot) in p.setdefault("shadowsPaid", set()):
+            _fail("Refused()")
+        p["shadowsPaid"].add((pid, slot))
 
     def result(self, sender, s):
         if self.subs[s]["paid"] or self.verdicts[s]["status"] not in (v3.HELD, v3.WINDOW, v3.FINAL):
@@ -584,6 +665,14 @@ class FakeWallet:
         name = signature.split("(")[0]
         if to == RACE and name == "release":
             name = "refund"  # the race's release refunds a check; Panels' releases a stuck panel
+        try:
+            key = (name, args)
+            hash(key)
+        except TypeError:  # a table's lists
+            key = (name, repr(args))
+        self.chain.estimates[key] = self.chain.estimates.get(key, 0) + 1
+        if kw.get("gas_floor"):
+            self.chain.floors[key] = kw["gas_floor"]
         fn = getattr(self.chain, name, None)
         if fn is None:
             raise Reverted(f"{name}: not due")
@@ -713,6 +802,7 @@ class Judging(unittest.TestCase):
         c.add_submission(2, bounty=0, issue=1)  # a registration check, to shadow
         net.host._issues = [{"number": 9, "labels": ["bounty"],
                              "body": f"Registration: 1\nReporter wallet: {c.issues[1]['reporter']}"}]
+        c.early = False  # v3's rule: the counted reveal waits for the seal window (#311 would reveal at once)
         counted = c.add_panel(1, v3.COUNTED, net.addresses(0))
         net.tick([net.nodes[0]])  # sealed as the counted judge
         c.warp(SEAL_WINDOW + 1)  # its reveal window is open ...
@@ -720,6 +810,49 @@ class Judging(unittest.TestCase):
         net.tick([net.nodes[0]])
         mine = [(n, a[0]) for _, n, a in c.txs]
         self.assertLess(mine.index(("seal", shadow)), mine.index(("reveal", counted)))
+
+    def test_a_full_panel_reveals_before_its_seal_window_ends(self):
+        """#311: once every seat has sealed (and every shadow drawn with it), the judges reveal at once."""
+        net = Net(self.tmp)
+        c = net.chain
+        counted = c.add_panel(1, v3.COUNTED, net.addresses(0, 1, 2))
+        shadow = c.add_panel(1, v3.SHADOW, net.addresses(3), ex=counted, seal_by=c.panels_[counted]["sealBy"])
+        net.tick(net.nodes[:2])  # two of three sealed: nobody reveals while a seat could still seal
+        self.assertEqual([n for _, n, _ in c.txs], ["seal", "seal"])
+        net.tick(net.nodes[:3])  # the panel is full, but its shadow hasn't sealed: still no counted reveal
+        self.assertNotIn("reveal", c.names())
+        net.tick(net.nodes[3:])  # the shadow seals
+        net.tick(net.nodes[:3], 2)
+        self.assertLess(c.time, c.panels_[counted]["sealBy"])
+        self.assertTrue(c.panel(counted)["counted"], "counted before the seal window ends")
+        self.assertFalse(any("refused" in m for m in net.logs), "nothing sent that the chain refused")
+        c.warp(SEAL_WINDOW + 1)
+        net.tick(net.nodes[3:], 2)
+        self.assertTrue(c.seat(shadow, 0)["revealed"])
+
+    def test_an_audit_reveals_at_once(self):
+        net = Net(self.tmp)
+        c = net.chain
+        counted = c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.tick([net.nodes[0]], 2)
+        self.assertTrue(c.panel(counted)["counted"])
+        audit = c.add_panel(1, v3.AUDIT, net.addresses(1), ex=counted)
+        net.tick([net.nodes[1]], 2)
+        self.assertTrue(c.panel(audit)["counted"])
+        self.assertLess(c.time, c.panels_[audit]["sealBy"])
+
+    def test_on_v3_a_node_waits_for_the_seal_window(self):
+        """A deployment without #311 (v3): one early attempt is refused at the estimate, then the node waits."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.early = False
+        counted = c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.tick([net.nodes[0]], 3)
+        self.assertEqual(c.names(), ["seal"])
+        self.assertEqual(sum("only after the seal window" in m for m in net.logs), 1)
+        c.warp(SEAL_WINDOW + 1)
+        net.tick([net.nodes[0]], 2)
+        self.assertTrue(c.panel(counted)["counted"])
 
     def test_a_shadow_on_a_waiting_submission(self):
         net = Net(self.tmp)
@@ -769,6 +902,7 @@ class Judging(unittest.TestCase):
     def test_a_node_that_lost_its_round_doesnt_reveal(self):
         net = Net(self.tmp)
         c = net.chain
+        c.early = False  # v3's rule, so the seal and the reveal are in different runs
         first = net.node(0, rounds=False)
         counted = c.add_panel(1, v3.COUNTED, net.addresses(0))
         net.tick([first])
@@ -995,6 +1129,31 @@ class KeeperTableChallenge(unittest.TestCase):
             keeper.tick(0)
         self.assertEqual(c.names().count("drawAudits"), 2 * node_v3.AUDIT_TRIES)
 
+    def test_the_keeper_draws_audits_again_once_busy_auditors_have_room(self):
+        """#311: every auditor busy (L16: the contract keeps the audit block and draws nobody) when the verdict counts
+        minutes after its draw. The keeper's tries for that state of the registry are spent, but a capacity window later
+        it tries again, and again after `releaseAudits` re-targets the audits; it used to wait for a registry change
+        that never came, and the audits were released until the check was refunded."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        keeper = net.node(3, keeper=True)
+        for _ in range(6):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawAudits"), node_v3.AUDIT_TRIES)
+        c.warp(c.live["capWindow"])  # the busy auditors' hour is over: room again, the registry unchanged
+        for _ in range(6):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawAudits"), 2 * node_v3.AUDIT_TRIES)
+        c.verdicts[1]["redraws"] += 1  # a released round re-targets the audits (`releaseAudits`)
+        for _ in range(6):
+            c.height += 6
+            keeper.tick(0)
+        self.assertEqual(c.names().count("drawAudits"), 3 * node_v3.AUDIT_TRIES)
+
     def test_the_keeper_doesnt_redraw_a_challenge_forever(self):
         """drawChallenge succeeds without drawing while busy validators leave its fresh panel short (L16), so the keeper
         tries it a few times per state, not on every pass: on the devnet a keeper that called it every pass made
@@ -1131,6 +1290,668 @@ class KeeperTableChallenge(unittest.TestCase):
         net.judge_through([net.nodes[0]])
         self.assertIsNone(net.nodes[1].challenge(1))
         self.assertEqual(c.challenges, [])
+
+
+class Rebases(unittest.TestCase):
+    """v3.1's rebase in place (#310) as the node keeps and judges it: rebase checks found from `Rebased`, `merge`
+    through a final passing rebase (never on a stale base), the fail-fast reopening after the solver's own failed
+    rebase, and the judge's case with the approved diff, the range-diff and the rubric's question."""
+
+    BASE, ORIG, NEW = "11" * 20, "ab" * 20, "cd" * 20
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name)
+
+    def _claimed_and_stale(self, net, rebase_solver=None):
+        """Submission 1 won bounty 1 and is claimed on base 11…; the head moved to ee…; rebase check 2 of it is on the
+        head. Returns the chain."""
+        c = net.chain
+        c.subs[1].update(fix="0x" + self.ORIG + "00" * 12, base="0x" + self.BASE + "00" * 12, paid=True, outcome=1)
+        c.verdicts[1].update(status=v3.FINAL, **{"pass": True})
+        c.head_ = bytes.fromhex("ee" * 20) + b"\0" * 12
+        c.add_submission(2, solver=rebase_solver or c.subs[1]["solver"])
+        c.subs[2].update(rebaseOf=1, fix="0x" + self.NEW + "00" * 12, base="0x" + c.head_.hex(), paid=True)
+        c.rebases_ = [{"bounty": 1, "original": 1, "submission": 2, "block": 1}]
+        c.bounties[1] = {"state": v3.CLAIMED, "winner": 1, "epoch": 1}
+        c.awards[(1, 1)] = {"winner": c.subs[1]["solver"], "fix": "0x" + self.ORIG + "00" * 12, "sub": 1,
+                            "closed": False, "earned": 0, "merged": False, "rebase": 2, "lastPass": 0}
+        return c
+
+    def test_the_keeper_merges_through_a_final_passing_rebase(self):
+        net = Net(self.tmp)
+        c = self._claimed_and_stale(net)
+        keeper = net.node(3, keeper=True)
+        c.verdicts[2].update(status=v3.WINDOW, **{"pass": True})
+        keeper.tick(0)
+        self.assertNotIn("merge", c.names())  # the original is final, its rebase isn't: no reverting call
+        c.verdicts[2]["status"] = v3.FINAL
+        c.merge = lambda sender, b: c.awards[(b, 1)].update(merged=True)
+        keeper.tick(0)
+        self.assertEqual(c.names().count("merge"), 1)
+
+    def test_no_merge_call_on_a_stale_base(self):
+        net = Net(self.tmp)
+        c = self._claimed_and_stale(net)
+        c.verdicts[2].update(status=v3.FINAL, **{"pass": True})
+        c.head_ = bytes.fromhex("99" * 20) + b"\0" * 12  # the head moved again
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertNotIn("merge", c.names())
+        self.assertTrue(any("isn't Heads.head any more" in line and "pofctl --v3 rebase" in line for line in net.logs))
+
+    def test_the_solvers_failed_rebase_reopens_at_once(self):
+        net = Net(self.tmp)
+        c = self._claimed_and_stale(net)
+        c.verdicts[2].update(status=v3.WINDOW, **{"pass": False})
+        c.subs[2]["outcome"] = 2  # counted as a fail, on the head
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        keeper.tick(0)
+        self.assertEqual(c.names().count("mergeExpired"), 1)
+        self.assertTrue(c.awards[(1, 1)]["closed"])
+
+    def test_a_strangers_failed_rebase_only_frees_its_slot(self):
+        net = Net(self.tmp)
+        c = self._claimed_and_stale(net, rebase_solver="0x" + "42" * 20)
+        c.verdicts[2].update(status=v3.WINDOW, **{"pass": False})
+        c.subs[2]["outcome"] = 2
+        net.node(3, keeper=True).tick(0)
+        self.assertNotIn("mergeExpired", c.names())
+
+    def test_a_fail_after_the_head_moved_again_only_frees_its_slot(self):
+        net = Net(self.tmp)
+        c = self._claimed_and_stale(net)
+        c.verdicts[2].update(status=v3.WINDOW, **{"pass": False})
+        c.subs[2]["outcome"] = 2
+        c.head_ = bytes.fromhex("99" * 20) + b"\0" * 12
+        net.node(3, keeper=True).tick(0)
+        self.assertNotIn("mergeExpired", c.names())
+
+    def test_the_judges_case_carries_the_approved_diff_and_the_range_diff(self):
+        from types import SimpleNamespace
+
+        from oracle import fetch, rebase_v3
+
+        calls = []
+
+        class Fetcher:
+            def diff(self, root, sha, fix, base, max_bytes):
+                calls.append(("diff", sha, base))
+                return fetch.Diff("mb", "+approved line\n", "the fix")
+
+            def range_diff(self, root, old_base, old_fix, new_base, new_fix, max_bytes):
+                calls.append(("range", old_base, old_fix, new_base, new_fix))
+                return fetch.Diff("mb2", "1:  abc = 1:  def the fix\n")
+
+        chain = SimpleNamespace(submission=lambda s: {"fix": "0x" + self.ORIG + "00" * 12,
+                                                      "base": "0x" + self.BASE + "00" * 12})
+        node = SimpleNamespace(judge=SimpleNamespace(reads_evidence=True), chain=chain, fetcher=Fetcher(),
+                               src_root=self.tmp)
+        base_case = {"id": "c", "repo": "r", "issue": "i", "commit": "x", "diff": "+rebased line\n", "context": [],
+                     "notes": ("a note",)}
+        sub = {"rebaseOf": 1}
+        pull = {"head_sha": self.NEW, "base_sha": "ee" * 20}
+        case, refusal = rebase_v3.judge_case(node, sub, pull, base_case, "")
+        self.assertEqual(refusal, "")
+        self.assertEqual(calls, [("diff", self.ORIG, self.BASE), ("range", self.BASE, self.ORIG, "ee" * 20, self.NEW)])
+        self.assertTrue(case["diff"].startswith("+rebased line"))
+        self.assertIn(rebase_v3.APPROVED_HEADING + "\n+approved line", case["diff"])
+        self.assertIn(rebase_v3.RANGE_HEADING + "\n1:  abc = 1:  def", case["diff"])
+        self.assertEqual(case["notes"][0], "a note")
+        self.assertIn(f"rebase of submission 1's approved fix (commit {self.ORIG} on base {self.BASE})", case["notes"][1])
+        self.assertEqual(case["notes"][2], rebase_v3.RUBRIC)
+        self.assertIn("solves = false", rebase_v3.RUBRIC)
+        # a judge that reads only the test run (the fake) gets the case as it was; a refusal stays one
+        node.judge = SimpleNamespace(reads_evidence=False)
+        self.assertEqual(rebase_v3.judge_case(node, sub, pull, base_case, ""), (base_case, ""))
+        node.judge = SimpleNamespace(reads_evidence=True)
+        self.assertEqual(rebase_v3.judge_case(node, sub, pull, base_case, "no"), (base_case, "no"))
+        # not fetched yet: NotReady, so the node tries again before its seal deadline
+        node.fetcher = SimpleNamespace(diff=lambda *a: None, range_diff=lambda *a: None)
+        with self.assertRaises(node_v3.evidence.NotReady):
+            rebase_v3.judge_case(node, sub, pull, base_case, "")
+
+    def test_a_clean_rebase_passes_and_a_smuggled_change_fails(self):
+        """With a stand-in judge that answers the rubric's question from the range-diff (a model's job), the node's
+        case is what decides it: a range-diff with only context changes passes, one that adds a line fails."""
+        from oracle import rebase_v3
+
+        def verdict(range_diff: str, tests_passed: bool) -> bool:
+            case = rebase_v3.case({"diff": "+x\n", "notes": ()}, 1, "+x\n", range_diff, (self.BASE, self.ORIG),
+                                  ("ee" * 20, self.NEW))
+            ranged = case["diff"].split(rebase_v3.RANGE_HEADING, 1)[1]
+            unrelated = any(line.lstrip().startswith("++") for line in ranged.splitlines())
+            return tests_passed and rebase_v3.RUBRIC in case["notes"] and not unrelated
+
+        self.assertTrue(verdict("1:  abc = 1:  def the fix\n", True))
+        self.assertFalse(verdict("1:  abc ! 1:  def the fix\n    @@ x\n    ++unrelated()\n", True))
+        self.assertFalse(verdict("1:  abc = 1:  def the fix\n", False))  # a semantic conflict: the tests fail
+
+    def test_a_semantic_conflict_fails_on_the_new_bases_protected_test(self):
+        """The rebase check's runs are any fix's: on its tree (with the base's protected paths when the repository
+        has them); the first fix's protected test failing there fails the rebase."""
+        net = Net(self.tmp, exit_code=1)
+        c = net.chain
+        c.subs[1]["rebaseOf"] = 7  # a rebase check, judged as any fix (its runs failed)
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        self.assertFalse(c.verdicts[1]["pass"])
+
+    def test_the_chain_reads_v3_and_v3_1_records(self):
+        word = lambda i: (i).to_bytes(32, "big")  # noqa: E731
+
+        class Rpc:
+            def __init__(self, words):
+                self.words = words
+
+            def view(self, to, sig, returns, *args):
+                if sig.startswith("contracts"):
+                    return [RACE, PANELS, FEES, RACE, RACE, COIN, 1]
+                n = self.words(sig)
+                return abi.decode(returns, b"".join(word(0) for _ in range(n - 1)) + word(9))
+
+            def eth_call(self, to, data):
+                return b"\0" * 32 * self.words("award(")
+
+        v31 = v3.Chain(Rpc(lambda sig: 8 if sig.startswith("award") else 16), RACE)
+        self.assertTrue(v31.rebases())
+        self.assertEqual(v31.submission(1)["rebaseOf"], 9)
+        self.assertEqual(v31.award(1, 1)["lastPass"], 9)
+        old = v3.Chain(Rpc(lambda sig: 6 if sig.startswith("award") else 15), RACE)
+        self.assertFalse(old.rebases())
+        self.assertEqual(old.submission(1)["rebaseOf"], 0)
+        self.assertEqual((old.award(1, 1)["rebase"], old.award(1, 1)["lastPass"]), (0, 0))
+        self.assertEqual(old.rebased(0), [])
+
+
+class KeeperRetries(unittest.TestCase):
+    """The keeper's retry model (v3.1 polish VP6–VP8; #314, audit F3–F5) on the fake chain over simulated hours: the
+    chain's clock moves (`warp`), nothing sleeps. `estimates` counts the wallet's sends per call, refused ones too:
+    each is an eth_estimateGas on a real chain."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name)
+
+    @staticmethod
+    def hours(net, keeper, hours: float, step: int = 60, each=None) -> None:
+        for _ in range(int(hours * 3600 // step)):
+            net.chain.warp(step)
+            keeper.tick(0)
+            if each:
+                each()
+
+    def _held(self, net):
+        """Submission 1 judged by a k = 1 panel: held, its counted judges paid."""
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.subs[1]["paid"] = True
+        return c
+
+    def test_startwindow_and_refill_are_tried_a_few_times_per_state(self):
+        net = Net(self.tmp)
+        c = self._held(net)
+        tries: dict = {}
+
+        def refuse(name):
+            def call(sender, x):
+                state = (name, c.epoch(), c.time // c.live["capWindow"])
+                tries[state] = tries.get(state, 0) + 1
+                _fail("NotReady()")
+            return call
+        c.startWindow, c.refill = refuse("startWindow"), refuse("refill")
+        c.add_submission(2)
+        short = c.add_panel(2, v3.COUNTED, net.addresses(1, 2, 3))
+        c.panels_[short]["seats"] = 2  # a seat nobody can take yet
+        keeper = net.node(3, keeper=True)
+        self.hours(net, keeper, 3)
+        self.assertTrue(tries)
+        self.assertLessEqual(max(tries.values()), node_v3.CHALLENGE_TRIES)
+        self.assertEqual({k[0] for k in tries}, {"startWindow", "refill"})
+        before = sum(tries.values())
+        c.add_validator(SimKeys(7))  # the registry changed: a few tries again, at once
+        keeper.tick(0)
+        self.assertEqual(sum(tries.values()), before + 2)
+        self.assertFalse(any("left to others" in line for line in net.logs))  # NotReady is a gate: never given up
+
+    def test_finish_waits_for_the_report_window_after_finality(self):
+        net = Net(self.tmp)
+        c = self._held(net)
+        c.verdicts[1].update(status=v3.FINAL, finalAt=c.time)
+        keeper = net.node(3, keeper=True)
+        due = c.time + node_v3.REPORT_WINDOW_S
+        seen = []
+        self.hours(net, keeper, 26, step=600, each=lambda: seen.append((c.time, c.estimates.get(("finish", (1,)), 0))))
+        self.assertTrue(all(n == 0 for at, n in seen if at <= due))
+        self.assertEqual(c.estimates[("finish", (1,))], 1)
+        self.assertTrue(c.subs[1]["done"])
+        self.assertNotIn(1, keeper._scan)  # done, final, nothing owed: not read again
+
+    def test_release_waits_for_the_races_result_days(self):
+        net = Net(self.tmp)
+        c = net.chain
+        c.verdicts[1].update(status=v3.WAITING, redraws=1, waitEpoch=c.epoch() + 1, retryAt=c.time + 30 * 86400)
+        keeper = net.node(3, keeper=True)
+        seen = []
+        self.hours(net, keeper, 24 * 9, step=3600,
+                   each=lambda: seen.append(((c.time - c.start) // 86400, c.estimates.get(("refund", (1,)), 0))))
+        self.assertTrue(all(n == 0 for day, n in seen if day < c.config()["resultDays"]))
+        self.assertEqual(c.estimates[("refund", (1,))], 1)  # RaceV3.release, sent once it was due
+        self.assertTrue(c.subs[1]["done"])
+
+    def test_a_late_report_pays_the_panel_after_the_window_and_never_gives_up(self):
+        """Audit F4: one auditor never reports. `payPanel` isn't sent before REPORT_WINDOW after the reveal deadline,
+        is sent once after it, and the auditor who did report is paid."""
+        net = Net(self.tmp)
+        c = self._held(net)
+        audit = c.add_panel(1, v3.AUDIT, net.addresses(1, 2))
+        c.panels_[audit].update(counted=True, revealBy=c.time)
+        c.usage[(audit, 0)] = v2.Usage(b"\x01" * 32, 1, 0, 1, 1, 1, 1)  # the first reported, the second never will
+        keeper = net.node(3, keeper=True)
+        due = c.panels_[audit]["revealBy"] + node_v3.REPORT_WINDOW_S
+        seen = []
+        self.hours(net, keeper, 30, step=300,
+                   each=lambda: seen.append((c.time, c.estimates.get(("payPanel", (audit,)), 0))))
+        self.assertTrue(all(n == 0 for at, n in seen if at <= due))
+        self.assertEqual(c.estimates[("payPanel", (audit,))], 1)
+        self.assertTrue(c.panels_[audit]["paid"])
+        self.assertIn(("panel", audit), keeper._kept)
+        self.assertFalse(any("left to others" in line for line in net.logs))
+
+    def test_an_ungated_refusal_backs_off_and_is_given_up_after_a_day(self):
+        """#314's "done when": one estimate per backoff period, one log line each; F1's `Unpriced` (not a gate) is
+        left to others GIVE_UP_S after the first refusal."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.result = lambda sender, s: _fail("Unpriced(bytes32)")
+        c.live["capWindow"] = 10**9  # one capacity window all along: the backoff alone spaces the tries
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.hours(net, keeper, 1, step=12)
+        # tries at 0, 30, 90, 210, 450, 930 and 1890 s: seven in the first hour, not 300
+        self.assertEqual(c.estimates[("result", (1,))], 7)
+        refused = [line for line in net.logs if line.startswith("keeper: result(1) refused")]
+        self.assertEqual(len(refused), 7)
+        self.assertIn("next try in 60 s (", refused[1])  # with the passes skipped in the backoff before
+        self.hours(net, keeper, 25, step=600)
+        n = c.estimates[("result", (1,))]
+        self.assertLessEqual(n, 7 + 25)  # an hour apart after the first hour
+        self.assertTrue(any(line.startswith("keeper: result(1) refused for") and "left to others" in line
+                            for line in net.logs))
+        self.hours(net, keeper, 5, step=600)
+        self.assertEqual(c.estimates[("result", (1,))], n)  # given up
+
+    def test_a_state_change_restarts_the_backoff(self):
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        net.judge_through([net.nodes[0]])
+        c.result = lambda sender, s: _fail("Unpriced(bytes32)")
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        keeper.tick(0)
+        self.assertEqual(c.estimates[("result", (1,))], 1)  # backing off
+        c.add_validator(SimKeys(7))  # the registry's epoch moved
+        keeper.tick(0)
+        self.assertEqual(c.estimates[("result", (1,))], 2)
+
+    def test_payshadow_is_sent_with_the_gas_floor(self):
+        net = Net(self.tmp)
+        c = net.chain
+        shadow = c.add_panel(1, v3.SHADOW, net.addresses(1))
+        c.panels_[shadow].update(closed=True, scored=True)
+        c.panels_[shadow]["slots"][0].update(revealed=True, receipted=True)
+        c.usage[(shadow, 0)] = v2.Usage(b"\x01" * 32, 1, 0, 1, 1, 1, 1)
+        c.time = c.panels_[shadow]["revealBy"] + 1
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertIn("payShadow", c.names())
+        self.assertGreaterEqual(c.floors[("payShadow", (shadow, 0))], node_v3.PAY_SHADOW_GAS_FLOOR)
+        self.assertEqual(node_v3.PAY_SHADOW_GAS_FLOOR, 850_000)
+
+    def test_a_period_of_several_parts_closes_in_one_or_two_passes(self):
+        net = Net(self.tmp)
+        c = net.chain
+        keeper = net.node(3, keeper=True)
+        c.period, c.roll_parts, c.parts_left = 1, 4, 4
+        keeper.tick(0)
+        self.assertEqual(c.rolled_, 1)
+        self.assertEqual(c.estimates[("rollPart", ())], 4)  # one estimate a part, none once it closed
+        self.assertNotIn("roll", c.names())
+        c.period, c.roll_parts, c.parts_left = 2, 15, 15
+        keeper.tick(0)
+        self.assertEqual(c.rolled_, 1)  # ROLL_PARTS_PER_PASS in this pass
+        self.assertEqual(c.estimates[("rollPart", ())], 4 + node_v3.ROLL_PARTS_PER_PASS)
+        keeper.tick(0)
+        self.assertEqual(c.rolled_, 2)
+        self.assertEqual(c.estimates[("rollPart", ())], 4 + 15)
+
+    def test_a_429_storm_in_the_keeper_doesnt_delay_a_due_reveal(self):
+        net = Net(self.tmp)
+        c = net.chain
+        c.add_panel(1, v3.COUNTED, net.addresses(0))
+        node = net.node(0, keeper=True)
+        storm, asked = [True], []
+        rolled = c.rolled
+
+        def limited():
+            asked.append(c.time)
+            if storm[0]:
+                raise Unavailable("HTTP 429", retry_after=None)
+            return rolled()
+        c.rolled = limited  # read by the keeper alone, first in its section
+        node.tick(0)  # the seal; the keeper's section hits the rate limit and pauses
+        self.assertIn("seal", c.names())
+        node.tick(0)  # the next pass: the reveal (its panel has sealed), and no keeper call
+        self.assertIn("reveal", c.names())
+        self.assertEqual(len(asked), 1)
+        self.assertEqual(sum("isn't answering the keeper's calls" in line for line in net.logs), 1)
+        c.warp(node_v3.BACKOFF_BASE_S)
+        node.tick(0)  # paused again, longer: still one log line
+        self.assertEqual(len(asked), 2)
+        self.assertEqual(sum("isn't answering the keeper's calls" in line for line in net.logs), 1)
+        c.warp(2 * node_v3.BACKOFF_BASE_S)
+        storm[0] = False
+        node.tick(0)
+        self.assertEqual(len(asked), 3)
+        self.assertTrue(any("answers again" in line for line in net.logs))
+
+    def test_a_429_pause_follows_retry_after_up_to_the_cap(self):
+        net = Net(self.tmp)
+        c = net.chain
+        keeper = net.node(3, keeper=True)
+        after = [120.0]
+
+        def limited():
+            raise Unavailable("HTTP 429", retry_after=after[0])
+        c.rolled = limited
+        keeper.tick(0)
+        self.assertEqual(keeper._paused_until, c.time + 120)
+        after[0] = 10**6
+        c.time = keeper._paused_until
+        keeper.tick(0)
+        self.assertEqual(keeper._paused_until, c.time + node_v3.RATE_PAUSE_MAX_S)
+
+    def test_the_keeper_section_runs_every_keeper_every_seconds(self):
+        net = Net(self.tmp)
+        c = net.chain
+        keeper = net.node(3, keeper=True)
+        keeper.keeper_every = 60
+        asked = []
+        rolled = c.rolled
+        c.rolled = lambda: asked.append(c.time) or rolled()
+        self.hours(net, keeper, 0.5, step=12)  # a pass a block, a keeper section a minute
+        self.assertEqual(len(asked), 30)
+
+    def test_the_scan_set_shrinks_as_checks_finish_and_a_restart_rescans_once(self):
+        net = Net(self.tmp)
+        c = net.chain
+        for s in range(2, 7):
+            c.add_submission(s)
+            c.subs[s].update(paid=True, done=s % 2 == 0)
+            c.verdicts[s].update(status=v3.FINAL, finalAt=c.time + 10**6)
+        reads = []
+        verdict = c.verdict
+        c.verdict = lambda s: reads.append(s) or verdict(s)
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertEqual(sorted(reads), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(keeper._scan, {1, 3, 5})  # 2, 4 and 6 are done: final, nothing owed
+        reads.clear()
+        keeper.tick(0)
+        self.assertEqual(sorted(reads), [1, 3, 5])
+        c.subs[3]["done"] = True
+        keeper.tick(0)
+        reads.clear()
+        keeper.tick(0)
+        self.assertEqual(sorted(reads), [1, 5])
+        restarted = net.node(3, keeper=True)  # a new process: every check read once again, then only the open ones
+        reads.clear()
+        restarted.tick(0)
+        self.assertEqual(sorted(reads), [1, 2, 3, 4, 5, 6])
+        reads.clear()
+        restarted.tick(0)
+        self.assertEqual(sorted(reads), [1, 5])
+
+    def test_a_claimed_fix_stays_in_the_scan_until_merged(self):
+        net = Net(self.tmp)
+        c = net.chain
+        c.subs[1].update(paid=True, done=True)
+        c.verdicts[1].update(status=v3.FINAL)
+        c.bounties[1] = {"state": v3.CLAIMED, "winner": 1, "epoch": 1}
+        c.awards[(1, 1)] = {"winner": c.subs[1]["solver"], "fix": "0x" + "00" * 32, "sub": 1, "closed": False,
+                            "earned": 0, "merged": False}
+        c.merge = lambda sender, b: _fail("NotYet()")
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertIn(1, keeper._scan)  # its merge is owed
+        c.awards[(1, 1)]["merged"] = True
+        keeper.tick(0)
+        self.assertNotIn(1, keeper._scan)
+
+    def test_a_won_fix_stays_in_the_scan_until_claimed_and_merged(self):
+        """A final, done fix whose solver hasn't claimed yet isn't dropped: its claim makes the merge due (scenario r
+        of the integration set found it dropped before the claim, and never merged)."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.subs[1].update(paid=True, done=True)
+        c.verdicts[1].update(status=v3.FINAL)
+        c.bounties[1] = {"state": v3.WON, "winner": 1, "epoch": 0}
+        merged = []
+        c.merge = lambda sender, b: merged.append(b)
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertIn(1, keeper._scan)  # won, not claimed yet: kept
+        c.bounties[1] = {"state": v3.CLAIMED, "winner": 1, "epoch": 1}
+        c.awards[(1, 1)] = {"winner": c.subs[1]["solver"], "fix": "0x" + "00" * 32, "sub": 1, "closed": False,
+                            "earned": 0, "merged": False}
+        keeper.tick(0)
+        self.assertEqual(merged, [1])
+
+    def test_a_budgeted_section_resumes_where_it_stopped(self):
+        net = Net(self.tmp)
+        c = net.chain
+        for s in range(2, 41):
+            c.add_submission(s)
+            c.verdicts[s]["seedBlock"] = 10**9  # nothing to call yet: one read each
+        reads = []
+        verdict = c.verdict
+        c.verdict = lambda s: reads.append(s) or verdict(s)
+        keeper = net.node(3, keeper=True)
+        keeper.keeper_budget = 20
+        passes = []
+        for _ in range(6):
+            reads.clear()
+            keeper.tick(0)
+            passes.append(list(reads))
+        self.assertTrue(all(0 < len(p) < 20 for p in passes))
+        covered = [s for p in passes[:4] for s in p]
+        self.assertEqual(sorted(set(covered)), list(range(1, 41)))  # every check within a few passes
+        self.assertEqual(passes[1][0], passes[0][-1] + 1)  # each pass goes on from where the last stopped
+        self.assertTrue(any("budget" in line for line in net.logs))
+
+    def test_a_rebase_check_is_kept_with_the_same_gates(self):
+        """#310's rebase checks come from `Rebased` alone (task 2.8): the keeper reads them, gates their `finish`, and
+        drops them once done."""
+        net = Net(self.tmp)
+        c = net.chain
+        c.subs[1].update(paid=True, done=True, outcome=1)
+        c.verdicts[1].update(status=v3.FINAL)
+        c.add_submission(2)
+        c.subs[2].update(rebaseOf=1, paid=True)
+        c.verdicts[2].update(status=v3.FINAL, finalAt=c.time)
+        c.rebases_ = [{"bounty": 1, "original": 1, "submission": 2, "block": 1}]
+        committed = c.committed
+        c.committed = lambda fb, tb=None: [e for e in committed(fb, tb) if e["submission"] != 2]
+        keeper = net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertIn(2, keeper._scan)
+        due = c.time + node_v3.REPORT_WINDOW_S
+        seen = []
+        self.hours(net, keeper, 26, step=600, each=lambda: seen.append((c.time, c.estimates.get(("finish", (2,)), 0))))
+        self.assertTrue(all(n == 0 for at, n in seen if at <= due))
+        self.assertEqual(c.estimates[("finish", (2,))], 1)
+        self.assertNotIn(2, keeper._scan)
+
+
+class KeeperDrawAndSignal(unittest.TestCase):
+    """v3.1 polish VP24 (the owner's Q2, 2026-11-24): one draw-and-signal rule. Waiting: signal (the wait), draw, then
+    signal again if the draw seated a panel. Sealed: draw, then signal. `signals` records the verdict's status at
+    each RaceV3.signal: waiting counts a wait, a panel counts its seated validators as drawn."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.net = Net(Path(self._tmp.name))
+        self.c, self.signals, self.sent = self.net.chain, [], []
+        c = self.c
+
+        def signal(sender, s):
+            self.sent.append("signal")
+            self.signals.append(c.verdicts[s]["status"])
+
+        def draw(sender, s):  # a panel seated, from a sealed check past its seed block or a waiting one
+            v = c.verdicts[s]
+            if v["status"] == v3.SEALED and c.height <= v["seedBlock"]:
+                _fail("TooEarly()")
+            self.sent.append("draw")
+            c.add_panel(s, v3.COUNTED, self.net.addresses(0, 1, 2))
+        c.signal, c.draw = signal, draw
+
+    def test_waiting_signals_the_wait_draws_then_signals_the_panel(self):
+        c = self.c
+        c.verdicts[1].update(status=v3.WAITING, redraws=1, waitEpoch=c.epoch() + 1, retryAt=c.time - 1)
+        keeper = self.net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertEqual(self.sent[:3], ["signal", "draw", "signal"])
+        self.assertEqual(self.signals[:2], [v3.WAITING, v3.JUDGING])
+
+    def test_waiting_not_yet_due_signals_the_wait_once(self):
+        c = self.c
+        c.verdicts[1].update(status=v3.WAITING, waitEpoch=c.epoch() + 1, retryAt=c.time + 86_400)
+        keeper = self.net.node(3, keeper=True)
+        for _ in range(5):
+            c.warp(60)
+            keeper.tick(0)
+        self.assertEqual(self.sent, ["signal"])  # the wait, once a wait round; no draw before its retry time
+        c.verdicts[1].update(redraws=1, retryAt=c.time + 86_400)  # a released round waits again: its own signal
+        keeper.tick(0)
+        self.assertEqual(self.sent, ["signal", "signal"])
+
+    def test_sealed_draws_then_signals(self):
+        self.c.height = self.c.verdicts[1]["seedBlock"] + 1
+        keeper = self.net.node(3, keeper=True)
+        keeper.tick(0)
+        self.assertEqual((self.sent[:2], self.signals[:1]), (["draw", "signal"], [v3.JUDGING]))
+
+    def test_the_rule_itself(self):
+        def steps(status, drew=True, seats=True):
+            out = []
+
+            def draw():
+                out.append("draw")
+                return drew
+
+            def signal(kind):
+                out.append("signal:" + kind)
+                return True
+            v3.draw_and_signal(status, draw, signal, lambda: seats)
+            return out
+        self.assertEqual(steps(v3.WAITING), ["signal:wait", "draw", "signal:drawn"])
+        self.assertEqual(steps(v3.WAITING, seats=False), ["signal:wait", "draw"])  # still waiting: counted already
+        self.assertEqual(steps(v3.WAITING, drew=False), ["signal:wait", "draw"])
+        self.assertEqual(steps(v3.SEALED), ["draw", "signal:drawn"])
+        self.assertEqual(steps(v3.SEALED, drew=False), ["draw"])
+        self.assertEqual(steps(v3.JUDGING), [])
+
+
+class KeeperSettings(unittest.TestCase):
+    """ORACLE_POLL, ORACLE_KEEPER_EVERY, ORACLE_TX_POLL and ORACLE_KEEPER_BUDGET (v3.1 polish VP6)."""
+
+    def test_defaults_follow_the_chain(self):
+        from oracle import __main__ as cli
+
+        self.assertEqual(cli.node_cadence({}, 11_155_111),
+                         {"poll": 12.0, "keeper_every": 60.0, "tx_poll": 4.0, "keeper_budget": 300})
+        self.assertEqual(cli.node_cadence({}, CHAIN),
+                         {"poll": 2.0, "keeper_every": 0.0, "tx_poll": 0.4, "keeper_budget": 300})
+        env = {"ORACLE_POLL": "5", "ORACLE_KEEPER_EVERY": "0", "ORACLE_TX_POLL": "1.5", "ORACLE_KEEPER_BUDGET": "50"}
+        self.assertEqual(cli.node_cadence(env, 11_155_111),
+                         {"poll": 5.0, "keeper_every": 0.0, "tx_poll": 1.5, "keeper_budget": 50})
+        for bad in ({"ORACLE_POLL": "soon"}, {"ORACLE_TX_POLL": "-1"}, {"ORACLE_KEEPER_BUDGET": "0"}):
+            with self.assertRaises(SystemExit):
+                cli.node_cadence(bad, CHAIN)
+
+    def test_the_help_documents_each_setting(self):
+        from oracle import __main__ as cli
+
+        for name in ("ORACLE_POLL", "ORACLE_KEEPER_EVERY", "ORACLE_TX_POLL", "ORACLE_KEEPER_BUDGET"):
+            self.assertIn(f"    {name} ", cli.__doc__)
+
+
+class TableOnV3(unittest.TestCase):
+    """VP2 (audit F1 on live v3): where FeesV3 has no `drawEpoch`, the table posts no family that isn't priced yet."""
+
+    CLAUDE = v3.name_id("anthropic.claude")  # the deployment's name for the family it prices
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name)
+
+    def table(self, v31: bool, list_prices=None):
+        net = Net(Path(tempfile.mkdtemp(dir=self.tmp)))
+        c = net.chain
+        c.v31_fees = v31
+        c.priced = [FAMILY, self.CLAUDE]
+        probes = []
+        draw_epoch = c.draw_epoch
+        c.draw_epoch = lambda s: probes.append(s) or draw_epoch(s)
+        kw = {} if list_prices is None else {"list_prices": list_prices}
+        node = net.node(0, table=True, **kw)
+        _, families, tokens = node.post_table()
+        node.post_table()
+        self.assertEqual(probes, [0])  # probed once
+        return dict(zip(families, tokens)), net.logs
+
+    def test_on_v3_only_priced_families_are_posted(self):
+        table, logs = self.table(v31=False)
+        self.assertNotIn(v3.name_id("openai/gpt"), table)
+        self.assertNotIn(v3.name_id("anthropic/claude"), table)
+        self.assertEqual(set(table), {FAMILY, self.CLAUDE})
+        self.assertEqual(table[self.CLAUDE], [4_000_000, 200_000, 20_000_000])  # the price in force
+        self.assertEqual(sum("no drawEpoch" in line for line in logs), 1)
+
+    def test_on_v31_every_listed_family_is_posted(self):
+        table, logs = self.table(v31=True)
+        self.assertIn(v3.name_id("openai/gpt"), table)
+        self.assertEqual(len(table), len(node_v3.default_list_prices()) + 2)
+        self.assertFalse(any("no drawEpoch" in line for line in logs))
+
+    def test_a_v31_function_refusing_check_0_still_counts_as_v31(self):
+        net = Net(self.tmp)
+        node = net.node(0, table=True)
+
+        def refuse(s):
+            raise Reverted("Unknown()", "0x" + abi.selector("Unknown()").hex())
+        net.chain.draw_epoch = refuse
+        self.assertTrue(node.fees_draw_epoch())
+
+    def test_an_empty_list_gives_the_v3_rules_table(self):
+        """ORACLE_LIST_PRICES={} (the measured image's route on live v3): the same table as the v3 rule."""
+        from oracle import __main__ as cli
+
+        empty = cli._json_setting("{}")
+        self.assertEqual(empty, {})
+        on_v31, _ = self.table(v31=True, list_prices=empty)
+        on_v3, _ = self.table(v31=False)
+        self.assertEqual(on_v31, on_v3)
 
 
 class Registering(unittest.TestCase):

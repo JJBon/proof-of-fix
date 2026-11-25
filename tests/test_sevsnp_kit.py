@@ -373,6 +373,39 @@ class TheTerraform(unittest.TestCase):
         # map(string): the first test host, 2026-11-20, got the signing key's ARN and started the node.)
         self.assertIn("node_lines = length(var.node_config) == 0 ? [] :", main)
 
+    def test_several_kits_in_one_account_keep_the_old_defaults(self):
+        """subnet_id, tags and budget_cost_tag (#251, the temporary validators): empty by default, so an existing state
+        plans no change; the kit's own network moves to index 0 instead of being replaced."""
+        tf = KIT / "terraform"
+        variables = (tf / "variables.tf").read_text()
+        for name, default in (("subnet_id", '""'), ("tags", "{}"), ("budget_cost_tag", '""')):
+            block = variables[variables.index(f'variable "{name}" {{'):]
+            self.assertIn(f"  default     = {default}\n", block[:block.index("\n}\n") + 1])
+        network = (tf / "network.tf").read_text()
+        for res in ("aws_vpc.main", "aws_internet_gateway.main", "aws_subnet.public", "aws_route_table.public",
+                    "aws_route_table_association.public"):
+            self.assertRegex(network, rf"moved \{{\n  from = {re.escape(res)}\n  to   = {re.escape(res)}\[0\]\n\}}")
+        self.assertEqual(len(re.findall(r"count\s+= local\.own_network \? 1 : 0", network)), 5)
+        self.assertIn("subnet_id                            = local.subnet_id", (tf / "main.tf").read_text())
+        self.assertIn("volume_tags = length(var.tags) > 0 ?", (tf / "main.tf").read_text())
+        budget = (tf / "budget.tf").read_text()
+        self.assertIn('for_each = var.budget_cost_tag != "" ? [var.budget_cost_tag] : []', budget)
+        self.assertIn('values = ["user:${cost_filter.value}"]', budget)
+        # The watcher is untouched by these (another change owns it).
+        self.assertNotIn("subnet", (tf / "watcher.tf").read_text())
+
+    def test_the_example_keeps_the_instance(self):
+        """A plan without create_instance = true destroys the instance and its data volume (the Radicle key)."""
+        tf = KIT / "terraform"
+        example = (tf / "test.tfvars.example").read_text()
+        self.assertRegex(example, r"(?m)^create_instance\s+= true")
+        self.assertNotRegex(example, r"(?<![0-9a-f])(?!123456789012)\d{12}(?![0-9a-f])")
+        ignore = (tf / ".gitignore").read_text().splitlines()
+        for pattern in ("*.tfstate*", "*.tfvars", "*.tfvars.*", "!*.tfvars.example", "*.plan", "*.plan.txt"):
+            self.assertIn(pattern, ignore)
+        self.assertIn("**Warning: from here on, every `tofu plan` and `tofu apply` of this state needs `-var "
+                      "create_instance=true`", (ROOT / "validator-kit/SEVSNP-PLAN.md").read_text())
+
     def test_v2_s_kit_is_untouched(self):
         self.assertTrue((ROOT / "validator-kit/terraform/node.tf").exists())
         self.assertIn("al2023-ami-kernel-default-arm64", (ROOT / "validator-kit/terraform/node.tf").read_text())

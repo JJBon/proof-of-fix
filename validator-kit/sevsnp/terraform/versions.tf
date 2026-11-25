@@ -17,6 +17,6 @@ provider "aws" {
   region = var.region
 
   default_tags {
-    tags = { "pof:component" = "validator-sevsnp", "pof:kit" = "validator-kit/sevsnp" }
+    tags = merge({ "pof:component" = "validator-sevsnp", "pof:kit" = "validator-kit/sevsnp" }, var.tags)
   }
 }

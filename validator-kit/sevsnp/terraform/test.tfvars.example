@@ -1,0 +1,47 @@
+# An example of the kit's variables (validator-kit/SEVSNP-PLAN.md, steps 5-6 and "The v3 watcher"). Copy it to
+# test.tfvars (git-ignored, with *.tfstate*) and fill in your own values; never commit the copy.
+#
+#   cp test.tfvars.example test.tfvars
+#   tofu plan -var-file=test.tfvars          # read the plan before every apply
+#
+# WARNING: create_instance defaults to false. Once the instance exists, a plan or apply without
+# create_instance = true (here or as -var create_instance=true) DESTROYS the instance and its data volume, which holds
+# the node's state and its Radicle key (a new volume is a new key, and a registration can't change its node).
+
+# ---------- The disk and the instance ----------
+snapshot_id     = "snap-0123456789abcdef0" # the measured disk's snapshot (SEVSNP-PLAN.md step 4)
+manifest_path   = "../out/manifest.json"   # the same build's manifest
+create_instance = true                     # keep it true once the instance exists (the warning above)
+power_off       = true                     # every run ends stopped; false only for a first attest-only test
+# name          = "pof-snp"                # one name, and one state, per validator: pof-snp-v2, pof-snp-v3, ...
+
+# ---------- The money ----------
+budget_emails    = ["you@example.org"]
+budget_limit_usd = 15
+# Without budget_cost_tag the budget counts the whole account, not this kit (SEVSNP-PLAN.md, "Running several
+# validators"). Activate the tag as a cost allocation tag in the payer account first.
+# tags            = { "pof:validator" = "v2" }
+# budget_cost_tag = "pof:validator$v2"
+
+# ---------- A shared network (optional) ----------
+# An existing public subnet instead of the kit's own VPC (an account has 5 VPCs a region by default).
+# subnet_id = "subnet-0123456789abcdef0"
+
+# ---------- The node (after the attest-only boot; SEVSNP-PLAN.md step 8) ----------
+# node_config = {
+#   ORACLE_VERSION           = "3"
+#   ORACLE_RPC               = "https://rpc.example.org/sepolia" # this validator's own endpoint, no key in the URL
+#   ORACLE_FROM_BLOCK        = "<the deployment record's block>"
+#   ORACLE_RACE              = "0x<the deployment's Race>"
+#   ORACLE_SPEND_DAILY_USD   = "0.50"
+#   ORACLE_SPEND_MONTHLY_USD = "5"
+#   MODEL_API_KEY_SECRET_ARN = "arn:aws:secretsmanager:us-east-2:123456789012:secret:pof-snp/model-api-key-AbCdEf"
+# }
+# extra_secret_arns = ["arn:aws:secretsmanager:us-east-2:123456789012:secret:pof-snp/model-api-key-AbCdEf"]
+# node_command      = "run --until-idle 600"
+
+# ---------- The v3 watcher (once registered) ----------
+# watcher_enabled    = true
+# validator_address  = "0x<the signing key's address>"
+# rpc_url_secret_arn = "arn:aws:secretsmanager:us-east-2:123456789012:secret:pof-snp/rpc-url-AbCdEf" # a keyed URL
+# max_starts_per_day = 12

@@ -228,6 +228,10 @@ library PanelsDraw {
         if (nr == 0) return c;
         uint256 end = c.counter + budget;
         uint256 k = c.k;
+        // F1 (v3.1 polish): a paid seat's family must be priced at the check's own epoch, which its pay is charged at,
+        // and at the snapshot
+        uint256 ep = c.fees.drawEpoch(c.id);
+        if (ep > c.snap.rolled) ep = c.snap.rolled;
         while (c.m < k && c.counter < end) {
             uint256 i = c.counter++;
             (address key, uint64 raisedAt, uint8 bucket) =
@@ -258,7 +262,7 @@ library PanelsDraw {
                 if (c.unpriced == address(0)) c.unpriced = key;
                 continue;
             }
-            if (c.fees.pricedFrom(v.family) > c.snap.rolled) continue;
+            if (c.fees.pricedFrom(v.family) > ep) continue;
             if (!c.scores.isSeatedSince(v.family, c.snap.blockNo)) continue; // barred or a contender (D20)
             c.members[c.m++] = x;
         }
@@ -323,7 +327,8 @@ library PanelsDraw {
 
     /// Whether `count` validators are eligible for a verdict's challenge: drawable and bonded for its bounty, outside
     /// its panel (and its auditors), not parties, at level A or B for a hidden-test submission (D4, D10), with room
-    /// for a check now (L16: a full or paused validator couldn't take its challenge's seat), and able to sit together
+    /// for a check now (L16: a full or paused validator couldn't take its challenge's seat), of a family priced at the
+    /// check's epoch (v3.1 polish, F1: the only families its challenge panel can seat), and able to sit together
     /// under the deployment's `Strict` operator, host and TEE-type caps (#251 batch 4, L23: so a hold doesn't end while
     /// its challenge can't be drawn; taken in scan order, as the draw takes them in sample order). The caps are a panel
     /// of HOLD_K's whatever `count` is (#251 batch 5: `count` adds the audits still due, and any `count` validators that
@@ -339,6 +344,7 @@ library PanelsDraw {
         uint256 start = uint256(keccak256(abi.encode(c.seed, "hold")));
         uint256 reads = n < HOLD_SCAN_MAX ? n : HOLD_SCAN_MAX;
         Ctx memory h; // the challengers so far, under the caps (`fits`; no family cap: D20's, unchanged)
+        uint256 ep = c.fees.drawEpoch(c.id); // F1 (v3.1 polish): only a family a challenge panel could seat counts
         h.members = new Member[](c.count);
         h.opCap = c.opCap;
         h.hostCap = c.hostCap;
@@ -349,6 +355,7 @@ library PanelsDraw {
             IValidators.Validator memory v = c.reg.validator(key);
             if (c.teeOnly && v.level == LEVEL_C) continue;
             if (c.host.isParty(c.id, key) || c.host.isParty(c.id, v.operator)) continue;
+            if (!c.fees.isPriced(v.family) || c.fees.pricedFrom(v.family) > ep) continue;
             Member memory x = Member(key, v.operator, v.host, v.family, v.teeType, v.level);
             if (!fits(h, x, HOLD_K)) continue;
             h.members[h.m++] = x;

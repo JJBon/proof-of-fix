@@ -334,6 +334,17 @@ class TheUserData(unittest.TestCase):
         self.assertTrue(f["registered"])
 
 
+class TheJudgingConsole(unittest.TestCase):
+    """verify.py reads a capture that still holds the boot's POF-ATTEST lines (EC2 keeps a console's last 64 KB)."""
+
+    def test_the_end_s_capture_is_kept_only_while_it_still_attests(self):
+        booted = (ROOT / "validator-kit/sevsnp/evidence/2026-11-20/console.txt").read_text(errors="replace")
+        scrolled = "[ 135.0] pof-node.sh[943]: keeper: payShadow(91, 0) refused (Refused())\n" * 3
+        self.assertEqual(A.run_console(booted, booted + scrolled), (booted + scrolled, ""))
+        self.assertEqual(A.run_console(booted, scrolled), (booted, scrolled))  # rc5: the attest lines had scrolled out
+        self.assertEqual(A.run_console(booted, ""), (booted, ""))
+
+
 class TheRecordItems(unittest.TestCase):
     """sevSnpValidator and attestedImages pass only for an AWS run of the record's commit with a real SEV-SNP host."""
 
@@ -573,7 +584,7 @@ class TheExternalSet(unittest.TestCase):
         X = self.X
         self.assertEqual(X.HARNESS, ["genesis", "v1", "v2", "v3", "v4", "v5"])
         self.assertEqual(X.PAUSED, ["v2", "v3", "v4", "v5"])
-        self.assertEqual(X.EXTERNAL_FAMILY, "fake-6")
+        self.assertEqual(X.EXTERNAL_FAMILY, "anthropic/claude")  # `provider/line` (v3.1 polish VP12), priced at deploy
 
 
 class TheReleaseCandidateExternalMode(unittest.TestCase):

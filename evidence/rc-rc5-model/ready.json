@@ -1,0 +1,21 @@
+{
+  "format": "pof-external-ready/1",
+  "mode": "aws",
+  "external": "0x6C423661490653b44d02B2F298A99252F4423045",
+  "chainId": 31337,
+  "rpc": "http://10.82.0.145:8545",
+  "race": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "registry": "0xaF79b9F48d2939529B9Eae7aBd0B8D3440807E40",
+  "rid": "rad:z28TLjwqZe1x3sZpPVf1EHtfVMhUG",
+  "seed": "z6MkvMmB3GF13E3nHJTyQr9Ki4ZHB3SfkBfwL389QUR5frtz@10.82.0.145:8776",
+  "family": "anthropic/claude",
+  "image": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+  "bond": 250,
+  "proof": "tee",
+  "teeType": "amd-sev-snp",
+  "windowsKind": "production",
+  "acceptedImages": [
+    "0x4d5decb4510662eeec5233e778a24db2fb19026fdc18e88476409b7f4b099a8b",
+    "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a"
+  ]
+}

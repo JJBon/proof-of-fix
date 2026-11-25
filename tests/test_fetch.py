@@ -92,6 +92,34 @@ class TestFetchFromABareRepo(FetchCase):
         self.assertEqual([p.name for p in self.root.iterdir()], [sha])  # no temporary directory left behind
         self.assertTrue(f.ensure(self.root, sha, commit_word(sha)))  # a second pass reuses it
 
+    def test_the_range_diff_of_a_rebase(self):
+        """#310 RB3: an approved fix and its rebase onto a head that moved, from their merge bases, by this node."""
+        url, fix, first = make_repo(self.tmp, {"stats.py": "def median(xs):\n    return sorted(xs)[len(xs) // 2]\n"})
+        work = self.tmp / "work"
+        git(work, "checkout", "-q", "-b", "head", first)
+        (work / "other.py").write_text("x = 1\n")
+        git(work, "add", ".")
+        git(work, "commit", "-q", "-m", "the first fix")
+        head = git(work, "rev-parse", "HEAD")
+        git(work, "cherry-pick", fix)
+        rebased = git(work, "rev-parse", "HEAD")
+        git(work, "checkout", "-q", "-b", "smuggled", head)  # the same fix on the same head, and one more line
+        (work / "stats.py").write_text("def median(xs):\n    return sorted(xs)[len(xs) // 2]\nsmuggled = True\n")
+        git(work, "add", ".")
+        git(work, "commit", "-q", "-m", "the fix")
+        smuggled = git(work, "rev-parse", "HEAD")
+        git(work, "push", "-q", str(self.tmp / "bare.git"), f"{smuggled}:refs/heads/smuggled",
+            f"{rebased}:refs/heads/clean")
+        f = fetch.Fetcher(url, log=self.logs)
+        clean = f.range_diff(self.root, first, fix, head, rebased)
+        self.assertEqual(clean.refusal, "")
+        self.assertRegex(clean.text, r"1:\s+[0-9a-f]+ = 1:\s+[0-9a-f]+ the fix")
+        dirty = f.range_diff(self.root, first, fix, head, smuggled)
+        self.assertIn("smuggled = True", dirty.text)
+        self.assertEqual(f.range_diff(self.root, first, fix, head, "zz").refusal,
+                         "a rebase's range-diff needs four commit ids")
+        self.assertFalse([p for p in self.root.iterdir()])  # nothing left behind
+
     def test_a_fix_the_seal_doesnt_commit_to_is_refused_before_fetching(self):
         url, sha, first = make_repo(self.tmp, {"stats.py": "x = 1\n"})
         f = fetch.Fetcher(url, log=self.logs)

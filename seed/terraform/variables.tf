@@ -96,3 +96,14 @@ variable "budget_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "keeper_secret_arns" {
+  description = "The keeper's secrets on this host (owner's approval 2026-11-23): its account's key and its own RPC URL (pof-seed/keeper-rpc-url, a key of its own, not the validator's), as Secrets Manager ARNs (with their random suffix). The role may read exactly these (GetSecretValue). Empty: no keeper policy."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for a in var.keeper_secret_arns : can(regex("^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+$", a))])
+    error_message = "keeper_secret_arns: Secrets Manager secret ARNs only."
+  }
+}

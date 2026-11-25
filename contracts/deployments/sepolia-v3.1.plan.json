@@ -1,0 +1,30 @@
+{
+  "rid": "rad:z2whCPbrSKbtyvwYjHXPZhN9ZkK5z",
+  "genesisHead": "bc68e00bb6eea82ddb497a527d71bd14aa6c3b34",
+  "families": [
+    "anthropic/claude"
+  ],
+  "teeTypes": [
+    "amd-sev-snp",
+    "aws-nitro-enclaves"
+  ],
+  "images": [
+    "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a"
+  ],
+  "keeper": {
+    "address": "0xd793682e7b7BF62daFa4b62dEb712Fc8C0a4E1aC",
+    "role": "the seed host's keeper-only node",
+    "cost": "about $0 (it runs on the seed's existing instance) plus Sepolia gas, about 1.5-2M gas a check"
+  },
+  "genesisValidator": {
+    "key": "0x6C423661490653b44d02B2F298A99252F4423045",
+    "operator": "0x6C423661490653b44d02B2F298A99252F4423045",
+    "teeType": "amd-sev-snp",
+    "level": 1,
+    "attestation": "0xdeb3b8957f2ce83a6d88b9f88338652726c93628f0045268c8302e8592137c6e",
+    "image": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+    "host": "0xb198813ac55f5104c3f55e47886019c8fb94c3fac5f42e04c187710c1156b795",
+    "firmware": 67117025,
+    "signature": "0x7ff259db44c5192ad837d95c97eebc2e78a4f884d34b2ddf99ea7b3181a81268471558c6a7fab2b09c11a14557ffd15883d1d03b9702d8636c28455f130e3c2e1c"
+  }
+}

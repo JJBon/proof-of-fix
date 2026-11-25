@@ -383,19 +383,20 @@ contract PanelsV3Test is PanelsSetup {
 
     // ---------- seals, reveals and receipts: early, mismatched, replayed, late ----------
 
+    /// #311: a reveal or a receipt is refused while a seat is unsealed; once every seat has sealed the reveal opens,
+    /// before `sealBy`.
     function test_anEarlyRevealIsRefused() public {
         _network(2, 3, 3);
         uint256 pid = _openAndDraw(_id(), 100e6);
         address[] memory js = pn.judges(pid);
-        for (uint256 i; i < 3; ++i) {
-            _seal(pid, js[i], true);
-        }
-        _revealReverts(pid, js[0], Panels.TooEarly.selector); // the seal window is still open
+        _seal(pid, js[0], true);
+        _seal(pid, js[1], true);
+        _revealReverts(pid, js[0], Panels.TooEarly.selector); // a seat could still seal
         _receiptReverts(pid, js[0], Panels.TooEarly.selector);
-        vm.warp(pn.panel(pid).sealBy);
-        _revealReverts(pid, js[0], Panels.TooEarly.selector); // its last second
-        vm.warp(pn.panel(pid).sealBy + 1);
-        _reveal(pid, js[0]);
+        _seal(pid, js[2], true);
+        assertLt(vm.getBlockTimestamp(), pn.panel(pid).sealBy);
+        _reveal(pid, js[0]); // the panel is full and sealed: open, long before `sealBy`
+        _receipt(pid, js[0]);
     }
 
     /// A reveal that doesn't match its seal: the whole bond (Fault.Mismatch), the seat replaced, the call succeeds.

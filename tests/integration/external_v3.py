@@ -33,6 +33,10 @@ F. a fix: a Radicle issue registered with pofctl and its check final, its bounty
    pofctl. For the draw, four of the six harness validators pause (capacity 0, as an operator may), so the counted
    panel of 3 is the genesis validator, v1 and the outside validator; they resume once it is drawn. The outside
    validator seals and reveals its verdict on its counted seat, and the verdict is counted.
+D. the draw duty (v3.1 polish VP9): with the harness's keeper off for one draw, a registration check nobody in the
+   harness draws; the outside validator's watcher (validator-kit/sevsnp/lambda/watcher.py, run here against this
+   chain for the outside key, its instance a stopped stand-in) starts it once, and the outside validator's own node,
+   its keeper on, draws the check.
 R. the result, `pof-external-run/1`, to POF_EXT_DIR/external.json (or --result): what release_candidate.py's external
    items read.
 I. isolation: the run's internal network has no route out, and every harness validator's Radicle node dialled only the
@@ -71,12 +75,12 @@ from oracle.keys import DstackKeys  # noqa: E402
 
 FORMAT = "pof-external-run/1"
 READY_FORMAT = "pof-external-ready/1"
-PREFIX = "pof251x"
+PREFIX = os.environ.get("POF_EXT_PREFIX", "pof251x")  # another name beside a second run on one machine
 OUT = ROOT / ".external-v3"
 RECORD_DIR = ROOT / "contracts" / "deployments" / "external-v3"
 HARNESS = ["genesis"] + [f"v{i}" for i in range(1, 6)]  # the other six (the owner's decision, 2026-11-21)
 NODES = ["owner", *HARNESS, "reporter", "solver"]
-EXTERNAL_FAMILY = SV.FAMILIES[len(HARNESS)]  # "fake-6": priced from the deployment, as the seventh validator's
+EXTERNAL_FAMILY = "anthropic/claude"  # the launch's family (v3.1 polish VP12, `provider/line`), priced from the deployment
 EXTERNAL_BOND = 250  # coins: the SEV-SNP plan's `register --bond 250`
 EXTERNAL_FUNDS = 5_000  # coins sent to the outside key: its bond, stakes and its share of a challenge's cover
 REHEARSAL_IMAGE = "0x" + crypto.keccak256(b"pof external rehearsal checker image").hex()
@@ -261,6 +265,7 @@ class ExternalStory(K.KitStory):
         self.registered()
         self.qualified()
         self.judged()
+        self.draw_duty()
         self.out["result"] = "passed" if all(v == "PASS" for v in self.res.result.values()) else "failed"
         self.res.scenario("R", "the result for the release candidate's external items")
         self.res.ok(f"{FORMAT}: {self.result_path}")
@@ -276,7 +281,7 @@ class ExternalStory(K.KitStory):
         genesis_commit = self.repos()
         minter = crypto.address(secret("minter"))
         launch = {**SR.LAUNCH, "LOCAL_WINDOWS": "production", "LOCAL_GENESIS_MINT_TO": minter,
-                  "LOCAL_FAMILIES": ",".join(SV.FAMILIES[:len(HARNESS) + 1]), "LOCAL_EXTRA_IMAGE": s["image"]}
+                  "LOCAL_FAMILIES": ",".join(SV.FAMILIES[:len(HARNESS)] + [EXTERNAL_FAMILY]), "LOCAL_EXTRA_IMAGE": s["image"]}
         record = self.deploy_v3(rad.rid["a"], genesis_commit, env=launch)
         self.rpc.call("anvil_setBlockTimestampInterval", [0])  # chain time moves only when the run moves it
         record["rid"] = rad.rid["a"]
@@ -453,6 +458,55 @@ class ExternalStory(K.KitStory):
                   f"({'receipted, ' if seat.get('receipted') else ''}verdict {'pass' if v['pass'] else 'fail'}, "
                   f"status {v3.STATUS[v['status']]}), {round(time.time() - t)} s of wall time")
 
+    def draw_duty(self) -> None:
+        """D: the outside validator's watcher's draw duty (validator-kit/sevsnp/lambda/watcher.py, WAKE_ON_DRAW; v3.1
+        polish VP9), once, with the harness's keeper off for that draw: a registration check nobody in the harness
+        draws; the watcher, reading this chain for the outside key, asks its (stand-in, stopped) instance to start
+        once; the outside validator's own node, whose keeper is on, draws it."""
+        res, n = self.res, self.n
+        c = n.chain
+        res.scenario("D", "the outside validator's watcher's draw duty, with the harness's keeper off for one draw")
+        genesis = n.nodes["genesis"]
+        genesis.keeper = False
+        try:
+            env = {"ENABLED": "true", "STATE_PARAM": "/pof-snp/outside/watcher", "RACE_ADDRESS": c.race,
+                   "VALIDATOR_ADDRESS": self.ext, "INSTANCE_ID": "i-outside", "UNPAUSE_CHECK": "off",
+                   "MAX_BLOCK_RANGE": "100000", "WAKE_ON_DRAW": "true", "WAKE_ON_HEAD": "false",
+                   "DRAW_STAGGER_MINUTES": "0"}  # the stagger spreads several validators; here one watches
+            host = StoppedHost()
+            got, tries, s, r = None, 0, 0, {}
+            while got is None and tries < 3:
+                tries += 1
+                param = K.Param(json.dumps({"last": self.rpc.block()}))
+                _, s = n.register_issue()
+                # past its seed block and the watcher's grace (DRAW_GRACE_BLOCKS 25) at once
+                past = c.verdict(s)["seedBlock"] + 25 + 3 - self.rpc.block()
+                self.rpc.call("anvil_mine", [hex(max(past, 1))])
+                r = K.W.run(env, self.rpc, param, host, now=time.time)
+                if r.get("draw") == [s] and r.get("action") == "started":
+                    got = r
+            self.must(got is not None and host.starts == 1,
+                      f"the outside validator's watcher found undrawn check {s} past its grace and started its "
+                      f"stopped instance once ({got or r}; {tries} check(s) registered)")
+            end = time.time() + 180
+            while time.time() < end and c.verdict(s)["status"] in (v3.SEALED, v3.WAITING):
+                time.sleep(2)
+            drawn = n.evs(c.panels, "Drawn(uint256,uint256,uint8,uint256,bytes32)", s)
+            by = (self.rpc.call("eth_getTransactionByHash", [drawn[0]["transactionHash"]])["from"].lower()
+                  if drawn else "")
+            self.must(by == self.ext.lower(),
+                      f"check {s} drawn by the outside validator's own node (its keeper's Panels.draw, from "
+                      f"{by[:10] or 'nobody'}), with the harness's keeper off")
+            again = K.W.run(env, self.rpc, param, host, now=time.time)
+            # the draw may have seated the outside validator on the check's own panel: a start for that seat is the
+            # seat duty's, not a second draw start
+            self.must(s not in (again.get("draw") or []),
+                      f"the next watcher run makes no second draw start for check {s} (it saw it drawn; "
+                      f"{again.get('action')}, seats {again.get('seal') or []})")
+            self.out["drawDuty"] = {"check": s, "starts": host.starts, "drawnBy": by, "tries": tries}
+        finally:
+            genesis.keeper = True
+
     def isolation(self, others: tuple = ("relay",)) -> None:
         """The run's internal network has no route out; every harness validator's Radicle node dialled only the seed,
         outbound. (The outside network is internal in local mode; in aws mode it is the published one, and the host's
@@ -488,6 +542,20 @@ class ExternalStory(K.KitStory):
                                             text=True).stdout.strip()
         if self.out["result"] == "passed" and not all(v == "PASS" for v in self.out["results"].values()):
             self.out["result"] = "failed"  # isolation runs after the story
+
+
+class StoppedHost:
+    """The outside validator's instance as its watcher sees it through EC2 (D): stopped; a start is counted. Its node
+    is the outside validator's own process, which this file doesn't start."""
+
+    def __init__(self) -> None:
+        self.starts = 0
+
+    def describe_instances(self, InstanceIds):  # noqa: N803 (boto3's names)
+        return {"Reservations": [{"Instances": [{"State": {"Name": "stopped"}}]}]}
+
+    def start_instances(self, InstanceIds):  # noqa: N803
+        self.starts += 1
 
 
 def clean() -> None:

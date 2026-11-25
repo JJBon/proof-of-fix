@@ -62,7 +62,8 @@ def good_rc(**changes) -> dict:
 
 
 def good_plan() -> dict:
-    return {"rid": RID, "genesisHead": HEAD, "families": ["fake"], "teeTypes": ["amd-sev-snp"], "images": [IMAGE],
+    return {"rid": RID, "genesisHead": HEAD, "families": ["anthropic/claude"], "teeTypes": ["amd-sev-snp"],
+            "images": [IMAGE],
             "genesisValidator": {"key": GENESIS, "operator": "0x" + "55" * 20, "teeType": "amd-sev-snp",
                                  "level": 1, "attestation": "0x" + "66" * 32, "image": IMAGE, "host": "0x" + "77" * 32}}
 
@@ -120,7 +121,12 @@ rec.write_text(json.dumps({"chainId": int(cid), "deployer": os.environ["DEPLOY_D
                            "addresses": {"race": "0x" + "11" * 20, "pool": "0x" + "22" * 20,
                                          "panels": "0x" + "44" * 20},
                            "constructorArgs": {"Validators": {"validators": {
-                               "radNode": os.environ.get("FAKE_RAD_NODE") or os.environ["DEPLOY_GENESIS_RAD_NODE"]}}},
+                               "radNode": os.environ.get("FAKE_RAD_NODE") or os.environ["DEPLOY_GENESIS_RAD_NODE"]}},
+                               "FeesV3": {"caps": {"inputTokens": 140000, "outputTokens": 16000, "storageMb": 20,
+                                                   "gasAllowance": 1000000, "maxGasPrice": 1000000000,
+                                                   "gasOverhead": int(os.environ.get("FAKE_OVERHEAD") or 500000)}},
+                               "RaceV3": {"config": json.dumps({"mergeDays": int(os.environ.get("FAKE_MERGE_DAYS")
+                                                                                 or 3)})}},
                            "testCoin": {"genesisMint": {"total": int(os.environ["DEPLOY_GENESIS_MINT"])
                                                         + int(os.environ.get("FAKE_MINT_OFF", "0")),
                                                         "restTo": os.environ["DEPLOY_GENESIS_MINT_TO"]}}}))
@@ -348,7 +354,7 @@ class TestPlan(unittest.TestCase):
 
     def test_refusals(self):
         for change, says in (({"rid": "proof-of-fix"}, "rid"), ({"genesisHead": "abc"}, "genesisHead"),
-                             ({"families": []}, "families"), ({"families": ["a,b"]}, "families"),
+                             ({"families": []}, "families"), ({"families": ["a,b"]}, "family 'a,b'"),
                              ({"images": ["0x12"]}, "images")):
             with self.assertRaises(ds.Refused) as e:
                 self.load({**good_plan(), **change})
@@ -364,6 +370,75 @@ class TestPlan(unittest.TestCase):
     def test_the_genesis_dev_key_must_be_the_plans_key(self):
         with self.assertRaises(ds.Refused):
             self.load(good_plan(), key=2)
+
+    def test_a_family_must_be_provider_slash_line(self):
+        """VP12: `anthropic/claude` is accepted; the dotted `anthropic.claude` is refused, naming the form."""
+        self.assertEqual(self.load({**good_plan(), "families": ["anthropic/claude", "openai/gpt-5.1"]})["families"],
+                         ["anthropic/claude", "openai/gpt-5.1"])
+        for bad in ("anthropic.claude", "fake", "Anthropic/claude", "anthropic/", "/claude", "a/b/c", "-a/b"):
+            with self.assertRaises(ds.Refused) as e:
+                self.load({**good_plan(), "families": [bad]})
+            self.assertIn(f"family {bad!r} isn't in the form provider/line, e.g. anthropic/claude", str(e.exception))
+        with self.assertRaises(ds.Refused) as e:
+            self.load({**good_plan(), "families": ["anthropic/claude", "anthropic/claude"]})
+        self.assertIn("repeat", str(e.exception))
+
+    def test_live_v3s_committed_plan_keeps_its_dotted_family(self):
+        """v3's plan (and record) are history: that plan, named by its RID and genesis head, still loads as it is,
+        with no keeper even for Sepolia; the same family in any other plan is refused."""
+        v3 = json.loads(ds.V3_PLAN.read_text(encoding="utf-8"))
+        self.assertEqual(v3["families"], ["anthropic.claude"])
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "plan.json"
+            p.write_text(json.dumps(v3), encoding="utf-8")
+            self.assertEqual(ds.load_plan(str(p), None, sepolia=True)["families"], ["anthropic.claude"])
+        with self.assertRaises(ds.Refused):
+            self.load({**good_plan(), "families": ["anthropic.claude"], "genesisHead": v3["genesisHead"]})
+
+    def test_the_keeper(self):
+        """VP16 (Q1): a Sepolia plan names the seed host's keeper; it is checked and kept as given."""
+        keeper = {"address": "0x" + "99" * 20, "role": ds.KEEPER_ROLE, "cost": ds.KEEPER_COST}
+        self.assertEqual(self.load({**good_plan(), "keeper": keeper})["keeper"], keeper)
+        self.assertNotIn("keeper", self.load(good_plan()))  # a local rehearsal may leave it out
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "plan.json"
+            p.write_text(json.dumps(good_plan()), encoding="utf-8")
+            with self.assertRaises(ds.Refused) as e:
+                ds.load_plan(str(p), None, sepolia=True)
+            self.assertIn("names no keeper", str(e.exception))
+        for change, says in (({"address": "0x12"}, "keeper.address"), ({"role": ""}, "keeper.role"),
+                             ({"cost": None}, "keeper.cost")):
+            with self.assertRaises(ds.Refused) as e:
+                self.load({**good_plan(), "keeper": {**keeper, **change}})
+            self.assertIn(says, str(e.exception))
+
+    def test_the_template_names_the_family_form_and_the_keeper(self):
+        doc = ds.__doc__
+        self.assertIn('"families": ["anthropic/claude", …]', doc)
+        self.assertNotIn("anthropic.claude\"", doc)
+        self.assertIn('"keeper": {"address": "0x<the seed host\'s keeper account>"', doc)
+        self.assertIn(f'"role": "{ds.KEEPER_ROLE}"', doc)
+        self.assertIn("about $0", ds.KEEPER_COST)
+        self.assertIn("1.5-2M gas a check", ds.KEEPER_COST)
+        self.assertEqual(ds.KEEPER_ROLE, "the seed host's keeper-only node")
+
+
+class TestRepayment(unittest.TestCase):
+    """VP13 (F11): the v3.1 deploy's FeesV3 caps, set by DeploySepolia.s.sol and read back from the record by the
+    wrapper; and #310's mergeDays 3 (O4)."""
+
+    def test_the_script_sets_the_values_the_wrapper_checks(self):
+        src = (ROOT / "contracts" / "script" / "DeploySepolia.s.sol").read_text(encoding="utf-8")
+        self.assertIn("g.caps = IFeesV3.Caps(140_000, 16_000, 20, 1_000_000, 500_000, 1 gwei);", src)
+        self.assertEqual(ds.REPAYMENT, {"gasAllowance": 1_000_000, "gasOverhead": 500_000,
+                                        "maxGasPrice": 1_000_000_000})
+        self.assertIn("c.mergeDays = 3;", src)
+        self.assertEqual(ds.MERGE_DAYS, 3)
+        # the struct's order: inputTokens, outputTokens, storageMb, gasAllowance, gasOverhead, maxGasPrice
+        iface = (ROOT / "contracts" / "src" / "v3" / "IFeesV3.sol").read_text(encoding="utf-8")
+        order = re.findall(r"uint64 (\w+);", iface[iface.index("struct Caps"):iface.index("}", iface.index("struct Caps"))])
+        self.assertEqual(order, ["inputTokens", "outputTokens", "storageMb", "gasAllowance", "gasOverhead",
+                                 "maxGasPrice"])
 
 
 class TestDeploy(unittest.TestCase):
@@ -394,7 +469,7 @@ class TestDeploy(unittest.TestCase):
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
 
     def run_deploy(self, *extra, chain=11_155_111, head=HEAD, url=None, fail="", mint_off=0, rad_node=RAD_DID,
-                   record_node="", rules_off=False, chain_rules=(0, 0, 0, 7, 0)):
+                   record_node="", rules_off=False, chain_rules=(0, 0, 0, 7, 0), overhead="", merge_days=""):
         Chain.chain = chain
         Chain.rules = chain_rules
         if head:
@@ -404,7 +479,8 @@ class TestDeploy(unittest.TestCase):
         env.update({"PATH": f"{self.bin}:{env['PATH']}", "DEPLOY_FORGE_CONTAINER": "fake-anvil",
                     "FAKE_DOCKER_LOG": str(self.docker_log), "FAKE_ROOT": str(ROOT), "FAKE_CHAIN": str(chain),
                     "FAKE_DOCKER_FAIL": fail, "FAKE_MINT_OFF": str(mint_off), "FAKE_RAD_NODE": record_node,
-                    "FAKE_RULES_OFF": "1" if rules_off else ""})
+                    "FAKE_RULES_OFF": "1" if rules_off else "", "FAKE_OVERHEAD": str(overhead),
+                    "FAKE_MERGE_DAYS": str(merge_days)})
         node = ["--genesis-rad-node", rad_node] if rad_node is not None else []
         return subprocess.run([sys.executable, str(ROOT / "scripts" / "deploy_sepolia.py"), "deploy", "--rpc-url",
                                url or self.url, "--plan", str(self.plan), "--release-candidate", str(self.rc),
@@ -586,6 +662,35 @@ class TestDeploy(unittest.TestCase):
         r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", record_node="0x" + "ee" * 32)
         self.assertEqual(r.returncode, 2)
         self.assertIn("genesis Radicle node key isn't the one asked for", r.stderr)
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_the_record_carries_the_repayment_and_the_keeper(self):
+        keeper = {"address": "0x" + "99" * 20, "role": ds.KEEPER_ROLE, "cost": ds.KEEPER_COST}
+        self.plan.write_text(json.dumps({**good_plan(), "keeper": keeper}), encoding="utf-8")
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rec = json.loads((ROOT / "contracts" / "deployments" / self.record).read_text())
+        self.assertEqual(rec["keeper"], keeper)
+        caps = rec["constructorArgs"]["FeesV3"]["caps"]
+        self.assertEqual((caps["gasOverhead"], caps["gasAllowance"], caps["maxGasPrice"]), (500_000, 1_000_000, 10**9))
+
+    @outside_sandbox(NEEDS_CHECKOUT)
+    def test_a_record_with_other_repayment_caps_or_merge_days_is_refused(self):
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", overhead=50_000)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("repayment caps (gasAllowance 1000000, gasOverhead 50000, maxGasPrice 1000000000) aren't",
+                      r.stderr)
+        r = self.run_deploy("--dev-key", "0", "--genesis-dev-key", "1", merge_days=14)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("mergeDays (14) isn't 3", r.stderr)
+
+    def test_a_dotted_family_is_refused_before_any_call(self):
+        self.plan.write_text(json.dumps({**good_plan(), "families": ["anthropic.claude"]}), encoding="utf-8")
+        self.assert_refused(self.run_deploy("--dev-key", "0"), "isn't in the form provider/line", rpc=())
+
+    def test_a_sepolia_plan_without_the_keeper_is_refused_before_any_call(self):
+        self.assert_refused(self.run_deploy("--deployer", "0x" + "88" * 20, url="https://127.0.0.2:1/"),
+                            "names no keeper", rpc=())
 
     @outside_sandbox(NEEDS_CHECKOUT)
     def test_forges_refusal_is_a_refusal(self):

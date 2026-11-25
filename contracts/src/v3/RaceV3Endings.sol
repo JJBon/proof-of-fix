@@ -10,7 +10,8 @@ import {PoolV3} from "./PoolV3.sol";
 import {Status, Kind} from "./PanelsBase.sol";
 
 /// RaceV3's endings (proof-of-fix#251, contract batch 2; the EIP-170 split of RaceV3Annex): withdrawals, time-outs,
-/// expired merges, and the refund of a check Panels couldn't judge (design L19); since batch 3 also registration and
+/// the rebase in place (#310; expired merges moved to the annex then, EIP-170), and the refund of a check Panels
+/// couldn't judge (design L19); since batch 3 also registration and
 /// the opening of a bounty, the judges' reports, shadows' pay, FeesV3's signals and the deposit's return. It is deployed
 /// first, with the race's parameters; RaceV3Annex takes it at construction (checking its fingerprint) and reaches it for
 /// any call it doesn't have (its fallback), so these run in RaceV3's storage, with its balances and its caller, after
@@ -94,7 +95,10 @@ contract RaceV3Endings is RaceV3Base {
 
     /// A shadow seat that revealed with its receipt and reported its usage: its capped usage at the check's prices
     /// (FeesV3's `shadowCost`, no service fee) from the sponsors' pool, as far as the pool holds. Once a seat; a family
-    /// priced after the check opened is paid nothing (FeesV3 has no price for it at the check's epoch). Anyone.
+    /// priced after the check opened is paid nothing (FeesV3 has no price for it at the check's epoch). Anyone. A call
+    /// with too little gas for `shadowCost` reverts (ShortOfGas) instead of closing the seat unpaid (#310's extra day:
+    /// the catch branch was the cheapest success, so anyone could close a shadow's pay for nothing, and a gas estimate
+    /// priced that branch and then reverted on-chain on the paying one).
     function payShadow(uint256 spid, uint256 slot) external delegated nonReentrant {
         bytes memory p = _pan(spid);
         bytes memory x = _seat(spid, slot);
@@ -105,11 +109,17 @@ contract RaceV3Endings is RaceV3Base {
         shadowsPaid[spid] |= bit;
         bytes memory v = _val(key);
         uint256 id = _w(p, P_ID);
-        try fees.shadowCost(id, _repoOf(_submissions[id]), bytes32(_w(v, V_FAMILY)), _usage[spid][slot]) returns (
-            uint256 c
-        ) {
+        bytes32 repo = _repoOf(_submissions[id]);
+        IFeesV3.Usage memory u = _usage[spid][slot];
+        uint256 g = gasleft();
+        try fees.shadowCost(id, repo, bytes32(_w(v, V_FAMILY)), u) returns (uint256 c) {
             pool.spend(coin, address(uint160(_w(v, V_OPERATOR))), _units(c));
-        } catch {}
+        } catch {
+            // EIP-150: a call that ran out of gas leaves its caller at most 1/64 of the gas it had. Then it wasn't
+            // FeesV3 that refused (an unpriced family, paid nothing) but the caller that sent too little: all of it
+            // reverts, and the seat stays payable.
+            if (gasleft() <= g / 64) revert ShortOfGas();
+        }
     }
 
     // ---------- FeesV3's queue signals, and the deposit's return (moved from the annex, batch 3) ----------
@@ -175,25 +185,46 @@ contract RaceV3Endings is RaceV3Base {
         _end(id, Outcome.TimedOut);
     }
 
-    /// A winning fix not claimed by its deadline (mergeDays after its win), or a claimed one whose final verdict wasn't
-    /// merged by mergeDays after its finality (its base went stale, or nobody merged it, #251 L9): nothing is paid
-    /// (the award closes with nothing earned) and the bounty reopens.
-    function mergeExpired(uint256 b) external delegated nonReentrant {
+    /// A claimed, unmerged award of bounty `b` whose base (or its passed rebase's) is no longer the head, rebased in
+    /// place (#310, RB1, RB2, RB7): `fix`, based on the head `base`, opened in the clear (the approved fix is public
+    /// since its claim) as a new check at the bounty the original was judged at, with the same deposit or flat fee as
+    /// a fix, and a claim for its submitter within its cap (the winning solver's own rebase replaces its earlier
+    /// claims of the award). The winning solver may rebase at once; anyone else REBASE_GRACE after the head last
+    /// moved. One rebase check undecided at a time; a passed one may be replaced once its base went stale too. The
+    /// award keeps its place, its epoch and its price; `merge` moves the head to the rebased commit once both verdicts
+    /// are final passes.
+    function rebase(uint256 b, bytes32 fix, bytes32 base, bytes32 salt) external delegated nonReentrant returns (uint256 id) {
         Bounty storage bt = _bounties[b];
-        if (bt.state == State.Won) {
-            if (_day() <= bt.mergeBy) revert NotYet();
-            return _reopen(b);
-        }
-        if (bt.state != State.Merged) revert NotYet();
-        uint256 e = bt.epoch;
-        Award storage a = awards[b][e];
-        (Status st,, uint256 finalAt) = _verdict(a.sub);
-        if (a.merged || st != Status.Final || _day() <= (finalAt - start) / 1 days + config.mergeDays) revert NotYet();
-        a.closed = true;
-        emit ClawedBack(b, e, 0);
-        book.closeClaim(a.sub); // final, never merged: its claim closes, nothing joins the reputation
-        _reopen(b);
+        if (bt.state != State.Merged) revert WrongState(b, bt.state);
+        Award storage a = awards[b][bt.epoch];
+        uint256 orig = a.sub;
+        (, bool pass,) = _verdict(orig);
+        bytes memory h = _headRecord(bt.issue);
+        uint256 r = a.rebase;
+        Submission storage rs = _submissions[r];
+        Outcome o = rs.outcome;
+        // refused: a base not the head, an award that can merge as it is, a commit already paid, a rebase undecided or
+        // passed on the head, or the solver's own failed one on the head (`mergeExpired` reopens the bounty instead)
+        if (
+            a.merged || !pass || base != bytes32(_w(h, 0)) || _submissions[orig].base == base || fix == 0 || fix == a.fix
+                || paidFix[fix] || (r != 0 && (o == Outcome.None || (o == Outcome.Pass && rs.base == base)))
+                || _ownFail(a, r, base)
+        ) revert Refused();
+        if (msg.sender != a.winner && block.timestamp < _w(h, 2) + REBASE_GRACE) revert NotYet();
+        if (msg.sender == a.winner) book.closeClaim(orig); // so the bounty counts once against its cap
+        if (rs.solver == msg.sender) book.closeClaim(r);
+        uint256 judged = _submissions[orig].judged;
+        id = _newCheck(b, 0, msg.sender, keccak256(abi.encode(fix, base, salt, msg.sender)), judged);
+        book.openClaim(id, msg.sender, judged); // D29: refused over the submitter's cap, before anything is judged
+        Submission storage s = _submissions[id];
+        s.fix = fix;
+        s.base = base;
+        s.rebaseOf = orig;
+        if (o == Outcome.Pass) a.lastPass = r;
+        a.rebase = id;
+        emit Rebased(b, orig, id, fix, base);
     }
+
 
     // ---------- L19: a check that can't be judged ----------
 
@@ -215,6 +246,7 @@ contract RaceV3Endings is RaceV3Base {
         emit Decided(id, Outcome.Released);
         _rest(id, true); // never judged: the rest of its fee returns, and its claim closes with no reputation lost
         book.closeClaim(id);
+        if (s.rebaseOf != 0) return; // a rebase check only frees its award's slot (#310, RB5)
         uint256 b = s.bounty;
         uint256 issueId = b == 0 ? s.issue : _bounties[b].issue;
         if (b != 0) {

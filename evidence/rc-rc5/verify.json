@@ -1,0 +1,46 @@
+{
+ "checks": {
+  "attestedImages": {
+   "detail": "attested mode: the image pof-unlisted-probe@sha256:0000000000000000000000000000000000000000000000000000000000000000 isn't on the measured disk's list (/etc/pof/images.json); nothing else runs, and not",
+   "ok": true
+  },
+  "imageDigest": {
+   "detail": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+   "ok": true
+  },
+  "nitroBinding": {
+   "ok": true
+  },
+  "nitroPcrs": {
+   "detail": "{\"pcr4\": \"ff2a43fd50b8778b6c1a7eea309d4795da116d23467933e1bcea7bf0bab3b3bcd22ec8a8e44b9fa9a6ba7f1726a8be77\", \"pcr7\": \"98441c7f7625d10058c47683aec486ce311c633235eb555593a7ee791121e3578ae72d04ecef661f272d59058b77af35\", \"pcr12\": \"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"}",
+   "ok": true
+  },
+  "nitroSignature": {
+   "ok": true
+  },
+  "nonce": {
+   "detail": "the boot used '5d12a0688200902f1d4aaebaf5e24138'",
+   "ok": true
+  },
+  "roothash": {
+   "detail": "booted ddfdf368532d37484c7f92e1c577d520cd678ca30da105ef77e331dfe1ed26f5",
+   "ok": true
+  },
+  "snpMeasurement": {
+   "detail": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
+   "ok": true
+  },
+  "snpPolicy": {
+   "detail": "policy 0x2030000, VMPL 0",
+   "ok": true
+  },
+  "snpReportData": {
+   "ok": true
+  },
+  "snpSignature": {
+   "detail": "signed by the host's vlek",
+   "ok": true
+  }
+ },
+ "passed": true
+}

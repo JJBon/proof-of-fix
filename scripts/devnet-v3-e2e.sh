@@ -12,7 +12,8 @@
 # when it ends, pass or fail, and no container is left behind. Needs Docker. Never a public chain (rule 1).
 #
 #   scripts/devnet-v3-e2e.sh            about 5 minutes (POF_V3_E2E_PORT picks the port, default 8558;
-#                                       POF_V3_E2E_NAME the container; POF_V3_E2E_KEEP=1 keeps the devnet)
+#                                       POF_V3_E2E_NAME the container; POF_V3_E2E_KEEP=1 keeps the devnet;
+#                                       POF_V3_E2E_FAILED_LOGS=<dir> keeps a failed run's node logs there, #339)
 #   scripts/devnet-v3-e2e.sh --heal     also time to heal for a paid fix (scripts/time-to-heal.sh): a bad fix passed by
 #                                       a panel of 3, claimed, challenged, and reversed by a fresh panel of 5
 #   scripts/devnet-v3-e2e.sh --report <file>   write the run's numbers as JSON; --verbose prints every node's log
@@ -38,6 +39,11 @@ export DEVNET_RECORD=$RECORDS/devnet.json DEVNET_RECORD_V2=$RECORDS/devnet-v2.js
 [[ "$DEVNET_PORT" != 8546 ]] || { echo "devnet-v3-e2e: 8546 is the owner's devnet; pick another port" >&2; exit 2; }
 command -v docker >/dev/null && docker info >/dev/null 2>&1 || { echo "devnet-v3-e2e: Docker isn't reachable" >&2; exit 2; }
 cleanup() {
+  local code=$?
+  if ((code != 0)) && [[ -n "${POF_V3_E2E_FAILED_LOGS:-}" ]] && compgen -G "$WORK/*.log" >/dev/null; then
+    mkdir -p "$POF_V3_E2E_FAILED_LOGS" && cp "$WORK"/*.log "$POF_V3_E2E_FAILED_LOGS"/ || true  # #339: kept
+    echo "devnet-v3-e2e: failed (exit $code); its node logs are kept in $POF_V3_E2E_FAILED_LOGS"
+  fi
   [[ "${POF_V3_E2E_KEEP:-}" == 1 ]] && { echo "kept the devnet on 127.0.0.1:$DEVNET_PORT"; return; }
   scripts/devnet.sh reset >/dev/null 2>&1 || true
   chmod -R u+w "$WORK" 2>/dev/null || true  # step 10's fetched checkouts are read-only (#115)

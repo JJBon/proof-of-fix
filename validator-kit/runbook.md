@@ -156,6 +156,108 @@ scripts/pofctl --as engineer validator withdraw     # or, with the node image: p
 - **Remove:** `tofu destroy`. The signing-key secret has a 7-day recovery window. Delete it immediately only if you're
   sure the key is no longer a seat: `aws secretsmanager delete-secret --secret-id pof-validator/signing-key --force-delete-without-recovery`.
 
+## Run a keeper
+
+The race moves only when someone sends its keeper calls: draw, signal, refill, startWindow, the audit and challenge
+draws, result, finish, release, merge, the shadows' pay and FeesV3's daily roll. Anyone may send them. A validator's
+node sends them while it runs, but an on-demand validator runs only for its own seats, and a check nobody drew has no
+seats. A keeper-only node makes these calls alone, all the time: `python3 -m oracle.keeper` (v3.1 polish VP10). The
+project's seed host runs one as launch infrastructure.
+
+- **A plain key, gas only.** It never seals, reveals, judges, posts a table, registers or pushes to Radicle, so it
+  needs no TEE, no bond and no registration. Fund its address with a little Sepolia ETH, nothing else.
+- **Check it before you start it:** `python3 -m oracle.keeper info` prints the address, its ETH balance, the
+  deployment and where its scan starts, and says "not registered (keeper only)".
+- **Run it:** `python3 -m oracle.keeper run` (`--once` for one pass, `--from-block N` to start the scan elsewhere).
+
+Its settings, in an environment file (`/etc/pof-keeper/keeper.env`; ARNs only, no secret):
+
+```bash
+ORACLE_RACE=0x…                     # the record's RaceV3
+ORACLE_FROM_BLOCK=…                 # the record's `block`: no event scan starts before it
+ORACLE_RPC_SECRET_ARN=arn:aws:secretsmanager:<region>:<account>:secret:<the RPC URL, with its key>
+ORACLE_PRIVATE_KEY_SECRET_ARN=arn:aws:secretsmanager:<region>:<account>:secret:<the keeper's key>
+ORACLE_KEEPER_ADDRESS=0x…           # the key's address: a wrong secret stops the keeper at start
+ORACLE_POLL=120                     # seconds between passes (the default: a free RPC tier's daily credits)
+ORACLE_TX_POLL=3                    # seconds between looks for a receipt (the default)
+ORACLE_KEEPER_MAX_TX_HOUR=60        # the most transactions in any hour (the default): a guard on the gas
+```
+
+Off AWS, `ORACLE_RPC` and `ORACLE_PRIVATE_KEY` take the values themselves; keep them out of the unit file and of any
+log. The keeper reads the secrets with the instance's role (`secretsmanager:GetSecretValue` on exactly those two
+ARNs) and replaces the RPC URL's key in every log line.
+
+A systemd unit, as on the seed host (a system user without a shell, the code read-only to it, its own limits):
+
+```ini
+# /etc/systemd/system/pof-keeper.service
+[Unit]
+Description=proof-of-fix keeper-only node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pof-keeper
+# a checkout (or a `git archive` of oracle/, bot/ and pof/), root-owned: read-only to the service
+WorkingDirectory=/opt/pof-keeper/current
+EnvironmentFile=/etc/pof-keeper/keeper.env
+ExecStart=/usr/bin/python3 -E -s -B -u -m oracle.keeper run
+Restart=on-failure
+RestartSec=120
+MemoryHigh=250M
+MemoryMax=300M
+CPUQuota=50%
+Nice=10
+ProtectSystem=strict
+NoNewPrivileges=true
+PrivateTmp=true
+SyslogIdentifier=pof-keeper
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo useradd --system --shell /usr/sbin/nologin pof-keeper
+sudo systemctl daemon-reload && sudo systemctl enable --now pof-keeper
+journalctl -u pof-keeper -f                     # each transaction's hash, block, gas used and ETH cost
+```
+
+To update it, put the new code in a new directory, point `/opt/pof-keeper/current` at it and restart; keep the old
+one to roll back. After a restart it rescans events from `ORACLE_FROM_BLOCK` (a few `eth_getLogs` calls).
+
+**Its cost.** About 1.5–2M gas a check, from the draw to the finish, in about 7 calls; an idle day is one `roll()`,
+about 0.03–0.17M gas. At Sepolia's usual gas price (about 20 wei) that is effectively nothing; at 1 gwei a check
+costs about 0.002 ETH. Reads: about 10–15 a pass, so about 9k RPC calls a day at a 120 s poll, which fits a free
+tier's daily credits on the keeper's own key. The host: a small instance is plenty (the seed host's keeper used about
+20 MB), and it can share a host that already runs, as the seed's does.
+
+**Several keepers are fine.** A call another keeper sent first reverts as mined-but-reverted (its gas spent) or is
+refused at the estimate; the keeper logs it and moves on. The hourly cap bounds what a run of such races can cost.
+
+### The watcher's draw duty (the fallback)
+
+Without an always-on keeper nobody draws a new check. So the kit's watcher draws too (v3.1 polish VP9, on by
+default): each run it also scans the events that open a check (`Committed`, `Registered`, `Rebased`) in the same
+block range as the seats, keeps each check on its list until it is final, and starts the stopped instance once for a
+check nobody drew in time; the node's keeper draws it and the node powers off once idle. A drawn check is read again
+every `RETRY_MINUTES`: if its panel is released back to waiting (missed deadlines), that new round wakes a host once
+more for the redraw (v3.1 polish VP23); polling never starts the instance twice for the same round.
+
+| Setting (the watcher's environment) | Default | What |
+|---|---|---|
+| `WAKE_ON_DRAW` | `"true"` in the kit (`watcher_wake_on_draw`) | the draw duty on or off |
+| `DRAW_GRACE_BLOCKS` | 25 (about 5 minutes) | blocks past a check's seed block (or its retry time, for a waiting draw) before it is due: a running keeper draws first |
+| `DRAW_STAGGER_MINUTES` | 10 | this validator's stagger, `keccak256(validator, check) mod (10 × 60)` seconds after the grace: usually one host wakes, the others see the check drawn |
+| `DRAW_MAX_STARTS` | 1 | starts per check and round (its released rounds, seed block or retry time) |
+| `DRAW_READS_MAX` | 20 | verdicts read a run |
+| `MAX_BLOCK_RANGE` | 2000 (`watcher_max_block_range`) | the most blocks scanned a run; lower it for an RPC tier that limits `eth_getLogs`' range |
+
+A draw start is held by the fuse (`max_starts_per_day`), the budget's stop and the kill switch like any start, but not
+by the spend pause: a draw calls no model. With the seed host's keeper running it never fires; without one, each
+undrawn check costs about 10 minutes of compute on one host. A 429 ends the watcher's run before it saves anything,
+so give the watcher its own RPC key.
+
 ## The AWS devnet: deploying v2 and taking the owner's seat (#150, #112)
 
 For the deployment's owner. `scripts/devnet.sh`'s **remote mode** does this from a checkout of proof-of-fix, with Docker,

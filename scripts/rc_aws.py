@@ -226,6 +226,15 @@ def split_user_data(text: str) -> tuple:
     return node, host, refused
 
 
+def run_console(attested: str, end: str) -> tuple:
+    """The judging boot's console for verify.py, and the end's capture to keep beside it (or ""). EC2 keeps only a
+    console's last 64 KB: by the end of a run a busy node's lines can push the boot's POF-ATTEST lines out (rc5,
+    2026-11-25), so the end's capture replaces the one taken when the boot attested only while it still attests."""
+    if end and console_facts(end)["attested"]:
+        return end, ""
+    return attested, end or ""
+
+
 def console_facts(text: str) -> dict:
     """What a boot printed on the serial console: its Radicle node ID, firmware, whether it attested, its nonce, and
     the node's registration line."""
@@ -644,8 +653,10 @@ def aws_run(a, aws: Aws | None = None, sleep=time.sleep) -> int:
                       "the external set finished", a.hours * 3600, every=60, sleep=sleep)
         external = st["result"]
         (out / "external.json").write_text(json.dumps(external, indent=2))
-        console2 = aws.console(sev) or console2
+        console2, end = run_console(console2, aws.console(sev))
         (out / "console-run.txt").write_text(console2)
+        if end:
+            (out / "console-run-end.txt").write_text(end)
         verify = run_verify(out / "console-run.txt", a.manifest, nonces["run"], a.snp_measurement, a.amd_chain,
                             a.nitro_root, out / "evidence")
         (out / "verify.json").write_text(json.dumps(verify, indent=1, sort_keys=True))

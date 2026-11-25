@@ -42,13 +42,21 @@ node's key, and the setup unseeds the old RID.
 
 ## Applying it (after task 6.2, on the owner's word for 6.3)
 
+**Warning: `create_instance` defaults to `false`. Once the seed runs, a `tofu plan` or `tofu apply` without
+`create_instance = true` destroys the seed: its instance, its data volume (the node's key: a new one is a new Node ID)
+and its Elastic IP (its address).** Keep the values in a `seed.tfvars` copied from
+[`terraform/seed.tfvars.example`](terraform/seed.tfvars.example), which sets `create_instance = true` and
+`ssm_access = true`, and pass `-var-file=seed.tfvars` to every plan and apply. `seed.tfvars`, saved plans and the state
+are git-ignored (`terraform/.gitignore`); never commit them.
+
 OpenTofu (or Terraform ≥ 1.6), credentials for the sandbox account in your environment (`AWS_PROFILE`):
 
 ```bash
 cd seed/terraform
+cp seed.tfvars.example seed.tfvars     # publication_record, budget_emails; create_instance = true stays
 tofu init
-tofu apply -var create_instance=true -var publication_record=/path/to/publication.json \
-  -var 'budget_emails=["you@example.org"]'
+tofu plan -var-file=seed.tfvars        # the first time: the instance, its volume and address are created
+tofu apply -var-file=seed.tfvars
 tofu output public_ip
 ```
 
@@ -64,8 +72,17 @@ sudo -u radicle RAD_HOME=/var/lib/radicle/home rad seed         # exactly one po
 journalctl -u radicle-seed
 ```
 
-To remove it: `tofu apply -var create_instance=false` (the instance, its volume and its address go; a new one gets a new
-Node ID and address), or `tofu destroy`.
+Every later change goes through the same `-var-file=seed.tfvars` (the warning above). To remove it on purpose:
+`tofu apply -var-file=seed.tfvars -var create_instance=false` (the instance, its volume and its address go; a new one
+gets a new Node ID and address), or `tofu destroy -var-file=seed.tfvars`.
+
+## The keeper on the same host (the owner's approval, 2026-11-23)
+
+The host may also run a keeper-only v3 node (`oracle/keeper.py`, as the `pof-keeper` systemd unit). It reads two
+secrets with the seed's role: its account's key and its own RPC URL (a key of its own, not a validator's). The role
+gets `secretsmanager:GetSecretValue` on exactly the ARNs in `keeper_secret_arns` (Secrets Manager secret ARNs only,
+with their random suffix; anything else is refused at plan time) and nothing else; empty, the default, adds no policy.
+The seed itself reads no secret.
 
 ## Checking it from a fresh node
 

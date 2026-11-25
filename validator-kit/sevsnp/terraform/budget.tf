@@ -14,6 +14,17 @@ resource "aws_budgets_budget" "monthly" {
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
+  # Without a filter the budget counts the whole account's cost, not this kit's: with several kits (or anything else)
+  # in one account, every kit's budget reaches its limit together and every automatic stop fires. budget_cost_tag
+  # ("key$value", a cost allocation tag activated in the payer account) makes it this kit's own.
+  dynamic "cost_filter" {
+    for_each = var.budget_cost_tag != "" ? [var.budget_cost_tag] : []
+    content {
+      name   = "TagKeyValue"
+      values = ["user:${cost_filter.value}"]
+    }
+  }
+
   dynamic "notification" {
     for_each = local.budget_alerts ? [["ACTUAL", 80], ["FORECASTED", 100]] : []
     content {

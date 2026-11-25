@@ -65,7 +65,10 @@ on-demand price on shared tenancy ([AWS](https://docs.aws.amazon.com/AWSEC2/late
 | The measured disk's root volume, 1 GiB gp3 | $0.08 a month | its snapshot: about $0.02 (only written blocks) |
 | The data volume, 20 GiB gp3 | $1.60 a month | the node's state; scratch wiped at each boot |
 | The signing key's secret | $0.40 a month | |
-| **Idle (stopped)** | **about $2.10 a month** | |
+| **Idle (stopped), the watcher off** | **about $2.10 a month** | |
+| The v3 watcher, enabled | about $0.12 a month | Lambda once a minute, logs |
+| The RPC URL in a secret (`rpc_url_secret_arn`) | about $0.62 a month | the second secret ($0.40) and the watcher's reads of it, one a run (~43,800 a month, $0.22) |
+| **Idle with the watcher and the RPC URL's secret** | **about $2.85 a month** | |
 
 A run of the node (boot, attest, checks, ten idle minutes) of about 15 minutes costs about $0.022. A Dedicated Host
 (the only SEV-SNP option in us-east-1) is $8.078 an hour for a c6a host: not used.

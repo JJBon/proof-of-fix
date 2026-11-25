@@ -376,6 +376,13 @@
   },
   "repo": "0xe30ab0ae9dad7743af0a1cdb0ff360a997ae60f9767f1da6ca7737cbdb5610d0",
   "rid": "rad:zyZXC9NqVuse8nXdpv7iYRScDHsN",
+  "supersededAt": {
+    "block": 12211341,
+    "date": "2026-11-25",
+    "note": "v3.1 (rc5, commit 6f23f52) on the new repository rad:z2whCPbrSKbtyvwYjHXPZhN9ZkK5z; this deployment's repository rad:zyZXC9NqVuse8nXdpv7iYRScDHsN is frozen at 81505595 (its only delegate key was lost with the replaced SEV-SNP host). A node given this record runs only v3's keeper, so v3's money still settles (#310 RB12).",
+    "race": "0xC02F191a82f9459FB4C003B68245c872a256a790"
+  },
+  "supersededBy": "contracts/deployments/sepolia-v3.1.json",
   "teeOnly": true,
   "testCoin": {
     "address": "0xc2ff84A4866E7BB7bC5697b057c13A8970d0c158",

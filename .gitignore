@@ -73,6 +73,8 @@ __pycache__/
 # (scripts/integration.sh --version 3 --radicle, #251 task 4.6).
 /.integration-radicle-v3/
 /contracts/deployments/integration-radicle-v3/
+/.integration-handover-v3/
+/contracts/deployments/integration-handover-v3/
 # The SEV-SNP kit's Radicle node on the internal network: results, node logs, throwaway record (scripts/kit-radicle.sh,
 # #251 task 4.9).
 /.kit-radicle/
@@ -107,3 +109,9 @@ __pycache__/
 /validator-kit/sevsnp/out/
 # pofctl's config in a checkout (docs/guides/: the record's and the keystore's paths, no secret), #251 task 5.7.
 /pofctl.json
+
+# The calibration set's local proof (scripts/integration.sh --version 3 --radicle --calibration, proof-of-fix#334), and
+# scripts/calibrate.py's default ledger.
+/.integration-calibration/
+/contracts/deployments/integration-calibration/
+/.calibration/

@@ -161,8 +161,24 @@ class TheTerraform(unittest.TestCase):
         actions = re.findall(r'"((?:ssm|ssmmessages|ec2messages|s3|kms|secretsmanager|ec2):\w+)"', main)
         self.assertEqual(sorted(actions), sorted(["ssm:UpdateInstanceInformation", "ssmmessages:CreateControlChannel",
                                                   "ssmmessages:CreateDataChannel", "ssmmessages:OpenControlChannel",
-                                                  "ssmmessages:OpenDataChannel"]))
+                                                  "ssmmessages:OpenDataChannel", "secretsmanager:GetSecretValue"]))
         self.assertIn("count  = var.ssm_access ? 1 : 0", main)
+        # The keeper's secrets (2026-11-23): GetSecretValue on exactly the listed ARNs, and no policy when none are.
+        keeper = main[main.index('data "aws_iam_policy_document" "keeper"'):main.index('resource "aws_iam_instance_profile"')]
+        self.assertIn("resources = var.keeper_secret_arns", keeper)
+        self.assertEqual(len(re.findall(r"count\s+= length\(var\.keeper_secret_arns\) > 0 \? 1 : 0", keeper)), 2)
+        variables = self.tf("variables.tf")
+        self.assertIn(r'regex("^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:', variables)
+
+    def test_the_example_keeps_the_instance(self):
+        """A plan without create_instance = true destroys the seed: the example sets it, and the state and the real
+        tfvars are git-ignored."""
+        example = self.tf("seed.tfvars.example")
+        self.assertRegex(example, r"(?m)^create_instance = true$")
+        self.assertRegex(example, r"(?m)^ssm_access\s+= true$")
+        ignore = self.tf(".gitignore").splitlines()
+        for pattern in ("*.tfstate*", "*.tfvars", "*.tfvars.*", "!*.tfvars.example", "*.plan"):
+            self.assertIn(pattern, ignore)
 
     def test_a_budget_with_alerts_and_no_stop(self):
         budget = self.tf("budget.tf")

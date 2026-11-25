@@ -133,6 +133,7 @@ interface IFeesV3 {
     /// What each judge of an audit or a challenge panel of attempt `id` is paid: the median of the panel's reports at
     /// the attempt's prices plus the unscaled service fee (task 3.5). A view; the race pays each panel once.
     function checkCost(uint256 id, bytes32 repo, Report[] calldata judges) external view returns (uint256[] memory);
-    /// Closes the oldest ended pricing period, in bounded parts (task 3.5).
+    /// One bounded part of closing the oldest ended pricing period (task 3.5; v3.1 polish F2: one part a call, as
+    /// `rollPart`).
     function roll() external;
 }

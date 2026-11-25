@@ -129,7 +129,7 @@ class Rig:
         self.plan = work / "plan.json"
         image = "0x" + keccak256(b"the checker image").hex()
         self.plan.write_text(json.dumps({
-            "rid": RID, "genesisHead": HEAD, "families": ["fake", "fake-1"],
+            "rid": RID, "genesisHead": HEAD, "families": ["anthropic/claude", "openai/gpt"],
             "teeTypes": ["amd-sev-snp", "intel-tdx"], "images": [image],
             "genesisValidator": {"operator": address(derive(MNEMONIC, 2)), "teeType": "amd-sev-snp", "level": 1,
                                  "attestation": "0x" + keccak256(b"a test attestation").hex(), "image": image,

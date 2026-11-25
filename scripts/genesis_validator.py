@@ -8,7 +8,7 @@ attested on this disk (validator-kit/SEVSNP-PLAN.md, "Open risks"), so the genes
 secret, not on the host. The key is read into this process only: never printed, logged, written to a file or put on
 a command line. Only its address is printed.
 
-    scripts/genesis-validator.sh new-key [--replace]
+    scripts/genesis-validator.sh new-key [--replace] [--kit-dir DIR | --secret-arn ARN]
         a fresh secp256k1 key straight into the secret (PutSecretValue, signed here); prints its address. Refused when
         the secret already holds a key, naming that key's address, unless --replace (Secrets Manager keeps the old
         value as AWSPREVIOUS).
@@ -37,8 +37,9 @@ a command line. Only its address is printed.
         signed with the secret's key, which must be the plan's `genesisValidator.key`; the signature written into the
         plan. Prints the registry, the digest and the signer's address.
 
-Every command that reads the key takes `--secret-arn ARN` (default `tofu -chdir=validator-kit/sevsnp/terraform output
--raw signing_key_secret_arn`, local state) and `--profile` (default pof-sandbox: `aws configure export-credentials`,
+Every command that reads the key takes `--secret-arn ARN` (default `tofu -chdir=<--kit-dir> output -raw
+signing_key_secret_arn`, local state; `--kit-dir` defaults to validator-kit/sevsnp/terraform, the genesis kit: pass
+another validator's state directory, or `--secret-arn`, for another kit) and `--profile` (default pof-sandbox: `aws configure export-credentials`,
 the SSO profile's credentials, read into this process; the requests are signed here, oracle/models.py's SigV4).
 `binding` and `fields` take `--key-address 0x…` instead to read nothing.
 
@@ -265,13 +266,14 @@ class AwsSecret:
 def secret_arn(a, runner=subprocess.run) -> str:
     if a.secret_arn:
         return a.secret_arn
+    kit = getattr(a, "kit_dir", None) or KIT_TERRAFORM
     try:
-        r = runner(["tofu", f"-chdir={KIT_TERRAFORM}", "output", "-raw", "signing_key_secret_arn"], cwd=ROOT,
+        r = runner(["tofu", f"-chdir={kit}", "output", "-raw", "signing_key_secret_arn"], cwd=ROOT,
                    capture_output=True, text=True, timeout=120)
     except OSError:
         raise Refused("no --secret-arn, and tofu can't run to read the kit's output") from None
     if r.returncode or not r.stdout.strip():
-        raise Refused(f"no --secret-arn, and the kit's output signing_key_secret_arn can't be read ({KIT_TERRAFORM})")
+        raise Refused(f"no --secret-arn, and the kit's output signing_key_secret_arn can't be read ({kit})")
     return r.stdout.strip()
 
 
@@ -473,7 +475,9 @@ def parser() -> argparse.ArgumentParser:
 
     def secret(sp, key_address=False):
         sp.add_argument("--secret-arn", help="the signing key's secret (default: the kit's tofu output "
-                        "signing_key_secret_arn)")
+                        "signing_key_secret_arn, from --kit-dir)")
+        sp.add_argument("--kit-dir", default=KIT_TERRAFORM, help="the kit's state directory whose output names the "
+                        f"secret when --secret-arn isn't given (default {KIT_TERRAFORM}: the genesis kit's)")
         sp.add_argument("--profile", default=DEFAULT_PROFILE, help="the AWS profile (default pof-sandbox)")
         if key_address:
             sp.add_argument("--key-address", help="the key's address, instead of reading the secret")

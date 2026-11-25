@@ -21,7 +21,7 @@ Neither was applied: nothing in AWS changed.
 | **How to reach it** | from the profile `your-aws-profile` (the management account), assume `arn:aws:iam::111111111111:role/OrganizationAccountAccessRole` (checked 2026-11-20 with a read-only call). The platform admins' SSO permission set `AdministratorAccess` on the account works too. |
 | **Region** | **us-east-2** (US East, Ohio). On shared tenancy SEV-SNP is offered only in US East (Ohio) and Europe (Ireland) ([AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sev-snp.html)). |
 | **Instance type** | **c6a.large** (2 vCPUs, 4 GiB, AMD EPYC Milan; SEV-SNP and NitroTPM 2.0 supported: `describe-instance-types`) |
-| **Cost** | **$0.0842 an hour** running: $0.0765 on demand (Price List API, us-east-2, 2026-11-20) plus SEV-SNP's 10 %; plus $0.005 an hour of public IPv4. Stopped: about $2.10 a month (20 GiB data volume, 1 GiB root, the snapshot, the secret). A 2-hour test costs about $0.18 of compute. |
+| **Cost** | **$0.0842 an hour** running: $0.0765 on demand (Price List API, us-east-2, 2026-11-20) plus SEV-SNP's 10 %; plus $0.005 an hour of public IPv4. Stopped: about $2.10 a month (20 GiB data volume, 1 GiB root, the snapshot, the secret); with the v3 watcher enabled about $0.12 more (Lambda, logs), and with the RPC URL kept in a secret (`rpc_url_secret_arn`) $0.40 for that secret plus about $0.22 for the watcher's reads of it. A 2-hour test costs about $0.18 of compute. |
 | **Blocker** | the sandbox account's SCP `sandbox-region-us-east-1` (p-7gapimy5) denied every region but us-east-1 (step 1). Removed 2026-11-20: platform PR #228 allows us-east-2. |
 
 The alternative without the SCP change is a Dedicated Host in us-east-1: a c6a host is **$8.078 an hour** (Price List
@@ -96,6 +96,8 @@ echo "$SNAP"                               # snap-…
 
 ## 5. Terraform, first apply: everything but the instance
 
+`terraform/test.tfvars.example` lists the variables with placeholder values; the lines below are its first apply's.
+
 ```bash
 cd validator-kit/sevsnp/terraform
 cat > test.tfvars <<EOF                    # *.tfvars is git-ignored
@@ -125,6 +127,12 @@ ID=$(tofu output -raw instance_id)
 aws ec2 describe-instances --instance-ids "$ID" --query 'Reservations[].Instances[].CpuOptions'
 # must show "AmdSevSnp": "enabled"
 ```
+
+**Warning: from here on, every `tofu plan` and `tofu apply` of this state needs `-var create_instance=true` (or
+`create_instance = true` in `test.tfvars`, as `test.tfvars.example` has it). A plan without it destroys the instance
+and its data volume, which holds the node's state and its Radicle key: a new volume is a new key, and a registration
+can't change its node.** The same holds for every later step below that runs `tofu apply -var-file=test.tfvars`, the
+watcher's included. Read each plan before applying it.
 
 With no `node_config` the boot only attests: it formats the data volume, loads the two images, prints its evidence on
 the serial console, runs the attested-mode self-test, and (with `power_off=false`) stays up so the console can be read.
@@ -266,6 +274,19 @@ others, so without it the canonical `main` lagged `Heads.head` until 4 delegates
 11 minutes of c6a.large at `run --until-idle 600`, about $0.016. It isn't held by the spend pause (no model call); the
 fuse, the budget and the kill switch hold it as any start.
 
+**The draw duty (v3.1 polish VP9).** A check nobody drew has no seats, so no seat wakes anyone for it. With
+`watcher_wake_on_draw` (on by default) the watcher also scans the events that open a check (`Committed`, `Registered`,
+`Rebased`) in the same block range as `Seated`, keeps the undrawn ones on its state list, and starts the stopped
+instance once for a check still undrawn `DRAW_GRACE_BLOCKS` (25, about 5 minutes) past its seed block, or past its
+retry time for a waiting draw, plus this validator's stagger (`keccak256(validator, check)` mod 10 minutes,
+`DRAW_STAGGER_MINUTES`). The node's keeper draws it and the node powers off once idle; the other validators' watchers
+see the check drawn and drop it. The starts: at most one per check and seed block (`DRAW_MAX_STARTS`), at most 20
+verdicts read a run (`DRAW_READS_MAX`), under the fuse, the budget and the kill switch like any start, and not held by
+the spend pause (a draw calls no model). The cost: about 10 minutes of compute per undrawn check (about $0.016 of
+c6a.large at `run --until-idle 600`), on usually one host thanks to the stagger. With an always-on keeper (the seed
+host's, [the runbook's "Run a keeper"](runbook.md#run-a-keeper)) it never fires. `watcher_max_block_range`
+(`MAX_BLOCK_RANGE`, 2000) bounds each run's scan for an RPC tier that limits `eth_getLogs`' range.
+
 ## 9. Stop and destroy
 
 ```bash
@@ -277,6 +298,57 @@ aws ec2 delete-snapshot --snapshot-id "$SNAP"                       # the AMI's 
 ```
 
 If the SCP change was only for this test, revert step 1 afterwards.
+
+## Running several validators
+
+One account can hold several kits, one validator each. Each is the same module with its own state and its own
+variables; nothing is shared but, optionally, the network.
+
+- **One state per validator.** A directory (or workspace) per validator, each with its own `*.tfvars` and
+  `name = "pof-snp-vN"` (`pof-snp-v2`, `pof-snp-v3`, …): every resource, the secret, the watcher, the budget and its
+  stop are named from `name`, so two kits with the same name collide. Each validator gets its own signing key in its
+  own kit's secret: `scripts/genesis-validator.sh new-key --kit-dir <that validator's state directory>` (or
+  `--secret-arn`); without either it reads the genesis kit's output. Every plan of every state needs
+  `create_instance = true` once its instance exists (the warning in step 6).
+- **A shared network when the account's VPC limit is near.** An account has 5 VPCs a region by default, and each kit
+  makes its own VPC and internet gateway. With `subnet_id` set to an existing public subnet (a route to an internet
+  gateway, public IPs on launch, no NAT needed) the kit makes only its security group, in that subnet's VPC; its DNS
+  rule follows that VPC's CIDR. The shared network is its own small state, applied once before the kits and destroyed
+  after them. Empty `subnet_id`, the default, keeps the kit's own VPC: existing states plan no change.
+- **Each validator's own RPC endpoint.** Give each node (`node_config`'s `ORACLE_RPC`) and its watcher
+  (`watcher_rpc_url`, or `rpc_url_secret_arn` for a URL holding a key) an endpoint of its own, not another validator's
+  or the keeper's: keyless public endpoints limit by client IP and by burst, so probe each one first (`eth_chainId`,
+  an `eth_getLogs` range of at least `ORACLE_LOG_RANGE`, a burst of parallel calls). The watcher's `eth_getLogs`
+  asks for up to `MAX_BLOCK_RANGE` blocks (`watcher.tf`, 2000 today): a provider with a smaller limit breaks its first
+  run and any catch-up, so don't use one. A key belongs in a header secret (`RPC_API_KEY_SECRET_ARN`) or
+  `rpc_url_secret_arn`, not in `ORACLE_RPC`, which the user data carries in clear.
+- **The budget tag.** Without `budget_cost_tag` every kit's budget measures **the whole account**, so with several kits
+  (or the seed, a test chain, anything else) in one account all the budgets reach their limit together and every
+  kit's automatic stop fires, each validator stopped for the rest of the month. To give each kit a budget of its own:
+  tag it (`tags = { "pof:validator" = "vN" }`, which also tags its volumes), activate `pof:validator` as a cost
+  allocation tag in the **payer (management) account** (Billing, Cost allocation tags; only the payer can, and a newly
+  activated tag counts cost from then on, after up to a day), then set `budget_cost_tag = "pof:validator$vN"` and
+  apply. Public IPv4 isn't attributed to the tag. The alternative is one account-level limit on every kit, accepting
+  one shared stop.
+- **The kill switch.** Per validator, without Terraform: disable the watcher's schedule, throttle its function and stop
+  the instance (if it's running; with none, the last command has no ID to stop).
+
+  ```bash
+  N=pof-snp-v2   # the validator's name
+  aws events disable-rule --name "$N-watcher"
+  aws lambda put-function-concurrency --function-name "$N-watcher" --reserved-concurrent-executions 0
+  aws ec2 stop-instances --instance-ids "$(aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId' \
+    --filters "Name=tag:Name,Values=$N-node" "Name=instance-state-name,Values=pending,running" --output text)"
+  ```
+
+  Set `watcher_enabled = false` in that validator's tfvars before its next apply (the watcher's own kill switch): an
+  apply with `watcher_enabled = true` sets the rule back to enabled, and the module's function sets no reserved
+  concurrency, so a refreshing apply also lifts the throttle. To undo: `aws lambda delete-function-concurrency
+  --function-name "$N-watcher"`, then apply with `watcher_enabled = true`, which re-enables the rule.
+
+Tearing one down: on chain first (`node_command = "leave"`, later `withdraw-bond`: a registration can't move to another
+node or disk), then the kill switch, then `tofu destroy -var-file=<its tfvars> -var create_instance=true`, and the
+shared network last.
 
 ## The release candidate's run (task 7.0; the owner's decision, 2026-11-21)
 
@@ -653,10 +725,10 @@ in place of 55 s).
 | A drawn validator's windows | production (`WindowsLib.production`, what `DeploySepolia.s.sol` deploys) | minutes (`inMinutes()`: a devnet with `DEVNET_V3_WINDOWS=minutes`, the Foundry short run) |
 |---|---|---|
 | seal (`SEAL_WINDOW`, from the draw or a replacement's seat) | 7,200 s | 120 s |
-| reveal (`REVEAL_WINDOW`, after `sealBy`, once every seat sealed) | 3,600 s | 60 s |
+| reveal (from v3.1, #311: opens once every seat sealed, and for a counted panel its shadows, not at `sealBy`; it closes `REVEAL_WINDOW` after `sealBy`; v3: after `sealBy`) | 3,600 s after `sealBy` | 60 s after `sealBy` |
 | a cold start's share of the seal window (127 s; 199 s bound) | 1.8 % (2.8 %) | 106 % (166 %): the window closes first |
 | what's left of the seal window after the check | ≈ 4,370 s (73 min): 7,200 − 127 − 2,400 (Sepolia's profile, `timeoutSeconds` for the two test runs) − about 300 (the fix's fetch and the model call) | nothing |
-| the reveal | the node holds the instance up while its seat is open (an open seat isn't idleness), so it reveals within its 2 s poll of the window opening; after a crash the watcher restarts it, worst 127 s (3.5 %) of 3,600 s | only a node that stayed up |
+| the reveal | the node holds the instance up while its seat is open (an open seat isn't idleness), so it reveals within its 2 s poll of the window opening: from v3.1, minutes after the draw when everyone drawn seals promptly; after a crash the watcher restarts it as soon as the panel is full (v3.1) or near `sealBy` (v3), worst 127 s (3.5 %) of 3,600 s | only a node that stayed up |
 
 **Production windows (Sepolia): the margin is wide; nothing to fix.** A cold start uses under 3 % of the seal window,
 and over an hour is left after the longest check the Sepolia profile allows. A replacement seat gets a fresh seal

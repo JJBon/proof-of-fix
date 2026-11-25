@@ -18,7 +18,7 @@ import unittest
 IN_SANDBOX = os.environ.get("POF_SANDBOX") == "1"
 
 # How many `outside_sandbox` uses the test files hold (tests/test_sandbox_env.py counts them).
-EXPECTED = 18  # 13, and 5 in test_deploy_sepolia.py for the panel rules (#251 contract batch 4)
+EXPECTED = 20  # 13, 5 in test_deploy_sepolia.py for the panel rules (#251 contract batch 4), 2 for v3.1's record (VP13, VP16)
 
 
 def outside_sandbox(reason: str):

@@ -148,6 +148,60 @@ class ScrubAndScan(unittest.TestCase):
         self.assertNotIn("amazonaws.com", text)
 
 
+class VerbatimRefs(unittest.TestCase):
+    """VP15: the exemption names v3's refs only, and a ref is matched by its commit."""
+
+    def test_the_listed_refs_are_v3s(self):
+        self.assertEqual(snap.PRESETS["proof-of-fix"]["verbatim_refs"], ["8946b9c", "sepolia-v3"])
+        self.assertNotIn("verbatim_refs", snap.PRESETS["pof-devnet-infra"])
+
+    @unittest.skipUnless(shutil.which("git"), "needs git")
+    def test_a_ref_is_listed_by_its_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            git("init", "-q", cwd=tmp)
+            git("commit", "-q", "--allow-empty", "-m", "one", cwd=tmp)
+            git("branch", "sepolia-v3", cwd=tmp)
+            git("commit", "-q", "--allow-empty", "-m", "two", cwd=tmp)
+            preset = snap.PRESETS["proof-of-fix"]
+            self.assertTrue(snap.verbatim_exempt(Path(tmp), "sepolia-v3", preset))
+            self.assertTrue(snap.verbatim_exempt(Path(tmp), "HEAD~1", preset))
+            self.assertFalse(snap.verbatim_exempt(Path(tmp), "HEAD", preset))
+            self.assertFalse(snap.verbatim_exempt(Path(tmp), "no-such-ref", preset))
+            self.assertFalse(snap.verbatim_exempt(Path(tmp), "HEAD~1", {"verbatim_refs": []}))
+
+    @unittest.skipUnless(shutil.which("git"), "needs git")
+    def test_v3s_commit_is_listed_in_this_repository(self):
+        if subprocess.run(["git", "-C", str(ROOT), "cat-file", "-e", "8946b9c^{commit}"],
+                          capture_output=True).returncode:
+            self.skipTest("v3's commit 8946b9c isn't in this checkout (a snapshot has one root commit)")
+        self.assertTrue(snap.verbatim_exempt(ROOT, "8946b9c", snap.PRESETS["proof-of-fix"]))
+
+
+class ImageInputsClean(unittest.TestCase):
+    """VP15 (task 5.1): the working tree's image files hold none of the preset's private terms, so v3.1's image is
+    built from files that scrub to themselves. Reports file:line and the term's number, never its value."""
+
+    def test_the_image_inputs_hold_no_private_term(self):
+        terms = Path(os.environ.get("POF_SNAPSHOT_TERMS", snap.DEFAULT_TERMS)).expanduser()
+        if not terms.is_file():
+            self.skipTest(f"no terms file at {terms} (the owner's machine has it)")
+        replace, _ = snap.read_terms(terms)
+        hits = snap.term_hits(ROOT, replace, snap.IMAGE_INPUTS)
+        self.assertEqual(hits, [], "private terms in the image's files (file:line term N): "
+                         + ", ".join(f"{rel}:{line} term {n}" for rel, line, n in hits))
+
+    def test_term_hits_names_lines_and_numbers_never_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "oracle").mkdir()
+            (root / "oracle" / "a.py").write_text(f"x\n# {PRIVATE} and other\n")
+            (root / "scripts").mkdir()
+            (root / "scripts" / "judge_run.py").write_text("other\n")
+            (root / "docs.md").write_text(f"{PRIVATE}\n")  # not an image input
+            hits = snap.term_hits(root, [(PRIVATE, "example.com"), ("other", "x")], snap.IMAGE_INPUTS)
+            self.assertEqual(hits, [("oracle/a.py", 2, 1), ("oracle/a.py", 2, 2), ("scripts/judge_run.py", 1, 2)])
+
+
 @unittest.skipUnless(shutil.which("git") and shutil.which("tar"), "needs git and tar")
 class EndToEnd(unittest.TestCase):
     def setUp(self):
@@ -204,6 +258,27 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(sorted(files), ["README.md", "code.py"])  # old.txt is gone
         self.assertIn("Trailer: one", git("log", "-1", "--format=%B", "refs/heads/snapshot", cwd=self.target))
         self.assertEqual(git("rev-list", "--count", "refs/heads/snapshot", cwd=self.target), "2")  # no source history
+
+    def test_another_branch_starts_from_the_snapshot_and_leaves_it_alone(self):
+        rc, out = self.run_it("--push", "--branch", "v3.1-preview")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.head(), self.before)  # the released snapshot is untouched
+        preview = git("rev-parse", "refs/heads/v3.1-preview", cwd=self.target)
+        self.assertEqual(git("rev-parse", f"{preview}~1", cwd=self.target), self.before)  # on top of the snapshot
+        self.assertNotIn(PRIVATE, git("show", "refs/heads/v3.1-preview:README.md", cwd=self.target))
+        self.assertIn("to v3.1-preview", out)
+        (self.source / "code.py").write_text("x = 2\n")  # a second push builds on the preview's own tip
+        git("commit", "-q", "-am", "next", cwd=self.source)
+        rc, out = self.run_it("--push", "--branch", "v3.1-preview")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(git("rev-parse", "refs/heads/v3.1-preview~1", cwd=self.target), preview)
+        self.assertEqual(self.head(), self.before)
+
+    def test_a_branch_name_must_be_plain(self):
+        for bad in ("../main", "-x", "a b", "refs/../../x"):
+            with self.assertRaises(SystemExit):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    self.run_it("--branch", bad)
 
     def test_pushing_again_with_nothing_new_makes_no_commit(self):
         self.run_it("--push")
@@ -419,6 +494,48 @@ class RadicleTarget(unittest.TestCase):
             self.run_it("--out", str(self.base / "again"), "--publish", "--rad-home", str(self.node),
                         "--record", str(self.base / "r.json"))
         self.assertFalse((self.base / "again").exists())
+
+    def image_file_with_a_kept_term(self) -> None:
+        (self.source / "oracle").mkdir()
+        (self.source / "oracle" / "rpc.py").write_text(f"# see {PRIVATE}\n")
+        git("add", "-A", cwd=self.source)
+        git("commit", "-q", "-m", "an image file with a private term", cwd=self.source)
+
+    def test_a_listed_ref_copies_its_image_files_verbatim_with_the_terms_counted(self):
+        """VP15: v3's refs (the preset's `verbatim_refs`) keep their image files byte for byte, terms included."""
+        self.image_file_with_a_kept_term()
+        git("branch", "sepolia-v3", cwd=self.source)
+        out_dir = self.base / "public"
+        rc, out = self.run_it("--out", str(out_dir), "--ref", "sepolia-v3")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(git("show", "HEAD:oracle/rpc.py", cwd=out_dir), f"# see {PRIVATE}")
+        self.assertIn("term 1 (company domain): replaced 1 time(s) in 1 file(s); kept 1 time(s) in 1 file(s) the "
+                      "image is built from", out)
+        self.assertNotIn("refused", out)
+        self.assertNotIn(PRIVATE, out)
+
+    def test_an_unlisted_ref_with_a_kept_term_fails(self):
+        """VP15: any other ref copies the image files verbatim too, but a kept term in them fails the run."""
+        git("branch", "sepolia-v3", cwd=self.source)  # listed, but HEAD is a later commit
+        self.image_file_with_a_kept_term()
+        out_dir = self.base / "public"
+        rc, out = self.run_it("--out", str(out_dir))
+        self.assertEqual(rc, 1, out)
+        self.assertIn("term 1 (company domain): replaced 1 time(s) in 1 file(s); kept 1 time(s) in 1 file(s) the "
+                      "image is built from (refused: only the listed refs (8946b9c, sepolia-v3)", out)
+        self.assertIn("FOUND a private term: oracle/rpc.py", out)
+        self.assertIn("nothing created, nothing published", out)
+        self.assertFalse(out_dir.exists())
+        self.assertNotIn(PRIVATE, out)
+
+    def test_an_unlisted_ref_with_clean_image_files_copies_them_verbatim(self):
+        (self.source / "oracle").mkdir()
+        (self.source / "oracle" / "rpc.py").write_text("# clean\n")
+        git("add", "-A", cwd=self.source)
+        git("commit", "-q", "-m", "a clean image file", cwd=self.source)
+        rc, out = self.run_it("--out", str(self.base / "public"))
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(git("show", "HEAD:oracle/rpc.py", cwd=self.base / "public"), "# clean")
 
     def test_a_non_empty_out_is_refused(self):
         (self.base / "busy").mkdir()

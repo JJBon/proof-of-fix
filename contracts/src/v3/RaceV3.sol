@@ -60,6 +60,16 @@ import {SolverBook} from "./SolverBook.sol";
 /// counted from the verdict's finality (`earned`) and paid once the fix is merged: a held verdict, a frozen window or
 /// an unmerged fix pays nothing.
 ///
+/// **Rebase in place (v3.1, #310, design RB1-RB13).** A claimed, unmerged award whose base is no longer the head is
+/// re-submitted rebased onto the head (`rebase`): a new check of the rebased commit, opened in the clear, with a fix's
+/// deposit and a claim of the original's judged bounty, judged by a fresh panel with its own full window. The award
+/// keeps its place, epoch and price; `merge` moves the head to the rebased commit once both verdicts are final passes,
+/// and the instalments count from the later finality. The winning solver may rebase at once, anyone else REBASE_GRACE
+/// after the head last moved (a third party's rebase that merges is paid REBASE_SHARE_BPS of the price and its checks
+/// at the bounty's payment). The solver's own rebase failed by its counted panel on the head reopens the bounty at once
+/// (`mergeExpired`); any other ending only frees the award's one rebase slot; the merge deadline counts from the latest
+/// passing rebase's finality, and a rebase in flight holds it.
+///
 /// **A check that can't be judged is refunded (#251, design L19; specs/panel-liveness).** When Panels releases its
 /// rounds MAX_REDRAWS times, or at its deadline (resultDays after the commitment) once a round was released, anyone
 /// calls `release`: the deposit's or fee's rest returns to the solver (no slash, no failed verdict, no reputation
@@ -222,11 +232,15 @@ contract RaceV3 is RaceV3Base {
     }
 
     /// Who takes part in check `id` (Panels' IPanelsHost), fixed when it opened: the issue's reporter, the solver,
-    /// and the funders who had pledged to its bounty by then. A judge whose key or operator is a party is recused.
+    /// and the funders who had pledged to its bounty by then; for a rebase check also the winning solver whose fix it
+    /// rebases (#310, RB6). A judge whose key or operator is a party is recused.
     function isParty(uint256 id, address account) external view returns (bool) {
         Submission storage s = _submissions[id];
         if (account == address(0)) return false;
-        if (account == s.solver || account == _issues[s.issue != 0 ? s.issue : _bounties[s.bounty].issue].reporter) {
+        if (
+            account == s.solver || account == _issues[s.issue != 0 ? s.issue : _bounties[s.bounty].issue].reporter
+                || (s.rebaseOf != 0 && account == _submissions[s.rebaseOf].solver)
+        ) {
             return true;
         }
         uint256 q = s.bounty == 0 ? 0 : pledgeOrder[s.bounty][account];
@@ -369,14 +383,19 @@ contract RaceV3 is RaceV3Base {
         s.fix = fix;
         s.base = base;
         bt.epoch += 1;
-        awards[b][bt.epoch] = Award(s.solver, fix, id, false, 0, false);
+        awards[b][bt.epoch] = Award(s.solver, fix, id, false, 0, false, 0, 0);
         _setState(b, State.Merged);
         emit Awarded(b, bt.epoch, s.solver);
     }
 
     /// Solved = merged (#251, L9): once the claimed fix's verdict is final and still a pass, the repository's head
-    /// moves to it, if its base is still the head (a stale base reverts whole: the winner keeps its place until
-    /// mergeDays after the finality). Its instalments, counted from the finality, are then paid. Anyone, once.
+    /// moves to it, if its base is still the head (a stale base reverts whole: the winner keeps its place, and may be
+    /// rebased in place, `rebase`). Its instalments, counted from the finality, are then paid. Anyone, once.
+    ///
+    /// **Through a rebase (#310, RB5).** When the award's latest rebase check stands as a pass, the head moves to the
+    /// rebased commit instead, once both verdicts are final, and records the rebase check's verdict; the original
+    /// commit never becomes the head. Both commits count as paid, the bounty joins the winner's reputation, and the
+    /// rebaser's claim closes with nothing gained.
     function merge(uint256 b) external nonReentrant {
         Bounty storage bt = _bounties[b];
         if (bt.state != State.Merged) revert WrongState(b, bt.state);
@@ -386,11 +405,24 @@ contract RaceV3 is RaceV3Base {
         if (st != Status.Final) revert NotYet();
         if (a.closed || a.merged || !pass) revert Refused(); // reversed: `sync` reopens the bounty
         Submission storage s = _submissions[id];
-        heads.move(repo, s.base, a.fix, b, id, keccak256(abi.encode(address(panels), id)));
+        uint256 m = id; // the check whose tree the head moves to
+        uint256 r = a.rebase;
+        if (r != 0) {
+            (st, pass,) = _verdict(r);
+            if (pass) {
+                if (st != Status.Final) revert NotYet();
+                m = r;
+            }
+        }
+        Submission storage t = _submissions[m];
+        heads.move(repo, t.base, t.fix, b, id, keccak256(abi.encode(address(panels), m)));
         a.merged = true;
-        paidFix[a.fix] = true;
+        a.fix = t.fix;
+        paidFix[s.fix] = true;
+        paidFix[t.fix] = true;
         book.paid(id, s.solver, s.judged); // D29: its claim closes and its bounty joins its reputation; L6: active
-        emit HeadMerged(b, bt.epoch, id, a.fix);
+        if (m != id) book.closeClaim(m);
+        emit HeadMerged(b, bt.epoch, m, t.fix);
     }
 
     // ---------- payouts ----------
@@ -408,9 +440,9 @@ contract RaceV3 is RaceV3Base {
 
     // ---------- delegated to RaceV3Annex, run in this contract's storage ----------
 
-    // register, openBounty, report, withdrawIssue, withdraw, timeOut, mergeExpired, release, payShadow, signal and
-    // finish run in RaceV3Endings, which the annex reaches for any call it doesn't have (its fallback): one more
-    // DELEGATECALL, still in this contract's storage.
+    // register, openBounty, report, withdrawIssue, withdraw, timeOut, rebase, release, payShadow, signal and finish run
+    // in RaceV3Endings, which the annex reaches for any call it doesn't have (its fallback): one more DELEGATECALL,
+    // still in this contract's storage. mergeExpired runs in the annex since #310 (EIP-170: the endings hold rebase).
 
     /// An issue's final registration check: a pass opens its bounty, a fail forfeits its stake
     /// (RaceV3Endings.openBounty).
@@ -450,9 +482,16 @@ contract RaceV3 is RaceV3Base {
         _delegate();
     }
 
-    /// A winning fix not claimed, or a claimed one not merged, by its deadline: the bounty reopens
+    /// A winning fix not claimed, or a claimed one not merged, by its deadline (counted from its latest passing
+    /// rebase's finality too), or whose solver's own rebase failed on the head: the bounty reopens
     /// (RaceV3Endings.mergeExpired).
     function mergeExpired(uint256) external {
+        _delegate();
+    }
+
+    /// A claimed, unmerged award whose base is no longer the head, rebased in place onto the head (#310, RB2): a new
+    /// check of the rebased commit, opened in the clear (RaceV3Endings.rebase).
+    function rebase(uint256, bytes32, bytes32, bytes32) external returns (uint256) {
         _delegate();
     }
 

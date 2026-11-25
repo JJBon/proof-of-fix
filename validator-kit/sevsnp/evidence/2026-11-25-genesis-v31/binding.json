@@ -1,0 +1,9 @@
+{
+  "key": "0x6C423661490653b44d02B2F298A99252F4423045",
+  "deployer": "0x18B7360A885Ea1c9aD0781843C8d7EFB21E9a023",
+  "deployerNonce": 33,
+  "libraries": 3,
+  "chainId": 11155111,
+  "registry": "0xbF7138DAA5DC0b0796e56C79DA2Ed0F480b06B94",
+  "attestNonce": "a56c01d3c307122a331da66596cac6262bcc5712d1aaa7913993f15beae286c6"
+}

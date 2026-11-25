@@ -113,7 +113,7 @@ resource "aws_instance" "node" {
   count                                = var.create_instance ? 1 : 0
   ami                                  = aws_ami.checker[0].id
   instance_type                        = var.instance_type
-  subnet_id                            = aws_subnet.public.id
+  subnet_id                            = local.subnet_id
   vpc_security_group_ids               = [aws_security_group.node.id]
   iam_instance_profile                 = aws_iam_instance_profile.node.name
   instance_initiated_shutdown_behavior = "stop" # the node's power-off stops it; start it again to run again
@@ -137,6 +137,10 @@ resource "aws_instance" "node" {
 
   user_data                   = local.user_data
   user_data_replace_on_change = false
+
+  # default_tags don't reach the volumes: with var.tags set they're tagged at launch too (the data volume holds the
+  # Radicle key). Empty (the default) leaves them untagged, as before, so an existing instance plans no change.
+  volume_tags = length(var.tags) > 0 ? merge(var.tags, { Name = "${var.name}-node" }) : null
 
   tags = { Name = "${var.name}-node", "pof:roothash" = local.roothash }
 

@@ -304,13 +304,14 @@ stateDiagram-v2
   Waiting --> Sealed: the registry changes
   Sealed --> Judging: a panel of k is seated
   Judging --> Window: k = 3, 5 or 7<br/>the verdict is counted
-  Judging --> Held: k = 1 and fewer than 3 validators<br/>could judge a challenge
-  Judging --> Window: k = 1 and 3 challengers<br/>already exist
-  Held --> Window: 3 validators outside the panel are active,<br/>not parties, and bonded for the bounty
+  Judging --> Held: k = 1 and too few validators<br/>could judge a challenge
+  Judging --> Window: k = 1 and enough challengers<br/>already exist
+  Held --> Window: enough validators outside the panel and its auditors<br/>are bonded, not parties, and have room
   Window --> Window: a challenge freezes the window<br/>until a larger, fresh panel decides
   Window --> Final: the window passed, every audit is in<br/>and no challenge is open
   Final --> [*]: a pass starts the instalments
 ```
+- **How many validators a held verdict needs.** Six eligible validators outside its panel before its audits are drawn (seven in all, with the judge), then three outside the judge and its auditors after (six in all, with two auditors). Each must be bonded for the bounty, not a party, and have room under its k = 1 limit now. That is the challenge panel of 3, plus one for each audit still to be drawn, since an auditor sits out of the challenge. Below that every lone verdict stays held; at exactly the threshold, one validator pausing or filling up holds them all.
 - **Nothing of the bounty is paid while a verdict is held or its window runs.** The judges' fees are paid when the verdict is posted; only the bounty waits.
 - **Every k = 1 verdict is audited by two auditors outside its panel,** each drawn as soon as one is eligible. An audit that disagrees opens a challenge.
 - **A validator has at most 10 k = 1 verdicts not yet final.** At 10 it isn't drawn at k = 1.
@@ -338,7 +339,7 @@ stateDiagram-v2
 
 ## Take part
 
-v3 is live on the Sepolia testnet (test coin only): **[start here](docs/take-part.md)**, then [fund an issue](docs/guides/fund-an-issue.md), [submit a fix as a Radicle patch](docs/guides/submit-a-fix.md) or [run a validator](docs/guides/run-a-validator.md).
+v3.1 is live on the Sepolia testnet (test coin only; it supersedes v3): **[start here](docs/take-part.md)**, then [fund an issue](docs/guides/fund-an-issue.md), [submit a fix as a Radicle patch](docs/guides/submit-a-fix.md) or [run a validator](docs/guides/run-a-validator.md).
 
 [`docs/participate.md`](docs/participate.md) describes the earlier private v2 devnet, which v3 replaces.
 

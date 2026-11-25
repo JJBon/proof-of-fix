@@ -109,7 +109,7 @@ variable "extra_secret_arns" {
 }
 
 variable "vpc_cidr" {
-  description = "The kit's VPC: one public subnet, no inbound, no NAT."
+  description = "The kit's own VPC (when subnet_id is empty): one public subnet, no inbound, no NAT."
   type        = string
   default     = "10.82.0.0/24"
 }
@@ -233,4 +233,34 @@ variable "log_retention_days" {
   description = "CloudWatch log retention for the watcher."
   type        = number
   default     = 30
+}
+
+# ---------- Several kits in one account ----------
+
+variable "subnet_id" {
+  description = "An existing public subnet to launch in (one network shared by several kits in one account, which has 5 VPCs a region by default): the kit then makes only its security group, in that subnet's VPC. Empty: the kit makes its own VPC (vpc_cidr), as before."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.subnet_id == "" || can(regex("^subnet-[0-9a-f]{8,17}$", var.subnet_id))
+    error_message = "subnet_id: a subnet ID (subnet-…), or empty for the kit's own VPC."
+  }
+}
+
+variable "tags" {
+  description = "Extra tags on every resource (the provider's default_tags) and on the instance's volumes, e.g. { \"pof:validator\" = \"v2\" }. Empty (the default): the volumes stay untagged, as before."
+  type        = map(string)
+  default     = {}
+}
+
+variable "budget_cost_tag" {
+  description = "Scope the budget to one cost allocation tag, \"<key>$<value>\" (e.g. pof:validator$v2, with tags = { \"pof:validator\" = \"v2\" }). The tag must first be activated as a cost allocation tag in the payer (management) account, or the budget counts nothing. Empty: the budget counts the whole account, as before."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.budget_cost_tag == "" || can(regex("^[^$]+\\$[^$]+$", var.budget_cost_tag))
+    error_message = "budget_cost_tag: \"<key>$<value>\", e.g. pof:validator$v2."
+  }
 }

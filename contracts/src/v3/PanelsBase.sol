@@ -72,9 +72,9 @@ struct Submission {
     address challenger;
     address author; // a constitution-tier submission's deposit returns here
     uint64 auditEpoch; // registry epoch + 1 when its audit snapshot was taken (#251 task 3.10)
-    bool auditWaits; // no auditor in that snapshot, and the registry hasn't changed: drawAudits refuses until it does
+    bool auditWaits; // no auditor in that snapshot: drawAudits refuses until the registry changes or `retryAt` (#336)
     uint8 redraws; // rounds released so far: stuck panels and audits that couldn't be drawn (#251, L19)
-    uint64 retryAt; // while waiting: when it's drawn again even if the registry didn't change (L19, L16)
+    uint64 retryAt; // while waiting, or its audits wait (#336): when retried even if the registry didn't change (L19)
     uint64 auditStuckAt; // when its audits first found no auditor since the last one was drawn (0: not stuck)
     uint64 challengeBy; // its open challenge's CHALLENGE_DEADLINE: past it with no panel, the challenge lapses (L25)
     uint64 challengeRetryAt; // while its challenge waits: when it's drawn again even if the registry didn't change (L25)

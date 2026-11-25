@@ -1,0 +1,123 @@
+{
+  "format": "pof-release-candidate/1",
+  "tag": "rc5",
+  "commit": "6f23f52e8114e514056c89dfc9022ec3300726cf",
+  "result": "passed",
+  "checks": {
+    "integration": {
+      "command": "scripts/integration.sh --release-candidate 6f23f52e8114e514056c89dfc9022ec3300726cf",
+      "runs": [
+        "failed",
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "details": [
+        {
+          "sets": {
+            "radicle": "failed",
+            "story": "passed (1523s)",
+            "launch": "passed (834s)",
+            "rebase": "passed (260s)",
+            "few-larger": "passed (200s)",
+            "few-same": "passed (201s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "rebase": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 3019,
+          "invocation": 1
+        },
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (1481s)",
+            "launch": "passed (935s)",
+            "rebase": "passed (284s)",
+            "few-larger": "passed (219s)",
+            "few-same": "passed (218s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "rebase": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 3713,
+          "invocation": 2
+        },
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (1408s)",
+            "launch": "passed (824s)",
+            "rebase": "passed (284s)",
+            "few-larger": "passed (245s)",
+            "few-same": "passed (375s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "rebase": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 3695,
+          "invocation": 2
+        },
+        {
+          "sets": {
+            "radicle": "passed",
+            "story": "passed (1467s)",
+            "launch": "passed (885s)",
+            "rebase": "passed (285s)",
+            "few-larger": "passed (220s)",
+            "few-same": "passed (201s)"
+          },
+          "windows": {
+            "story": "production",
+            "launch": "production",
+            "rebase": "production",
+            "few-larger": "production",
+            "few-same": "production"
+          },
+          "wallSeconds": 3639,
+          "invocation": 2
+        }
+      ]
+    },
+    "productionWindows": "passed",
+    "sevSnpValidator": "passed",
+    "realModelRun": "passed",
+    "attestedImages": "passed",
+    "attestedImagesEvidence": "evidence/rc-rc5",
+    "sevSnpValidatorEvidence": "evidence/rc-rc5",
+    "realModelRunEvidence": "evidence/rc-rc5-model",
+    "realModelRunModel": "direct:bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  },
+  "panelRules": {
+    "operatorCap": "off",
+    "hostCap": "off",
+    "teeCap": "off",
+    "kTop": 3,
+    "challengeSize": "same"
+  },
+  "bytecode": {
+    "TestCoin": "0xd8b1d3d0896ac7cdcd4f7240a7c816272581195b38fed0676b04fedb0b3f53a2",
+    "CoinFaucet": "0x582891ee6e3b55e68c70e4312cb6d26e355b9ea404908e1823edff34b64da32c",
+    "PoolV3": "0xdf76aed1b208eb18b2a263f4d519386d8dfc708050286783184565e58ed089b0",
+    "RegistryMaker": "0x70e57165e836b137758706a1667bd1abded00bd593e9cb9796a3c26b2a9cc48b",
+    "Validators": "0x4c775a0c57ed0cd9f08f79ac618050045603d161e896eb6e49b0514555d3dbd7",
+    "PanelScores": "0x6e104725d554ee87fcc10d945f465f2cb6143214a9363bcfca77697ca06f4df8",
+    "FeesV3": "0x3f5ac00f9ec1eb2a4fb5ae8c500b3eb060216b3450c9bc739dec4bb9f7c5fc74",
+    "Panels": "0x948b9b0ad8c14fdfd2d33739a1bc92a7cbe3cc5162a3e059a2241b49506c9775",
+    "RaceV3Endings": "0x92e0bddfc2ad9a7f63e3b6fc0fff7bd07b76ec614c1ec2ce1be2790a9f8b7bce",
+    "RaceV3Annex": "0xbcbabffaecb47b5c2cb6e04d450b94c24efca848a173000b641eaa31d8a4088a",
+    "RaceV3": "0xf0ac476c40699a872b700c840700e8e3d6535116c986f6ae0cda21f8e63f4df0"
+  }
+}

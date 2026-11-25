@@ -384,6 +384,32 @@ class GatewayTest(unittest.TestCase):
         self.assertEqual(self.stub.log, [])
         self.assertFalse(self.ws.out.exists())
 
+    def test_without_model_gateway_url_it_stops_first_naming_the_variable(self):
+        """v3.1 polish VP25: no default gateway. Unset or empty, run-v2 and run stop before anything else: one line
+        naming MODEL_GATEWAY_URL on stderr, nothing on stdout, nothing sent, nothing written."""
+        for value in (None, "", "  "):
+            for args in (self.ws.args(), [sys.executable, str(SCRIPT), "run", "--execute", "--max-usd", "5",
+                                          "--max-tokens", "1000"]):
+                env = self.ws.env(self.stub)
+                if value is None:
+                    del env["MODEL_GATEWAY_URL"]
+                else:
+                    env["MODEL_GATEWAY_URL"] = value
+                r = subprocess.run(args, env=env, cwd=ROOT, capture_output=True, text=True, timeout=120)
+                self.assertEqual(r.returncode, 1, args)
+                self.assertEqual(r.stdout, "")
+                self.assertEqual(r.stderr.strip().splitlines(), [r.stderr.strip()])  # one line, no traceback
+                self.assertIn("MODEL_GATEWAY_URL is not set", r.stderr)
+                self.assertIn("Nothing was sent", r.stderr)
+        self.assertEqual(self.stub.log, [])
+        self.assertFalse(self.ws.out.exists())
+
+    def test_no_gateway_host_is_written_in_the_script(self):
+        text = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("bedrock-agentcore", text)
+        self.assertNotIn("GATEWAY =", text)
+        self.assertFalse(hasattr(RUN, "GATEWAY"))
+
     def test_the_test_plan_is_the_chosen_design_on_tiny_sets(self):
         self.assertEqual((PLAN["design"]["design"], PLAN["design"]["h3"]), ("B", "2 seats"))
         self.assertEqual(STUDY_CALLS, 7 * 7 + 2 * 4)

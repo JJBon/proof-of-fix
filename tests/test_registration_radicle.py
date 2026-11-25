@@ -251,7 +251,9 @@ class RegistrationFromRadicle(unittest.TestCase):
     def open_issue(self, title: str, description: str, me: str = ME) -> str:
         (self.rad.home / "did").write_text(me)
         out = self.rad_cli("issue", "open", "--repo", RID, "--title", title, "--description", description)
-        return out.split()[2]
+        from pofctl import v3cli
+
+        return v3cli.rad_issue_id(out)  # Radicle 1.10.3's box: its `│ Issue   <id> │` row
 
     def comment(self, issue: str, text: str, me: str = OTHER) -> None:
         (self.rad.home / "did").write_text(me)  # anyone may comment: the reporter's own node, here another

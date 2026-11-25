@@ -1,0 +1,305 @@
+{
+ "about": "scripts/calibrate.py's data (proof-of-fix#334): which prepared fix (calibration/fixes/) is correct (good) and which is subtly wrong (bad). Kept here, away from the issues and the fixes the judges read.",
+ "items": [
+  {
+   "id": "c01",
+   "function": "clamp",
+   "prepared": "good"
+  },
+  {
+   "id": "c02",
+   "function": "mean",
+   "prepared": "good"
+  },
+  {
+   "id": "c03",
+   "function": "last_word",
+   "prepared": "good"
+  },
+  {
+   "id": "c04",
+   "function": "count_vowels",
+   "prepared": "bad"
+  },
+  {
+   "id": "c05",
+   "function": "is_leap",
+   "prepared": "good"
+  },
+  {
+   "id": "c06",
+   "function": "median",
+   "prepared": "good"
+  },
+  {
+   "id": "c07",
+   "function": "chunk",
+   "prepared": "good"
+  },
+  {
+   "id": "c08",
+   "function": "title_case",
+   "prepared": "bad"
+  },
+  {
+   "id": "c09",
+   "function": "safe_div",
+   "prepared": "good"
+  },
+  {
+   "id": "c10",
+   "function": "unique",
+   "prepared": "good"
+  },
+  {
+   "id": "c11",
+   "function": "word_count",
+   "prepared": "good"
+  },
+  {
+   "id": "c12",
+   "function": "fizzbuzz",
+   "prepared": "bad"
+  },
+  {
+   "id": "c13",
+   "function": "reverse_words",
+   "prepared": "good"
+  },
+  {
+   "id": "c14",
+   "function": "percent",
+   "prepared": "good"
+  },
+  {
+   "id": "c15",
+   "function": "flatten",
+   "prepared": "good"
+  },
+  {
+   "id": "c16",
+   "function": "is_palindrome",
+   "prepared": "bad"
+  },
+  {
+   "id": "c17",
+   "function": "days_in_month",
+   "prepared": "good"
+  },
+  {
+   "id": "c18",
+   "function": "initials",
+   "prepared": "good"
+  },
+  {
+   "id": "c19",
+   "function": "running_total",
+   "prepared": "good"
+  },
+  {
+   "id": "c20",
+   "function": "to_celsius",
+   "prepared": "bad"
+  },
+  {
+   "id": "c21",
+   "function": "max_index",
+   "prepared": "good"
+  },
+  {
+   "id": "c22",
+   "function": "strip_prefix",
+   "prepared": "good"
+  },
+  {
+   "id": "c23",
+   "function": "gcd",
+   "prepared": "good"
+  },
+  {
+   "id": "c24",
+   "function": "parse_bool",
+   "prepared": "bad"
+  },
+  {
+   "id": "c25",
+   "function": "nth_fib",
+   "prepared": "good"
+  },
+  {
+   "id": "c26",
+   "function": "pad_left",
+   "prepared": "good"
+  },
+  {
+   "id": "c27",
+   "function": "sum_digits",
+   "prepared": "good"
+  },
+  {
+   "id": "c28",
+   "function": "normalize_spaces",
+   "prepared": "bad"
+  },
+  {
+   "id": "c29",
+   "function": "ordinal",
+   "prepared": "good"
+  },
+  {
+   "id": "c30",
+   "function": "range_sum",
+   "prepared": "good"
+  },
+  {
+   "id": "c31",
+   "function": "merge_dicts",
+   "prepared": "good"
+  },
+  {
+   "id": "c32",
+   "function": "rot13",
+   "prepared": "bad"
+  },
+  {
+   "id": "c33",
+   "function": "is_sorted",
+   "prepared": "good"
+  },
+  {
+   "id": "c34",
+   "function": "hamming",
+   "prepared": "good"
+  },
+  {
+   "id": "c35",
+   "function": "seconds_to_hms",
+   "prepared": "good"
+  },
+  {
+   "id": "c36",
+   "function": "truncate",
+   "prepared": "bad"
+  },
+  {
+   "id": "c37",
+   "function": "roman",
+   "prepared": "good"
+  },
+  {
+   "id": "c38",
+   "function": "snake_case",
+   "prepared": "good"
+  },
+  {
+   "id": "c39",
+   "function": "dot",
+   "prepared": "good"
+  },
+  {
+   "id": "c40",
+   "function": "split_csv_line",
+   "prepared": "bad"
+  },
+  {
+   "id": "c41",
+   "function": "interleave",
+   "prepared": "good"
+  },
+  {
+   "id": "c42",
+   "function": "grade",
+   "prepared": "good"
+  },
+  {
+   "id": "c43",
+   "function": "count_char",
+   "prepared": "good"
+  },
+  {
+   "id": "c44",
+   "function": "remove_none",
+   "prepared": "bad"
+  },
+  {
+   "id": "c45",
+   "function": "bin_search",
+   "prepared": "good"
+  },
+  {
+   "id": "c46",
+   "function": "escape_html",
+   "prepared": "good"
+  },
+  {
+   "id": "c47",
+   "function": "kebab_to_camel",
+   "prepared": "good"
+  },
+  {
+   "id": "c48",
+   "function": "weekday_name",
+   "prepared": "bad"
+  },
+  {
+   "id": "c49",
+   "function": "compound",
+   "prepared": "good"
+  },
+  {
+   "id": "c50",
+   "function": "is_anagram",
+   "prepared": "good"
+  },
+  {
+   "id": "c51",
+   "function": "primes_below",
+   "prepared": "good"
+  },
+  {
+   "id": "c52",
+   "function": "moving_average",
+   "prepared": "bad"
+  },
+  {
+   "id": "c53",
+   "function": "json_path",
+   "prepared": "good"
+  },
+  {
+   "id": "c54",
+   "function": "count_lines",
+   "prepared": "good"
+  },
+  {
+   "id": "c55",
+   "function": "rgb_to_hex",
+   "prepared": "good"
+  },
+  {
+   "id": "c56",
+   "function": "parse_duration",
+   "prepared": "bad"
+  },
+  {
+   "id": "c57",
+   "function": "sort_by_length",
+   "prepared": "good"
+  },
+  {
+   "id": "c58",
+   "function": "safe_int",
+   "prepared": "good"
+  },
+  {
+   "id": "c59",
+   "function": "transpose",
+   "prepared": "good"
+  },
+  {
+   "id": "c60",
+   "function": "expand_tabs",
+   "prepared": "bad"
+  }
+ ]
+}

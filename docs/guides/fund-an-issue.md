@@ -10,8 +10,8 @@ JSON-RPC endpoint, and about 0.01 Sepolia ETH.
 <!-- test: values -->
 ```bash
 export POFCTL_RPC=https://<your Sepolia JSON-RPC endpoint: Infura, Alchemy or your own>
-export RID=rad:zyZXC9NqVuse8nXdpv7iYRScDHsN           # proof-of-fix on Radicle
-export RECORD=contracts/deployments/sepolia-v3.json   # the deployment record, on the branch sepolia-v3 (step 1)
+export RID=rad:z2whCPbrSKbtyvwYjHXPZhN9ZkK5z            # proof-of-fix on Radicle
+export RECORD=contracts/deployments/sepolia-v3.1.json   # the deployment record, on the branch sepolia-v3.1 (step 1)
 ```
 
 ## 1. Your Radicle node and the code
@@ -38,14 +38,14 @@ rad node connect z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem@77.113.144.207
 rad clone --seed z6MkveoyyXuC4S2BKidHiE1qz1RbcKLDfe4hxLTHAhaGdNem --timeout 2min "$RID" proof-of-fix && cd proof-of-fix
 ```
 
-The canonical `main` moves only through the race (a fix reaches it when it's final and merged), so it's older than
-the code the deployment runs and has no deployment record. Take the current code, the organiser's branch `sepolia-v3`:
+The canonical `main` moves only through the race (a fix reaches it when it's final and merged), so it has no
+deployment record. Take the current code, the organiser's branch `sepolia-v3.1`:
 
 <!-- test: skip (the devnet's repository has the program and the record on its main) -->
 ```bash
 rad remote add z6Mkjgv8wBE6A963vtYC9VCBcxBPn6TBTKxjfMqgk6VFubdq --name asclepius --fetch   # the organiser's node
-git checkout -b sepolia-v3 asclepius/sepolia-v3
-ls "$RECORD"                                 # the deployment record (RaceV3 0xD622…9829, block 12196904)
+git checkout -b sepolia-v3.1 asclepius/sepolia-v3.1
+ls "$RECORD"                                 # the deployment record (RaceV3 0xC02F…a790, block 12211341)
 ```
 
 ## 2. Your key
@@ -55,20 +55,23 @@ mkdir -p ~/.proof-of-fix && cast wallet new ~/.proof-of-fix funder    # an encry
                                                                        # then prints the keystore's address
 printf '{"record": "%s", "keystore": "%s"}\n' "$RECORD" ~/.proof-of-fix/funder > pofctl.json
 field() { python3 -c 'import json, sys; print(json.load(sys.stdin)[sys.argv[1]])' "$1"; }   # one field of --json
-ME=$(scripts/pofctl --json --v3 status | field solver) && echo "your address $ME"   # asks for the password
+ME=$(scripts/pofctl --json --v3 status | field solver) && echo "your address $ME"   # asks for the password, once
+printf '{"record": "%s", "keystore": "%s", "address": "%s"}\n' "$RECORD" ~/.proof-of-fix/funder "$ME" > pofctl.json
 ```
 
-pofctl decrypts the keystore for every command, `status` included, so each asks for its password at the terminal,
-and fails where there's none (a script, a CI job, a shell without a TTY). For a scripted run, put the password in a
-file only you can read and name it in `POFCTL_KEYSTORE_PASSWORD_FILE` (never the password itself in the
-environment). pofctl never prints the key. `pofctl.json` holds two paths, no secret; don't commit it.
+cast's keystore doesn't name its address, so the first `status` decrypts it once to find it; with the address in
+`pofctl.json` (or `--address 0x…`), `status` reads only the chain and asks for no password. Every command that sends
+a transaction decrypts the keystore and asks for its password at the terminal, and fails where there's none (a
+script, a CI job, a shell without a TTY). For a scripted run, put the password in a file only you can read and name it
+in `POFCTL_KEYSTORE_PASSWORD_FILE` (never the password itself in the environment). pofctl never prints the key.
+`pofctl.json` holds two paths and your address, no secret; don't commit it.
 
 Send about **0.01 Sepolia ETH** (plenty for every step here) to your address from any Sepolia faucet: it pays the gas.
 Check it arrived, then take test coins:
 
 <!-- test: gas -->
 ```bash
-cast balance "$ME" --rpc-url "$POFCTL_RPC" --ether   # 0.010000000000000000 once the faucet's ETH is in
+scripts/pofctl --v3 status | grep ETH        # "ETH  0.010000 for gas" once the faucet's ETH is in; no password
 scripts/pofctl faucet                        # 20 test coins, once every 2 hours per address
 ```
 
@@ -78,25 +81,36 @@ the unused part comes back). One faucet claim of 20 covers it and leaves enough 
 ## 3. Open and register the issue
 
 ```bash
-ISSUE=$(rad issue open --title "median() of an empty list raises" \
-  --description "median([]) raises IndexError; it should raise ValueError." \
-  | awk '!id && $1 == "│" && $2 == "Issue" {id = $3} END {print id}')
-echo "issue $ISSUE"
+scripts/pofctl --json --v3 issue register --title "median() of an empty list raises" \
+  --description "median([]) raises IndexError; it should raise ValueError." --comment > ~/.proof-of-fix/registration.json
+REG=$(field issue < ~/.proof-of-fix/registration.json)
+echo "registration $REG: its check $(field check < ~/.proof-of-fix/registration.json), Radicle issue $(field radIssue < ~/.proof-of-fix/registration.json)"
 rad sync --announce
-REG=$(scripts/pofctl --json --v3 issue register --rad-issue "$ISSUE" --comment | field issue)
-echo "registration $REG"
 ```
 
-`rad issue open` (Radicle 1.10.3) prints the new issue in a box, and its row `│ Issue   <40 hex digits> │` holds
-the id: the `awk` takes that row only, not any other 40-hex string the box may show. If `ISSUE` comes out empty,
-find your issue's short id with `rad issue list`; `rad issue show <short id>` prints the full id in the same row.
+`issue register --title` opens the Radicle issue (`rad issue open`), takes its whole id from Radicle's output and
+checks it with `rad issue show`. Then it pays the registration fee, stakes the issue and posts its registration
+check's deposit (the unused part comes back), and comments your signed claim on the Radicle issue. For an issue you
+already opened, give its whole id instead: `--rad-issue <id>` (as `rad issue list` shows it).
 
-`issue register` pays the registration fee, stakes the issue and posts its registration check's deposit (the unused
-part comes back), then comments your signed claim on the Radicle issue. Validators check that the issue is a genuine,
-in-scope bug report. On Sepolia the check is final about a day later (a panel of 3's windows) once 7 or more
-validators are active. At launch, while fewer than 7 validators are active, a panel has one judge: its verdict waits
-7 days for challenges and is held until enough validators are active to judge one (design L16), so expect days, not
-hours.
+Validators check that the issue is a genuine, in-scope bug report. A validator's keeper draws the check's panel
+within minutes; if no validator draws it within 10 minutes, any key with gas may:
+
+<!-- test: skip (the devnet's keepers draw every check at once; pofctl's own tests cover `draw`) -->
+```bash
+scripts/pofctl --v3 draw "$(field check < ~/.proof-of-fix/registration.json)"
+```
+
+How long it takes. On v3.1 the reveal opens as soon as every seat has sealed, so a verdict takes minutes; a seat that
+doesn't seal makes it at most about 2–3 hours after the draw: the 2-hour seal window, then the reveal (up to an hour)
+and the count. On Sepolia
+the check is then final about a day later (a panel of 3's windows) once 7 or more validators are active. At launch,
+while fewer than 7 validators are active, a panel has one judge: its verdict waits 7 days for challenges and is held
+until 6–7 validators with room can judge one (design L16), so expect days, not hours. Follow it with:
+
+```bash
+scripts/pofctl --v3 issue show --issue "$REG"   # its status, panel, deadlines, result, hold or window; no password
+```
 
 <!-- test: wait-registration -->
 ```bash

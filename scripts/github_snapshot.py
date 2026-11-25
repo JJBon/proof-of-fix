@@ -61,6 +61,11 @@ PRESETS = {
         # image from the public code (the owner's decision, 2026-11-23, #251). They go across unscrubbed; the scan
         # still refuses secrets, AWS account ids and denied terms in them, and the run prints what each term kept.
         "verbatim": IMAGE_INPUTS,
+        # Only these refs may keep a private term in those files (v3.1 polish VP15): live v3's commit and the branch
+        # its image is built from, whose digest must stay reproducible while v3 lives. Any other ref copies them
+        # verbatim too, but a kept term fails the run: a clean file scrubs to itself. Emptied, and this exemption
+        # removed, when v3 sunsets (the owner's decision, 2026-11-23, Q3).
+        "verbatim_refs": ["8946b9c", "sepolia-v3"],
     },
     "pof-devnet-infra": {
         "paths": ["modules/pof_devnet", "modules/compose_host", "modules/schedule", "modules/scripts",
@@ -146,6 +151,47 @@ def shape_of(term: str) -> str:
 def is_verbatim(rel: str, verbatim: list) -> bool:
     """Whether a path (relative, with "/") is one of `verbatim`'s files or under one of its directories."""
     return any(rel.startswith(v) if v.endswith("/") else rel == v for v in verbatim)
+
+
+def verbatim_exempt(source: Path, ref: str, preset: dict) -> bool:
+    """Whether `ref` is one of the preset's `verbatim_refs` (VP15): it resolves to the same commit as a listed ref, a
+    commit or a branch (local, or origin's), in `source`. Only then may the image files keep a private term."""
+    listed = preset.get("verbatim_refs", [])
+    if not listed:
+        return False
+
+    def commit(name: str) -> str | None:
+        r = subprocess.run(["git", "-C", str(source), "rev-parse", "--verify", "-q", f"{name}^{{commit}}"],
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        return r.stdout.decode().strip() if r.returncode == 0 else None
+
+    sha = commit(ref)
+    if sha is None:
+        return False
+    for name in listed:
+        for candidate in (name, f"origin/{name}"):
+            if commit(candidate) == sha:
+                return True
+    return False
+
+
+def term_hits(root: Path, replace: list, paths: list) -> list:
+    """Where the replacements' terms are in `paths` (files, or directories ending with "/") under root: (file, line,
+    term number), the number in read_terms' order, from 1. Never the value: this output may end up anywhere."""
+    hits = []
+    for path in paths:
+        base = root / path.rstrip("/")
+        if path.endswith("/"):
+            files = text_files(base) if base.is_dir() else []
+        else:
+            files = [(base, base.read_text(encoding="utf-8", errors="replace"))] if base.is_file() else []
+        for p, text in files:
+            rel = p.relative_to(root).as_posix()
+            if "__pycache__" in rel.split("/"):
+                continue
+            hits += [(rel, n, i) for n, line in enumerate(text.splitlines(), 1)
+                     for i, (old, _) in enumerate(replace, 1) if old and old in line]
+    return hits
 
 
 def scrub(root: Path, replace: list, counts: list | None = None, verbatim: list = (),
@@ -320,6 +366,11 @@ def rad_publish(repo: Path, root: str, rad_home: Path, record_path: Path, name: 
     return record
 
 
+def not_listed(preset: dict) -> str:
+    listed = ", ".join(preset.get("verbatim_refs", [])) or "none"
+    return f"only the listed refs ({listed}) may keep a private term in the image's files; clean the file"
+
+
 def radicle_target(a, preset: dict, replace: list, deny: list, kinds: list, source: Path, sha: str) -> int:
     """#251 task 5.1 (L13): the scrubbed tree as one root commit in a new local repository; `rad init` only with
     --publish and the node named."""
@@ -338,12 +389,15 @@ def radicle_target(a, preset: dict, replace: list, deny: list, kinds: list, sour
         tree.mkdir()
         lay_out(tree, source, a.ref, preset)
         counts, kept, verbatim = [[0, 0] for _ in replace], [[0, 0] for _ in replace], preset.get("verbatim", [])
+        exempt = verbatim_exempt(source, a.ref, preset)
         print(f"{a.preset} for Radicle: {a.ref} ({sha}): scrubbed {scrub(tree, replace, counts, verbatim, kept)} "
               "file(s)")
         for i, ((n, files), (k, kfiles), kind) in enumerate(zip(counts, kept, kinds), 1):
             print(f"  term {i} ({kind}): replaced {n} time(s) in {files} file(s)"
-                  + (f"; kept {k} time(s) in {kfiles} file(s) the image is built from" if k else ""))
-        found = scan(tree, replace, deny, verbatim) + public_scan(tree, verbatim)
+                  + (f"; kept {k} time(s) in {kfiles} file(s) the image is built from" if k else "")
+                  + ("" if exempt or not k else f" (refused: {not_listed(preset)})"))
+        allowed = verbatim if exempt else ()
+        found = scan(tree, replace, deny, allowed) + public_scan(tree, allowed)
         if found:
             for rel, kind in found:
                 print(f"  FOUND {kind}: {rel}")
@@ -390,6 +444,9 @@ def main(argv=None) -> int:
     ap.add_argument("--push", action="store_true", help="commit and push when the scan is clean")
     ap.add_argument("--trailer", action="append", default=[], help="a line to end the commit message with")
     ap.add_argument("--remote-url", help="push here instead of GitHub (for tests): no gh, no privacy check")
+    ap.add_argument("--branch", default=BRANCH,
+                    help=f"github: the branch to push (default {BRANCH}); another one starts from {BRANCH}'s tip, "
+                         "e.g. a preview of unreleased code beside the released snapshot")
     ap.add_argument("--allow-public", action="store_true",
                     help="accept a target the owner has already made public (it never changes visibility)")
     ap.add_argument("--target", choices=["github", "radicle"], default="github",
@@ -406,7 +463,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.target == "radicle":
         given = [f for f, v in (("--push", a.push), ("--remote-url", a.remote_url),
-                                ("--allow-public", a.allow_public)) if v]
+                                ("--allow-public", a.allow_public), ("--branch", a.branch != BRANCH)) if v]
         if given:
             ap.error(f"{', '.join(given)}: the GitHub target's, not the Radicle target's")
         if a.preset != "proof-of-fix":
@@ -414,6 +471,8 @@ def main(argv=None) -> int:
         if a.publish and not (a.rad_home and a.record):
             ap.error("--publish needs the node (--rad-home, its RAD_HOME) and --record, both named explicitly")
     else:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,99}", a.branch) or ".." in a.branch:
+            ap.error(f"--branch: not a plain branch name: {a.branch!r}")
         given = [f for f, v in (("--out", a.out), ("--publish", a.publish), ("--rad-home", a.rad_home),
                                 ("--record", a.record), ("--expect-root", a.expect_root)) if v]
         if given:
@@ -435,10 +494,18 @@ def main(argv=None) -> int:
     with tempfile.TemporaryDirectory(prefix="pof-snapshot-") as tmp:
         tree = Path(tmp) / "tree"
         run(["git", *creds, "clone", "-q", "--branch", BRANCH, "--single-branch", url, str(tree)])
+        if a.branch != BRANCH:  # a preview branch: its earlier tip if it exists, else the snapshot's
+            if run(["git", *creds, "ls-remote", "origin", f"refs/heads/{a.branch}"], cwd=tree):
+                run(["git", *creds, "fetch", "-q", "origin", f"refs/heads/{a.branch}"], cwd=tree)
+                run(["git", "reset", "-q", "--hard", "FETCH_HEAD"], cwd=tree)
         lay_out(tree, source, a.ref, preset)
         verbatim = preset.get("verbatim", [])
+        exempt = verbatim_exempt(source, a.ref, preset)
         print(f"{a.preset}: {a.ref} ({sha}): scrubbed {scrub(tree, replace, verbatim=verbatim)} file(s)")
-        found = scan(tree, replace, deny, verbatim)
+        found = scan(tree, replace, deny, verbatim if exempt else ())
+        if found and not exempt and any(kind == "a private term" and is_verbatim(rel.replace(os.sep, "/"), verbatim)
+                                        for rel, kind in found):
+            print(f"  a private term kept in a file the image is built from: {not_listed(preset)}")
         if found:
             for rel, kind in found:
                 print(f"  FOUND {kind}: {rel}")
@@ -471,12 +538,12 @@ def main(argv=None) -> int:
         for part in message:
             commit += ["-m", part]
         run(commit, cwd=tree)
-        run(["git", *creds, "push", "-q", "origin", f"HEAD:refs/heads/{BRANCH}"], cwd=tree)
+        run(["git", *creds, "push", "-q", "origin", f"HEAD:refs/heads/{a.branch}"], cwd=tree)
         local = run(["git", "rev-parse", "HEAD"], cwd=tree)
-        remote = run(["git", *creds, "ls-remote", "origin", f"refs/heads/{BRANCH}"], cwd=tree).split("\t")[0]
+        remote = run(["git", *creds, "ls-remote", "origin", f"refs/heads/{a.branch}"], cwd=tree).split("\t")[0]
         if local != remote:
             raise SystemExit(f"github-snapshot: {a.preset}'s push didn't land")
-        print(f"{a.preset}: pushed {local[:12]} to {BRANCH}")
+        print(f"{a.preset}: pushed {local[:12]} to {a.branch}")
     return 0
 
 

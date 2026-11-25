@@ -1,0 +1,15 @@
+{
+  "ORACLE_VERSION": "3",
+  "ORACLE_RPC": "http://10.82.0.145:8545",
+  "ORACLE_RACE": "0xD167a00a8dcDbfe41E99E97E0E32aE2Be403aF22",
+  "ORACLE_FAMILY": "anthropic/claude",
+  "ORACLE_JUDGE": "fake",
+  "ORACLE_IMAGE": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+  "ORACLE_HOST_ID": "aws:us-east-2",
+  "ORACLE_FIX_SOURCE": "radicle",
+  "ORACLE_MERGE_VIA": "radicle",
+  "ORACLE_SEAT_NODES": "chain",
+  "ORACLE_RADICLE_RID": "rad:z4Eha6N9c2me2JhZovdsJSzSHnf5H",
+  "ORACLE_REPO": "pof/stats",
+  "ORACLE_POLL": "2"
+}

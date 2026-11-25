@@ -331,7 +331,10 @@ contract ReplayV3Test is Test {
             vm.prank(active[i]);
             fees.post([items[t], items[t + 1], items[t + 2], eth], fams, toks);
         }
-        fees.roll();
+        uint256 p0 = fees.rolled();
+        while (fees.rolled() == p0) {
+            fees.roll(); // one part a call (v3.1 polish F2)
+        }
         ++period;
         ++closes;
         assertEq(fees.rolled(), period, _at(e, "one period closed"));

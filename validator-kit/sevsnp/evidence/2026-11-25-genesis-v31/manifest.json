@@ -1,0 +1,44 @@
+{
+ "cmdline": "console=ttyS0,115200n8 root=/dev/mapper/root rootfstype=erofs ro roothash=ddfdf368532d37484c7f92e1c577d520cd678ca30da105ef77e331dfe1ed26f5 systemd.verity_root_data=/dev/disk/by-partuuid/ddfdf368-532d-3748-4c7f-92e1c577d520 systemd.verity_root_hash=/dev/disk/by-partuuid/cd678ca3-0da1-05ef-77e3-31dfe1ed26f5 systemd.verity_root_options=panic-on-corruption systemd.volatile=overlay nvme_core.io_timeout=4294967295 loglevel=4 systemd.show_status=error",
+ "disk_gib": 1,
+ "format": "pof-checker-disk/1",
+ "image_digest": "0xd0960af213994a2370424e77475f41f3654cab29dc76131e0efd6153e3e7c50a",
+ "images": {
+  "format": "pof-images/1",
+  "images": [
+   {
+    "archive": "node.tar",
+    "name": "node",
+    "ref": "pof-oracle-node@sha256:5283698eb843dc0544f41c111425475cbcdad606e19641bfdb3ee8250f744d05"
+   },
+   {
+    "archive": "test.tar",
+    "name": "test",
+    "ref": "pof-test-image@sha256:d950c8ad133bb60d987cbc8eb94cd341a63d175686df8d9a5c5305dbdea05ad5"
+   }
+  ],
+  "platform": "amd64"
+ },
+ "kernel": "6.12.115+deb13.1-cloud-amd64",
+ "measured": {
+  "format": "pof-checker-image/1",
+  "hash": "sha384",
+  "pcr12": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "pcr4": "ff2a43fd50b8778b6c1a7eea309d4795da116d23467933e1bcea7bf0bab3b3bcd22ec8a8e44b9fa9a6ba7f1726a8be77",
+  "pcr7": "98441c7f7625d10058c47683aec486ce311c633235eb555593a7ee791121e3578ae72d04ecef661f272d59058b77af35",
+  "platform": "amd64",
+  "roothash": "ddfdf368532d37484c7f92e1c577d520cd678ca30da105ef77e331dfe1ed26f5"
+ },
+ "roothash": "ddfdf368532d37484c7f92e1c577d520cd678ca30da105ef77e331dfe1ed26f5",
+ "sha256": {
+  "disk.raw": "60b2e9fb41a5415b6a913d4074693abc48714bb0a9ec454dbc5711e55a333a90",
+  "images.json": "de03c4cbf0a1b3d506f9b480e3302dc6580a6493ef2a819551e1b622bfd5bf33",
+  "packages.txt": "77f2be5592c1febaf698c8e4af6afbd618ee2fa220897e659e9715ec9d8364e9",
+  "pcrs.json": "eb44295944cfcbfc2757efdcd7087cd000c1d87b857ab222f363a8f21a5e72ae",
+  "uki.efi": "864ca58b7feaae183a0f96b6b27a737d2e55d3910add298af5eb8002f71396a3"
+ },
+ "source": {
+  "is_head": true,
+  "tree": "78bdf3fab7d4cb7a71a9d402b1a767943c1ebadb"
+ }
+}
